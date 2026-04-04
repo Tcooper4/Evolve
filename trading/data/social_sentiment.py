@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Reddit mention sentiment (public JSON API, no API key)."""
+"""Reddit mention sentiment: PRAW when credentials exist, else public JSON API."""
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import statistics
 import time
 import urllib.error
@@ -64,13 +65,101 @@ def _fetch_subreddit_search(
         return [], str(e)
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
-def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
-    """
-    Reddit sentiment from r/wallstreetbets and r/stocks (last day, search).
+def _reddit_creds_from_runtime() -> Tuple[str, str]:
+    rid = os.environ.get("REDDIT_CLIENT_ID", "").strip()
+    rsec = os.environ.get("REDDIT_CLIENT_SECRET", "").strip()
+    if rid and rsec:
+        return rid, rsec
+    try:
+        import streamlit as st
 
-    Returns sentiment_score (-1..1), label, mention_count, top_posts, trending.
+        rid = (st.session_state.get("user_key_REDDIT_CLIENT_ID") or "").strip()
+        rsec = (st.session_state.get("user_key_REDDIT_CLIENT_SECRET") or "").strip()
+    except Exception:
+        pass
+    return rid, rsec
+
+
+def _fetch_via_praw(
+    sub: str, query: str, limit: int
+) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    reddit_id, reddit_secret = _reddit_creds_from_runtime()
+    if not reddit_id or not reddit_secret:
+        return [], "missing Reddit credentials"
+    try:
+        import praw
+    except ImportError:
+        return [], "praw not installed"
+    try:
+        reddit = praw.Reddit(
+            client_id=reddit_id,
+            client_secret=reddit_secret,
+            user_agent="Evolve/1.0",
+        )
+        posts: List[Dict[str, Any]] = []
+        lim = min(limit, 100)
+        for submission in reddit.subreddit(sub).search(
+            query, limit=lim, sort="new", time_filter="day"
+        ):
+            posts.append(
+                {
+                    "id": submission.id or "",
+                    "title": (submission.title or "")[:500],
+                    "selftext": (getattr(submission, "selftext", None) or "")[:1500],
+                    "score": int(submission.score or 0),
+                    "subreddit": sub,
+                }
+            )
+        return posts, None
+    except Exception as e:
+        _reason = f"PRAW fetch r/{sub} failed: {e}"
+        logger.warning(_reason)
+        return [], str(e)
+
+
+def _collect_reddit_posts(
+    sym: str, limit: int, use_praw: bool
+) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    seen = set()
+    posts: List[Dict[str, Any]] = []
+    _last_fetch_err: Optional[str] = None
+    fetch_fn = _fetch_via_praw if use_praw else _fetch_subreddit_search
+    for sub in _SUBREDDITS:
+        batch, fetch_err = fetch_fn(sub, sym, limit)
+        if fetch_err:
+            _last_fetch_err = fetch_err
+        for p in batch:
+            pid = (p.get("id") or "").strip()
+            key = pid or (sub, p.get("title"), p.get("score"))
+            if key in seen:
+                continue
+            seen.add(key)
+            posts.append(p)
+        time.sleep(0.3)
+        if len(batch) < 3:
+            batch_d, fetch_err_d = fetch_fn(sub, f"${sym}", limit)
+            if fetch_err_d:
+                _last_fetch_err = fetch_err_d
+            for p in batch_d:
+                pid = (p.get("id") or "").strip()
+                key = pid or (sub, p.get("title"), p.get("score"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                posts.append(p)
+            time.sleep(0.3)
+    return posts, _last_fetch_err
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _get_social_sentiment_impl(
+    symbol: str, limit: int, _auth_mode: str
+) -> Dict[str, Any]:
     """
+    Internal cached implementation. _auth_mode is 'praw' or 'json' so cache
+    invalidates when Reddit credentials are added or removed.
+    """
+    use_praw = _auth_mode == "praw"
     out: Dict[str, Any] = {
         "success": False,
         "sentiment_score": 0.0,
@@ -98,35 +187,10 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
         return out
 
     try:
-        seen = set()
-        posts: List[Dict[str, Any]] = []
-        _last_fetch_err: Optional[str] = None
-        for sub in _SUBREDDITS:
-            batch, fetch_err = _fetch_subreddit_search(sub, sym, limit)
-            if fetch_err:
-                _last_fetch_err = fetch_err
-            for p in batch:
-                pid = (p.get("id") or "").strip()
-                key = pid or (sub, p.get("title"), p.get("score"))
-                if key in seen:
-                    continue
-                seen.add(key)
-                posts.append(p)
-            time.sleep(0.3)
-            if len(batch) < 3:
-                batch_d, fetch_err_d = _fetch_subreddit_search(
-                    sub, f"${sym}", limit
-                )
-                if fetch_err_d:
-                    _last_fetch_err = fetch_err_d
-                for p in batch_d:
-                    pid = (p.get("id") or "").strip()
-                    key = pid or (sub, p.get("title"), p.get("score"))
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    posts.append(p)
-                time.sleep(0.3)
+        posts, _last_fetch_err = _collect_reddit_posts(sym, limit, use_praw)
+
+        if use_praw and not posts and _last_fetch_err:
+            posts, _last_fetch_err = _collect_reddit_posts(sym, limit, False)
 
         if not posts:
             if _last_fetch_err:
@@ -187,3 +251,14 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
         logger.warning("get_social_sentiment failed for %s: %s", sym, e)
         out["error"] = str(e)
         return out
+
+
+def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
+    """
+    Reddit sentiment from r/wallstreetbets and r/stocks (last day, search).
+
+    Returns sentiment_score (-1..1), label, mention_count, top_posts, trending.
+    """
+    rid, rsec = _reddit_creds_from_runtime()
+    mode = "praw" if (rid and rsec) else "json"
+    return _get_social_sentiment_impl(symbol, limit, mode)

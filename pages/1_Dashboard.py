@@ -15,6 +15,7 @@ import streamlit as st
 
 from components.deep_dive import render_deep_dive
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
+from config.llm_config import get_llm_config
 from config.user_store import load_user_preferences, save_user_preferences
 from trading.data.price_cache import get_history, get_info, get_quote
 
@@ -180,8 +181,13 @@ session_id = st.session_state.get("evolve_session_id") or st.session_state.get(
     "session_id", ""
 )
 prefs = load_user_preferences(session_id) if session_id else {}
-if "onboarding_done" not in st.session_state:
-    st.session_state["onboarding_done"] = bool(prefs.get("onboarding_done"))
+_prefs_done = bool(
+    prefs.get("onboarding_done") or prefs.get("onboarding_completed")
+)
+if _prefs_done:
+    st.session_state["onboarding_done"] = True
+elif "onboarding_done" not in st.session_state:
+    st.session_state["onboarding_done"] = False
 
 if not st.session_state["onboarding_done"]:
     st.title("Welcome to Evolve")
@@ -208,6 +214,26 @@ if not st.session_state["onboarding_done"]:
 
 st.title("Home")
 st.caption("Your trading copilot — scroll for pulse, setups, and chat.")
+
+try:
+    _cfg = get_llm_config()
+    _has_llm = _cfg.has_openai() or _cfg.has_anthropic()
+    if not _has_llm:
+        _has_llm = bool(
+            st.session_state.get("user_key_OPENAI_API_KEY")
+            or st.session_state.get("user_key_ANTHROPIC_API_KEY")
+        )
+    if not _has_llm:
+        st.info(
+            "Add an OpenAI or Anthropic key "
+            "in Settings to enable the chat "
+            "agent, AI commentary, and morning "
+            "briefing narrative. "
+            "All market data features are active.",
+            icon="ℹ️",
+        )
+except Exception as e:
+    logger.warning("Home LLM availability strip skipped: %s", e)
 
 # --- Market pulse ---
 st.subheader("Market pulse")

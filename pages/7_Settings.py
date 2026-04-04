@@ -77,7 +77,7 @@ with tab_keys:
             save_user_api_keys,
             load_user_api_keys,
         )
-        _uid = get_stable_user_id()
+        _uid = st.session_state.get("evolve_session_id") or get_stable_user_id()
         _saved = load_user_api_keys(_uid) or {}
 
         # Show masked existing keys
@@ -89,25 +89,71 @@ with tab_keys:
             _saved.get("OPENAI_API_KEY")
             or os.environ.get("OPENAI_API_KEY")
         )
-
-        st.markdown("#### Anthropic (Claude)")
-        if _has_anthropic:
-            st.success("✅ Anthropic key saved")
-        anthropic_key = st.text_input(
-            "Anthropic API Key",
-            type="password",
-            placeholder="sk-ant-... (leave blank to keep existing)",
-            key="settings_anthropic_key"
+        _has_news = bool(
+            _saved.get("NEWS_API_KEY")
+            or os.environ.get("NEWS_API_KEY")
+        )
+        _has_reddit = bool(
+            _saved.get("REDDIT_CLIENT_ID")
+            or os.environ.get("REDDIT_CLIENT_ID")
         )
 
         st.markdown("#### OpenAI")
         if _has_openai:
             st.success("✅ OpenAI key saved")
         openai_key = st.text_input(
-            "OpenAI API Key",
+            "OpenAI API key",
             type="password",
             placeholder="sk-... (leave blank to keep existing)",
-            key="settings_openai_key"
+            key="settings_openai_key",
+            help="Chat, commentary, morning briefing narrative.",
+        )
+
+        st.markdown("#### Anthropic (optional)")
+        if _has_anthropic:
+            st.success("✅ Anthropic key saved")
+        anthropic_key = st.text_input(
+            "Anthropic API key",
+            type="password",
+            placeholder="sk-ant-... (leave blank to keep existing)",
+            key="settings_anthropic_key",
+            help="Alternative LLM — Claude for chat and agents.",
+        )
+
+        st.markdown("#### News API (optional)")
+        if _has_news:
+            st.success("✅ News API key saved")
+        news_key = st.text_input(
+            "News API key",
+            type="password",
+            placeholder="NewsAPI key (leave blank to keep existing)",
+            key="settings_news_key",
+        )
+
+        st.markdown("#### Reddit (optional)")
+        if _has_reddit:
+            st.success("✅ Reddit app credentials saved")
+        reddit_client_id = st.text_input(
+            "Reddit client ID",
+            type="password",
+            placeholder="Reddit app client ID",
+            key="settings_reddit_id",
+        )
+        reddit_secret = st.text_input(
+            "Reddit client secret",
+            type="password",
+            placeholder="Reddit app secret",
+            key="settings_reddit_secret",
+        )
+
+        _pref_llm = (
+            load_user_preferences(_uid) or {}
+        ).get("preferred_llm_provider") or "openai"
+        provider = st.selectbox(
+            "Preferred LLM provider",
+            ["openai", "anthropic"],
+            index=(0 if _pref_llm == "openai" else 1),
+            help="Default provider for chat and agents.",
         )
 
         if st.button(
@@ -123,6 +169,12 @@ with tab_keys:
                 keys_to_save[
                     "OPENAI_API_KEY"
                 ] = openai_key.strip()
+            if news_key.strip():
+                keys_to_save["NEWS_API_KEY"] = news_key.strip()
+            if reddit_client_id.strip():
+                keys_to_save["REDDIT_CLIENT_ID"] = reddit_client_id.strip()
+            if reddit_secret.strip():
+                keys_to_save["REDDIT_CLIENT_SECRET"] = reddit_secret.strip()
             if keys_to_save:
                 save_user_api_keys(
                     _uid, keys_to_save
@@ -140,6 +192,15 @@ with tab_keys:
                 else:
                     from config.user_store import inject_user_keys_to_env
                     inject_user_keys_to_env(_uid)
+                try:
+                    from config.user_store import save_user_preferences, load_user_preferences
+                    _p = load_user_preferences(_uid) or {}
+                    save_user_preferences(
+                        _uid,
+                        {**_p, "preferred_llm_provider": provider},
+                    )
+                except Exception as _e:
+                    st.caption(f"Preference note: {_e}")
                 st.success(
                     "Keys saved and activated. "
                     "They will load automatically "
@@ -159,6 +220,9 @@ with tab_keys:
             save_user_api_keys(_uid, {
                 "ANTHROPIC_API_KEY": "",
                 "OPENAI_API_KEY": "",
+                "NEWS_API_KEY": "",
+                "REDDIT_CLIENT_ID": "",
+                "REDDIT_CLIENT_SECRET": "",
             })
             st.warning("Keys cleared.")
 
