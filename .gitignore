@@ -221,3 +221,6 @@ hybrid_weights.json
 hybrid_performance.json
 memory.json
 .cache/
+
+hybrid_performance.json.backup
+hybrid_weights.json.backup
