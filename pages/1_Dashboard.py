@@ -457,15 +457,11 @@ else:
 
         st.info(
             "Generating briefing: parallel AI scores on up to 50 tickers, "
-            "then 5 fast models per top pick (~30–90s typical). "
+            "then 5 fast models per top pick (~20–60s typical, 3 picks). "
             "Watchlist and news above are already loaded.",
             icon="⏳",
         )
-        _mb = MorningBriefing(
-            universe="sp100",
-            min_ai_score=6.5,
-            max_positions=5,
-        )
+        _mb = MorningBriefing(universe="sp100")
         progress = st.progress(0, text="AI-scoring universe (parallel)…")
 
         def _brief_progress(done: int, total: int) -> None:

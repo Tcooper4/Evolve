@@ -14,6 +14,7 @@ Dependencies: existing platform modules only
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
@@ -47,11 +48,11 @@ class MorningBriefing:
     def __init__(
         self,
         universe: str = "sp100",
-        min_ai_score: float = 6.5,
-        max_positions: int = 5,
+        min_ai_score: Optional[float] = None,
+        max_positions: int = 3,
     ):
         self.universe = universe
-        self.min_ai_score = min_ai_score
+        self.min_ai_score = float(min_ai_score or 5.5)
         self.max_positions = max_positions
         self._last_report: Optional[Dict[str, Any]] = None
 
@@ -85,8 +86,9 @@ class MorningBriefing:
                 progress_callback=progress_callback
             )
             logger.info(
-                "Morning briefing: %d candidates above %.1f score",
-                len(candidates), self.min_ai_score
+                "Morning briefing: found %d candidates above %.1f score",
+                len(candidates),
+                self.min_ai_score,
             )
 
             # Step 3: Deep analysis on top candidates
@@ -99,18 +101,37 @@ class MorningBriefing:
             except Exception as e:
                 logger.warning("Morning briefing: ForecastRouter init failed: %s", e)
 
-            for candidate in candidates[:self.max_positions]:
+            _to_analyze = candidates[: self.max_positions]
+            _n_opp = len(_to_analyze)
+            for i, candidate in enumerate(_to_analyze):
+                sym = candidate.get("symbol") or "?"
+                t0 = time.perf_counter()
+                logger.info(
+                    "Morning briefing: analyzing %s (%d/%d)",
+                    sym,
+                    i + 1,
+                    _n_opp,
+                )
                 try:
                     opp = self._analyze_opportunity(
-                        candidate, router=shared_router
+                        candidate,
+                        router=shared_router,
+                        briefing=True,
                     )
                     if opp:
                         opportunities.append(opp)
                 except Exception as e:
                     logger.debug(
                         "Opportunity analysis failed for %s: %s",
-                        candidate.get("symbol"), e
+                        sym,
+                        e,
                     )
+                elapsed = time.perf_counter() - t0
+                logger.info(
+                    "Morning briefing: %s complete (%.1fs)",
+                    sym,
+                    elapsed,
+                )
 
             report["top_opportunities"] = opportunities
 
@@ -211,6 +232,11 @@ class MorningBriefing:
                 uni = uni[:30]
             uni = uni[: self.BRIEFING_UNIVERSE_CAP]
 
+            logger.info(
+                "Morning briefing: scanning %d tickers...",
+                len(uni),
+            )
+
             raw = scan_market(
                 filters=[],
                 universe=uni,
@@ -243,8 +269,13 @@ class MorningBriefing:
         self,
         candidate: Dict[str, Any],
         router: Any = None,
+        briefing: bool = True,
     ) -> Optional[Dict[str, Any]]:
-        """Deep analysis on a single candidate."""
+        """Deep analysis on a single candidate.
+
+        When ``briefing`` is True, skip Monte Carlo and strategy comparison
+        (heavy paths reserved for Analyze deep dive).
+        """
         symbol = candidate.get("symbol")
         if not symbol:
             return None
@@ -326,67 +357,73 @@ class MorningBriefing:
             except Exception as e:
                 logger.debug("Forecast failed for %s: %s", symbol, e)
 
-            try:
-                from trading.backtesting.monte_carlo import (
-                    MonteCarloConfig,
-                    MonteCarloSimulator,
-                )
-
-                import numpy as np
-
-                _cfg = MonteCarloConfig(n_simulations=100)
-                _mc = MonteCarloSimulator(_cfg)
-                _cm = {c.lower(): c for c in hist.columns}
-                _cc = _cm.get("close", hist.columns[0])
-                _rets = hist[_cc].astype(float).pct_change().dropna()
-                if len(_rets) >= 30:
-                    _paths = _mc.simulate_portfolio_paths(
-                        _rets, n_simulations=100
+            if not briefing:
+                try:
+                    from trading.backtesting.monte_carlo import (
+                        MonteCarloConfig,
+                        MonteCarloSimulator,
                     )
-                    if _paths is not None and len(_paths) > 1:
-                        _first = _paths.iloc[0].values.astype(float)
-                        _last = _paths.iloc[-1].values.astype(float)
-                        _term = (_last / np.maximum(_first, 1e-12)) - 1.0
-                        _p10 = float(np.percentile(_term, 10))
-                        _fmove = float(
-                            (opp.get("forecast") or {}).get(
-                                "expected_move_pct", 0
-                            )
-                            or 0
-                        )
-                        if _p10 < -0.08:
-                            opp["risk_note"] = (
-                                f"High downside risk: 10th pct = {_p10:.1%} "
-                                f"(vs ~{_fmove:+.1f}% consensus move)"
-                            )
-            except Exception as _mce:
-                logger.debug("Briefing Monte Carlo skipped: %s", _mce)
 
-            try:
-                from trading.strategies.strategy_comparison import (
-                    get_strategy_comparison,
-                )
+                    import numpy as np
 
-                _cmp = get_strategy_comparison()
-                _best_name, _ = _cmp.get_best_strategy(hist, metric="win_rate")
-                if _best_name:
-                    _mat = _cmp.generate_comparison_matrix(hist)
-                    _wr = None
-                    if _mat is not None and not _mat.empty:
-                        _row = _mat.loc[_mat["Strategy"] == _best_name]
-                        if not _row.empty:
-                            _wr = float(_row.iloc[0].get("win_rate") or 0.0)
-                    if _wr is not None:
-                        opp["strategy_note"] = (
-                            f"Best strategy: {_best_name} "
-                            f"({_wr:.0%} win rate)"
+                    _cfg = MonteCarloConfig(n_simulations=100)
+                    _mc = MonteCarloSimulator(_cfg)
+                    _cm = {c.lower(): c for c in hist.columns}
+                    _cc = _cm.get("close", hist.columns[0])
+                    _rets = hist[_cc].astype(float).pct_change().dropna()
+                    if len(_rets) >= 30:
+                        _paths = _mc.simulate_portfolio_paths(
+                            _rets, n_simulations=100
                         )
-                    else:
-                        opp["strategy_note"] = (
-                            f"Best strategy: {_best_name}"
-                        )
-            except Exception as _sce:
-                logger.debug("Briefing strategy comparison skipped: %s", _sce)
+                        if _paths is not None and len(_paths) > 1:
+                            _first = _paths.iloc[0].values.astype(float)
+                            _last = _paths.iloc[-1].values.astype(float)
+                            _term = (_last / np.maximum(_first, 1e-12)) - 1.0
+                            _p10 = float(np.percentile(_term, 10))
+                            _fmove = float(
+                                (opp.get("forecast") or {}).get(
+                                    "expected_move_pct", 0
+                                )
+                                or 0
+                            )
+                            if _p10 < -0.08:
+                                opp["risk_note"] = (
+                                    f"High downside risk: 10th pct = "
+                                    f"{_p10:.1%} (vs ~{_fmove:+.1f}% "
+                                    f"consensus move)"
+                                )
+                except Exception as _mce:
+                    logger.debug("Monte Carlo skipped: %s", _mce)
+
+                try:
+                    from trading.strategies.strategy_comparison import (
+                        get_strategy_comparison,
+                    )
+
+                    _cmp = get_strategy_comparison()
+                    _best_name, _ = _cmp.get_best_strategy(
+                        hist, metric="win_rate"
+                    )
+                    if _best_name:
+                        _mat = _cmp.generate_comparison_matrix(hist)
+                        _wr = None
+                        if _mat is not None and not _mat.empty:
+                            _row = _mat.loc[_mat["Strategy"] == _best_name]
+                            if not _row.empty:
+                                _wr = float(
+                                    _row.iloc[0].get("win_rate") or 0.0
+                                )
+                        if _wr is not None:
+                            opp["strategy_note"] = (
+                                f"Best strategy: {_best_name} "
+                                f"({_wr:.0%} win rate)"
+                            )
+                        else:
+                            opp["strategy_note"] = (
+                                f"Best strategy: {_best_name}"
+                            )
+                except Exception as _sce:
+                    logger.debug("Strategy comparison skipped: %s", _sce)
 
             # Add AI score signals as thesis
             signals = candidate.get("signals", [])

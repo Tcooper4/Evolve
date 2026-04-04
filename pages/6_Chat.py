@@ -44,11 +44,7 @@ if _auto_mode:
         from agents.briefing.morning_briefing import (
             MorningBriefing,
         )
-        MorningBriefing(
-            universe="sp100",
-            min_ai_score=6.5,
-            max_positions=5,
-        ).render_streamlit()
+        MorningBriefing(universe="sp100").render_streamlit()
         st.markdown("---")
     except Exception as e:
         st.caption(
