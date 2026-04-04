@@ -481,3 +481,13 @@ def get_options_sentiment(symbol: str) -> Dict[str, Any]:
     except Exception as e:
         logger.exception("get_options_sentiment failed: %s", e)
         return {"success": False, "error": str(e)}
+
+
+def get_evolve_platform_tool_registry():
+    """
+    Re-export for callers using ``from trading.services.agent_tools import …``.
+    Canonical definition lives in ``agents.llm.agent``.
+    """
+    from agents.llm.agent import get_evolve_platform_tool_registry as _registry
+
+    return _registry()

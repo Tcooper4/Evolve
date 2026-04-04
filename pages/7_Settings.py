@@ -42,11 +42,12 @@ render_top_bar()
 st.title("⚙️ Settings")
 st.caption("Watchlist, alerts, and system configuration")
 
-tab_wl, tab_keys, tab_alerts, tab_track, tab_admin = st.tabs([
+tab_wl, tab_keys, tab_alerts, tab_track, tab_research, tab_admin = st.tabs([
     "Watchlist",
     "🔑 API Keys",
     "Alerts",
     "Performance",
+    "Research preferences",
     "System",
 ])
 
@@ -467,6 +468,89 @@ with tab_track:
                 )
     except Exception as e:
         st.caption(f"Feature unavailable: {e}")
+
+with tab_research:
+    st.markdown("### Briefing & scanner preferences")
+    st.caption(
+        "Customize your morning briefing and scanner defaults."
+    )
+    try:
+        from utils.session_utils import get_stable_user_id
+        from config.user_store import load_user_preferences, save_user_preferences
+
+        _uid = st.session_state.get("evolve_session_id") or get_stable_user_id()
+        _prefs = load_user_preferences(_uid) or {}
+    except Exception:
+        _uid = ""
+        _prefs = {}
+
+    universe_opts = [
+        "Top 25 (fastest, ~30s)",
+        "SP100 (balanced, ~60s)",
+        "NASDAQ100 (tech-heavy)",
+        "SP500 (broadest, ~3min)",
+    ]
+    style_opts = [
+        "Balanced (default)",
+        "Momentum-heavy",
+        "Technical-heavy",
+        "Fundamental-heavy",
+    ]
+
+    _def_u = "Top 25 (fastest, ~30s)"
+    _stored_u = _prefs.get("briefing_universe", _def_u)
+    _u_idx = (
+        universe_opts.index(_stored_u) if _stored_u in universe_opts else 0
+    )
+
+    _def_s = "Balanced (default)"
+    _stored_s = _prefs.get("scoring_style", _def_s)
+    _s_idx = style_opts.index(_stored_s) if _stored_s in style_opts else 0
+
+    min_score = st.slider(
+        "Minimum AI Score for briefing",
+        min_value=4.0,
+        max_value=8.0,
+        value=float(_prefs.get("min_ai_score", 5.5)),
+        step=0.5,
+        key="pref_min_score",
+        help="Lower = more stocks shown. Higher = only strongest signals.",
+    )
+
+    universe_choice = st.selectbox(
+        "Briefing scan universe",
+        options=universe_opts,
+        index=_u_idx,
+        key="pref_universe",
+    )
+
+    scoring_style = st.radio(
+        "Score weighting style",
+        options=style_opts,
+        index=_s_idx,
+        key="pref_scoring",
+        horizontal=True,
+    )
+
+    st.markdown("---")
+    if st.button("Save preferences", key="save_research_prefs", type="primary"):
+        try:
+            from config.user_store import save_user_preferences as _save_rp
+            from utils.session_utils import get_stable_user_id as _gid
+
+            _uid_save = st.session_state.get("evolve_session_id") or _gid()
+            _save_rp(
+                _uid_save,
+                {
+                    **_prefs,
+                    "min_ai_score": min_score,
+                    "briefing_universe": universe_choice,
+                    "scoring_style": scoring_style,
+                },
+            )
+            st.success("Preferences saved. Refresh Home to apply.")
+        except Exception as e:
+            st.caption(f"Could not save: {e}")
 
 with tab_admin:
     st.subheader("System")

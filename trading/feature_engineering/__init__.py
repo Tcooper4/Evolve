@@ -1,3 +1,2 @@
-from trading.feature_engineering import indicators
-
-__all__ = ["indicators"]
+# -*- coding: utf-8 -*-
+"""Feature engineering package. Import submodules directly (e.g. ``feature_engineer``, ``indicators``)."""

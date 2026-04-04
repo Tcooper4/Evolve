@@ -226,6 +226,25 @@ class MorningBriefing:
 
             u = (self.universe or "default").lower()
             uni = list(_get_universe(u))
+            try:
+                from config.user_store import load_user_preferences
+                from utils.session_utils import get_stable_user_id
+
+                _uid = get_stable_user_id()
+                _p = load_user_preferences(_uid) or {}
+                if _p.get("min_ai_score") is not None:
+                    self.min_ai_score = float(_p["min_ai_score"])
+                pref_uni = str(_p.get("briefing_universe") or "")
+                if "NASDAQ100" in pref_uni:
+                    uni = list(_get_universe("nasdaq100"))
+                elif "SP500" in pref_uni:
+                    uni = list(_get_universe("sp500"))[:50]
+                elif "SP100" in pref_uni:
+                    uni = list(_get_universe("sp100"))
+                elif "Top 25" in pref_uni:
+                    uni = list(_get_universe("sp100"))[:25]
+            except Exception:
+                pass
             if u in ("sp50", "large", "mega"):
                 uni = uni[:50]
             elif u in ("sp30", "core"):
