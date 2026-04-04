@@ -103,3 +103,81 @@ def render_tabbed_analyze_sections(
         render_multi_asset_gnn(**kw)
         st.markdown("---")
         render_causal(**kw)
+        st.markdown("---")
+        st.markdown("## Signal IC Analysis")
+        st.caption(
+            "Measures whether the AI Score actually predicts forward returns. "
+            "Runs on historical data — takes 2–5 minutes."
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            ic_symbols = st.multiselect(
+                "Symbols to analyze",
+                options=[
+                    "AAPL",
+                    "MSFT",
+                    "NVDA",
+                    "GOOGL",
+                    "AMZN",
+                    "META",
+                    "TSLA",
+                    "JPM",
+                    "V",
+                    "XOM",
+                ],
+                default=["AAPL", "MSFT", "NVDA"],
+                key="analyze_ic_symbols",
+            )
+        with col2:
+            ic_lookback = st.selectbox(
+                "Lookback period",
+                options=[126, 252, 504],
+                format_func=lambda x: {
+                    126: "6 months",
+                    252: "1 year",
+                    504: "2 years",
+                }[x],
+                index=1,
+                key="analyze_ic_lookback",
+            )
+
+        if st.button(
+            "Run IC Analysis",
+            key="analyze_ic_run_btn",
+            type="primary",
+        ):
+            if not ic_symbols:
+                st.warning("Select at least one symbol")
+            else:
+                progress_bar = st.progress(0, text="Starting...")
+
+                def _ic_progress(done: int, total: int) -> None:
+                    t = max(total, 1)
+                    progress_bar.progress(
+                        done / t,
+                        text=f"Analyzing {done}/{total}...",
+                    )
+
+                with st.spinner(f"Computing IC for {len(ic_symbols)} symbols..."):
+                    try:
+                        from trading.analysis.signal_ic import get_ic_analyzer
+
+                        analyzer = get_ic_analyzer()
+                        report = analyzer.run_analysis(
+                            symbols=ic_symbols,
+                            lookback_days=ic_lookback,
+                            progress_callback=_ic_progress,
+                        )
+                        progress_bar.progress(1.0, text="Complete")
+                        st.session_state["analyze_ic_report"] = report
+                    except Exception as e:
+                        progress_bar.progress(1.0, text="Stopped")
+                        st.caption(f"IC analysis failed: {e}")
+
+        if "analyze_ic_report" in st.session_state:
+            from trading.analysis.signal_ic import get_ic_analyzer
+
+            get_ic_analyzer().render_streamlit(
+                st.session_state["analyze_ic_report"],
+            )
