@@ -19,6 +19,7 @@ import streamlit as st
 import yfinance as yf
 
 from trading.data.price_cache import get_history as _pc_get_history
+from trading.utils.credential_placeholders import is_placeholder_credential
 from trading.utils.safe_math import safe_rsi
 
 logger = logging.getLogger(__name__)
@@ -51,8 +52,12 @@ def _has_external_api_keys() -> bool:
                 ).strip()
             except Exception:
                 sess_v = ""
-        if env_v or sess_v:
-            return True
+        val = env_v or sess_v
+        if not val:
+            continue
+        if is_placeholder_credential(val):
+            continue
+        return True
     return False
 _ML_TRAINER_INSTANCE = None
 

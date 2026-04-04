@@ -341,7 +341,7 @@ class DisasterRecoveryManager:
                         "last_activity": s.last_activity.isoformat(),
                         "strategies": s.strategies,
                         "context_data": s.context_data,
-                        "metadata": s.metadata,
+                        "extra_data": s.extra_data,
                     }
                     for s in sessions
                 ]
@@ -650,7 +650,12 @@ class DisasterRecoveryManager:
                 
                 # Restore sessions
                 if "sessions" in export_data:
-                    for s_data in export_data["sessions"]:
+                    for raw in export_data["sessions"]:
+                        s_data = dict(raw)
+                        if "extra_data" not in s_data and "metadata" in s_data:
+                            s_data["extra_data"] = s_data.pop("metadata", None)
+                        else:
+                            s_data.pop("metadata", None)
                         session_obj = TradingSessionModel(**s_data)
                         session.merge(session_obj)
                 

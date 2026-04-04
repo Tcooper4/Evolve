@@ -15,6 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 
+from trading.utils.credential_placeholders import is_placeholder_credential
+
 logger = logging.getLogger(__name__)
 
 _USER_AGENT = "EvolveTradingBot/3.23 (research; contact: local)"
@@ -84,8 +86,16 @@ def _reddit_creds_from_runtime() -> Tuple[str, str]:
 
 
 def _reddit_use_praw(reddit_id: str, reddit_secret: str) -> bool:
-    """PRAW only when both credentials are present and non-empty (no 401 from blanks)."""
-    return bool(str(reddit_id).strip()) and bool(str(reddit_secret).strip())
+    """PRAW only when both credentials are real (not empty or .env template placeholders)."""
+    rid = str(reddit_id or "").strip()
+    rsec = str(reddit_secret or "").strip()
+    if not rid or not rsec:
+        return False
+    if is_placeholder_credential(rid):
+        return False
+    if is_placeholder_credential(rsec):
+        return False
+    return True
 
 
 def _fetch_via_praw(

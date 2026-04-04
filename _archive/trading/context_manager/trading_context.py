@@ -541,7 +541,7 @@ class TradingContextManager:
                             db_session.max_age_seconds = trading_session.max_age.total_seconds() if trading_session.max_age else None
                             db_session.strategies = trading_session.strategies
                             db_session.context_data = trading_session.context_data
-                            db_session.metadata = trading_session.metadata
+                            db_session.extra_data = trading_session.metadata
                             db_session.updated_at = datetime.now()
                         else:
                             # Create new session
@@ -554,7 +554,7 @@ class TradingContextManager:
                                 max_age_seconds=trading_session.max_age.total_seconds() if trading_session.max_age else None,
                                 strategies=trading_session.strategies,
                                 context_data=trading_session.context_data,
-                                metadata=trading_session.metadata,
+                                extra_data=trading_session.metadata,
                             )
                             session.add(db_session)
                     
@@ -650,7 +650,7 @@ class TradingContextManager:
                                     last_activity=db_session.last_activity,
                                     strategies=db_session.strategies or {},
                                     context_data=db_session.context_data or {},
-                                    metadata=db_session.metadata or {},
+                                    metadata=db_session.extra_data or {},
                                     max_age=(
                                         timedelta(seconds=db_session.max_age_seconds)
                                         if db_session.max_age_seconds

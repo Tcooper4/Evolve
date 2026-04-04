@@ -187,7 +187,7 @@ class TradingSessionModel(Base):
     # JSON fields
     strategies = Column(JSONEncodedDict, nullable=True)
     context_data = Column(JSONEncodedDict, nullable=True)
-    metadata = Column(JSONEncodedDict, nullable=True)
+    extra_data = Column("metadata", JSONEncodedDict, nullable=True)
     
     # Timestamps
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -209,8 +209,8 @@ class StateManagerModel(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False, index=True)
     
-    # Metadata
-    metadata = Column(JSONEncodedDict, nullable=True)
+    # ORM name extra_data; DB column remains metadata for existing SQLite DBs
+    extra_data = Column("metadata", JSONEncodedDict, nullable=True)
 
 
 class AgentMemoryModel(Base):
@@ -230,8 +230,7 @@ class AgentMemoryModel(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Metadata
-    metadata = Column(JSONEncodedDict, nullable=True)
+    extra_data = Column("metadata", JSONEncodedDict, nullable=True)
     
     # Unique constraint
     __table_args__ = (
@@ -262,6 +261,5 @@ class TaskModel(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True, index=True)
     
-    # Metadata
-    metadata = Column(JSONEncodedDict, nullable=True)
+    extra_data = Column("metadata", JSONEncodedDict, nullable=True)
 
