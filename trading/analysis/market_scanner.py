@@ -10,7 +10,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -65,6 +65,22 @@ SCAN_FILTERS = {
     "insider_buying": "Insider buying signal in last 90d",
     "top_ai_score": "AI Score >= 7.0",
 }
+
+_SCAN_AI_MAX_WORKERS = 8
+
+
+def _score_ticker_ai(
+    symbol: str, hist: pd.DataFrame
+) -> tuple:
+    """Worker: AI score for one symbol (hist pre-sliced, thread-owned copy)."""
+    try:
+        from trading.analysis.ai_score import compute_ai_score
+
+        ai = compute_ai_score(symbol, hist)
+        return symbol, ai
+    except Exception as e:
+        logger.debug("Scanner AI score failed for %s: %s", symbol, e)
+        return symbol, None
 
 
 def scan_market(
@@ -128,15 +144,10 @@ def scan_market(
 
     results = []
     total = len(universe)
+    pending: List[Tuple[str, pd.DataFrame, Dict[str, Any]]] = []
 
-    for i, symbol in enumerate(universe):
+    for symbol in universe:
         try:
-            if progress_callback:
-                try:
-                    progress_callback(i + 1, total)
-                except Exception:
-                    pass
-
             # Extract per-ticker data from batch download
             if len(universe) == 1:
                 hist = raw.copy()
@@ -221,20 +232,7 @@ def scan_market(
             if not passes:
                 continue
 
-            # Compute AI Score for passing stocks
-            try:
-                from trading.analysis.ai_score import compute_ai_score
-                ai = compute_ai_score(symbol, hist)
-                ai_score = ai.get("overall_score", 5.0)
-                ai_grade = ai.get("grade", "C")
-            except Exception:
-                ai_score = 5.0
-                ai_grade = "C"
-
-            if "top_ai_score" in filters and ai_score < 7.0:
-                continue
-
-            results.append({
+            partial = {
                 "symbol": symbol,
                 "price": round(last_price, 2),
                 "change_20d": round(ret_20d, 2),
@@ -242,13 +240,63 @@ def scan_market(
                 "vs_sma20": round((last_price / sma20 - 1) * 100, 2) if sma20 else None,
                 "pct_from_52w_high": round(pct_from_high, 2),
                 "volume_ratio": round(vol_ratio, 2),
-                "ai_score": ai_score,
-                "ai_grade": ai_grade,
-            })
+            }
+            pending.append((symbol, hist.copy(), partial))
 
         except Exception as e:
             logger.debug("Scanner: %s failed: %s", symbol, e)
             continue
+
+    ai_by_symbol: Dict[str, Any] = {}
+    n_pend = len(pending)
+    if progress_callback:
+        try:
+            progress_callback(0, max(1, n_pend))
+        except Exception:
+            pass
+    if pending:
+        done_ai = 0
+        with ThreadPoolExecutor(max_workers=_SCAN_AI_MAX_WORKERS) as executor:
+            future_map = {
+                executor.submit(_score_ticker_ai, sym, h): sym
+                for sym, h, _partial in pending
+            }
+            for fut in as_completed(future_map):
+                sym, ai = fut.result()
+                ai_by_symbol[sym] = ai
+                done_ai += 1
+                if progress_callback:
+                    try:
+                        progress_callback(done_ai, n_pend)
+                    except Exception:
+                        pass
+    elif progress_callback:
+        try:
+            progress_callback(1, 1)
+        except Exception:
+            pass
+
+    for symbol, _hist, partial in pending:
+        ai = ai_by_symbol.get(symbol)
+        if ai:
+            ai_score = ai.get("overall_score", 5.0)
+            ai_grade = ai.get("grade", "C")
+            signals = ai.get("signals") or []
+        else:
+            ai_score = 5.0
+            ai_grade = "C"
+            signals = []
+
+        if "top_ai_score" in filters and ai_score < 7.0:
+            continue
+
+        row = {
+            **partial,
+            "ai_score": ai_score,
+            "ai_grade": ai_grade,
+            "signals": signals,
+        }
+        results.append(row)
 
     # Sort by AI Score descending
     results.sort(key=lambda x: x["ai_score"], reverse=True)

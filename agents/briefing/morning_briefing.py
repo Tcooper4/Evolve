@@ -15,7 +15,7 @@ Dependencies: existing platform modules only
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,15 @@ class MorningBriefing:
     # Cap universe for briefing speed; Scanner page uses full list.
     BRIEFING_UNIVERSE_CAP = 50
 
+    # Fast consensus subset (Analyze page uses full 10-model stack).
+    BRIEFING_MODELS = [
+        "arima",
+        "xgboost",
+        "ridge",
+        "catboost",
+        "prophet",
+    ]
+
     def __init__(
         self,
         universe: str = "sp100",
@@ -46,10 +55,15 @@ class MorningBriefing:
         self.max_positions = max_positions
         self._last_report: Optional[Dict[str, Any]] = None
 
-    def generate(self) -> Dict[str, Any]:
+    def generate(
+        self,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Dict[str, Any]:
         """
         Generate full morning briefing.
         Returns dict with markdown report and structured data.
+
+        progress_callback: optional callable(done, total) during universe scan.
         """
         logger.info("Morning briefing: starting generation")
         report = {
@@ -67,7 +81,9 @@ class MorningBriefing:
             report["market_regime"] = self._get_market_regime()
 
             # Step 2: Scan universe
-            candidates = self._scan_universe()
+            candidates = self._scan_universe(
+                progress_callback=progress_callback
+            )
             logger.info(
                 "Morning briefing: %d candidates above %.1f score",
                 len(candidates), self.min_ai_score
@@ -179,7 +195,10 @@ class MorningBriefing:
 
         return regime
 
-    def _scan_universe(self) -> List[Dict[str, Any]]:
+    def _scan_universe(
+        self,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> List[Dict[str, Any]]:
         """Run scanner on universe and return top candidates (symbol + ai_score)."""
         try:
             from trading.analysis.market_scanner import _get_universe, scan_market
@@ -199,6 +218,7 @@ class MorningBriefing:
                     200,
                     max(len(uni), self.max_positions * 16),
                 ),
+                progress_callback=progress_callback,
             )
             if raw.get("error"):
                 logger.warning("Universe scan error: %s", raw.get("error"))
@@ -262,7 +282,10 @@ class MorningBriefing:
 
                 _router = router if router is not None else ForecastRouter()
                 forecast = _router.get_consensus_forecast(
-                    data=hist, horizon=7, symbol=str(symbol)
+                    data=hist,
+                    horizon=7,
+                    symbol=str(symbol),
+                    models=self.BRIEFING_MODELS,
                 )
                 if forecast and "error" not in forecast:
                     consensus_price = forecast.get("consensus_price")
@@ -597,8 +620,27 @@ class MorningBriefing:
             if cached and (now - cached_ts) < 1800:
                 report = cached
             else:
-                with st.spinner("Generating briefing..."):
-                    report = self.generate()
+                progress = st.progress(
+                    0,
+                    text=(
+                        f"Parallel AI scores (up to {self.BRIEFING_UNIVERSE_CAP} "
+                        "tickers), then 5-model consensus per top pick…"
+                    ),
+                )
+
+                def _progress_cb(done: int, total: int) -> None:
+                    if total <= 0:
+                        return
+                    frac = min(1.0, float(done) / float(total))
+                    progress.progress(
+                        frac,
+                        text=f"AI-scoring universe… {done}/{total}",
+                    )
+
+                try:
+                    report = self.generate(progress_callback=_progress_cb)
+                finally:
+                    progress.empty()
                 st.session_state[cache_key] = report
                 st.session_state[cache_ts_key] = now
 
