@@ -162,7 +162,7 @@ def critique_backtest(metrics: Dict[str, Any]) -> Dict[str, Any]:
             "success": False,
             "error": str(e),
             "critique": "Could not run full critique.",
-            "suggestions": ["Check Strategy Testing page for detailed metrics."],
+            "suggestions": ["Check the Backtest page for detailed metrics."],
         }
 
 
@@ -176,13 +176,10 @@ def scan_universe(
     “what looks good” questions.
     """
     try:
-        from trading.analysis.market_scanner import (
-            DEFAULT_UNIVERSE,
-            scan_market,
-        )
+        from trading.analysis.market_scanner import _get_universe, scan_market
 
-        uni = list(DEFAULT_UNIVERSE)
         u = (universe or "default").lower()
+        uni = list(_get_universe(u))
         if u in ("sp50", "large", "mega"):
             uni = uni[:50]
         elif u in ("sp30", "core"):

@@ -88,7 +88,7 @@ def _unusual_for_expiry(
     return unusual_calls, unusual_puts
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def get_options_flow(symbol: str, top_n: int = 10) -> Dict[str, Any]:
     """
     Fetch options chains via yfinance and surface unusual volume vs expiry average.

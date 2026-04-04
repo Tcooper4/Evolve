@@ -73,7 +73,18 @@ def render(
 
                 _models_to_compare = st.multiselect(
                     "Select models to compare",
-                    options=["arima", "xgboost", "lstm", "prophet", "catboost", "ridge", "tcn", "ensemble"],
+                    options=[
+                        "arima",
+                        "xgboost",
+                        "lstm",
+                        "prophet",
+                        "catboost",
+                        "ridge",
+                        "tcn",
+                        "garch",
+                        "transformer",
+                        "ensemble",
+                    ],
                     default=["arima", "xgboost", "lstm"],
                     key="model_comparison_select",
                 )

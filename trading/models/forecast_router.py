@@ -24,6 +24,7 @@ Example:
 
 import importlib
 import logging
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -1326,7 +1327,30 @@ class ForecastRouter:
             horizon_int = 7
 
         if models is None:
-            models = ["arima", "xgboost", "ridge", "catboost", "prophet"]
+            models = [
+                "arima",
+                "xgboost",
+                "ridge",
+                "catboost",
+                "prophet",
+                "lstm",
+                "tcn",
+                "transformer",
+                "garch",
+                "ensemble",
+            ]
+
+        _SLOW_MODELS = frozenset(
+            {"lstm", "tcn", "transformer", "garch", "ensemble"}
+        )
+
+        def _consensus_timeout_s(model_name: str) -> float:
+            n = str(model_name).lower()
+            if n == "ensemble":
+                return 180.0
+            if n in _SLOW_MODELS:
+                return 90.0
+            return 120.0
 
         all_forecasts: List[np.ndarray] = []
         used: List[str] = []
@@ -1335,12 +1359,23 @@ class ForecastRouter:
 
         for name in models:
             try:
-                result = self.get_forecast(
-                    df,
-                    model_type=name,
-                    horizon=horizon_int,
-                    run_walk_forward=False,
-                )
+
+                def _run_one_forecast():
+                    return self.get_forecast(
+                        df,
+                        model_type=name,
+                        horizon=horizon_int,
+                        run_walk_forward=False,
+                    )
+
+                _to = _consensus_timeout_s(name)
+                with ThreadPoolExecutor(max_workers=1) as _pool:
+                    _fut = _pool.submit(_run_one_forecast)
+                    try:
+                        result = _fut.result(timeout=_to)
+                    except FuturesTimeout:
+                        failed.append(f"{name}(timeout {_to:.0f}s)")
+                        continue
                 fc_result = (result or {}).get("forecast", [])
                 fc = np.asarray(fc_result, dtype="float64").ravel()
                 if fc.size < horizon_int:

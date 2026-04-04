@@ -179,18 +179,14 @@ class MorningBriefing:
     def _scan_universe(self) -> List[Dict[str, Any]]:
         """Run scanner on universe and return top candidates (symbol + ai_score)."""
         try:
-            from trading.analysis.market_scanner import (
-                DEFAULT_UNIVERSE,
-                scan_market,
-            )
+            from trading.analysis.market_scanner import _get_universe, scan_market
 
-            uni = list(DEFAULT_UNIVERSE)
             u = (self.universe or "default").lower()
+            uni = list(_get_universe(u))
             if u in ("sp50", "large", "mega"):
                 uni = uni[:50]
             elif u in ("sp30", "core"):
                 uni = uni[:30]
-            # sp100 / default: use full platform default list (same as agent_tools.scan_universe)
 
             raw = scan_market(
                 filters=[],

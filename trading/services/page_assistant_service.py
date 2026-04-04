@@ -71,7 +71,7 @@ def _analyze_context(ss: Any = None) -> str:
         + t
         + ": Interactive chart with period switcher, AI Score "
         "(technical/momentum/sentiment/fundamental), forecasting models "
-        "(ARIMA/XGBoost/Ridge/CatBoost/Prophet), econometric diagnostics, "
+        "(ARIMA/XGBoost/Ridge/CatBoost/Prophet/LSTM/TCN/Transformer/GARCH/Ensemble), econometric diagnostics, "
         "and news sentiment overlay. Ask about the AI score, what the "
         "forecast means, or buy/sell signals."
     )
@@ -257,7 +257,7 @@ def _performance_context(session_state: Any) -> str:
 
 
 def _model_lab_context(session_state: Any) -> str:
-    """Context for Model Lab page: current model being trained."""
+    """Context for Analyze page: current model selection (legacy helper name)."""
     parts = []
     model = session_state.get("current_model") or session_state.get("selected_model")
     if model:
@@ -265,7 +265,7 @@ def _model_lab_context(session_state: Any) -> str:
     if session_state.get("training_in_progress"):
         parts.append("Training in progress.")
     if not parts:
-        return "Model Lab page. No model selected or training in progress."
+        return "Analyze page. No model selected or training in progress."
     return " ".join(parts)
 
 

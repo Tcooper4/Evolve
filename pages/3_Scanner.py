@@ -123,7 +123,7 @@ def _get_short_float(ticker: str) -> str:
         return "N/A"
 
 
-@st.cache_data(ttl=86400)
+@st.cache_data(ttl=300)
 def _load_scanner_universe(universe_label: str) -> list:
     universe_label = (universe_label or "").strip()
     if universe_label.startswith("S&P 100"):

@@ -5,9 +5,11 @@ and ranks results by AI Score.
 Designed to run on demand (not continuously) to avoid rate limits.
 Uses yfinance batch download for efficiency.
 """
+import json
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -25,6 +27,35 @@ DEFAULT_UNIVERSE = [
     "ADBE", "NOW", "INTU", "ISRG", "AMGN", "PLD", "CB", "SPGI", "GS", "BLK",
     "SPY", "QQQ", "IWM", "GLD", "SLV", "TLT", "HYG", "EEM",
 ]
+
+UNIVERSE_FILES = {
+    "sp100": "data/universes/sp100.json",
+    "sp500": "data/universes/sp500.json",
+    "nasdaq100": "data/universes/nasdaq100.json",
+    "russell1000": "data/universes/russell1000.json",
+    "russell3000": "data/universes/russell3000.json",
+}
+
+
+def _get_universe(label: str) -> List[str]:
+    """
+    Resolve a universe label to a ticker list.
+    Known JSON universes load from data/universes/; otherwise DEFAULT_UNIVERSE.
+    """
+    key = (label or "default").lower().strip()
+    if key in UNIVERSE_FILES:
+        path = Path(UNIVERSE_FILES[key])
+        if path.exists():
+            try:
+                with open(path, encoding="utf-8", errors="replace") as f:
+                    data = json.load(f)
+                if isinstance(data, list):
+                    out = [str(x).strip().upper() for x in data if x]
+                    if out:
+                        return out
+            except Exception as e:
+                logger.warning("Universe load failed for %s: %s", key, e)
+    return list(DEFAULT_UNIVERSE)
 
 SCAN_FILTERS = {
     "momentum": "Price > SMA20 AND 20d return > 2%",

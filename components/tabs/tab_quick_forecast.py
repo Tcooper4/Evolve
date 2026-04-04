@@ -54,9 +54,24 @@ def render(
     ModelSelectorAgent = backend["ModelSelectorAgent"]
     MarketAnalyzer = backend["MarketAnalyzer"]
     try:
-        QUICK_FORECAST_MODELS = ["ARIMA", "XGBoost", "Ridge"]
+        QUICK_FORECAST_MODELS = [
+            "ARIMA",
+            "XGBoost",
+            "Ridge",
+            "CatBoost",
+            "Prophet",
+            "LSTM",
+            "TCN",
+            "Transformer",
+            "GARCH",
+            "Ensemble",
+        ]
         st.header("Quick Forecast")
-        st.markdown("Generate fast forecasts with pre-configured models (ARIMA, XGBoost, Ridge)")
+        st.markdown(
+            "Generate forecasts via the consensus router (all major models); "
+            "quick presets: "
+            + ", ".join(QUICK_FORECAST_MODELS)
+        )
 
         # Data Loading Form
         with st.form("data_form"):
@@ -857,35 +872,12 @@ def render(
                                     except Exception as e:
                                         logger.warning(f"Forecast postprocessing failed: {e}")
 
-                                # Log model performance
                                 if 'model_log' in st.session_state and 'perf_logger' in st.session_state:
                                     try:
-                                        import time
-                                        train_time = time.time() - time.time()  # Placeholder - would need actual timing
-
-                                        # Calculate basic metrics if possible
-                                        r2_score = 0.0  # Placeholder - would need actual evaluation
-                                        rmse = 0.0
-                                        mae = 0.0
-
-                                        st.session_state.model_log.log_training(
-                                            model_name=selected_model,
-                                            model_version='1.0',
-                                            training_data_size=len(data),
-                                            training_time=train_time,
-                                            parameters={},
-                                            metrics={
-                                                'r2_score': r2_score,
-                                                'rmse': rmse,
-                                                'mae': mae
-                                            }
-                                        )
-
-                                        st.session_state.perf_logger.log_performance(
-                                            model_name=selected_model,
-                                            metric_name='accuracy',
-                                            metric_value=r2_score,
-                                            timestamp=datetime.now()
+                                        st.caption(
+                                            "Training metrics available after "
+                                            "running walk-forward validation "
+                                            "on the Backtest page."
                                         )
                                     except Exception as e:
                                         logger.warning(

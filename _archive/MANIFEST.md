@@ -1,11 +1,13 @@
 # Evolve — `_archive/` manifest
 
-**Version:** v3.29.0  
-**Date:** 2026-04-03  
+**Version:** v3.39.0  
+**Date:** 2026-04-04  
 
 ## Purpose
 
 Unreachable or legacy modules were moved here **without deletion**, preserving history under `_archive/<original relative path>/`.
+
+Additional archive passes completed in v3.30–v3.35: 60 additional files moved in second pass, 5 in third pass, 101 true orphans in final pass. Total archived: ~267 files.
 
 ## This round (safe archive)
 

@@ -779,7 +779,7 @@ class PromptAgent:
             "williams": "Williams_R",
             "cci": "CCI",
             "atr": "ATR",
-            "forecast": "Forecasting",
+            "forecast": "Analyze",
             "predict": "Prediction",
             "backtest": "Backtesting",
             "optimize": "Optimization",
@@ -1406,7 +1406,7 @@ class PromptAgent:
         """Handle backtest request.
 
         Uses strategy registry + generate_signals + metrics (same pattern as
-        pages/2_Strategy_Testing). Backtester class has no instance run_backtest;
+        pages/5_Backtest). Backtester class has no instance run_backtest;
         module-level run_backtest expects a .run() that does not exist. See BACKTEST_FIX.md.
         """
         try:
@@ -1480,7 +1480,7 @@ class PromptAgent:
                     recommendations=["Check strategy implementation"],
                 )
 
-            # Metrics and equity curve (mirror pages/2_Strategy_Testing)
+            # Metrics and equity curve (mirror pages/5_Backtest)
             initial_capital = 100000.0
             data = data.reindex(signals_df.index).ffill().bfill()
             data["returns"] = data["close"].pct_change()
@@ -1584,14 +1584,14 @@ class PromptAgent:
             return AgentResponse(
                 success=False,
                 message=out.get("error", "Critique unavailable.") or "Run a backtest first, then ask to critique it.",
-                recommendations=out.get("suggestions", ["Run a backtest in Strategy Testing"]),
+                recommendations=out.get("suggestions", ["Run a backtest on the Backtest page"]),
             )
         except Exception as e:
             self.logger.exception("Critique backtest failed: %s", e)
             return AgentResponse(
                 success=False,
                 message=f"Critique failed: {e}",
-                recommendations=["Run a backtest in Strategy Testing, then ask again."],
+                recommendations=["Run a backtest on the Backtest page, then ask again."],
             )
 
     def _handle_recommend_model_request(self, params: Dict[str, Any]) -> AgentResponse:
@@ -1621,7 +1621,7 @@ class PromptAgent:
                     success=True,
                     message=msg,
                     data=out,
-                    recommendations=["Use Forecasting page to train and compare models"],
+                    recommendations=["Use the Analyze page to train and compare models"],
                     next_actions=["Run forecast with recommended model", "Compare with other models"],
                 )
             fallback = out.get("fallback_models", ["LSTM", "ARIMA", "Prophet"])
@@ -1630,8 +1630,8 @@ class PromptAgent:
                 success=True,
                 message=msg,
                 data=out,
-                recommendations=["Use Model Lab to train and compare"],
-                next_actions=["Open Forecasting or Model Lab"],
+                recommendations=["Use the Analyze page to train and compare models"],
+                next_actions=["Open the Analyze page"],
             )
         except Exception as e:
             self.logger.exception("Recommend model failed: %s", e)
@@ -1642,7 +1642,7 @@ class PromptAgent:
             )
 
     def _get_backtest_strategy(self, strategy_name: str) -> Tuple[Optional[Any], str]:
-        """Resolve strategy name to (instance, resolved_name). Uses same strategies as 2_Strategy_Testing."""
+        """Resolve strategy name to (instance, resolved_name). Uses same strategies as Backtest."""
         if not strategy_name or not isinstance(strategy_name, str):
             strategy_name = "RSI"
         name = strategy_name.strip()
@@ -2491,7 +2491,7 @@ class PromptAgent:
                         if not forecast_added:
                             data_context += (
                                 f"\n[Note: No recent forecast available for {symbol} — "
-                                "run the Forecasting page for model predictions]\n"
+                                "run the Analyze page for model predictions]\n"
                             )
 
                         # Market regime freshness
@@ -2526,7 +2526,7 @@ class PromptAgent:
                         if not regime_added:
                             data_context += (
                                 f"\n[Note: No recent market regime analysis available for {symbol} — "
-                                "run the Market Analysis or Strategy pages for regime diagnostics]\n"
+                                "run the Analyze or Backtest pages for regime diagnostics]\n"
                             )
 
                         # If neither forecast nor regime exists at all, add session-history note
@@ -2534,7 +2534,7 @@ class PromptAgent:
                             data_context += (
                                 f"\n[Note: {symbol} has not been analyzed in this session. "
                                 "Live price data shown above. For forecasts and strategy signals, "
-                                "navigate to the Forecasting or Strategy pages.]\n"
+                                "navigate to the Analyze or Backtest pages.]\n"
                             )
                     except Exception as me:
                         self.logger.warning(

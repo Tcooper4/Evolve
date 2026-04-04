@@ -151,7 +151,7 @@ def _collect_reddit_posts(
     return posts, _last_fetch_err
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def _get_social_sentiment_impl(
     symbol: str, limit: int, _auth_mode: str
 ) -> Dict[str, Any]:

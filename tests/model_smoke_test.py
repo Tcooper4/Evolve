@@ -123,30 +123,38 @@ def test_lstm():
     print("PASS: LSTMForecaster")
 
 
-def test_hybrid():
-    """Test HybridModel with ARIMA + XGBoost as submodels."""
-    from trading.forecasting.hybrid_model import HybridModel
-    from trading.models.arima_model import ARIMAModel
-    from trading.models.xgboost_model import XGBoostModel
+def test_transformer():
+    """Transformer path via ForecastRouter (matches live Analyze/consensus wiring)."""
+    try:
+        from trading.models.forecast_router import ForecastRouter
+    except ImportError as e:
+        logger.warning("Skipping Transformer smoke (ForecastRouter): %s", e)
+        return
 
-    logger.info("Testing HybridModel (ARIMA + XGBoost)...")
+    logger.info("Testing Transformer via ForecastRouter...")
     df = make_ohlcv()
-    submodels = {
-        "arima": ARIMAModel({"use_auto_arima": True}),
-        "xgboost": XGBoostModel({}),
-    }
-    # Fit submodels individually
-    submodels["arima"].fit(df["close"])
-    submodels["xgboost"].fit(df, df["close"])
-
-    hybrid = HybridModel(submodels)
-    hybrid.fit(df)
-    preds = hybrid.predict(df)
-    preds = np.asarray(preds, dtype="float64").ravel()
-    logger.info("HybridModel forecast: %s", preds[-7:])
-    # Use last 7 as the comparable horizon
-    _assert_price_range("HybridModel", preds[-7:])
-    print("PASS: HybridModel")
+    df = df.rename(
+        columns={
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume",
+        }
+    )
+    router = ForecastRouter()
+    res = router.get_forecast(
+        df,
+        model_type="transformer",
+        horizon=7,
+        run_walk_forward=False,
+        symbol="SMOKE",
+    )
+    raw = (res or {}).get("forecast", [])
+    fc = np.asarray(raw, dtype="float64").ravel()
+    logger.info("Transformer (router) forecast: %s", fc)
+    _assert_price_range("TransformerForecaster", fc)
+    print("PASS: TransformerForecaster")
 
 
 def test_prophet():
@@ -300,7 +308,7 @@ def main():
     test_xgboost()
     test_arima()
     test_lstm()
-    test_hybrid()
+    test_transformer()
     test_prophet()
     test_catboost()
     test_ridge()

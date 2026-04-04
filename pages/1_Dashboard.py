@@ -167,6 +167,9 @@ def _home_chat_reply(prompt: str):
                 "get_forecast",
                 "get_news",
                 "get_risk_metrics",
+                "get_pattern_analysis",
+                "run_backtest",
+                "get_options_sentiment",
             ],
             max_tokens=2048,
         )
