@@ -637,6 +637,53 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
         except Exception as e:
             logger.debug("Social sentiment skipped: %s", e)
 
+        try:
+            from trading.data.sec_edgar import get_sec_signal
+
+            _sec = get_sec_signal(symbol)
+            _sec_sent = float(_sec.get("sec_sentiment", 0.0))
+            _sec_source = str(_sec.get("sec_source", "unavailable"))
+
+            if _sec_source not in ("unavailable", "error", "no_filing"):
+                _sec_score = 5.0 + _sec_sent * 4.0
+                _sec_score = max(0.0, min(10.0, _sec_score))
+                sentiment_score = sentiment_score * 0.70 + _sec_score * 0.30
+
+                _desc_parts = []
+                if _sec_sent > 0.1:
+                    _desc_parts.append(
+                        f"SEC filing: positive tone ({_sec.get('sec_label')})"
+                    )
+                elif _sec_sent < -0.1:
+                    _desc_parts.append(
+                        f"SEC filing: cautious tone ({_sec.get('sec_label')})"
+                    )
+                themes = _sec.get("sec_themes") or []
+                if themes:
+                    _desc_parts.append(
+                        "SEC themes: " + ", ".join(str(t) for t in themes[:2])
+                    )
+                signals.append(
+                    {
+                        "name": "SEC filings",
+                        "value": round(_sec_score, 1),
+                        "impact": (
+                            "positive"
+                            if _sec_sent > 0.1
+                            else "negative"
+                            if _sec_sent < -0.1
+                            else "neutral"
+                        ),
+                        "description": (
+                            " · ".join(_desc_parts)
+                            if _desc_parts
+                            else f"SEC EDGAR ({_sec_source})"
+                        ),
+                    }
+                )
+        except Exception:
+            pass
+
         # ── FUNDAMENTAL SCORE (0-10) ──────────────────────────────
         fundamental_score = 5.0
         sector = ""  # initialise for use in risk flags

@@ -348,6 +348,40 @@ def render_deep_dive(ticker: str) -> None:
             )
 
         try:
+            from trading.data.sec_edgar import get_latest_filing, get_sec_signal
+
+            _sec = get_sec_signal(sym)
+            _filing = get_latest_filing(sym, "10-Q") or get_latest_filing(sym, "10-K")
+
+            if _sec.get("sec_source") not in ("unavailable", "error", "no_filing"):
+                st.markdown("**SEC Filing Analysis**")
+                _label = str(_sec.get("sec_label", "neutral"))
+                _icon = {
+                    "positive": "🟢",
+                    "negative": "🔴",
+                    "neutral": "⬜",
+                }.get(_label.lower(), "⬜")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Filing sentiment", f"{_icon} {_label.title()}")
+                with col2:
+                    if _filing:
+                        st.metric(
+                            "Latest filing",
+                            str(_filing.get("form", "")),
+                            delta=str(_filing.get("date", "")),
+                            delta_color="off",
+                        )
+                themes = _sec.get("sec_themes") or []
+                if themes:
+                    st.caption("Key themes: " + " · ".join(str(t) for t in themes[:3]))
+                st.caption(
+                    f"Source: SEC EDGAR ({_sec.get('sec_source')})"
+                )
+        except Exception as e:
+            st.caption(f"SEC data unavailable: {e}")
+
+        try:
             from trading.commentary.commentary_engine import (
                 CommentaryRequest,
                 CommentaryType,

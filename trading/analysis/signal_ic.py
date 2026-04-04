@@ -134,17 +134,27 @@ class ICResult:
 
     def has_edge(self) -> bool:
         return (
-            abs(self.ic_7d) > 0.05
+            self.ic_7d > 0.05
             and self.win_rate > 0.52
             and self.n_signals >= 10
         )
 
+    @property
+    def is_contrarian(self) -> bool:
+        return self.ic_7d < -0.05
+
     def summary(self) -> str:
-        edge = "✅ EDGE DETECTED" if self.has_edge() else "❌ NO EDGE"
+        edge_label = (
+            "✅ EDGE"
+            if self.has_edge()
+            else "🔄 CONTRARIAN"
+            if self.is_contrarian
+            else "❌ NO EDGE"
+        )
         return (
             f"{self.symbol}: IC(7d)={self.ic_7d:.3f}, "
             f"Win={self.win_rate:.1%}, "
-            f"Sharpe={self.sharpe:.2f} — {edge}"
+            f"Sharpe={self.sharpe:.2f} — {edge_label}"
         )
 
 
@@ -459,7 +469,13 @@ that buys when score > 5.0. > 0.5 is good.
                         "Win Rate": f"{r.win_rate:.1%}",
                         "Sharpe": f"{r.sharpe:.2f}",
                         "High-Conv Win": f"{r.hit_rate_above_6:.1%}",
-                        "Edge": "✅" if r.has_edge() else "❌",
+                        "Edge": (
+                            "✅"
+                            if r.has_edge()
+                            else "🔄"
+                            if r.is_contrarian
+                            else "❌"
+                        ),
                     }
                 )
 
