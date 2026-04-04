@@ -170,12 +170,7 @@ class RiskAnalyzer:
             + regime_risk * regime_weight
         )
 
-        return {
-            "success": True,
-            "result": min(max(risk_score, 0), 1),
-            "message": "Operation completed successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
+        return float(min(max(risk_score, 0), 1))
 
     def _determine_risk_level(
         self, forecast_risk_score: float, regime_metrics: Dict[str, float]
