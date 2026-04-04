@@ -133,13 +133,42 @@ class MarketRegimeAgent(BaseAgent):
 
         logger.info("Market Regime Agent initialized successfully")
 
-    def _setup(self):
-        # Not yet implemented — raises so
-        # failures are visible, not silent
-        raise NotImplementedError(
-            f"{self.__class__.__name__}._setup() "
-            f"is not yet implemented."
+    def _setup(self) -> None:
+        """BaseAgent hook; heavy init runs in __init__ after super().__init__."""
+        pass
+
+    def validate_input(self, **kwargs) -> bool:
+        """Accept known actions; optional symbol for analyze paths."""
+        action = kwargs.get("action", "analyze_regime")
+        if action == "calculate_regime_features" and kwargs.get("data") is None:
+            return False
+        return True
+
+    def validate_config(self) -> bool:
+        return bool(self.config and self.config.name)
+
+    def handle_error(self, error: Exception) -> AgentResult:
+        logger.error("MarketRegimeAgent error: %s", error)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            metadata={"agent": self.config.name},
         )
+
+    def get_capabilities(self) -> List[str]:
+        return [
+            "analyze_regime",
+            "get_market_data",
+            "calculate_regime_features",
+            "regime_transition_analysis",
+        ]
+
+    def get_requirements(self) -> Dict[str, Any]:
+        return {
+            "packages": ["numpy", "pandas", "scikit-learn", "yfinance"],
+            "optional_model_path": self.model_path,
+        }
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the market regime analysis logic.
@@ -779,10 +808,21 @@ class MarketRegimeAgent(BaseAgent):
             return 0.5  # Default confidence on error
 
 
-# Global market regime agent instance
-market_regime_agent = MarketRegimeAgent()
+_market_regime_agent_singleton: Optional["MarketRegimeAgent"] = None
+
+# Lazy singleton; module import must not instantiate (can fail on env/deps).
+market_regime_agent: Optional["MarketRegimeAgent"] = None
 
 
-def get_market_regime_agent() -> MarketRegimeAgent:
-    """Get the global market regime agent instance."""
-    return market_regime_agent
+def get_market_regime_agent() -> Optional["MarketRegimeAgent"]:
+    """Return a shared MarketRegimeAgent, or None if construction fails."""
+    global _market_regime_agent_singleton, market_regime_agent
+    if _market_regime_agent_singleton is not None:
+        return _market_regime_agent_singleton
+    try:
+        _market_regime_agent_singleton = MarketRegimeAgent()
+        market_regime_agent = _market_regime_agent_singleton
+        return _market_regime_agent_singleton
+    except Exception as e:
+        logger.warning("get_market_regime_agent: init failed: %s", e)
+        return None
