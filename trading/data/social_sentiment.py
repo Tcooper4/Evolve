@@ -66,25 +66,33 @@ def _fetch_subreddit_search(
 
 
 def _reddit_creds_from_runtime() -> Tuple[str, str]:
-    rid = os.environ.get("REDDIT_CLIENT_ID", "").strip()
-    rsec = os.environ.get("REDDIT_CLIENT_SECRET", "").strip()
-    if rid and rsec:
-        return rid, rsec
+    """Env first per key, then Streamlit session (Cloud)."""
+    rid_e = (os.environ.get("REDDIT_CLIENT_ID") or "").strip()
+    sec_e = (os.environ.get("REDDIT_CLIENT_SECRET") or "").strip()
+    rid_s = ""
+    sec_s = ""
     try:
         import streamlit as st
 
-        rid = (st.session_state.get("user_key_REDDIT_CLIENT_ID") or "").strip()
-        rsec = (st.session_state.get("user_key_REDDIT_CLIENT_SECRET") or "").strip()
+        rid_s = (st.session_state.get("user_key_REDDIT_CLIENT_ID") or "").strip()
+        sec_s = (st.session_state.get("user_key_REDDIT_CLIENT_SECRET") or "").strip()
     except Exception:
         pass
-    return rid, rsec
+    reddit_id = rid_e or rid_s
+    reddit_secret = sec_e or sec_s
+    return reddit_id, reddit_secret
+
+
+def _reddit_use_praw(reddit_id: str, reddit_secret: str) -> bool:
+    """PRAW only when both credentials are present and non-empty (no 401 from blanks)."""
+    return bool(str(reddit_id).strip()) and bool(str(reddit_secret).strip())
 
 
 def _fetch_via_praw(
     sub: str, query: str, limit: int
 ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
     reddit_id, reddit_secret = _reddit_creds_from_runtime()
-    if not reddit_id or not reddit_secret:
+    if not _reddit_use_praw(reddit_id, reddit_secret):
         return [], "missing Reddit credentials"
     try:
         import praw
@@ -120,6 +128,9 @@ def _fetch_via_praw(
 def _collect_reddit_posts(
     sym: str, limit: int, use_praw: bool
 ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    rid, rsec = _reddit_creds_from_runtime()
+    if use_praw and not _reddit_use_praw(rid, rsec):
+        use_praw = False
     seen = set()
     posts: List[Dict[str, Any]] = []
     _last_fetch_err: Optional[str] = None
@@ -260,5 +271,5 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
     Returns sentiment_score (-1..1), label, mention_count, top_posts, trending.
     """
     rid, rsec = _reddit_creds_from_runtime()
-    mode = "praw" if (rid and rsec) else "json"
+    mode = "praw" if _reddit_use_praw(rid, rsec) else "json"
     return _get_social_sentiment_impl(symbol, limit, mode)

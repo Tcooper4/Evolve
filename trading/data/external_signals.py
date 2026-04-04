@@ -641,8 +641,9 @@ class RedditSentimentCollector:
         self, symbol: str, max_posts: int = 50
     ) -> List[SentimentData]:
         """Get Reddit sentiment for a symbol."""
-        logger.warning(
-            "Reddit sentiment (OAuth) unavailable for %s: Real API not configured",
+        logger.info(
+            "Reddit OAuth collector skipped for %s (use trading.data.social_sentiment "
+            "for public JSON or PRAW when credentials are set).",
             symbol,
         )
         return []
@@ -804,7 +805,10 @@ class MacroIndicatorCollector:
 
             # If no FRED data, return empty dict (fallback)
             if not indicators:
-                logger.info("No macro indicators available")
+                logger.info(
+                    "Macro via FRED: unavailable (no API key). "
+                    "MacroFactors via yfinance is active."
+                )
                 return {}
 
             return indicators
@@ -883,9 +887,9 @@ class OptionsFlowCollector:
                 except Exception as e:
                     logger.warning(f"Tradier options flow failed: {e}")
 
-            logger.warning(
-                "Options flow unavailable for %s: Real API not configured",
-                symbol,
+            logger.info(
+                "Options via Tradier: unavailable (no API key). "
+                "Using yfinance path (trading.data.options_flow.get_options_flow)."
             )
             return []
 

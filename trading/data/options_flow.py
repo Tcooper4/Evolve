@@ -106,6 +106,7 @@ def get_options_flow(symbol: str, top_n: int = 10) -> Dict[str, Any]:
         "net_flow": "NEUTRAL",
         "expiries": [],
         "error": None,
+        "source": "yfinance",
     }
     sym = (symbol or "").strip().upper()
     if not sym:
