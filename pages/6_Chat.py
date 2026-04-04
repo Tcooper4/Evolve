@@ -31,15 +31,12 @@ render_top_bar()
 
 logger = logging.getLogger(__name__)
 
-# Autonomous mode toggle
+# Morning briefing (separate from sidebar agent orchestration toggle)
 _auto_mode = st.toggle(
-    "🤖 Autonomous Mode — Morning Briefing",
+    "Show morning briefing",
     value=False,
     key="chat_autonomous_mode",
-    help=(
-        "When ON, generates a morning briefing "
-        "with top opportunities before chat."
-    ),
+    help="Shows today's top opportunities above chat",
 )
 
 if _auto_mode:
@@ -58,8 +55,8 @@ if _auto_mode:
             f"Morning briefing unavailable: {e}"
         )
 
-st.title("💬 Chat")
-st.caption("Ask about portfolio, strategies, risk. News and research on the right.")
+st.markdown("### Chat")
+st.caption("Ask about portfolio, strategies, risk. News and market context on the right.")
 
 if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
@@ -116,7 +113,10 @@ with col_chat:
             if role == "assistant" and msg.get("action_data"):
                 _render_action_data(msg["action_data"])
 
-    prompt = st.chat_input("Ask about your portfolio, strategies, risk, or request a backtest...")
+    prompt = st.chat_input(
+        "Ask about markets, request forecasts, scan the universe, analyse patterns, "
+        "run a backtest, or check options flow..."
+    )
     if not prompt and st.session_state.get("chat_prefill"):
         prompt = st.session_state.pop("chat_prefill", "").strip()
 
@@ -165,6 +165,9 @@ with col_chat:
                                     "get_forecast",
                                     "get_news",
                                     "get_risk_metrics",
+                                    "get_pattern_analysis",
+                                    "run_backtest",
+                                    "get_options_sentiment",
                                 ],
                                 max_tokens=2048,
                             )
@@ -226,7 +229,7 @@ with col_news:
             st.session_state.chat_news_results = []
             st.caption(f"News unavailable: {e}")
 
-    st.subheader("📰 News")
+    st.subheader("News")
     news_ticker = st.text_input("Ticker", value=st.session_state.get("chat_news_ticker", "SPY"), key="chat_news_ticker_input_6", placeholder="SPY, AAPL").strip().upper() or "SPY"
     if st.button("Get News", key="chat_get_news_6"):
         _fetch_and_store_news(news_ticker)
@@ -246,11 +249,28 @@ with col_news:
                 st.caption(f"[Read more]({link})")
             st.divider()
 
-    st.subheader("Research")
-    st.caption("arXiv and research panels are on the Model Lab page.")
+    st.subheader("Market context")
+    try:
+        from trading.analysis.macro_factors import MacroFactors
+
+        mf = MacroFactors()
+        ctx = mf.get_current_context()
+        if ctx:
+            mc1, mc2, mc3 = st.columns(3)
+            mc1.metric("VIX", f"{ctx.get('vix', 0):.1f}")
+            mc2.metric("10Y yield", f"{ctx.get('yield_10y', 0):.2f}%")
+            mc3.metric("DXY", f"{ctx.get('dxy', 0):.1f}")
+            st.caption(ctx.get("regime_label", "Regime: unknown"))
+    except Exception:
+        st.caption("Macro context unavailable")
 
 with st.sidebar:
-    agent_mode = st.toggle("🤖 Multi-Agent Mode", value=False, help="Coordinate with Forecasting, Market Analysis, Strategy agents.", key="chat_agent_mode_6")
+    agent_mode = st.toggle(
+        "Enable tool execution",
+        value=False,
+        help="When on, coordinates Forecasting, Market Analysis, and Strategy agents.",
+        key="chat_agent_mode_6",
+    )
     st.session_state["agent_orchestration_mode"] = agent_mode
     if st.button("Save conversation to memory", key="chat_save_6"):
         if not st.session_state.chat_messages:

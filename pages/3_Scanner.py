@@ -29,9 +29,6 @@ except Exception:
 inject_theme()
 render_top_bar()
 
-st.title("🔍 Scanner")
-st.caption("Screen stocks by technical conditions and AI Score ranking")
-
 try:
     from trading.analysis.market_scanner import scan_market, get_available_filters, DEFAULT_UNIVERSE
     scanner_available = True
@@ -177,118 +174,6 @@ def _news_score(ticker: str) -> tuple:
         return "NEU", "#4a6080"
 
 
-col_left, col_right = st.columns([2, 1])
-with col_left:
-    available_filters = get_available_filters()
-    universe_choice = st.selectbox(
-        "Stock Universe",
-        [
-            "S&P 100 (~100, fastest)",
-            "S&P 500 (~500, fast)",
-            "S&P 500 + Nasdaq 100 (~600, moderate)",
-            "Russell 1000 (~1000, slow)",
-            "Russell 3000 (~3000, very slow)",
-        ],
-        key="scanner_universe_choice",
-    )
-    selected_filters = st.multiselect(
-        "Scan Filters",
-        options=list(available_filters.keys()),
-        default=["top_ai_score"],
-        format_func=lambda k: f"{k}: {available_filters[k]}",
-        help="Select one or more filters. Stocks must pass ALL selected filters.",
-        key="scanner_filters",
-    )
-with col_right:
-    max_results = st.slider("Max results", 5, 50, 20, key="scanner_max_results")
-    min_score = st.slider(
-        "Min AI Score",
-        min_value=0.0,
-        max_value=10.0,
-        value=6.5,
-        step=0.5,
-        key="scanner_min_ai_score",
-    )
-    _streaming_mode = st.toggle(
-        "⚡ Live Streaming Mode",
-        value=False,
-        key="scanner_streaming_mode",
-        help="Prepare live pipeline (yfinance); scanner table still refreshes on fragment interval.",
-    )
-    if _streaming_mode:
-        try:
-            from data.streaming_pipeline import create_streaming_pipeline
-
-            _u = universe if universe else ["SPY"]
-            create_streaming_pipeline(_u[:20], timeframes=["1d"], providers=["yfinance"])
-            st.caption(
-                "Streaming pipeline ready — quotes refresh with the scanner fragment."
-            )
-        except Exception as _se:
-            st.caption(
-                f"Streaming unavailable: {_se}. Using standard mode."
-            )
-    custom_universe = st.text_input(
-        "Custom universe (optional)",
-        placeholder="AAPL,MSFT,NVDA,TSLA",
-        help="Comma-separated tickers. Leave blank to use selected stock universe.",
-        key="scanner_custom_universe",
-    )
-
-universe = None
-if custom_universe.strip():
-    universe = [t.strip().upper() for t in custom_universe.split(",") if t.strip()]
-else:
-    label_map = {
-        "S&P 100 (~100, fastest)": "S&P 100",
-        "S&P 500 (~500, fast)": "S&P 500 (~500, fast)",
-        "S&P 500 + Nasdaq 100 (~600, moderate)": "S&P 500 + Nasdaq 100 (~600, moderate)",
-        "Russell 1000 (~1000, slow)": "Russell 1000 (~1000, slow)",
-        "Russell 3000 (~3000, very slow)": "Russell 3000 (~3000, very slow)",
-    }
-    loader_label = label_map.get(universe_choice, "S&P 100")
-    universe = _load_scanner_universe(loader_label)
-    if "Russell 1000" in universe_choice or "Russell 3000" in universe_choice:
-        st.warning("⚠️ Scanning 1000+ stocks may take 2-3 minutes.")
-
-if not selected_filters:
-    st.warning("Select at least one filter to run a scan.")
-    st.stop()
-
-if st.button("🚀 Run Scan", type="primary", key="scanner_run_btn"):
-    progress_bar = st.progress(0.0, text="Scanning...")
-    def _progress(done, total):
-        pct = done / total if total > 0 else 0
-        progress_bar.progress(pct, text=f"Scanning {done}/{total}...")
-    with st.spinner("Running scan..."):
-        _filters_for_scan = [f for f in selected_filters if f != "top_ai_score"]
-        scan_result = scan_market(
-            filters=_filters_for_scan,
-            universe=universe,
-            max_results=max_results,
-            progress_callback=_progress,
-        )
-    progress_bar.empty()
-    if scan_result.get("error"):
-        # Surface the error and keep previous results so the user
-        # can see what went wrong instead of an immediate rerun.
-        st.error(f"Scan error: {scan_result['error']}")
-    else:
-        if "top_ai_score" in selected_filters:
-            _results = scan_result.get("results") or []
-            _results = [r for r in _results if float(r.get("ai_score", 0) or 0) >= float(min_score)]
-            scan_result["results"] = _results
-            scan_result["passed"] = len(_results)
-        st.session_state.scanner_results = scan_result
-        st.rerun()
-
-if "scanner_results" not in st.session_state:
-    st.session_state.scanner_results = None
-
-_st_version = tuple(int(x) for x in st.__version__.split(".")[:2])
-_FRAGMENT_OK = _st_version >= (1, 37)
-
-
 def _scanner_table():
     scan_result = st.session_state.get("scanner_results")
     if not scan_result or scan_result.get("error"):
@@ -338,7 +223,6 @@ def _scanner_table():
     except Exception:
         pass
 
-    # News Score and Short Float columns
     for r in results:
         label, color = _news_score(r.get("symbol", ""))
         r["news_score"] = label
@@ -349,16 +233,21 @@ def _scanner_table():
 
     df = pd.DataFrame(results)
 
-    # Signal filter buttons (client-side filter)
     if "scanner_signal_filter" not in st.session_state:
         st.session_state.scanner_signal_filter = "All"
     filter_opts = ["All", "Score A+", "Breakout", "Oversold", "News Surge"]
+    st.markdown(
+        '<div style="background: var(--secondary-bg, var(--secondary-background-color, '
+        "#1e1e1e)); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;\">",
+        unsafe_allow_html=True,
+    )
     cols = st.columns(len(filter_opts))
     for i, opt in enumerate(filter_opts):
         with cols[i]:
-            if st.button(opt, key=f"scanner_filter_{opt}", width='stretch'):
+            if st.button(opt, key=f"scanner_filter_{opt}", width="stretch"):
                 st.session_state.scanner_signal_filter = opt
                 st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
     current_filter = st.session_state.scanner_signal_filter
 
     if current_filter == "Score A+":
@@ -421,28 +310,216 @@ def _scanner_table():
             styler = styler.map(_color_news_cell, subset=["News"])
         except Exception:
             styler = styler.applymap(_color_news_cell, subset=["News"])
-    st.dataframe(styler, width='stretch', height=400, key="scanner_results_df")
+    st.dataframe(styler, width="stretch", height=400, key="scanner_results_df")
 
     if len(df_display) >= 3 and "AI Score" in df_display.columns:
         st.markdown("#### AI Score Distribution")
         fig = px.bar(
             df_display.sort_values("AI Score", ascending=False),
-            x="Symbol", y="AI Score", color="AI Score",
-            color_continuous_scale="RdYlGn", range_color=[1, 10],
-            text="Grade", height=300,
+            x="Symbol",
+            y="AI Score",
+            color="AI Score",
+            color_continuous_scale="RdYlGn",
+            range_color=[1, 10],
+            text="Grade",
+            height=300,
         )
         fig.update_layout(template="plotly_dark", showlegend=False)
         fig.update_traces(textposition="outside")
-        st.plotly_chart(fig, width='stretch', key="scanner_dist_chart")
+        st.plotly_chart(fig, width="stretch", key="scanner_dist_chart")
 
-    with st.expander("🔗 Pairs Trading Scanner"):
+    st.markdown("#### Signal breakdown")
+    st.caption(
+        "Select any symbol from the results above to see what's driving its score."
+    )
+    sym_opts = [r.get("symbol") for r in results if r.get("symbol")]
+    if sym_opts:
+        selected = st.selectbox(
+            "Symbol",
+            options=sym_opts,
+            key="scanner_signal_sym",
+            label_visibility="collapsed",
+        )
+        if selected:
+            try:
+                from trading.analysis.ai_score import compute_ai_score
+                from trading.data.price_cache import get_history as _gh
+
+                _hist = _gh(selected, period="6mo")
+                _ai = compute_ai_score(selected, _hist)
+                if _ai.get("error") is None:
+                    st.markdown(f"**{selected}** — {_ai['summary']}")
+                    _sigs = pd.DataFrame(_ai.get("signals", []))
+                    if not _sigs.empty and "name" in _sigs.columns:
+                        st.dataframe(
+                            normalize_for_display(
+                                _sigs[["name", "value", "impact", "description"]]
+                            ),
+                            width="stretch",
+                            key="scanner_drill_sigs",
+                        )
+            except Exception as _e:
+                st.caption(f"Feature unavailable: {_e}")
+
+
+col_title, col_universe, col_score, col_stream = st.columns([3, 2, 2, 2])
+with col_title:
+    st.markdown("### Scanner")
+with col_universe:
+    universe_choice = st.selectbox(
+        "Stock Universe",
+        [
+            "S&P 100 (~100, fastest)",
+            "S&P 500 (~500, fast)",
+            "S&P 500 + Nasdaq 100 (~600, moderate)",
+            "Russell 1000 (~1000, slow)",
+            "Russell 3000 (~3000, very slow)",
+        ],
+        key="scanner_universe_choice",
+        label_visibility="collapsed",
+    )
+with col_score:
+    min_score = st.slider(
+        "Min AI Score",
+        min_value=0.0,
+        max_value=10.0,
+        value=6.5,
+        step=0.5,
+        key="scanner_min_ai_score",
+        label_visibility="collapsed",
+    )
+with col_stream:
+    st.toggle(
+        "Live mode",
+        key="scanner_streaming_mode",
+        help="Auto-refresh every 60 seconds",
+    )
+
+st.caption("Screen stocks by technical conditions and AI Score ranking")
+
+tab_scan, tab_pairs = st.tabs([
+    "Scanner",
+    "Pairs trading",
+])
+
+available_filters = get_available_filters()
+
+with tab_scan:
+    col_left, col_right = st.columns([2, 1])
+    with col_left:
+        selected_filters = st.multiselect(
+            "Scan Filters",
+            options=list(available_filters.keys()),
+            default=["top_ai_score"],
+            format_func=lambda k: f"{k}: {available_filters[k]}",
+            help="Select one or more filters. Stocks must pass ALL selected filters.",
+            key="scanner_filters",
+        )
+    with col_right:
+        max_results = st.slider("Max results", 5, 50, 20, key="scanner_max_results")
+        custom_universe = st.text_input(
+            "Custom universe (optional)",
+            placeholder="AAPL,MSFT,NVDA,TSLA",
+            help="Comma-separated tickers. Leave blank to use selected stock universe.",
+            key="scanner_custom_universe",
+        )
+
+    universe = None
+    if custom_universe.strip():
+        universe = [t.strip().upper() for t in custom_universe.split(",") if t.strip()]
+    else:
+        label_map = {
+            "S&P 100 (~100, fastest)": "S&P 100",
+            "S&P 500 (~500, fast)": "S&P 500 (~500, fast)",
+            "S&P 500 + Nasdaq 100 (~600, moderate)": "S&P 500 + Nasdaq 100 (~600, moderate)",
+            "Russell 1000 (~1000, slow)": "Russell 1000 (~1000, slow)",
+            "Russell 3000 (~3000, very slow)": "Russell 3000 (~3000, very slow)",
+        }
+        loader_label = label_map.get(universe_choice, "S&P 100")
+        universe = _load_scanner_universe(loader_label)
+        if "Russell 1000" in universe_choice or "Russell 3000" in universe_choice:
+            st.warning("⚠️ Scanning 1000+ stocks may take 2-3 minutes.")
+
+    if st.session_state.get("scanner_streaming_mode"):
+        try:
+            from data.streaming_pipeline import create_streaming_pipeline
+
+            _u = universe if universe else ["SPY"]
+            create_streaming_pipeline(_u[:20], timeframes=["1d"], providers=["yfinance"])
+            st.caption(
+                "Streaming pipeline ready — quotes refresh with the scanner fragment."
+            )
+        except Exception as _se:
+            st.caption(
+                f"Streaming unavailable: {_se}. Using standard mode."
+            )
+
+    if not selected_filters:
+        st.warning("Select at least one filter to run a scan.")
+        st.stop()
+
+    if st.button("Run Scan", type="primary", key="scanner_run_btn"):
+        progress_bar = st.progress(0.0, text="Scanning...")
+
+        def _progress(done, total):
+            pct = done / total if total > 0 else 0
+            progress_bar.progress(pct, text=f"Scanning {done}/{total}...")
+
+        with st.spinner("Running scan..."):
+            _filters_for_scan = [f for f in selected_filters if f != "top_ai_score"]
+            scan_result = scan_market(
+                filters=_filters_for_scan,
+                universe=universe,
+                max_results=max_results,
+                progress_callback=_progress,
+            )
+        progress_bar.empty()
+        if scan_result.get("error"):
+            st.error(f"Scan error: {scan_result['error']}")
+        else:
+            if "top_ai_score" in selected_filters:
+                _results = scan_result.get("results") or []
+                _results = [
+                    r for r in _results
+                    if float(r.get("ai_score", 0) or 0) >= float(min_score)
+                ]
+                scan_result["results"] = _results
+                scan_result["passed"] = len(_results)
+            st.session_state.scanner_results = scan_result
+            st.rerun()
+
+    if "scanner_results" not in st.session_state:
+        st.session_state.scanner_results = None
+
+    _st_version = tuple(int(x) for x in st.__version__.split(".")[:2])
+    _FRAGMENT_OK = _st_version >= (1, 37)
+    if _FRAGMENT_OK:
+        @st.fragment(run_every=60)
+        def _scanner_results():
+            _scanner_table()
+
+        _scanner_results()
+    else:
+        _scanner_table()
+
+with tab_pairs:
+    st.markdown("#### Pairs trading")
+    st.caption("Run a cointegration scan on symbols from your last scan results.")
+    scan_result = st.session_state.get("scanner_results") or {}
+    results = scan_result.get("results") or []
+    if not results:
+        st.info("Run a scan in the Scanner tab first to populate candidate symbols.")
+    else:
         try:
             from trading.strategies.pairs_trading_engine import PairsTradingEngine
-
             from trading.data.price_cache import get_history
 
             _pe = PairsTradingEngine()
-            if st.button("Find Cointegrated Pairs", key="pairs_scan_btn"):
+            if st.button(
+                "Find cointegrated pairs",
+                key="pairs_scan_btn",
+                type="primary",
+            ):
                 with st.spinner("Running cointegration tests…"):
                     _syms = [
                         str(r.get("symbol"))
@@ -480,38 +557,6 @@ def _scanner_table():
                         st.caption("No cointegrated pairs found in this sample.")
         except Exception as _pe:
             st.caption(f"Pairs trading unavailable: {_pe}")
-
-    st.markdown("#### Drill Down")
-    selected_sym = st.selectbox(
-        "Select stock to analyze",
-        options=[r.get("symbol") for r in results if r.get("symbol")],
-        key="scanner_drilldown",
-    )
-    if selected_sym:
-        try:
-            from trading.analysis.ai_score import compute_ai_score
-            _hist = get_history(selected_sym, period="6mo")
-            _ai = compute_ai_score(selected_sym, _hist)
-            if _ai.get("error") is None:
-                st.markdown(f"**{selected_sym}** — {_ai['summary']}")
-                _sigs = pd.DataFrame(_ai.get("signals", []))
-                if not _sigs.empty and "name" in _sigs.columns:
-                    st.dataframe(
-                        normalize_for_display(_sigs[["name", "value", "impact", "description"]]),
-                        width='stretch',
-                        key="scanner_drill_sigs",
-                    )
-        except Exception as _e:
-            st.caption(f"Feature unavailable: {_e}")
-
-
-if _FRAGMENT_OK:
-    @st.fragment(run_every=30)
-    def _scanner_results():
-        _scanner_table()
-    _scanner_results()
-else:
-    _scanner_table()
 
 
 # Page Assistant

@@ -78,27 +78,31 @@ if "analyze_symbol" not in st.session_state:
 if "analyze_forecast_horizon" not in st.session_state:
     st.session_state["analyze_forecast_horizon"] = 7
 
-st.title("📈 Analyze")
-st.markdown(
-    "Ticker analysis with forecasting, AI model selection, and market analysis"
-)
+c1, c2, c3 = st.columns([2, 2, 2])
+with c1:
+    st.markdown("### Analyze")
+    st.caption("Single-stock deep analysis")
+with c2:
+    ticker = st.text_input(
+        "Ticker",
+        value=st.session_state.get("analyze_ticker", "AAPL"),
+        key="analyze_ticker",
+        label_visibility="collapsed",
+        placeholder="Enter ticker...",
+    )
+with c3:
+    trader_mode = st.radio(
+        "Mode",
+        ["Short-term", "Long-term"],
+        horizontal=True,
+        key="analyze_trader_mode",
+        label_visibility="collapsed",
+    )
 
-ticker = st.text_input(
-    "Ticker",
-    value=st.session_state.get("analyze_ticker", "AAPL"),
-    key="analyze_ticker",
-)
 if not ticker or not ticker.strip():
     ticker = "AAPL"
 else:
     ticker = ticker.strip().upper()
-
-trader_mode = st.radio(
-    "Mode",
-    ["Short-term", "Long-term"],
-    horizontal=True,
-    key="analyze_trader_mode",
-)
 
 period_map = {
     "1D": "1d",

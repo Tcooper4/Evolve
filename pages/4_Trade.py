@@ -70,7 +70,7 @@ def _log_equity(note: str = ""):
 
 _ensure_paper()
 
-st.title("💰 Trade")
+st.markdown("### Trade")
 st.caption("Paper execution, portfolio, performance, and risk")
 
 eq = _paper_equity()
@@ -101,8 +101,12 @@ with c4:
         _paper_reset()
         st.rerun()
 
-tab_paper, tab_port, tab_perf, tab_risk = st.tabs(
-    ["Paper Trading", "Portfolio", "Performance", "Risk Management"]
+tab_paper, tab_portfolio, tab_risk = st.tabs(
+    [
+        "Paper trading",
+        "Portfolio & performance",
+        "Risk",
+    ]
 )
 
 with tab_paper:
@@ -111,6 +115,27 @@ with tab_paper:
         "Simulated fills at last close from yfinance. "
         "No live broker — for experimentation only."
     )
+    try:
+        from trading.services.recommendation_tracker import RecommendationTracker
+
+        tracker = RecommendationTracker()
+        latest = tracker.get_latest_open()
+        if latest:
+            st.info(
+                f"Latest agent recommendation: "
+                f"{latest['action']} {latest['symbol']} "
+                f"@ {latest['entry']:.2f} · "
+                f"Target: {latest['target']:.2f} · "
+                f"Stop: {latest['stop']:.2f}"
+            )
+            if st.button("Use this recommendation", key="prefill_rec_btn"):
+                st.session_state["paper_sym"] = latest["symbol"]
+                st.session_state["paper_side"] = (
+                    "Buy" if latest["action"] == "BUY" else "Sell"
+                )
+                st.rerun()
+    except Exception:
+        pass
     pc1, pc2, pc3 = st.columns(3)
     with pc1:
         p_sym = st.text_input("Symbol", "AAPL", key="paper_sym").strip().upper()
@@ -358,8 +383,8 @@ with tab_paper:
     except Exception as e:
         st.caption(f"Cost estimate unavailable: {e}")
 
-with tab_port:
-    st.subheader("Portfolio")
+with tab_portfolio:
+    st.subheader("Portfolio & performance")
     _ensure_paper()
     cash = float(st.session_state.evolve_paper_cash)
     st.metric("Cash (paper)", f"${cash:,.2f}")
@@ -367,7 +392,7 @@ with tab_port:
 
     st.markdown("#### Holdings (paper)")
     if not st.session_state.evolve_paper_positions:
-        st.info("No holdings. Place a paper trade in the Paper Trading tab.")
+        st.info("No holdings. Place a paper trade in the Paper trading tab.")
     else:
         rows = []
         for sym, row in st.session_state.evolve_paper_positions.items():
@@ -413,12 +438,26 @@ with tab_port:
             f"supported path. ({e})"
         )
 
-with tab_perf:
-    st.subheader("Performance")
-    _ensure_paper()
+    st.markdown("---")
+    st.markdown("#### Performance")
     trades = list(st.session_state.evolve_paper_trades)
-    if not trades:
-        st.info("No paper trades yet. Executions appear here after you place orders.")
+    if len(trades) == 0:
+        st.info(
+            "No paper trades yet. Open a position in the Paper trading tab, or use "
+            "the agent recommendations from Home."
+        )
+    elif len(trades) < 3:
+        st.info(
+            f"{len(trades)} trade(s) recorded. Performance metrics appear after "
+            "3 or more trades."
+        )
+        tdf = pd.DataFrame(trades)
+        st.markdown("#### Trade history")
+        st.dataframe(
+            normalize_for_display(tdf),
+            use_container_width=True,
+            key="perf_trades_df",
+        )
     else:
         tdf = pd.DataFrame(trades)
         st.markdown("#### Trade history")
@@ -445,10 +484,26 @@ with tab_perf:
                     m2.metric("Sharpe (approx)", f"{pm.sharpe_ratio:.2f}")
                     m3.metric("Max drawdown", f"{pm.max_drawdown*100:.2f}%")
                     m4.metric("Win rate (marks)", f"{pm.win_rate*100:.1f}%")
-                    with st.expander("Full metrics"):
-                        st.json(pm.to_dict())
+                    _pmd = pm.to_dict()
+                    _fk = (
+                        "volatility",
+                        "calmar_ratio",
+                        "sortino_ratio",
+                        "avg_win",
+                        "avg_loss",
+                    )
+                    _extras = {k: _pmd[k] for k in _fk if k in _pmd and _pmd[k] is not None}
+                    if _extras:
+                        st.markdown("##### Additional metrics")
+                        _ec = st.columns(min(4, len(_extras)))
+                        for i, (k, v) in enumerate(list(_extras.items())[:8]):
+                            _ec[i % len(_ec)].metric(
+                                k.replace("_", " ").title(),
+                                f"{float(v):.4f}" if isinstance(v, float) else str(v),
+                            )
 
-                    st.markdown("**Alpha Attribution**")
+                    st.markdown("---")
+                    st.markdown("#### Alpha attribution")
                     try:
                         import yfinance as yf
 
@@ -483,7 +538,6 @@ with tab_perf:
                                         use_container_width=True,
                                     )
                                 try:
-                                    st.markdown("**Alpha Attribution**")
                                     _x1, _x2, _x3 = st.columns(3)
                                     _x1.metric(
                                         "Alpha",
@@ -518,9 +572,9 @@ with tab_perf:
             )
 
 with tab_risk:
-    st.subheader("Risk Management")
+    st.subheader("Risk")
 
-    st.markdown("#### Position sizing (Kelly) & VaR")
+    st.markdown("### Position sizing")
     rk_sym = st.text_input(
         "Symbol for return history",
         "SPY",
@@ -532,7 +586,7 @@ with tab_risk:
         value=10000.0,
         key="risk_kelly_pv",
     )
-    if st.button("Compute Kelly & VaR", key="risk_kelly_btn"):
+    if st.button("Compute Kelly & VaR", key="risk_kelly_btn", type="primary"):
         try:
             import yfinance as yf
             from utils.risk_metrics import (
@@ -551,7 +605,19 @@ with tab_risk:
                 if kv.get("error"):
                     st.caption(f"Kelly: {kv['error']}")
                 else:
-                    st.json({k: v for k, v in kv.items() if k != "interpretation"})
+                    kc1, kc2, kc3, kc4 = st.columns(4)
+                    _rk = kv.get("recommended_pct")
+                    if _rk is not None:
+                        kc1.metric("Recommended size", f"{float(_rk):.2f}%")
+                    _fk = kv.get("full_kelly")
+                    if _fk is not None:
+                        kc2.metric("Full Kelly", f"{float(_fk)*100:.2f}%")
+                    _wr = kv.get("win_rate")
+                    if _wr is not None:
+                        kc3.metric("Win rate", f"{float(_wr)*100:.1f}%")
+                    _dp = kv.get("data_points")
+                    if _dp is not None:
+                        kc4.metric("Days", str(int(_dp)))
                     st.caption(kv.get("interpretation", ""))
                 vr = calculate_var(
                     r,
@@ -567,7 +633,7 @@ with tab_risk:
             st.caption(f"Kelly/VaR unavailable: {e}")
 
     st.markdown("---")
-    st.markdown("**Advanced risk (volatility & stress)**")
+    st.markdown("### Stress testing")
     try:
         import yfinance as yf
 
@@ -591,63 +657,58 @@ with tab_risk:
                             use_container_width=True,
                         )
     except Exception as _re:
-        st.caption(f"Advanced risk analysis unavailable: {_re}")
+        st.caption(f"Stress testing unavailable: {_re}")
 
     st.markdown("---")
-    st.subheader("📊 Advanced Risk Analytics")
+    st.markdown("### Portfolio risk")
     try:
         from trading.risk.advanced_risk import AdvancedRiskAnalyzer
         from trading.portfolio.portfolio_manager import PortfolioManager
 
         _pm = st.session_state.get("portfolio_manager")
-        if _pm and isinstance(_pm, PortfolioManager):
-            _positions = _pm.get_all_positions()
-            if _positions:
+        if (
+            _pm
+            and isinstance(_pm, PortfolioManager)
+            and _pm.get_all_positions()
+        ):
+            _hist_returns = getattr(_pm, "get_portfolio_returns", None)
+            _rets = _hist_returns() if callable(_hist_returns) else None
+            if _rets is not None and not _rets.empty:
                 _analyzer = AdvancedRiskAnalyzer()
-                _hist_returns = getattr(_pm, "get_portfolio_returns", None)
-                if callable(_hist_returns):
-                    _rets = _hist_returns()
-                else:
-                    _rets = None
-                if _rets is not None and not _rets.empty:
-                    _risk_metrics = _analyzer.calculate_comprehensive_risk(_rets)
-                    if _risk_metrics:
-                        _rc1, _rc2, _rc3 = st.columns(3)
-                        with _rc1:
-                            st.metric(
-                                "Portfolio VaR (95%)",
-                                f"{_risk_metrics.var_95:.2%}",
-                            )
-                        with _rc2:
-                            st.metric(
-                                "CVaR (95%)",
-                                f"{_risk_metrics.cvar_95:.2%}",
-                            )
-                        with _rc3:
-                            st.metric(
-                                "Max Drawdown",
-                                f"{_risk_metrics.max_drawdown:.2%}",
-                            )
-                    else:
-                        st.caption(
-                            "No risk metrics available for current positions."
-                        )
+                _risk_metrics = _analyzer.calculate_comprehensive_risk(_rets)
+                if _risk_metrics:
+                    _rc1, _rc2, _rc3 = st.columns(3)
+                    _rc1.metric(
+                        "Portfolio VaR (95%)",
+                        f"{_risk_metrics.var_95:.2%}",
+                    )
+                    _rc2.metric(
+                        "CVaR (95%)",
+                        f"{_risk_metrics.cvar_95:.2%}",
+                    )
+                    _rc3.metric(
+                        "Max drawdown",
+                        f"{_risk_metrics.max_drawdown:.2%}",
+                    )
                 else:
                     st.caption(
-                        "Not enough return history to compute advanced risk metrics."
+                        "Portfolio manager returned no aggregate risk metrics."
                     )
             else:
-                st.caption("No open positions from portfolio manager to analyze.")
+                st.caption(
+                    "Portfolio manager has positions but no return history for "
+                    "advanced analytics."
+                )
         else:
             st.caption(
-                "Advanced analytics apply when the portfolio manager is initialized "
-                "and has positions."
+                "Advanced multi-position analytics require a populated portfolio "
+                "manager; use symbol risk below otherwise."
             )
     except Exception as _re:
-        st.caption(f"Advanced risk unavailable: {_re}")
+        st.caption(f"Advanced portfolio risk unavailable: {_re}")
 
     st.markdown("---")
-    st.subheader("📉 Risk Analytics")
+    st.markdown("### Symbol risk")
 
     risk_col1, risk_col2 = st.columns(2)
     with risk_col1:
@@ -663,7 +724,7 @@ with tab_risk:
         )
 
     if st.button(
-        "▶ Calculate Risk Metrics",
+        "Calculate risk metrics",
         key="risk_calc_btn",
         type="primary",
     ):

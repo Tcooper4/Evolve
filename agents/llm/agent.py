@@ -2780,6 +2780,53 @@ def get_evolve_platform_tool_registry():
                 "required": ["symbol"],
             },
         },
+        {
+            "name": "get_pattern_analysis",
+            "description": (
+                "Chart patterns, support/resistance context, and trend read for a ticker."
+            ),
+            "function": _agent_tools.get_pattern_analysis,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
+            "name": "run_backtest",
+            "description": (
+                "Quick historical strategy backtest (~90d) with summary return, Sharpe, "
+                "drawdown, and win rate."
+            ),
+            "function": _agent_tools.run_backtest,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "days": {
+                        "type": "integer",
+                        "description": "Lookback calendar days (default 90)",
+                    },
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
+            "name": "get_options_sentiment",
+            "description": (
+                "Options flow: put/call volume ratio, max pain, unusual activity, net flow."
+            ),
+            "function": _agent_tools.get_options_sentiment,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                },
+                "required": ["symbol"],
+            },
+        },
     ]
 
 

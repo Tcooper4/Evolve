@@ -62,6 +62,18 @@ _TOOL_PATTERNS = {
     "get_risk_metrics": [
         "risk", "volatility", "sharpe", "drawdown", "var", "kelly",
     ],
+    "get_pattern_analysis": [
+        "pattern", "chart pattern", "head and shoulders", "breakout",
+        "support", "resistance", "technical pattern",
+    ],
+    "run_backtest": [
+        "backtest", "historical performance", "how has this strategy",
+        "test this strategy", "strategy performance",
+    ],
+    "get_options_sentiment": [
+        "options flow", "put call", "put/call", "unusual options",
+        "options activity", "call options", "put options",
+    ],
 }
 
 
@@ -211,6 +223,27 @@ def _heuristic_tool_calls(
             "name": "get_ai_score",
             "arguments": {"symbol": sym},
         })
+    if _pattern_hit(msg, _TOOL_PATTERNS.get("get_pattern_analysis", [])) and (
+        "get_pattern_analysis" in allowed_names
+    ):
+        calls.append({
+            "name": "get_pattern_analysis",
+            "arguments": {"symbol": sym},
+        })
+    if _pattern_hit(msg, _TOOL_PATTERNS.get("run_backtest", [])) and (
+        "run_backtest" in allowed_names
+    ):
+        calls.append({
+            "name": "run_backtest",
+            "arguments": {"symbol": sym, "days": 90},
+        })
+    if _pattern_hit(msg, _TOOL_PATTERNS.get("get_options_sentiment", [])) and (
+        "get_options_sentiment" in allowed_names
+    ):
+        calls.append({
+            "name": "get_options_sentiment",
+            "arguments": {"symbol": sym},
+        })
 
     seen = set()
     deduped: List[Dict[str, Any]] = []
@@ -240,9 +273,10 @@ def _build_router_prompt(
         lines.append(f"- {t['name']}: {t['schema_hint']}")
     lines.extend([
         "",
-        "Rules: Prefer live tools when the user asks for scanner/ideas, a specific ticker analysis, forecast, news, or risk stats.",
+        "Rules: Prefer live tools when the user asks for scanner/ideas, a specific ticker analysis, forecast, news, risk, patterns, backtests, or options flow.",
         "For scan_universe: universe is one of default|large|sp50|core; min_score 1-10; max_results integer.",
         "For symbol tools: symbol is a US ticker like AAPL.",
+        "For run_backtest: optional days (default 90).",
         "",
         "---",
         f"User message: {user_message}",
@@ -292,6 +326,21 @@ def _compact_tool_result(name: str, result: Dict[str, Any]) -> str:
         keys = ("sharpe_ratio", "sharpe", "max_drawdown", "win_rate", "annualized_return")
         bits = [f"{k}={m.get(k)}" for k in keys if m.get(k) is not None]
         return f"get_risk_metrics({result.get('symbol')}): " + ", ".join(bits[:8])
+    if name == "get_pattern_analysis":
+        return (
+            f"get_pattern_analysis({result.get('symbol')}):\n"
+            f"{(result.get('summary') or '')[:2000]}"
+        )
+    if name == "run_backtest":
+        return result.get("summary") or json.dumps(
+            {k: result.get(k) for k in ("total_return", "sharpe", "max_drawdown", "win_rate")},
+            default=str,
+        )
+    if name == "get_options_sentiment":
+        return result.get("summary") or json.dumps(
+            {k: result.get(k) for k in ("put_call_ratio", "max_pain", "net_flow", "unusual_activity")},
+            default=str,
+        )
     return f"{name}: {json.dumps(result, default=str)[:1500]}"
 
 
@@ -309,6 +358,9 @@ def _caption_for_tool(name: str, result: Dict[str, Any]) -> str:
         "get_forecast": "Ran consensus forecast",
         "get_news": "Loaded recent headlines",
         "get_risk_metrics": "Computed risk metrics",
+        "get_pattern_analysis": "Ran pattern analysis",
+        "run_backtest": "Ran quick backtest",
+        "get_options_sentiment": "Loaded options flow",
     }
     sym = result.get("symbol") or ""
     base = labels.get(name, f"Ran {name}")

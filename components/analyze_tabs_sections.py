@@ -5,12 +5,10 @@ Analyze page: tab definitions stay here; bodies live in components/tabs/.
 import streamlit as st
 
 from components.tabs.tab_ai_model_selection import render as render_ai_model_selection
-from components.tabs.tab_backtester import render as render_backtester
 from components.tabs.tab_causal import render as render_causal
 from components.tabs.tab_diagnostics import render as render_diagnostics
 from components.tabs.tab_earnings import render as render_earnings
 from components.tabs.tab_market_analysis import render as render_market_analysis
-from components.tabs.tab_model_comparison import render as render_model_comparison
 from components.tabs.tab_monte_carlo import render as render_monte_carlo
 from components.tabs.tab_multi_asset_gnn import render as render_multi_asset_gnn
 from components.tabs.tab_options_chain import render as render_options_chain
@@ -56,42 +54,52 @@ def render_tabbed_analyze_sections(
     )
 
     st.markdown("---")
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab_options, tab_insider, tab_earnings, tab_diag = st.tabs(
+    tab_forecast, tab_risk, tab_market, tab_technical, tab_research = st.tabs(
         [
-            "🚀 Quick Forecast",
-            "⚙️ Advanced Forecasting",
-            "🤖 AI Model Selection",
-            "📊 Model Comparison",
-            "📈 Market Analysis",
-            "🔗 Multi-Asset (GNN)",
-            "🎲 Monte Carlo",
-            "📊 Options & Short",
-            "🕵️ Insider Flow",
-            "📅 Earnings",
-            "📐 Diagnostics",
+            "Forecast",
+            "Risk",
+            "Market",
+            "Technical",
+            "Research",
         ]
     )
 
-    with tab1:
+    with tab_forecast:
         render_quick_forecast(**kw)
-    with tab2:
-        render_backtester(**kw)
-    with tab3:
-        render_ai_model_selection(**kw)
-    with tab4:
-        render_model_comparison(**kw)
-    with tab5:
-        render_market_analysis(**kw)
-    with tab6:
-        render_multi_asset_gnn(**kw)
-    with tab7:
-        render_monte_carlo(**kw)
-    with tab_options:
-        render_options_chain(**kw)
-    with tab_insider:
+        st.markdown("---")
+        with st.expander("Model selection details"):
+            render_ai_model_selection(**kw)
+
+    with tab_risk:
+        c_mc, c_opt = st.columns([3, 2])
+        with c_mc:
+            render_monte_carlo(**kw)
+        with c_opt:
+            render_options_chain(**kw)
+        st.markdown("---")
         render_scanner_signals(**kw)
-    with tab_earnings:
+
+    with tab_market:
+        render_market_analysis(**kw)
+        st.markdown("---")
         render_earnings(**kw)
-    with tab_diag:
+
+    with tab_technical:
         render_diagnostics(**kw)
+        st.markdown("---")
+        st.caption(
+            "Chart patterns feed into AI Score automatically. View detected patterns "
+            "in the deep dive for this ticker."
+        )
+        if st.button(
+            f"Open deep dive for {ticker}",
+            key="analyze_open_deep_dive",
+            type="primary",
+        ):
+            st.session_state["deep_dive_ticker"] = ticker
+            st.switch_page("pages/1_Dashboard.py")
+
+    with tab_research:
+        render_multi_asset_gnn(**kw)
+        st.markdown("---")
         render_causal(**kw)

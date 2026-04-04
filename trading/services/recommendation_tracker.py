@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,44 @@ class RecommendationTracker:
     """
     Saves AI Score recommendations with entry price and checks outcomes.
     """
+
+    def get_latest_open(self, session_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Most recent non-closed recommendation for UI prefill (entry/target/stop keys)."""
+        sid = (session_id or "").strip()
+        if not sid:
+            try:
+                from utils.session_utils import get_stable_user_id
+
+                sid = (get_stable_user_id() or "").strip()
+            except Exception as e:
+                logger.debug("get_latest_open: no session_id: %s", e)
+                return None
+        if not sid:
+            return None
+        try:
+            from config.user_store import load_user_preferences
+
+            prefs = load_user_preferences(sid) or {}
+            recs = prefs.get(_REC_KEY, [])
+            if not isinstance(recs, list):
+                return None
+            open_recs = [
+                r for r in recs
+                if isinstance(r, dict) and not r.get("closed")
+            ]
+            if not open_recs:
+                return None
+            r = open_recs[-1]
+            return {
+                "symbol": str(r.get("symbol", "")).strip().upper(),
+                "action": str(r.get("action", "HOLD")).upper(),
+                "entry": float(r.get("entry_price") or 0),
+                "target": float(r.get("target_price") or 0),
+                "stop": float(r.get("stop_price") or 0),
+            }
+        except Exception as e:
+            logger.debug("get_latest_open failed: %s", e)
+            return None
 
     def save_recommendation(
         self,

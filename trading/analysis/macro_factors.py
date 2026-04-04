@@ -43,6 +43,33 @@ class MacroFactors:
         self._cache: Dict[str, Any] = {}
         self._cache_ts: float = 0
 
+    def get_current_context(self) -> Dict[str, Any]:
+        """
+        Flat snapshot for dashboards (VIX, 10Y, DXY, regime label).
+        """
+        try:
+            f = self.get_factors()
+            if not f:
+                return {}
+            vix_b = f.get("vix") or {}
+            yc = f.get("yield_curve") or {}
+            dxy_b = f.get("dollar") or {}
+            regime = f.get("overall_regime") or {}
+            label = regime.get("label") or "UNKNOWN"
+            desc = regime.get("description") or ""
+            regime_label = f"Regime: {label}"
+            if desc:
+                regime_label = f"{regime_label} — {desc}"
+            return {
+                "vix": float(vix_b.get("current") or 0),
+                "yield_10y": float(yc.get("rate_10y") or 0),
+                "dxy": float(dxy_b.get("current") or 0),
+                "regime_label": regime_label,
+            }
+        except Exception as e:
+            logger.debug("get_current_context failed: %s", e)
+            return {}
+
     def get_factors(self, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Get all macro factors with caching.
