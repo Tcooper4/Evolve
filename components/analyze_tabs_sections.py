@@ -106,8 +106,9 @@ def render_tabbed_analyze_sections(
         st.markdown("---")
         st.markdown("## Signal IC Analysis")
         st.caption(
-            "Measures whether the AI Score actually predicts forward returns. "
-            "Runs on historical data — takes 2–5 minutes."
+            "Measures whether a historical price/volume-only score predicts forward returns "
+            "(no live Reddit/options/yfinance fundamentals — avoids look-ahead). "
+            "Runs on historical data — typically faster than full AI Score."
         )
 
         col1, col2 = st.columns(2)
