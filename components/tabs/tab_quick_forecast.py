@@ -738,7 +738,10 @@ def render(
                                         "Running consensus forecast (all models)..."
                                     ):
                                         consensus = _router.get_consensus_forecast(
-                                            data, horizon=horizon
+                                            data,
+                                            horizon=horizon,
+                                            symbol=str(ticker).strip().upper()
+                                            or None,
                                         )
                                     st.session_state[_cons_key] = consensus
                                     st.session_state[_cons_ts_key] = _time.time()
@@ -1133,6 +1136,8 @@ def render(
                                 consensus = router.get_consensus_forecast(
                                     data=hist_data_cons,
                                     horizon=horizon,
+                                    symbol=str(ticker).strip().upper()
+                                    or None,
                                 )
                                 st.session_state[_cons_key] = consensus
                                 st.session_state[_cons_ts_key] = _time.time()

@@ -307,6 +307,37 @@ def _scanner_table():
         st.info("No stocks passed the selected filters. Try relaxing criteria.")
         return
 
+    try:
+        from trading.data.price_cache import get_history
+        from trading.strategies.pairs_trading_engine import PairsTradingEngine
+
+        _top = [
+            str(r.get("symbol"))
+            for r in results[:10]
+            if r.get("symbol")
+        ]
+        if len(_top) >= 2:
+            _engine = PairsTradingEngine()
+            _pd: dict = {}
+            for _s in _top:
+                _h = get_history(_s, period="1y")
+                if _h is not None and not _h.empty:
+                    _cm = {c.lower(): c for c in _h.columns}
+                    _cc = _cm.get("close", _h.columns[0])
+                    _pd[_s] = pd.DataFrame(
+                        {"close": _h[_cc].astype(float)}
+                    )
+            _pairs = _engine.find_cointegrated_pairs(_pd, _top)
+            if _pairs:
+                _a, _b, _r0 = _pairs[0]
+                _pv = getattr(_r0, "p_value", float("nan"))
+                st.info(
+                    f"Pairs signal: {_a}/{_b} cointegrated "
+                    f"(p={_pv:.3f})"
+                )
+    except Exception:
+        pass
+
     # News Score and Short Float columns
     for r in results:
         label, color = _news_score(r.get("symbol", ""))

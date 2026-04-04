@@ -42,7 +42,9 @@ def render_ai_score(ticker: str, hist, *, trader_mode: str = "Short-term") -> No
 
             router = ForecastRouter()
             if hist is not None and not hist.empty:
-                forecast_result = router.get_consensus_forecast(data=hist, horizon=7)
+                forecast_result = router.get_consensus_forecast(
+                    data=hist, horizon=7, symbol=_sym
+                )
         except Exception:
             forecast_result = None
         _rec = _generate_recommendation(
@@ -105,7 +107,9 @@ def get_ai_recommendation_dict(
         try:
             router = ForecastRouter()
             if hist is not None and not hist.empty:
-                forecast_result = router.get_consensus_forecast(data=hist, horizon=7)
+                forecast_result = router.get_consensus_forecast(
+                    data=hist, horizon=7, symbol=_sym
+                )
         except Exception:
             pass
         return _generate_recommendation(

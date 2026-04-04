@@ -129,6 +129,10 @@ class ForecastRouter:
         self.performance_history = pd.DataFrame()
         self.model_weights = self._initialize_weights()
         self._last_price_used = 1.0
+        self._last_stationarity_meta: Dict[str, Any] = {
+            "is_stationary": True,
+            "note": None,
+        }
 
     @staticmethod
     @lru_cache(maxsize=64)
@@ -746,6 +750,24 @@ class ForecastRouter:
         Returns:
             Selected model type
         """
+        self._last_stationarity_meta = {"is_stationary": True, "note": None}
+        try:
+            from trading.analysis.econometric_diagnostics import (
+                run_stationarity_tests,
+            )
+
+            _sr = run_stationarity_tests(data)
+            self._last_stationarity_meta["is_stationary"] = bool(
+                _sr.get("is_stationary", True)
+            )
+            if not self._last_stationarity_meta["is_stationary"]:
+                self._last_stationarity_meta["note"] = (
+                    "Price level non-stationary (ADF); ARIMA preferred; "
+                    "Ridge assumes stationary structure — interpret with care."
+                )
+        except Exception as _se:
+            logger.debug("Stationarity probe skipped: %s", _se)
+
         # If the user explicitly asked for a model, honor it (no heuristic override).
         if model_type is not None:
             mt = str(model_type).lower()
@@ -756,6 +778,17 @@ class ForecastRouter:
                 return mt
             if mt != "auto":
                 logger.warning("Requested model '%s' not in registry; falling back.", model_type)
+
+        _auto = model_type is None or str(model_type).lower() in (
+            "auto",
+            "",
+        )
+        if (
+            _auto
+            and not self._last_stationarity_meta.get("is_stationary", True)
+            and "arima" in self.model_registry
+        ):
+            return "arima"
 
         # Auto-selection: pick a reasonable default when model_type is None/"auto"/invalid.
         if PROPHET_AVAILABLE and "prophet" in self.model_registry:
@@ -806,7 +839,8 @@ class ForecastRouter:
             if "xgboost" in self.model_registry:
                 return "xgboost"
             if "ridge" in self.model_registry:
-                return "ridge"
+                if self._last_stationarity_meta.get("is_stationary", True):
+                    return "ridge"
         except Exception as _e:
             logger.warning(
                 "ForecastRouter: data analysis failed during auto-selection: %s",
@@ -1070,11 +1104,19 @@ class ForecastRouter:
             # Log performance
             self._log_performance(selected_model, forecast_array, data)
 
+            _meta = self._get_metadata(model, selected_model)
+            try:
+                _sn = getattr(self, "_last_stationarity_meta", None) or {}
+                if isinstance(_meta, dict) and _sn.get("note"):
+                    _meta = {**_meta, "stationarity_note": _sn.get("note")}
+            except Exception as _me:
+                logger.debug("metadata stationarity merge skipped: %s", _me)
+
             return {
                 "model": selected_model,
                 "forecast": forecast_array,
                 "confidence": self._get_confidence(model, selected_model),
-                "metadata": self._get_metadata(model, selected_model),
+                "metadata": _meta,
                 "warnings": warnings_list,
                 "validation_mape": validation_mape if np.isfinite(validation_mape) else None,
                 "in_sample_mape": in_sample_mape,
@@ -1180,6 +1222,7 @@ class ForecastRouter:
         data: pd.DataFrame,
         horizon: int = 7,
         models: Optional[List[str]] = None,
+        symbol: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Run multiple models and build a consensus forecast.
@@ -1522,7 +1565,7 @@ class ForecastRouter:
 
         model_agreement = round(_agreement_ratio, 2)
 
-        return {
+        out: Dict[str, Any] = {
             "consensus_forecast": consensus.tolist(),
             "upper_bound": (consensus + std).tolist(),
             "lower_bound": (consensus - std).tolist(),
@@ -1539,4 +1582,31 @@ class ForecastRouter:
             "price_targets": price_targets,
             "forecast_debug": forecast_debug,
         }
+        try:
+            import streamlit as st
+
+            sym = (symbol or "").strip().upper()
+            if sym:
+                wf = st.session_state.get(f"wf_{sym}")
+                if isinstance(wf, dict) and not wf.get("error"):
+                    hr = wf.get("mean_directional_accuracy")
+                    if hr is None:
+                        hr = wf.get("hit_rate_5pct")
+                    if hr is not None:
+                        hit = float(hr)
+                        if hit > 0.55:
+                            out["walk_forward_confidence"] = "high"
+                        elif hit >= 0.45:
+                            out["walk_forward_confidence"] = "medium"
+                        else:
+                            out["walk_forward_confidence"] = "low"
+                            out.setdefault(
+                                "walk_forward_warnings", []
+                            ).append(
+                                "Walk-forward hit rate is low (~"
+                                f"{hit:.0%}); treat this consensus with caution."
+                            )
+        except Exception as _wf_e:
+            logger.debug("walk-forward session merge skipped: %s", _wf_e)
+        return out
 

@@ -12,7 +12,11 @@ def render_forecast(ticker: str, hist, *, horizon: int = 7) -> None:
         from trading.models.forecast_router import ForecastRouter
 
         router = ForecastRouter()
-        fc = router.get_consensus_forecast(data=hist, horizon=int(horizon))
+        fc = router.get_consensus_forecast(
+            data=hist,
+            horizon=int(horizon),
+            symbol=str(ticker or "").strip().upper() or None,
+        )
         if not fc or fc.get("error"):
             st.caption(str(fc.get("error", "Forecast unavailable.")))
             return
@@ -22,6 +26,11 @@ def render_forecast(ticker: str, hist, *, horizon: int = 7) -> None:
         models = fc.get("models_used") or []
         last = float(hist["Close"].iloc[-1])
         st.subheader("Consensus forecast")
+        _wfc = fc.get("walk_forward_confidence")
+        if _wfc:
+            st.caption(f"Walk-forward cache confidence: **{_wfc}**")
+        for _ww in fc.get("walk_forward_warnings") or []:
+            st.warning(_ww)
         st.metric("Direction", direction, delta=f"{conviction} conviction")
         if cp:
             pct = (float(cp) - last) / last * 100 if last else 0

@@ -9,7 +9,7 @@ import statistics
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,9 @@ _USER_AGENT = "EvolveTradingBot/3.23 (research; contact: local)"
 _SUBREDDITS = ("wallstreetbets", "stocks")
 
 
-def _fetch_subreddit_search(sub: str, query: str, limit: int) -> List[Dict[str, Any]]:
+def _fetch_subreddit_search(
+    sub: str, query: str, limit: int
+) -> Tuple[List[Dict[str, Any]], Optional[str]]:
     q = urllib.parse.urlencode(
         {
             "q": query,
@@ -48,13 +50,15 @@ def _fetch_subreddit_search(sub: str, query: str, limit: int) -> List[Dict[str, 
                     "subreddit": sub,
                 }
             )
-        return posts
+        return posts, None
     except urllib.error.HTTPError as e:
-        logger.debug("Reddit HTTP %s for r/%s: %s", e.code, sub, e)
-        return []
+        _reason = f"HTTP {e.code} for r/{sub}: {e.reason or 'error'}"
+        logger.warning("Reddit rate limit or HTTP error: %s", _reason)
+        return [], _reason
     except Exception as e:
-        logger.debug("Reddit fetch r/%s failed: %s", sub, e)
-        return []
+        _reason = f"Reddit fetch r/{sub} failed: {e}"
+        logger.warning(_reason)
+        return [], str(e)
 
 
 def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
@@ -71,6 +75,8 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
         "top_posts": [],
         "trending": False,
         "error": None,
+        "source": "reddit",
+        "reason": None,
     }
     sym = (symbol or "").strip().upper()
     if not sym:
@@ -83,14 +89,19 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
     except Exception as e:
         logger.warning("VADER not available: %s", e)
         out["error"] = str(e)
+        out["source"] = "unavailable"
+        out["reason"] = str(e)
         return out
 
     try:
         seen = set()
         posts: List[Dict[str, Any]] = []
+        _last_fetch_err: Optional[str] = None
         for sub in _SUBREDDITS:
             for q in (sym, f"${sym}"):
-                batch = _fetch_subreddit_search(sub, q, limit)
+                batch, fetch_err = _fetch_subreddit_search(sub, q, limit)
+                if fetch_err:
+                    _last_fetch_err = fetch_err
                 for p in batch:
                     pid = (p.get("id") or "").strip()
                     key = pid or (sub, p.get("title"), p.get("score"))
@@ -100,6 +111,13 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
                     posts.append(p)
 
         if not posts:
+            if _last_fetch_err:
+                out["success"] = False
+                out["sentiment_score"] = 0.0
+                out["source"] = "unavailable"
+                out["reason"] = _last_fetch_err
+                out["error"] = _last_fetch_err
+                return out
             out["success"] = True
             out["mention_count"] = 0
             return out

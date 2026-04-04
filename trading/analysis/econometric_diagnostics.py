@@ -682,3 +682,20 @@ class EconometricDiagnostics:
                     f"Break dates: {', '.join(breaks['break_dates'])}"
                 )
             st.caption(breaks.get("interpretation", ""))
+
+
+def run_stationarity_tests(data: pd.DataFrame) -> Dict[str, Any]:
+    """ADF/KPSS on price level for router hooks; safe defaults if statsmodels fails."""
+    try:
+        if data is None or data.empty:
+            return {"is_stationary": True}
+        diag = EconometricDiagnostics("_wf", data)
+        st_out = diag.test_stationarity()
+        adf = st_out.get("adf") or {}
+        return {
+            "is_stationary": bool(adf.get("is_stationary", True)),
+            "stationarity": st_out,
+        }
+    except Exception as e:
+        logger.warning("run_stationarity_tests failed: %s", e)
+        return {"is_stationary": True, "error": str(e)}

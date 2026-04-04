@@ -183,6 +183,62 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
 
         technical_score = min(10.0, tech_points / tech_divisor)
 
+        try:
+            from trading.analysis.chart_pattern_detector import (
+                ChartPatternDetector,
+            )
+
+            _pat = ChartPatternDetector(symbol, hist).detect_all()
+            _bull = {
+                "Inverse Head and Shoulders",
+                "Double Bottom",
+                "Ascending Triangle",
+                "Golden Cross",
+            }
+            _bear = {
+                "Head and Shoulders",
+                "Double Top",
+                "Descending Triangle",
+                "Death Cross",
+            }
+            _seen_bull = _seen_bear = False
+            for _p in _pat.get("patterns") or []:
+                _nm = str((_p or {}).get("name") or "")
+                if _nm in _bull and not _seen_bull:
+                    technical_score = min(10.0, technical_score + 0.3)
+                    signals.append(
+                        {
+                            "name": f"Pattern: {_nm}",
+                            "value": round(
+                                float((_p or {}).get("confidence") or 0), 2
+                            ),
+                            "impact": "positive",
+                            "description": (_p or {}).get(
+                                "description", ""
+                            )
+                            or f"Bullish pattern: {_nm}",
+                        }
+                    )
+                    _seen_bull = True
+                elif _nm in _bear and not _seen_bear:
+                    technical_score = max(0.0, technical_score - 0.3)
+                    signals.append(
+                        {
+                            "name": f"Pattern: {_nm}",
+                            "value": round(
+                                float((_p or {}).get("confidence") or 0), 2
+                            ),
+                            "impact": "negative",
+                            "description": (_p or {}).get(
+                                "description", ""
+                            )
+                            or f"Bearish pattern: {_nm}",
+                        }
+                    )
+                    _seen_bear = True
+        except Exception as _pe:
+            logger.debug("Chart pattern AI score hook skipped: %s", _pe)
+
         # ── MOMENTUM SCORE (0-10) ──────────────────────────────────
         mom_points = 0.0
         mom_signals = 0
@@ -247,6 +303,38 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
                     )
         except Exception as _e:
             logger.debug("math_helpers momentum/regime refinement skipped: %s", _e)
+
+        try:
+            from trading.data.options_flow import get_options_flow
+
+            _of = get_options_flow(symbol)
+            if _of.get("success"):
+                _pcr = float(_of.get("put_call_ratio") or 0.0)
+                _uc = len(_of.get("unusual_calls") or [])
+                _up = len(_of.get("unusual_puts") or [])
+                _unusual = _uc > 0 or _up > 0
+                if _unusual and 0 < _pcr < 0.7:
+                    momentum_score = min(10.0, momentum_score + 0.4)
+                    signals.append(
+                        {
+                            "name": "Options flow",
+                            "value": round(_pcr, 3),
+                            "impact": "positive",
+                            "description": "Options: unusual call activity",
+                        }
+                    )
+                elif _pcr > 1.3:
+                    momentum_score = max(0.0, momentum_score - 0.4)
+                    signals.append(
+                        {
+                            "name": "Options flow",
+                            "value": round(_pcr, 3),
+                            "impact": "negative",
+                            "description": "Options: unusual put activity",
+                        }
+                    )
+        except Exception as _oe:
+            logger.debug("Options flow AI score hook skipped: %s", _oe)
 
         # ── SENTIMENT SCORE (0-10) ──────────────────────────────────
         sentiment_score = 5.0  # neutral default
@@ -356,7 +444,19 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
             from trading.data.social_sentiment import get_social_sentiment
 
             social = get_social_sentiment(symbol)
-            if (
+            if social and social.get("source") == "unavailable":
+                signals.append(
+                    {
+                        "name": "Social Sentiment",
+                        "value": "N/A",
+                        "impact": "neutral",
+                        "description": (
+                            "Social sentiment: unavailable "
+                            f"({social.get('reason') or social.get('error') or 'fetch failed'})"
+                        ),
+                    }
+                )
+            elif (
                 social
                 and not social.get("error")
                 and social.get("success")

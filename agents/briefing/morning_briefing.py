@@ -249,7 +249,7 @@ class MorningBriefing:
                 from trading.models.forecast_router import ForecastRouter
                 router = ForecastRouter()
                 forecast = router.get_consensus_forecast(
-                    data=hist, horizon=7
+                    data=hist, horizon=7, symbol=str(symbol)
                 )
                 if forecast and "error" not in forecast:
                     consensus_price = forecast.get("consensus_price")
@@ -280,8 +280,77 @@ class MorningBriefing:
                             )
 
                         opp["conviction"] = forecast.get("conviction", "MEDIUM")
+                    for _w in forecast.get("walk_forward_warnings") or []:
+                        opp.setdefault("risks", []).append(_w)
+                    _wfc = forecast.get("walk_forward_confidence")
+                    if _wfc:
+                        opp.setdefault("catalysts", []).append(
+                            f"Walk-forward confidence: {_wfc}"
+                        )
             except Exception as e:
                 logger.debug("Forecast failed for %s: %s", symbol, e)
+
+            try:
+                from trading.backtesting.monte_carlo import (
+                    MonteCarloConfig,
+                    MonteCarloSimulator,
+                )
+
+                import numpy as np
+
+                _cfg = MonteCarloConfig(n_simulations=100)
+                _mc = MonteCarloSimulator(_cfg)
+                _cm = {c.lower(): c for c in hist.columns}
+                _cc = _cm.get("close", hist.columns[0])
+                _rets = hist[_cc].astype(float).pct_change().dropna()
+                if len(_rets) >= 30:
+                    _paths = _mc.simulate_portfolio_paths(
+                        _rets, n_simulations=100
+                    )
+                    if _paths is not None and len(_paths) > 1:
+                        _first = _paths.iloc[0].values.astype(float)
+                        _last = _paths.iloc[-1].values.astype(float)
+                        _term = (_last / np.maximum(_first, 1e-12)) - 1.0
+                        _p10 = float(np.percentile(_term, 10))
+                        _fmove = float(
+                            (opp.get("forecast") or {}).get(
+                                "expected_move_pct", 0
+                            )
+                            or 0
+                        )
+                        if _p10 < -0.08:
+                            opp["risk_note"] = (
+                                f"High downside risk: 10th pct = {_p10:.1%} "
+                                f"(vs ~{_fmove:+.1f}% consensus move)"
+                            )
+            except Exception as _mce:
+                logger.debug("Briefing Monte Carlo skipped: %s", _mce)
+
+            try:
+                from trading.strategies.strategy_comparison import (
+                    get_strategy_comparison,
+                )
+
+                _cmp = get_strategy_comparison()
+                _best_name, _ = _cmp.get_best_strategy(hist, metric="win_rate")
+                if _best_name:
+                    _mat = _cmp.generate_comparison_matrix(hist)
+                    _wr = None
+                    if _mat is not None and not _mat.empty:
+                        _row = _mat.loc[_mat["Strategy"] == _best_name]
+                        if not _row.empty:
+                            _wr = float(_row.iloc[0].get("win_rate") or 0.0)
+                    if _wr is not None:
+                        opp["strategy_note"] = (
+                            f"Best strategy: {_best_name} "
+                            f"({_wr:.0%} win rate)"
+                        )
+                    else:
+                        opp["strategy_note"] = (
+                            f"Best strategy: {_best_name}"
+                        )
+            except Exception as _sce:
+                logger.debug("Briefing strategy comparison skipped: %s", _sce)
 
             # Add AI score signals as thesis
             signals = candidate.get("signals", [])
@@ -452,6 +521,12 @@ class MorningBriefing:
                         f"**Risks:** {'; '.join(opp['risks'][:2])}"
                     )
 
+                if opp.get("risk_note"):
+                    lines.append(f"**Risk note:** {opp['risk_note']}")
+
+                if opp.get("strategy_note"):
+                    lines.append(f"**{opp['strategy_note']}**")
+
         else:
             lines.append(
                 "## No High-Conviction Opportunities Today\n"
@@ -544,6 +619,8 @@ class MorningBriefing:
                             f"{forecast.get('expected_move_pct', 0):+.1f}%"
                             if forecast else "N/A"
                         ),
+                        "Risk note": opp.get("risk_note") or "",
+                        "Strategy": opp.get("strategy_note") or "",
                     })
 
                 import pandas as pd

@@ -147,7 +147,7 @@ try:
 except Exception:
     pass
 
-# ── Global ticker search (sidebar) ──────────────────
+# ── Global ticker search (sidebar, above nav) ───────
 if "global_search_ticker" not in st.session_state:
     st.session_state["global_search_ticker"] = ""
 
@@ -179,13 +179,6 @@ with st.sidebar:
             st.caption("Market status: **Weekend**")
     except Exception:
         st.caption("Market status: —")
-    st.page_link("pages/7_Settings.py", label="⚙️ Settings")
-    with st.expander("Advanced tools", expanded=False):
-        st.page_link("pages/2_Analyze.py", label="Analyze")
-        st.page_link("pages/3_Scanner.py", label="Scanner")
-        st.page_link("pages/4_Trade.py", label="Trade")
-        st.page_link("pages/5_Backtest.py", label="Backtest")
-        st.page_link("pages/6_Chat.py", label="Chat")
     st.markdown("---")
 
 # ── Inject theme globally ────────────────────────────
@@ -215,8 +208,33 @@ if "llm_processor" not in st.session_state:
     except Exception:
         st.session_state.llm_processor = None
 
-# Main area when this script is the active page
-st.markdown("# Evolve")
-st.markdown("Open **Home** from the sidebar for the main experience, or use **Advanced tools** for full pages.")
-st.page_link("pages/1_Dashboard.py", label="🏠 Go to Home")
+_home = st.Page(
+    "pages/1_Dashboard.py",
+    title="Home",
+    icon="🏠",
+    default=True,
+)
+_analyze = st.Page("pages/2_Analyze.py", title="Analyze", icon="📊")
+_scanner = st.Page("pages/3_Scanner.py", title="Scanner", icon="🔍")
+_trade = st.Page("pages/4_Trade.py", title="Trade", icon="💼")
+_backtest = st.Page("pages/5_Backtest.py", title="Backtest", icon="⏮")
+_chat = st.Page("pages/6_Chat.py", title="Chat", icon="💬")
+_settings = st.Page("pages/7_Settings.py", title="Settings", icon="⚙️")
+
+_pg = st.navigation(
+    {
+        "": [_home],
+        "Advanced tools": [
+            _analyze,
+            _scanner,
+            _trade,
+            _backtest,
+            _chat,
+        ],
+        "System": [_settings],
+    },
+    position="sidebar",
+    expanded=False,
+)
+_pg.run()
 

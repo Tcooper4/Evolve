@@ -482,6 +482,31 @@ with tab_perf:
                                         normalize_for_display(pd.DataFrame(_rows)),
                                         use_container_width=True,
                                     )
+                                try:
+                                    st.markdown("**Alpha Attribution**")
+                                    _x1, _x2, _x3 = st.columns(3)
+                                    _x1.metric(
+                                        "Alpha",
+                                        f"{float(_att.excess_return):.2%}",
+                                    )
+                                    _x2.metric(
+                                        "Beta contribution",
+                                        f"{float(_att.benchmark_return):.2%}",
+                                    )
+                                    _sa = _att.strategy_attribution or {}
+                                    _sel = (
+                                        float(sum(_sa.values()))
+                                        if _sa
+                                        else float(_att.excess_return)
+                                    )
+                                    _x3.metric(
+                                        "Selection effect",
+                                        f"{_sel:.2%}",
+                                    )
+                                except Exception as _me:
+                                    st.caption(
+                                        f"Attribution display unavailable: {_me}"
+                                    )
                     except Exception as _ae:
                         st.caption(f"Alpha attribution unavailable: {_ae}")
             except Exception as e:

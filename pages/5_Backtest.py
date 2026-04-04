@@ -478,6 +478,9 @@ try:
                         st.session_state[
                             "wf_last_results"
                         ] = summary
+                        st.session_state[
+                            f"wf_{wf_symbol.strip().upper()}"
+                        ] = summary
 
         except Exception as e:
             st.caption(

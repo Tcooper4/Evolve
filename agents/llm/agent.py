@@ -2177,7 +2177,9 @@ class PromptAgent:
                     hist = yf.Ticker(symbol).history(period="6mo")
                     if hist is not None and not hist.empty:
                         router = ForecastRouter()
-                        consensus = router.get_consensus_forecast(hist, horizon=7)
+                        consensus = router.get_consensus_forecast(
+                            hist, horizon=7, symbol=symbol
+                        )
                         # Only cache successful results
                         if consensus and not consensus.get("error"):
                             disk_cache_set(cache_key, consensus, ttl=300)

@@ -244,7 +244,9 @@ def get_forecast(symbol: str, horizon: int = 7) -> Dict[str, Any]:
         if hist.empty:
             return {"success": False, "error": f"No data for {sym}"}
         router = ForecastRouter()
-        fc = router.get_consensus_forecast(data=hist, horizon=int(horizon))
+        fc = router.get_consensus_forecast(
+            data=hist, horizon=int(horizon), symbol=sym
+        )
         if fc.get("error"):
             return {"success": False, "error": fc["error"], "forecast": fc}
         return {"success": True, "symbol": sym, "forecast": fc}
