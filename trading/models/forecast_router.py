@@ -1267,6 +1267,21 @@ class ForecastRouter:
         if data is None or data.empty:
             return {"error": "No data provided", "models_failed": []}
 
+        if len(data) < 30:
+            return {
+                "error": "Need at least 30 trading days of data.",
+                "consensus": None,
+                "models": {},
+                "models_failed": [],
+                "models_used": [],
+                "consensus_forecast": [],
+                "direction": "NEUTRAL",
+                "conviction": "INSUFFICIENT",
+                "last_price": None,
+                "consensus_price": None,
+                "consensus_7d_change_pct": None,
+            }
+
         # Clean and normalize input data for all models
         df = data.copy()
         if not isinstance(df.index, pd.DatetimeIndex):

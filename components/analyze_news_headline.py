@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """News headline sentiment strip + Deep Dive news."""
 import streamlit as st
+
+from components.analyze_common import sentiment_icon_for_label
 from trading.data.price_cache import get_news
 
 
@@ -51,20 +53,14 @@ def render_analyze_headline_news_panel(ticker: str) -> None:
                     score += sum(1 for k in pos_kw if k in title_lower)
                     score -= sum(1 for k in neg_kw if k in title_lower)
                     if score >= 3:
-                        ns_label, ns_color = "HOT", "#ff9800"
+                        ns_label = "HOT"
                     elif score >= 1:
-                        ns_label, ns_color = "POS", "#26a69a"
+                        ns_label = "POS"
                     elif score <= -1:
-                        ns_label, ns_color = "NEG", "#ef5350"
+                        ns_label = "NEG"
                     else:
-                        ns_label, ns_color = "NEU", "#4a6080"
-                    st.markdown(
-                        f'<span style="color:{ns_color};font-size:10px;'
-                        f"padding:1px 6px;border-radius:2px;"
-                        f"background:{ns_color}22;font-family:monospace'>"
-                        f"{ns_label}</span> "
-                        f"{raw_title[:80]}",
-                        unsafe_allow_html=True,
-                    )
+                        ns_label = "NEU"
+                    _ic = sentiment_icon_for_label(ns_label)
+                    st.markdown(f"{_ic} {raw_title[:80]}")
     except Exception as e:
         st.caption(f"unavailable: {e}")

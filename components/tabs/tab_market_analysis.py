@@ -58,7 +58,9 @@ def render(
             st.header("📊 Market Analysis")
             st.markdown("Rolling correlation vs SPY and volatility regime. Load data in Quick Forecast first.")
             if st.session_state.get("analyze_forecast_data") is None:
-                st.warning("⚠️ Please load data first in the Quick Forecast tab")
+                st.warning(
+                    "⚠️ No data yet — enter a ticker at the top and open the Forecast tab."
+                )
             else:
                 _symbol = st.session_state.get("analyze_symbol", "Symbol")
                 hist = st.session_state.get("analyze_forecast_data").copy()
@@ -69,7 +71,6 @@ def render(
                 try:
                     import yfinance as yf
                     import plotly.graph_objects as go
-                    import numpy as np
 
                     _col1, _col2 = st.columns(2)
                     with _col1:

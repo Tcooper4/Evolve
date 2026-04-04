@@ -67,7 +67,9 @@ def render(
             """)
 
             if st.session_state.get("analyze_forecast_data") is None:
-                st.warning("⚠️ Please load data first in the Quick Forecast tab")
+                st.warning(
+                    "⚠️ No forecast data yet — enter a ticker at the top and open the Forecast tab."
+                )
             else:
                 col1, col2 = st.columns([1, 1])
 
@@ -275,7 +277,6 @@ def render(
                             regime = "neutral"
                             try:
                                 from trading.market.market_analyzer import MarketAnalyzer
-                                import pandas as pd
                                 df = data.copy() if hasattr(data, 'copy') else pd.DataFrame(data)
                                 if 'close' in df.columns and 'Close' not in df.columns:
                                     df['Close'] = df['close']
@@ -317,7 +318,10 @@ def render(
                 # Model comparison table — run all registered models via ForecastRouter
                 st.markdown("---")
                 st.subheader("📋 Model Comparison Table")
-                st.caption("Run each registered model and compare MAPE / 7-day forecast. Load data in Quick Forecast first.")
+                st.caption(
+                    "Run each registered model and compare MAPE / 7-day forecast. "
+                    "Uses daily data from the Forecast tab (ticker at top of Analyze)."
+                )
                 if st.session_state.get("analyze_forecast_data") is not None:
                     _hist = st.session_state.get("analyze_forecast_data").copy()
                     if "Close" not in _hist.columns and "close" in _hist.columns:

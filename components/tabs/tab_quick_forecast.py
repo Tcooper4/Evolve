@@ -8,7 +8,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as _components
 from plotly.subplots import make_subplots
 
 from components.analyze_common import (
@@ -16,6 +15,7 @@ from components.analyze_common import (
     _generate_recommendation,
     _is_english,
     _news_sentiment_score,
+    sentiment_icon_for_label,
 )
 from trading.data.earnings_calendar import get_upcoming_earnings
 from trading.data.insider_flow import get_insider_flow
@@ -42,17 +42,7 @@ def render(
     backend: dict,
 ) -> None:
     """Streamlit tab body (legacy Analyze)."""
-    DataLoader = backend["DataLoader"]
-    DataLoadRequest = backend["DataLoadRequest"]
-    YFinanceProvider = backend["YFinanceProvider"]
-    LSTMForecaster = backend["LSTMForecaster"]
-    XGBoostModel = backend["XGBoostModel"]
-    ProphetModel = backend["ProphetModel"]
-    ARIMAModel = backend["ARIMAModel"]
-    FeatureEngineering = backend["FeatureEngineering"]
-    DataPreprocessor = backend["DataPreprocessor"]
-    ModelSelectorAgent = backend["ModelSelectorAgent"]
-    MarketAnalyzer = backend["MarketAnalyzer"]
+    _ = backend  # passed by analyze_tabs_sections; forecast path uses price_cache
     try:
         QUICK_FORECAST_MODELS = [
             "ARIMA",
@@ -73,130 +63,34 @@ def render(
             + ", ".join(QUICK_FORECAST_MODELS)
         )
 
-        # Data Loading Form
-        with st.form("data_form"):
-            col1, col2, col3 = st.columns(3)
+        # Ticker comes from Analyze page header (`analyze_ticker`); always use daily 1y for forecasting
+        symbol = str(
+            st.session_state.get("analyze_ticker") or ticker or ""
+        ).strip().upper()
+        if not symbol:
+            st.info(
+                "Enter a ticker symbol at the top of the page to load data."
+            )
+            return
 
-            with col1:
-                symbol = st.text_input(
-                    "Ticker Symbol",
-                    value="AAPL",
-                    help="Enter stock ticker (e.g., AAPL, MSFT, GOOGL)"
-                ).upper()
+        try:
+            with st.spinner(f"Loading {symbol} data (daily, 1y)..."):
+                hist_fc = get_history(symbol, period="1y", interval="1d")
+        except Exception as _load_e:
+            logger.warning("Quick forecast: get_history failed: %s", _load_e)
+            hist_fc = None
 
-            with col2:
-                start_date = st.date_input(
-                    "Start Date",
-                    value=datetime.now().date() - timedelta(days=365),
-                    min_value=datetime.now().date() - timedelta(days=365*10),
-                    max_value=datetime.now().date(),
-                    help="Historical data start. Cannot select a future date."
-                )
+        if hist_fc is None or getattr(hist_fc, "empty", True) or len(hist_fc) < 30:
+            st.warning(
+                f"Not enough daily data for {symbol}. Try a different ticker."
+            )
+            return
 
-            with col3:
-                end_date = st.date_input(
-                    "End Date",
-                    value=datetime.now().date(),
-                    min_value=start_date,
-                    max_value=datetime.now().date(),
-                    help="End date for historical data. For forecasting future prices, use the 'Forecast Horizon (days)' slider — do not set end date in the future."
-                )
-
-            submitted = st.form_submit_button("📊 Load Data")
-
-        if end_date > datetime.now().date():
-            st.warning("End date is in the future. Historical data will only load up to today. Use the forecast horizon slider to project forward.")
-        if submitted:
-            # Validation
-            if not symbol:
-                st.error("Please enter a ticker symbol")
-            elif start_date >= end_date:
-                st.error("Start date must be before end date")
-            elif (end_date - start_date).days < 30:
-                st.error("Please select at least 30 days of data")
-            else:
-                try:
-                    with st.spinner(f"Fetching data for {symbol}..."):
-                        # Initialize data loader
-                        loader = DataLoader()
-
-                        # Create data load request
-                        request = DataLoadRequest(
-                            ticker=symbol,
-                            start_date=start_date.strftime("%Y-%m-%d"),
-                            end_date=end_date.strftime("%Y-%m-%d"),
-                            interval="1d"
-                        )
-
-                        # Load data
-                        response = loader.load_market_data(request)
-
-                        if not response.success:
-                            st.error(f"Error loading data: {response.message}")
-                        elif response.data is None or len(response.data) < 30:
-                            st.error(f"Insufficient data for {symbol}. Try different dates or symbol.")
-                        else:
-                            # Convert to standard format (lowercase column names)
-                            data = response.data.copy()
-                            data.columns = [col.lower() for col in data.columns]
-
-                            # Ensure we have 'close' column
-                            if 'close' not in data.columns:
-                                # Try to find close price column
-                                close_col = None
-                                for col in ['Close', 'close', 'CLOSE', 'price', 'Price']:
-                                    if col in data.columns:
-                                        close_col = col
-                                        break
-                                if close_col:
-                                    data['close'] = data[close_col]
-                                else:
-                                    st.error("Could not find close price column in data")
-                                    data = None
-
-                            if data is not None:
-                                # Store in session state
-                                st.session_state["analyze_forecast_data"] = data
-                                st.session_state["analyze_symbol"] = symbol
-                                # forecast_horizon is already in session_state (defaults to 7 if not set)
-                                # No need to reassign it here unless we want to update it
-
-                                st.success(f"✅ Loaded {len(data)} days of data for {symbol}")
-
-                                # Show data quality metrics
-                                try:
-                                    from trading.data.data_validator import DataValidator
-                                except ImportError:
-                                    DataValidator = None
-                                if DataValidator is not None:
-                                    try:
-                                        validator = DataValidator()
-                                        quality_metrics = validator.get_quality_metrics(data)
-                                    except Exception as qe:
-                                        logger.debug("Data quality metrics failed: %s", qe)
-                                        quality_metrics = None
-                                    if quality_metrics is not None:
-                                        with st.expander("📊 Data Quality Metrics", expanded=False):
-                                            col1, col2, col3, col4 = st.columns(4)
-                                            with col1:
-                                                st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
-                                            with col2:
-                                                st.metric("Missing Values", quality_metrics['missing_count'])
-                                            with col3:
-                                                st.metric("Outliers Detected", quality_metrics['outliers'])
-                                            with col4:
-                                                quality_score = quality_metrics['overall_quality']
-                                                st.metric("Quality Score", f"{quality_score:.0f}/100")
-                                            if quality_metrics['issues']:
-                                                st.warning("⚠️ Data Quality Issues:")
-                                                for issue in quality_metrics['issues']:
-                                                    st.write(f"• {issue}")
-                                else:
-                                    st.caption("Data validation unavailable")
-
-                except Exception as e:
-                    st.error(f"Error loading data: {str(e)}")
-                    st.info("Please check the ticker symbol and try again.")
+        st.session_state["analyze_forecast_data"] = hist_fc.copy()
+        st.session_state["analyze_symbol"] = symbol
+        st.success(
+            f"✅ Loaded {len(hist_fc)} days of daily data for {symbol} (1y)"
+        )
 
         # Earnings proximity warning (forecasts may be less reliable near earnings)
         try:
@@ -382,12 +276,9 @@ def render(
                             st.metric("Weighted Score", f"{weighted_score}/10", help=mode_label)
                         with top_cols[2]:
                             st.markdown("**News Score**")
+                            _ns_ic = sentiment_icon_for_label(ns_label)
                             st.markdown(
-                                f'<span style="font-family:monospace;font-size:14px;'
-                                f'padding:3px 8px;border-radius:3px;'
-                                f'background:{ns_color}22;color:{ns_color}">'
-                                f'{news_score:.1f} · {ns_label}</span>',
-                                unsafe_allow_html=True,
+                                f"{_ns_ic} **{news_score:.1f}** · {ns_label}"
                             )
                         with top_cols[3]:
                             st.caption(mode_label)
@@ -596,11 +487,12 @@ def render(
                                             f'color:#4a6080" title="{_conv_explain}">💡 {_conv_explain}</span>'
                                             f'</div>'
                                         )
-                                _components.html(
+                                _rec_min_h = 300 if _mh else 160
+                                st.html(
                                     f'<div style="background:#0a0e1a;border:1px solid '
                                     f'#1e2d45;border-radius:6px;overflow:hidden;'
                                     f'font-family:Courier New,monospace;'
-                                    f'margin:4px 0">'
+                                    f'margin:4px 0;min-height:{_rec_min_h}px">'
                                     f'<div style="padding:10px 16px;border-bottom:'
                                     f'1px solid #1e2d45;display:flex;align-items:'
                                     f'center;gap:14px">'
@@ -615,7 +507,7 @@ def render(
                                     f'</div>'
                                     f'<div style="padding:10px 16px">{_reasons_html}'
                                     f'</div>{_mh}{_info_row}</div>',
-                                    height=300 if _mh else 160,
+                                    width="stretch",
                                 )
                         except Exception as _re:
                             st.caption(f"Recommendation unavailable: {_re}")
@@ -775,7 +667,6 @@ def render(
                                     raw = consensus.get("consensus_forecast") or (consensus.get("consensus_price") and [consensus["consensus_price"]]) or []
                                     forecast_values = np.asarray(raw, dtype="float64").ravel()
                                     if forecast_values.size == 0 and consensus.get("price_targets"):
-                                        import numpy as np
                                         pt = consensus["price_targets"]
                                         last_price = float(consensus.get("last_price") or 0)
                                         if pt and last_price:
@@ -1392,31 +1283,21 @@ def render(
                         try:
                             _ns = _news_sentiment_score(ticker)
                             if _ns >= 7.5:
-                                _ns_label, _ns_color = "HOT", "#ff9800"
+                                _ns_label = "HOT"
                                 _ns_text = "Breaking positive news may accelerate move"
                             elif _ns >= 6.0:
-                                _ns_label, _ns_color = "POS", "#26a69a"
+                                _ns_label = "POS"
                                 _ns_text = "Positive news sentiment supports forecast"
                             elif _ns <= 3.0:
-                                _ns_label, _ns_color = "NEG", "#ef5350"
+                                _ns_label = "NEG"
                                 _ns_text = "Negative news may create headwinds"
                             else:
-                                _ns_label, _ns_color = "NEU", "#4a6080"
+                                _ns_label = "NEU"
                                 _ns_text = "News sentiment is neutral"
+                            _news_ic = sentiment_icon_for_label(_ns_label)
                             st.markdown(
-                                f'<div style="padding:8px 12px;'
-                                f'background:#0f1525;border-left:3px solid '
-                                f'{_ns_color};border-radius:0 4px 4px 0;'
-                                f'margin-top:8px">'
-                                f'<span style="color:{_ns_color};'
-                                f'font-weight:bold;font-size:11px">'
-                                f'NEWS {_ns_label}</span>'
-                                f'<span style="color:#8899aa;font-size:11px;'
-                                f'margin-left:8px">{_ns_text}</span>'
-                                f'<span style="color:#4a6080;font-size:10px;'
-                                f'float:right">score: {_ns:.1f}/10</span>'
-                                f'</div>',
-                                unsafe_allow_html=True
+                                f"{_news_ic} **NEWS {_ns_label}** — {_ns_text} "
+                                f"_(score {_ns:.1f}/10)_"
                             )
                         except Exception as _e:
                             logger.warning(

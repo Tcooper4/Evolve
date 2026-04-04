@@ -7,6 +7,28 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Emoji labels for news / sentiment (avoid raw HTML badges in markdown)
+SENTIMENT_ICONS = {
+    "POS": "🟢",
+    "POSITIVE": "🟢",
+    "NEG": "🔴",
+    "NEGATIVE": "🔴",
+    "NEU": "⬜",
+    "NEUTRAL": "⬜",
+    "HOT": "🔥",
+}
+
+
+def sentiment_icon_for_label(label: str) -> str:
+    """Map POS/NEG/NEU/HOT-style labels to emoji."""
+    if not label:
+        return "⬜"
+    u = str(label).strip().upper()
+    if u in SENTIMENT_ICONS:
+        return SENTIMENT_ICONS[u]
+    key3 = u[:3] if len(u) >= 3 else u
+    return SENTIMENT_ICONS.get(key3, "⬜")
+
 
 def _extract_forecast_values(result):
     """Extract forecast array from result (dict/list/array). Handles all result formats."""

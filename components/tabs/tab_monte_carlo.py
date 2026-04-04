@@ -74,9 +74,6 @@ def render(
 
                 if st.button("Run Monte Carlo", key="run_mc"):
                     try:
-                        import numpy as np
-                        import plotly.graph_objects as go
-
                         _close = hist["Close"].values.astype(float)
                         _returns = np.diff(_close) / _close[:-1]
                         _mu = float(np.mean(_returns))

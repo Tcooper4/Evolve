@@ -148,7 +148,6 @@ def render(
                         with st.expander("📊 Model validation scores (walk-forward)", expanded=False):
                             scores = st.session_state["advanced_best_model_scores"].get("scores", [])
                             if scores is not None and len(scores) > 0:
-                                import pandas as pd
                                 tab_df = pd.DataFrame(scores)
                                 st.dataframe(normalize_for_display(tab_df), width='stretch')
                 except Exception as e:

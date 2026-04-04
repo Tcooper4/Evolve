@@ -499,7 +499,7 @@ with tab_backtest:
                                     margin=dict(l=20, r=20, t=40, b=20),
                                     title=f"{bt_symbol} — {bt_strategy}",
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width="stretch")
 
                 except Exception as ex:
                     import traceback
