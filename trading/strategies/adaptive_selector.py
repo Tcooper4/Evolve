@@ -889,12 +889,14 @@ class AdaptiveSelector:
             }
 
             if use_hybrid:
-                # Get performance data for weight optimization
                 performance_data = self._get_model_performance_data(available_models)
-                optimized_weights = self.ensemble_optimizer.optimize_weights(
-                    available_models, performance_data
-                )
-                configuration["ensemble_weights"] = optimized_weights
+                if performance_data is None:
+                    configuration["use_hybrid"] = False
+                else:
+                    optimized_weights = self.ensemble_optimizer.optimize_weights(
+                        available_models, performance_data
+                    )
+                    configuration["ensemble_weights"] = optimized_weights
 
             logger.info(
                 f"Selected configuration: {configuration['selected_model']} + {configuration['selected_strategy']}"
@@ -1029,35 +1031,13 @@ class AdaptiveSelector:
 
     def _get_model_performance_data(
         self, models: List[str]
-    ) -> Dict[str, ModelPerformance]:
-        """Get performance data for models."""
-        try:
-            # This would fetch actual performance data
-            # For now, return simulated data
-            performance_data = {}
-
-            for model in models:
-                performance_data[model] = ModelPerformance(
-                    model_name=model,
-                    rmse=0.02 + np.random.random() * 0.03,
-                    mae=0.015 + np.random.random() * 0.025,
-                    mape=2.0 + np.random.random() * 3.0,
-                    sharpe_ratio=0.5 + np.random.random() * 1.5,
-                    max_drawdown=0.05 + np.random.random() * 0.15,
-                    win_rate=0.45 + np.random.random() * 0.3,
-                    profit_factor=1.0 + np.random.random() * 2.0,
-                    volatility_score=0.5,
-                    trend_score=0.0,
-                    overall_score=0.5 + np.random.random() * 0.5,
-                    last_updated=datetime.now(),
-                    regime_performance={},
-                )
-
-            return performance_data
-
-        except Exception as e:
-            logger.error(f"Error getting model performance data: {e}")
-            return {}
+    ) -> Optional[Dict[str, ModelPerformance]]:
+        """Get performance data for models (real metrics only; no simulation)."""
+        logger.warning(
+            "Adaptive selector: no real performance data available for model "
+            "selection. Using default model selection."
+        )
+        return None
 
 
 def get_adaptive_selector(config: Optional[Dict[str, Any]] = None) -> AdaptiveSelector:

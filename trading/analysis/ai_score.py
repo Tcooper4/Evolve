@@ -15,12 +15,34 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
+import streamlit as st
 import yfinance as yf
 
 from trading.data.price_cache import get_history as _pc_get_history
 from trading.utils.safe_math import safe_rsi
 
 logger = logging.getLogger(__name__)
+
+_MACRO_FACTORS_INSTANCE = None
+_ML_TRAINER_INSTANCE = None
+
+
+def _get_macro_factors():
+    global _MACRO_FACTORS_INSTANCE
+    if _MACRO_FACTORS_INSTANCE is None:
+        from trading.analysis.macro_factors import MacroFactors
+
+        _MACRO_FACTORS_INSTANCE = MacroFactors()
+    return _MACRO_FACTORS_INSTANCE
+
+
+def _get_ml_trainer():
+    global _ML_TRAINER_INSTANCE
+    if _ML_TRAINER_INSTANCE is None:
+        from trading.analysis.ml_score_trainer import MLScoreTrainer
+
+        _ML_TRAINER_INSTANCE = MLScoreTrainer()
+    return _ML_TRAINER_INSTANCE
 
 SECTOR_PE = {
     "Technology": 28.0,
@@ -89,9 +111,30 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         fundamental_score: float 0-10
         momentum_score: float 0-10
         signals: list of dicts {name, value, impact, description}
+        data_quality: per-dimension real vs unavailable
         summary: str — one-sentence plain-English verdict
         error: str | None
     """
+    if hist is not None and not hist.empty:
+        return _compute_ai_score_impl(symbol, hist)
+    sym_key = str(symbol or "").strip().upper()
+    if not sym_key:
+        return _error_score(str(symbol or ""), "Invalid symbol")
+    return _compute_ai_score_cached(sym_key)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _compute_ai_score_cached(symbol: str) -> Dict[str, Any]:
+    try:
+        h = _pc_get_history(symbol, period="6mo")
+    except Exception as e:
+        logger.warning("ai_score: price_cache get_history failed: %s", e)
+        h = pd.DataFrame()
+    return _compute_ai_score_impl(symbol, h)
+
+
+def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
+    """Internal AI score computation (used by compute_ai_score)."""
     try:
         _external_bundle: Optional[Dict[str, Any]] = None
         try:
@@ -131,6 +174,12 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         last_price = float(close[-1])
 
         signals = []
+        data_quality: Dict[str, str] = {
+            "sentiment": "unavailable",
+            "options": "unavailable",
+            "macro": "unavailable",
+            "insider": "unavailable",
+        }
         earnings_near = False
         earnings_days_until = None
 
@@ -309,6 +358,7 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
 
             _of = get_options_flow(symbol)
             if _of.get("success"):
+                data_quality["options"] = "real"
                 _pcr = float(_of.get("put_call_ratio") or 0.0)
                 _uc = len(_of.get("unusual_calls") or [])
                 _up = len(_of.get("unusual_puts") or [])
@@ -410,6 +460,10 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
             from trading.data.insider_flow import get_insider_flow
 
             insider = get_insider_flow(symbol)
+            if insider.get("error"):
+                data_quality["insider"] = "unavailable"
+            else:
+                data_quality["insider"] = "real"
             signal = insider.get("signal", "NO_ACTIVITY")
             insider_score = {
                 "INSIDER_BUYING": 8.5,
@@ -444,6 +498,8 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
             from trading.data.social_sentiment import get_social_sentiment
 
             social = get_social_sentiment(symbol)
+            if social and social.get("success") and social.get("source") == "reddit":
+                data_quality["sentiment"] = "real"
             if social and social.get("source") == "unavailable":
                 signals.append(
                     {
@@ -586,11 +642,11 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
 
             # Macro factor adjustment
             try:
-                from trading.analysis.macro_factors import MacroFactors
-                _macro = MacroFactors()
+                _macro = _get_macro_factors()
                 _macro_adj = _macro.get_ai_score_adjustment(
                     sector=sector
                 )
+                data_quality["macro"] = "real"
                 _macro_score_adj = _macro_adj.get(
                     "score_adjustment", 0.0
                 )
@@ -624,10 +680,7 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
 
         # ML Score blend (if model is trained) — after pre-earnings cap
         try:
-            from trading.analysis.ml_score_trainer import (
-                MLScoreTrainer,
-            )
-            _ml_trainer = MLScoreTrainer()
+            _ml_trainer = _get_ml_trainer()
             _ml_result = _ml_trainer.predict(symbol, hist)
             if (not _ml_result.get("fallback")
                     and _ml_result.get("ml_score") is not None):
@@ -691,6 +744,7 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
             "sentiment_score": round(sentiment_score, 1),
             "fundamental_score": round(fundamental_score, 1),
             "signals": signals,
+            "data_quality": data_quality,
             "summary": summary,
             "last_price": last_price,
             "error": None,
@@ -711,6 +765,12 @@ def _error_score(symbol: str, error: str) -> Dict[str, Any]:
         "sentiment_score": 5.0,
         "fundamental_score": 5.0,
         "signals": [],
+        "data_quality": {
+            "sentiment": "unavailable",
+            "options": "unavailable",
+            "macro": "unavailable",
+            "insider": "unavailable",
+        },
         "summary": f"Score unavailable: {error}",
         "last_price": None,
         "error": error,

@@ -505,46 +505,11 @@ class TwitterSentimentCollector:
         self, symbol: str, max_tweets: int = 100
     ) -> List[SentimentData]:
         """Get Twitter sentiment for a symbol."""
-        try:
-            # For now, return simulated data since Twitter API requires authentication
-            # In production, this would use the Twitter API v2
-            logger.info(f"Simulating Twitter sentiment for {symbol}")
-
-            # Simulate some tweets
-            simulated_tweets = [
-                f"${symbol} looking bullish today! #stocks",
-                f"Not sure about ${symbol} performance #trading",
-                f"${symbol} earnings beat expectations #investing",
-                f"${symbol} chart showing weakness #technicalanalysis",
-                f"Bullish on ${symbol} for next quarter #stockmarket",
-            ]
-
-            sentiment_data = []
-            for i, tweet in enumerate(simulated_tweets):
-                try:
-                    sentiment_score = await self._analyze_tweet_sentiment(tweet)
-                    sentiment_label = self._get_sentiment_label(sentiment_score)
-
-                    sentiment_data.append(
-                        SentimentData(
-                            symbol=symbol,
-                            timestamp=datetime.now() - timedelta(hours=i),
-                            sentiment_score=sentiment_score,
-                            sentiment_label=sentiment_label,
-                            volume=1,
-                            source="twitter",
-                            confidence=0.7,
-                        )
-                    )
-                except Exception as e:
-                    logger.warning(f"Error processing simulated tweet: {e}")
-                    continue
-
-            return await self._aggregate_sentiment(sentiment_data)
-
-        except Exception as e:
-            logger.error(f"Error getting Twitter sentiment for {symbol}: {e}")
-            return []
+        logger.warning(
+            "Twitter sentiment unavailable for %s: Real API not configured",
+            symbol,
+        )
+        return []
 
     @async_strategy_wrapper(timeout=5, fallback_value=0.0)
     async def _analyze_tweet_sentiment(self, text: str) -> float:
@@ -676,46 +641,11 @@ class RedditSentimentCollector:
         self, symbol: str, max_posts: int = 50
     ) -> List[SentimentData]:
         """Get Reddit sentiment for a symbol."""
-        try:
-            # For now, return simulated data since Reddit API requires authentication
-            # In production, this would use the Reddit API
-            logger.info(f"Simulating Reddit sentiment for {symbol}")
-
-            # Simulate some Reddit posts
-            simulated_posts = [
-                f"DD: Why I'm bullish on ${symbol} - Strong fundamentals and growth potential",
-                f"${symbol} earnings discussion thread",
-                f"Technical analysis: ${symbol} showing bearish signals",
-                f"${symbol} vs competitors - which is the better investment?",
-                f"Market sentiment on ${symbol} seems mixed",
-            ]
-
-            sentiment_data = []
-            for i, post in enumerate(simulated_posts):
-                try:
-                    sentiment_score = await self._analyze_text_sentiment(post)
-                    sentiment_label = self._get_sentiment_label(sentiment_score)
-
-                    sentiment_data.append(
-                        SentimentData(
-                            symbol=symbol,
-                            timestamp=datetime.now() - timedelta(hours=i * 2),
-                            sentiment_score=sentiment_score,
-                            sentiment_label=sentiment_label,
-                            volume=1,
-                            source="reddit",
-                            confidence=0.6,
-                        )
-                    )
-                except Exception as e:
-                    logger.warning(f"Error processing simulated Reddit post: {e}")
-                    continue
-
-            return await self._aggregate_sentiment(sentiment_data)
-
-        except Exception as e:
-            logger.error(f"Error getting Reddit sentiment for {symbol}: {e}")
-            return []
+        logger.warning(
+            "Reddit sentiment (OAuth) unavailable for %s: Real API not configured",
+            symbol,
+        )
+        return []
 
     @async_strategy_wrapper(timeout=8, fallback_value=0.0)
     async def _analyze_text_sentiment(self, text: str) -> float:
@@ -947,16 +877,17 @@ class OptionsFlowCollector:
     ) -> List[Dict[str, Any]]:
         """Get options flow data for a symbol."""
         try:
-            # Try to get real options data if API keys are available
             if "tradier" in self.api_keys:
                 try:
                     return await self._get_tradier_options_flow(symbol, days_back)
                 except Exception as e:
                     logger.warning(f"Tradier options flow failed: {e}")
 
-            # Fallback to simulated data
-            logger.info(f"Using simulated options flow for {symbol}")
-            return await self._generate_simulated_options_flow(symbol, days_back)
+            logger.warning(
+                "Options flow unavailable for %s: Real API not configured",
+                symbol,
+            )
+            return []
 
         except Exception as e:
             logger.error(f"Error getting options flow for {symbol}: {e}")
@@ -967,48 +898,8 @@ class OptionsFlowCollector:
         self, symbol: str, days_back: int
     ) -> List[Dict[str, Any]]:
         """Get options flow from Tradier API."""
-        # This would implement the actual Tradier API call
-        # For now, return empty list as fallback
         logger.info(f"Tradier API not implemented for {symbol}")
         return []
-
-    @async_strategy_wrapper(timeout=15, fallback_value=[])
-    async def _generate_simulated_options_flow(
-        self, symbol: str, days_back: int
-    ) -> List[Dict[str, Any]]:
-        """Generate simulated options flow data."""
-        try:
-            options_data = []
-
-            # Generate simulated options data for the past week
-            for i in range(days_back):
-                date = datetime.now() - timedelta(days=i)
-
-                # Simulate some options activity
-                for _ in range(np.random.randint(1, 5)):  # 1-4 options per day
-                    strike = round(np.random.uniform(50, 200), 2)
-                    option_type = np.random.choice(["call", "put"])
-                    volume = np.random.randint(10, 1000)
-                    premium = round(np.random.uniform(0.1, 10.0), 2)
-
-                    options_data.append(
-                        {
-                            "symbol": symbol,
-                            "date": date,
-                            "strike": strike,
-                            "option_type": option_type,
-                            "volume": volume,
-                            "premium": premium,
-                            "expiration": date + timedelta(days=30),
-                            "source": "simulated",
-                        }
-                    )
-
-            return options_data
-
-        except Exception as e:
-            logger.error(f"Error generating simulated options flow: {e}")
-            return []
 
 
 class ExternalSignalsManager:
@@ -1279,8 +1170,14 @@ class ExternalSignalsManager:
             return {"overall": 0.0}
 
 
+_ESM_INSTANCE: Optional[ExternalSignalsManager] = None
+
+
 def get_external_signals_manager(
     config: Optional[Dict[str, Any]] = None,
 ) -> ExternalSignalsManager:
-    """Factory function to create ExternalSignalsManager instance."""
-    return ExternalSignalsManager(config)
+    """Return process-wide ExternalSignalsManager (first call wins for config)."""
+    global _ESM_INSTANCE
+    if _ESM_INSTANCE is None:
+        _ESM_INSTANCE = ExternalSignalsManager(config or {})
+    return _ESM_INSTANCE

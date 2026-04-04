@@ -9,7 +9,6 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 
 from .alpha_vantage_provider import AlphaVantageProvider
@@ -231,11 +230,9 @@ class FallbackDataProvider(BaseDataProvider):
                 self._log_failure(provider_name, symbol, str(e), "live_price")
                 continue
 
-        # Return mock price as fallback
         self.logger.error(
-            f"All providers failed for live price of {symbol}, using mock price"
+            f"All providers failed for live price of {symbol}"
         )
-        # Mock data disabled - raise error if all providers fail
         raise RuntimeError(
             f"All real data providers failed to get live price for {symbol}. "
             "Mock data generation has been disabled. "
@@ -255,26 +252,17 @@ class FallbackDataProvider(BaseDataProvider):
 
         for symbol in symbols:
             try:
-                # Try to get live price
                 price = self.get_live_price(symbol)
-                if price is not None:
+                if price is not None and price > 0:
                     results[symbol] = {
                         "price": price,
                         "timestamp": datetime.now(),
-                        "volume": np.random.uniform(1000000, 10000000),  # Mock volume
-                        "change": np.random.normal(0, 0.02),  # Mock change
-                        "change_pct": np.random.normal(0, 0.02) * 100,  # Mock change %
+                        "volume": None,
+                        "change": None,
+                        "change_pct": None,
                     }
             except Exception as e:
                 self.logger.error(f"Failed to get market data for {symbol}: {e}")
-                # MOCK FALLBACK - replace with real data source
-                results[symbol] = {
-                    "price": 100.0 + np.random.normal(0, 10),
-                    "timestamp": datetime.now(),
-                    "volume": np.random.uniform(1000000, 10000000),
-                    "change": np.random.normal(0, 0.02),
-                    "change_pct": np.random.normal(0, 0.02) * 100,
-                }
 
         return results
 
@@ -394,16 +382,7 @@ class MockDataProvider(BaseDataProvider):
         self.logger.info("Mock data provider initialized")
 
     def fetch(self, symbol: str, interval: str = "1d", **kwargs) -> pd.DataFrame:
-        """Generate mock historical data.
-
-        Args:
-            symbol: Stock symbol
-            interval: Data interval (1d, 1h, etc.)
-            **kwargs: Additional parameters (start_date, end_date)
-
-        Returns:
-            DataFrame with mock OHLCV data
-        """
+        """Refuse to fabricate OHLCV; use a real provider."""
         if not self.is_enabled():
             raise RuntimeError("Provider is disabled")
 
@@ -414,59 +393,11 @@ class MockDataProvider(BaseDataProvider):
             raise ValueError(f"Invalid interval: {interval}")
 
         self._update_status_on_request()
-
-        try:
-            # Generate mock data
-            start_date = kwargs.get("start_date", "2023-01-01")
-            end_date = kwargs.get("end_date", "2023-12-31")
-
-            if isinstance(start_date, str):
-                start_date = datetime.strptime(start_date, "%Y-%m-%d")
-            if isinstance(end_date, str):
-                end_date = datetime.strptime(end_date, "%Y-%m-%d")
-
-            # Generate date range
-            date_range = pd.date_range(start=start_date, end=end_date, freq="D")
-
-            # Generate mock OHLCV data
-            base_price = 100.0 + hash(symbol) % 50  # Deterministic base price
-            np.random.seed(hash(symbol) % 1000)  # Deterministic randomness
-
-            data = []
-            current_price = base_price
-
-            for date in date_range:
-                # Generate price movement
-                change = np.random.normal(0, 0.02) * current_price
-                current_price += change
-
-                # Generate OHLC
-                open_price = current_price
-                high_price = current_price * (1 + abs(np.random.normal(0, 0.01)))
-                low_price = current_price * (1 - abs(np.random.normal(0, 0.01)))
-                close_price = current_price + np.random.normal(0, 0.005) * current_price
-
-                # Generate volume
-                volume = np.random.uniform(1000000, 10000000)
-
-                data.append(
-                    {
-                        "Open": open_price,
-                        "High": high_price,
-                        "Low": low_price,
-                        "Close": close_price,
-                        "Volume": volume,
-                    }
-                )
-
-            df = pd.DataFrame(data, index=date_range)
-            self._update_status_on_success()
-            return df
-
-        except Exception as e:
-            error_msg = f"Error generating mock data for {symbol}: {str(e)}"
-            self._update_status_on_failure(error_msg)
-            raise RuntimeError(error_msg)
+        self._update_status_on_failure("mock provider disabled")
+        raise ValueError(
+            f"Real price data unavailable for {symbol}. "
+            "Fallback provider cannot generate fake prices."
+        )
 
     def fetch_multiple(
         self, symbols: List[str], interval: str = "1d", **kwargs
@@ -519,17 +450,11 @@ class MockDataProvider(BaseDataProvider):
         return self.fetch(symbol, interval, **kwargs)
 
     def get_live_price(self, symbol: str) -> float:
-        """Get mock live price.
-
-        Args:
-            symbol: Trading symbol
-
-        Returns:
-            Mock current price
-        """
-        base_price = 100.0 + hash(symbol) % 50
-        np.random.seed(hash(symbol) % 1000)
-        return base_price + np.random.normal(0, 5)
+        """Refuse to fabricate a live price."""
+        raise ValueError(
+            f"Real price data unavailable for {symbol}. "
+            "Fallback provider cannot generate fake prices."
+        )
 
 
 def get_fallback_provider() -> FallbackDataProvider:

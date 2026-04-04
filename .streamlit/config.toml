@@ -1,9 +1,12 @@
- [theme]
- base = "dark"
- backgroundColor = "#0a0e1a"
- secondaryBackgroundColor = "#0f1525"
- textColor = "#e0e6f0"
- primaryColor = "#00d4ff"
+[client]
+showSidebarNavigation = false
+
+[theme]
+base = "dark"
+backgroundColor = "#0a0e1a"
+secondaryBackgroundColor = "#0f1525"
+textColor = "#e0e6f0"
+primaryColor = "#00d4ff"
 [server]
 maxUploadSize = 50
 headless = true

@@ -72,9 +72,19 @@ class MorningBriefing:
 
             # Step 3: Deep analysis on top candidates
             opportunities = []
+            shared_router = None
+            try:
+                from trading.models.forecast_router import ForecastRouter
+
+                shared_router = ForecastRouter()
+            except Exception as e:
+                logger.warning("Morning briefing: ForecastRouter init failed: %s", e)
+
             for candidate in candidates[:self.max_positions]:
                 try:
-                    opp = self._analyze_opportunity(candidate)
+                    opp = self._analyze_opportunity(
+                        candidate, router=shared_router
+                    )
                     if opp:
                         opportunities.append(opp)
                 except Exception as e:
@@ -210,7 +220,9 @@ class MorningBriefing:
             return []
 
     def _analyze_opportunity(
-        self, candidate: Dict[str, Any]
+        self,
+        candidate: Dict[str, Any],
+        router: Any = None,
     ) -> Optional[Dict[str, Any]]:
         """Deep analysis on a single candidate."""
         symbol = candidate.get("symbol")
@@ -247,8 +259,9 @@ class MorningBriefing:
             # Get consensus forecast
             try:
                 from trading.models.forecast_router import ForecastRouter
-                router = ForecastRouter()
-                forecast = router.get_consensus_forecast(
+
+                _router = router if router is not None else ForecastRouter()
+                forecast = _router.get_consensus_forecast(
                     data=hist, horizon=7, symbol=str(symbol)
                 )
                 if forecast and "error" not in forecast:
@@ -366,7 +379,9 @@ class MorningBriefing:
                     if s.get("impact") == "negative"
                 ][:2]
                 opp["thesis"] = "; ".join(positive) if positive else ""
-                opp["risks"] = negative
+                for _neg in negative:
+                    if _neg:
+                        opp.setdefault("risks", []).append(_neg)
 
             # Earnings catalyst
             try:

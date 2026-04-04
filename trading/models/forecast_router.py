@@ -734,10 +734,6 @@ class ForecastRouter:
         """Log performance metrics."""
         logger.debug(f"Model {model_name} forecast length {getattr(forecast, '__len__', lambda: 0)()}")
 
-    def _generate_fallback_data(self) -> pd.DataFrame:
-        """Generate minimal fallback DataFrame for missing data."""
-        return pd.DataFrame({"close": np.random.randn(100).cumsum() + 100})
-
     def _select_model(
         self, data: pd.DataFrame, model_type: Optional[str] = None
     ) -> str:
@@ -878,10 +874,26 @@ class ForecastRouter:
             if model_type is None:
                 model_type = kwargs.get("model_name") or kwargs.get("model")
 
-            # Defensive checks for input parameters
             if data is None or data.empty:
-                logger.warning("Empty or None data provided, using fallback data")
-                data = self._generate_fallback_data()
+                _sym = kwargs.get("symbol") or kwargs.get("ticker") or ""
+                logger.error(
+                    "Cannot forecast: price history unavailable for symbol %s",
+                    _sym or "(unknown)",
+                )
+                return {
+                    "error": "Insufficient price data",
+                    "symbol": _sym,
+                    "forecasts": [],
+                    "forecast": np.array([], dtype="float64"),
+                    "model": None,
+                    "confidence": 0.0,
+                    "metadata": {},
+                    "warnings": ["Insufficient price history for forecast"],
+                    "validation_mape": None,
+                    "in_sample_mape": None,
+                    "last_actual_price": None,
+                    "confidence_label": "Unknown",
+                }
 
             if horizon is None or horizon <= 0:
                 logger.warning(

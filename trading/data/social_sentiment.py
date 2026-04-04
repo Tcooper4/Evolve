@@ -6,10 +6,13 @@ from __future__ import annotations
 import json
 import logging
 import statistics
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
+
+import streamlit as st
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,7 @@ def _fetch_subreddit_search(
         return [], str(e)
 
 
+@st.cache_data(ttl=3600, show_spinner=False)
 def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
     """
     Reddit sentiment from r/wallstreetbets and r/stocks (last day, search).
@@ -98,17 +102,31 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
         posts: List[Dict[str, Any]] = []
         _last_fetch_err: Optional[str] = None
         for sub in _SUBREDDITS:
-            for q in (sym, f"${sym}"):
-                batch, fetch_err = _fetch_subreddit_search(sub, q, limit)
-                if fetch_err:
-                    _last_fetch_err = fetch_err
-                for p in batch:
+            batch, fetch_err = _fetch_subreddit_search(sub, sym, limit)
+            if fetch_err:
+                _last_fetch_err = fetch_err
+            for p in batch:
+                pid = (p.get("id") or "").strip()
+                key = pid or (sub, p.get("title"), p.get("score"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                posts.append(p)
+            time.sleep(0.3)
+            if len(batch) < 3:
+                batch_d, fetch_err_d = _fetch_subreddit_search(
+                    sub, f"${sym}", limit
+                )
+                if fetch_err_d:
+                    _last_fetch_err = fetch_err_d
+                for p in batch_d:
                     pid = (p.get("id") or "").strip()
                     key = pid or (sub, p.get("title"), p.get("score"))
                     if key in seen:
                         continue
                     seen.add(key)
                     posts.append(p)
+                time.sleep(0.3)
 
         if not posts:
             if _last_fetch_err:

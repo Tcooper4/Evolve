@@ -339,6 +339,14 @@ def render_deep_dive(ticker: str) -> None:
             st.markdown(f"{icon} **{nm}** — {val}")
         st.caption(top_signals_summary(signals))
 
+        quality = (score or {}).get("data_quality") or {}
+        unavailable = [k for k, v in quality.items() if v == "unavailable"]
+        if unavailable:
+            st.caption(
+                f"Data unavailable: {', '.join(unavailable)}. "
+                f"Score reflects available signals only."
+            )
+
         try:
             from trading.commentary.commentary_engine import (
                 CommentaryRequest,
