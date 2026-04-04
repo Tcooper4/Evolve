@@ -644,158 +644,159 @@ def render_price_chart(
                         f"Pattern detection unavailable: {e}"
                     )
             else:
-                # News vlines on main chart (only for News+Vol chart type)
-                if chart_type == "News + Volume":
-                    try:
-                        from trading.data.price_cache import get_news
-                        _news_items = get_news(ticker)
-                        _lang_filter = st.session_state.get(
-                            "news_lang_filter", "English only"
-                        )
-                        _price_thresh = st.session_state.get(
-                            "news_price_threshold", 0.5
-                        )
-                        _plotted = 0
-                        if _news_items and not hist.empty:
-                            from datetime import datetime
+                # News vlines on Candle/Line/Area when using static chart (no live
+                # intraday fragment). Uses same session keys as News+Vol settings.
+                try:
+                    from trading.data.price_cache import get_news
 
-                            _prices = hist["Close"].dropna()
+                    _news_items = get_news(ticker)
+                    _lang_filter = st.session_state.get(
+                        "news_lang_filter", "English only"
+                    )
+                    _price_thresh = st.session_state.get(
+                        "news_price_threshold", 0.5
+                    )
+                    _plotted = 0
+                    if _news_items and not hist.empty:
+                        from datetime import datetime
 
-                            for _item in _news_items[:15]:
-                                _content = _item.get("content") or {}
-                                _title = (
-                                    _item.get("title")
-                                    or _content.get("title")
-                                    or _content.get("summary")
-                                    or ""
-                                )
-                                if not _title:
-                                    continue
+                        _prices = hist["Close"].dropna()
 
-                                if (
-                                    _lang_filter == "English only"
-                                    and not _is_english(_title)
-                                ):
-                                    continue
-
-                                _pub = (
-                                    _item.get("providerPublishTime")
-                                    or _content.get("pubDate")
-                                    or _item.get("published")
-                                )
-                                if not _pub:
-                                    continue
-                                try:
-                                    if isinstance(_pub, str):
-                                        _dt = datetime.fromisoformat(
-                                            _pub.replace("Z", "+00:00")
-                                        )
-                                        _pub_dt = _dt.replace(tzinfo=None)
-                                        _pub_ts = _dt.timestamp()
-                                    else:
-                                        _pub_ts = float(_pub)
-                                        _pub_dt = datetime.fromtimestamp(
-                                            _pub_ts
-                                        )
-                                except Exception:
-                                    continue
-
-                                if len(hist.index) > 0:
-                                    _idx_min = hist.index.min()
-                                    _idx_max = hist.index.max()
-                                    try:
-                                        _idx_min = _idx_min.replace(tzinfo=None)
-                                        _idx_max = _idx_max.replace(tzinfo=None)
-                                    except Exception:
-                                        pass
-                                    if _pub_dt < _idx_min or _pub_dt > _idx_max:
-                                        continue
-
-                                if _price_thresh > 0:
-                                    try:
-                                        if hasattr(hist.index, "tz"):
-                                            _index_dt = (
-                                                hist.index.tz_localize(
-                                                    None
-                                                ).to_pydatetime()
-                                            )
-                                        else:
-                                            _index_dt = (
-                                                hist.index.to_pydatetime()
-                                            )
-                                        _diffs = abs(_index_dt - _pub_dt)
-                                        _closest_idx = int(_diffs.argmin())
-                                        if _closest_idx > 0:
-                                            _p1 = float(
-                                                _prices.iloc[_closest_idx]
-                                            )
-                                            _p0 = float(
-                                                _prices.iloc[_closest_idx - 1]
-                                            )
-                                            if _p0 != 0:
-                                                _move = abs(
-                                                    (_p1 - _p0) / _p0 * 100
-                                                )
-                                                if _move < _price_thresh:
-                                                    continue
-                                    except Exception:
-                                        pass
-
-                                _pos_kw = [
-                                    "beat",
-                                    "surge",
-                                    "raises",
-                                    "upgrade",
-                                    "strong",
-                                    "growth",
-                                ]
-                                _neg_kw = [
-                                    "miss",
-                                    "falls",
-                                    "cuts",
-                                    "downgrade",
-                                    "weak",
-                                    "loss",
-                                ]
-                                _tl = _title.lower()
-                                _pos = sum(
-                                    1 for k in _pos_kw if k in _tl
-                                )
-                                _neg = sum(
-                                    1 for k in _neg_kw if k in _tl
-                                )
-                                _ann_color = (
-                                    "#26a69a"
-                                    if _pos > _neg
-                                    else "#ef5350"
-                                    if _neg > _pos
-                                    else "#ff9800"
-                                )
-
-                                _vline_kwargs = dict(
-                                    x=_pub_dt,
-                                    line_dash="dot",
-                                    line_color=_ann_color,
-                                    line_width=1,
-                                    annotation_text="N",
-                                    annotation_position="top",
-                                    annotation_font_color=_ann_color,
-                                    annotation_font_size=10,
-                                )
-                                if _intraday_mode:
-                                    fig_chart.add_vline(
-                                        row=1, col=1, **_vline_kwargs
-                                    )
-                                else:
-                                    fig_chart.add_vline(**_vline_kwargs)
-                                _plotted += 1
-
-                        if _plotted == 0 and period in ("1d", "5d"):
-                            st.caption(
-                                "No recent English news found within chart timeframe."
+                        for _item in _news_items[:15]:
+                            _content = _item.get("content") or {}
+                            _title = (
+                                _item.get("title")
+                                or _content.get("title")
+                                or _content.get("summary")
+                                or ""
                             )
-                    except Exception:
-                        pass
+                            if not _title:
+                                continue
+
+                            if (
+                                _lang_filter == "English only"
+                                and not _is_english(_title)
+                            ):
+                                continue
+
+                            _pub = (
+                                _item.get("providerPublishTime")
+                                or _content.get("pubDate")
+                                or _item.get("published")
+                            )
+                            if not _pub:
+                                continue
+                            try:
+                                if isinstance(_pub, str):
+                                    _dt = datetime.fromisoformat(
+                                        _pub.replace("Z", "+00:00")
+                                    )
+                                    _pub_dt = _dt.replace(tzinfo=None)
+                                    _pub_ts = _dt.timestamp()
+                                else:
+                                    _pub_ts = float(_pub)
+                                    _pub_dt = datetime.fromtimestamp(
+                                        _pub_ts
+                                    )
+                            except Exception:
+                                continue
+
+                            if len(hist.index) > 0:
+                                _idx_min = hist.index.min()
+                                _idx_max = hist.index.max()
+                                try:
+                                    _idx_min = _idx_min.replace(tzinfo=None)
+                                    _idx_max = _idx_max.replace(tzinfo=None)
+                                except Exception:
+                                    pass
+                                if _pub_dt < _idx_min or _pub_dt > _idx_max:
+                                    continue
+
+                            if _price_thresh > 0:
+                                try:
+                                    if hasattr(hist.index, "tz"):
+                                        _index_dt = (
+                                            hist.index.tz_localize(
+                                                None
+                                            ).to_pydatetime()
+                                        )
+                                    else:
+                                        _index_dt = (
+                                            hist.index.to_pydatetime()
+                                        )
+                                    _diffs = abs(_index_dt - _pub_dt)
+                                    _closest_idx = int(_diffs.argmin())
+                                    if _closest_idx > 0:
+                                        _p1 = float(
+                                            _prices.iloc[_closest_idx]
+                                        )
+                                        _p0 = float(
+                                            _prices.iloc[_closest_idx - 1]
+                                        )
+                                        if _p0 != 0:
+                                            _move = abs(
+                                                (_p1 - _p0) / _p0 * 100
+                                            )
+                                            if _move < _price_thresh:
+                                                continue
+                                except Exception:
+                                    pass
+
+                            _pos_kw = [
+                                "beat",
+                                "surge",
+                                "raises",
+                                "upgrade",
+                                "strong",
+                                "growth",
+                            ]
+                            _neg_kw = [
+                                "miss",
+                                "falls",
+                                "cuts",
+                                "downgrade",
+                                "weak",
+                                "loss",
+                            ]
+                            _tl = _title.lower()
+                            _pos = sum(
+                                1 for k in _pos_kw if k in _tl
+                            )
+                            _neg = sum(
+                                1 for k in _neg_kw if k in _tl
+                            )
+                            _ann_color = (
+                                "#26a69a"
+                                if _pos > _neg
+                                else "#ef5350"
+                                if _neg > _pos
+                                else "#ff9800"
+                            )
+
+                            _vline_kwargs = dict(
+                                x=_pub_dt,
+                                line_dash="dot",
+                                line_color=_ann_color,
+                                line_width=1,
+                                annotation_text="N",
+                                annotation_position="top",
+                                annotation_font_color=_ann_color,
+                                annotation_font_size=10,
+                            )
+                            if _intraday_mode:
+                                fig_chart.add_vline(
+                                    row=1, col=1, **_vline_kwargs
+                                )
+                            else:
+                                fig_chart.add_vline(**_vline_kwargs)
+                            _plotted += 1
+
+                    if _plotted == 0 and period in ("1d", "5d"):
+                        st.caption(
+                            "No recent English news found within chart timeframe."
+                        )
+                except Exception:
+                    pass
 
                 st.plotly_chart(
                     fig_chart,

@@ -532,6 +532,61 @@ with tab_research:
         horizontal=True,
     )
 
+    direction_opts = [
+        "Bullish only (BUY signals)",
+        "Both directions",
+        "Bearish only (short signals)",
+    ]
+    _def_d = "Bullish only (BUY signals)"
+    _stored_d = _prefs.get("opportunity_direction", _def_d)
+    _d_idx = (
+        direction_opts.index(_stored_d) if _stored_d in direction_opts else 0
+    )
+    opportunity_direction = st.radio(
+        "Show opportunities",
+        options=direction_opts,
+        index=_d_idx,
+        key="pref_direction",
+        horizontal=True,
+        help="Bullish only filters out picks where forecast target is below entry.",
+    )
+
+    ALL_SECTORS = [
+        "Technology",
+        "Healthcare",
+        "Finance",
+        "Energy",
+        "Consumer Cyclical",
+        "Consumer Defensive",
+        "Industrial",
+        "Communication Services",
+        "Materials",
+        "Real Estate",
+        "Utilities",
+    ]
+    _stored_sectors = _prefs.get("preferred_sectors") or []
+    if not isinstance(_stored_sectors, list):
+        _stored_sectors = []
+    preferred_sectors = st.multiselect(
+        "Focus sectors",
+        options=ALL_SECTORS,
+        default=[s for s in _stored_sectors if s in ALL_SECTORS],
+        key="pref_sectors",
+        help="Leave empty to scan all sectors. Select to limit briefing candidates.",
+    )
+
+    watchlist_only = st.toggle(
+        "Briefing from watchlist only",
+        value=bool(_prefs.get("watchlist_only", False)),
+        key="pref_watchlist_only",
+        help="When ON, briefing scans your saved watchlist tickers only.",
+    )
+    if watchlist_only:
+        st.caption(
+            "Your watchlist tickers will be scanned instead of the universe. "
+            "Add tickers under Watchlist to include them."
+        )
+
     st.markdown("---")
     if st.button("Save preferences", key="save_research_prefs", type="primary"):
         try:
@@ -546,6 +601,9 @@ with tab_research:
                     "min_ai_score": min_score,
                     "briefing_universe": universe_choice,
                     "scoring_style": scoring_style,
+                    "opportunity_direction": opportunity_direction,
+                    "preferred_sectors": preferred_sectors,
+                    "watchlist_only": watchlist_only,
                 },
             )
             st.success("Preferences saved. Refresh Home to apply.")

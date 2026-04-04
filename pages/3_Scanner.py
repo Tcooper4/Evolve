@@ -29,6 +29,32 @@ except Exception:
 inject_theme()
 render_top_bar()
 
+_scanner_uid = ""
+_scanner_prefs = {}
+try:
+    from utils.session_utils import get_stable_user_id
+    from config.user_store import load_user_preferences
+
+    _scanner_uid = st.session_state.get("evolve_session_id") or get_stable_user_id()
+    _scanner_prefs = load_user_preferences(_scanner_uid) or {}
+except Exception:
+    pass
+
+if "scanner_prefs_hydrated" not in st.session_state:
+    st.session_state["scanner_min_ai_score"] = float(
+        _scanner_prefs.get("min_ai_score", 6.5)
+    )
+    _pu = str(_scanner_prefs.get("briefing_universe", ""))
+    _def_scan_uni = "S&P 100 (~100, fastest)"
+    if "NASDAQ100" in _pu or "NASDAQ" in _pu:
+        _def_scan_uni = "S&P 500 + Nasdaq 100 (~600, moderate)"
+    elif "SP500" in _pu:
+        _def_scan_uni = "S&P 500 (~500, fast)"
+    elif "Top 25" in _pu or "SP100" in _pu:
+        _def_scan_uni = "S&P 100 (~100, fastest)"
+    st.session_state["scanner_universe_choice"] = _def_scan_uni
+    st.session_state["scanner_prefs_hydrated"] = True
+
 try:
     from trading.analysis.market_scanner import scan_market, get_available_filters, DEFAULT_UNIVERSE
     scanner_available = True
@@ -501,6 +527,48 @@ with tab_scan:
         _scanner_results()
     else:
         _scanner_table()
+
+    _sr = st.session_state.get("scanner_results") or {}
+    if _sr and not _sr.get("error") and (_sr.get("results") or []):
+        _brief_map = {
+            "S&P 100 (~100, fastest)": "SP100 (balanced, ~60s)",
+            "S&P 500 (~500, fast)": "SP500 (broadest, ~3min)",
+            "S&P 500 + Nasdaq 100 (~600, moderate)": (
+                "NASDAQ100 (tech-heavy)"
+            ),
+            "Russell 1000 (~1000, slow)": "SP500 (broadest, ~3min)",
+            "Russell 3000 (~3000, very slow)": "SP500 (broadest, ~3min)",
+        }
+        if st.button(
+            "Save current filters as briefing defaults",
+            key="save_scanner_as_defaults",
+        ):
+            try:
+                from config.user_store import (
+                    load_user_preferences as _lp,
+                    save_user_preferences as _sv,
+                )
+                from utils.session_utils import get_stable_user_id as _gsid
+
+                _uid_sv = st.session_state.get("evolve_session_id") or _gsid()
+                _sp = _lp(_uid_sv) or {}
+                _sv(
+                    _uid_sv,
+                    {
+                        **_sp,
+                        "min_ai_score": float(min_score),
+                        "briefing_universe": _brief_map.get(
+                            universe_choice,
+                            "SP100 (balanced, ~60s)",
+                        ),
+                    },
+                )
+                st.success(
+                    "Saved as briefing defaults. "
+                    "Home briefing will use these settings on the next run."
+                )
+            except Exception as e:
+                st.caption(f"Could not save: {e}")
 
 with tab_pairs:
     st.markdown("#### Pairs trading")

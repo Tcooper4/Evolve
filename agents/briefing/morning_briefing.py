@@ -55,6 +55,59 @@ class MorningBriefing:
         self.min_ai_score = float(min_ai_score or 5.5)
         self.max_positions = max_positions
         self._last_report: Optional[Dict[str, Any]] = None
+        self._briefing_prefs: Dict[str, Any] = {}
+
+    def _load_briefing_prefs(self) -> Dict[str, Any]:
+        try:
+            from config.user_store import load_user_preferences
+            from utils.session_utils import get_stable_user_id
+
+            return load_user_preferences(get_stable_user_id()) or {}
+        except Exception:
+            return {}
+
+    def _opportunity_passes_direction_pref(self, opp: Dict[str, Any]) -> bool:
+        prefs = getattr(self, "_briefing_prefs", {}) or {}
+        od = prefs.get(
+            "opportunity_direction",
+            "Bullish only (BUY signals)",
+        )
+        fc = opp.get("forecast") or {}
+        entry = float(opp.get("entry") or 0)
+        target = float(opp.get("target") or fc.get("consensus_price") or 0)
+        exp_pct = float(fc.get("expected_move_pct", 0) or 0) / 100.0
+        if entry > 0 and target > 0:
+            forecast_return = (target - entry) / entry
+        else:
+            forecast_return = exp_pct
+
+        sym = str(opp.get("symbol") or "?")
+
+        if "Both directions" in od:
+            return True
+        if "Bearish only" in od:
+            is_bear = forecast_return < -0.005 or (
+                target > 0 and entry > 0 and target < entry * 0.998
+            )
+            if not is_bear:
+                logger.info(
+                    "Skipping %s: not bearish enough for bearish-only pref "
+                    "(return=%.2f%%)",
+                    sym,
+                    forecast_return * 100.0,
+                )
+            return is_bear
+
+        is_bull = forecast_return > 0.005 or (
+            target > 0 and entry > 0 and target > entry * 1.002
+        )
+        if not is_bull:
+            logger.info(
+                "Skipping %s: bearish forecast (return=%.2f%%)",
+                sym,
+                forecast_return * 100.0,
+            )
+        return is_bull
 
     def generate(
         self,
@@ -85,13 +138,49 @@ class MorningBriefing:
             candidates = self._scan_universe(
                 progress_callback=progress_callback
             )
+            self._briefing_prefs = self._load_briefing_prefs()
+            pref_sectors = self._briefing_prefs.get("preferred_sectors") or []
+            if pref_sectors and candidates:
+                try:
+                    from trading.data.price_cache import get_info
+
+                    filtered_c: List[Dict[str, Any]] = []
+                    for c in candidates:
+                        sym = c.get("symbol")
+                        if not sym:
+                            continue
+                        try:
+                            info = get_info(str(sym)) or {}
+                            sec_raw = (info.get("sector") or "").strip()
+                        except Exception:
+                            sec_raw = ""
+                        sec_l = sec_raw.lower()
+                        if not sec_l:
+                            continue
+                        if any(
+                            str(s).strip().lower() in sec_l
+                            for s in pref_sectors
+                        ):
+                            nc = dict(c)
+                            nc["sector"] = sec_raw
+                            filtered_c.append(nc)
+                    if filtered_c:
+                        candidates = filtered_c
+                        logger.info(
+                            "Sector filter applied: %d candidates in %s",
+                            len(candidates),
+                            pref_sectors,
+                        )
+                except Exception as _sf:
+                    logger.debug("Sector filter skipped: %s", _sf)
+
             logger.info(
                 "Morning briefing: found %d candidates above %.1f score",
                 len(candidates),
                 self.min_ai_score,
             )
 
-            # Step 3: Deep analysis on top candidates
+            # Step 3: Deep analysis — try extra names until slots filled
             opportunities = []
             shared_router = None
             try:
@@ -101,16 +190,19 @@ class MorningBriefing:
             except Exception as e:
                 logger.warning("Morning briefing: ForecastRouter init failed: %s", e)
 
-            _to_analyze = candidates[: self.max_positions]
-            _n_opp = len(_to_analyze)
-            for i, candidate in enumerate(_to_analyze):
+            _max_try = min(len(candidates), max(self.max_positions * 6, 24))
+            _pool = candidates[:_max_try]
+            _n_pool = len(_pool)
+            for i, candidate in enumerate(_pool):
+                if len(opportunities) >= self.max_positions:
+                    break
                 sym = candidate.get("symbol") or "?"
                 t0 = time.perf_counter()
                 logger.info(
                     "Morning briefing: analyzing %s (%d/%d)",
                     sym,
                     i + 1,
-                    _n_opp,
+                    _n_pool,
                 )
                 try:
                     opp = self._analyze_opportunity(
@@ -118,7 +210,7 @@ class MorningBriefing:
                         router=shared_router,
                         briefing=True,
                     )
-                    if opp:
+                    if opp and self._opportunity_passes_direction_pref(opp):
                         opportunities.append(opp)
                 except Exception as e:
                     logger.debug(
@@ -243,6 +335,24 @@ class MorningBriefing:
                     uni = list(_get_universe("sp100"))
                 elif "Top 25" in pref_uni:
                     uni = list(_get_universe("sp100"))[:25]
+                if _p.get("watchlist_only"):
+                    try:
+                        from trading.data.watchlist import WatchlistManager
+
+                        _wl = WatchlistManager().get_all() or []
+                        _syms = [
+                            str(r.get("symbol", "")).strip().upper()
+                            for r in _wl
+                            if r.get("symbol")
+                        ]
+                        if _syms:
+                            uni = _syms
+                            logger.info(
+                                "Morning briefing: using watchlist (%d tickers)",
+                                len(uni),
+                            )
+                    except Exception as _wl_e:
+                        logger.debug("Watchlist-only universe skipped: %s", _wl_e)
             except Exception:
                 pass
             if u in ("sp50", "large", "mega"):
@@ -487,8 +597,14 @@ class MorningBriefing:
         """Check watchlist for notable moves or signals."""
         alerts = []
         try:
-            from trading.data.watchlist import get_watchlist
-            watchlist = get_watchlist()
+            from trading.data.watchlist import WatchlistManager
+
+            _rows = WatchlistManager().get_all() or []
+            watchlist = [
+                str(r.get("symbol", "")).strip().upper()
+                for r in _rows
+                if r.get("symbol")
+            ]
             if not watchlist:
                 return []
 

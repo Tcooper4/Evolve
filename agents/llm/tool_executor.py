@@ -37,6 +37,13 @@ _ROUTER_STOPWORDS = {
     "WORK", "LAST", "NEXT", "HELP", "LOOK", "TELL", "GIVE", "KEEP", "TURN",
     "MOVE", "HELD", "HIGH", "LEFT", "SIDE", "CASE", "WEEK",
     "SAME", "SURE", "HALF", "FULL", "LESS", "BEST", "CAME", "DONE",
+    # Tool / domain triggers matching [A-Z]{2,5} (not tickers)
+    "RISK", "NEWS", "SCAN", "BUY", "SELL", "DEEP", "DIVE", "CHAT",
+    "STOCK", "STOCKS", "PICK", "PICKS", "IDEA", "IDEAS", "FIND",
+    "RATE", "TEST", "FLOW", "CALL", "PUTS", "CALLS",
+    "PLOT", "SHOW", "OPEN", "CLOSE", "STOP", "LOSS", "GAIN",
+    "PLAY", "REAL", "FAKE", "MOCK", "LIVE", "DATA", "INFO",
+    "TICK", "TICKS", "NAME", "CODE", "LIST", "GRID", "VIEW",
 }
 
 # Heuristic triggers (substring / regex). Single-symbol tools require a ticker
@@ -124,8 +131,22 @@ def _extract_json_object(text: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _strip_deep_dive_prefix(user_message: str) -> str:
+    """Remove `[Deep dive: TICKER]` line so DEEP/DIVE/TICKER there are not regex-matched."""
+    if not user_message:
+        return user_message
+    return re.sub(
+        r"^\s*\[Deep\s+dive:\s*[A-Za-z0-9.-]+\]\s*\n?",
+        "",
+        user_message,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+
+
 def _extract_symbols(user_message: str) -> List[str]:
-    found = re.findall(r"\b([A-Z]{2,5})\b", (user_message or "").upper())
+    body = _strip_deep_dive_prefix(user_message or "")
+    found = re.findall(r"\b([A-Z]{2,5})\b", body.upper())
     return [s for s in found if s not in _ROUTER_STOPWORDS]
 
 
@@ -134,13 +155,15 @@ def _resolve_symbol_for_tools(
     focus_symbol: Optional[str],
 ) -> Optional[str]:
     """
-    Pick a ticker for tool calls: first candidate from _extract_symbols (already
-    stopword-filtered), else the UI/session focus symbol (e.g. deep-dive chat).
+    Pick a ticker for tool calls: prefer explicit mentions, with session focus
+    when it matches extracted candidates; otherwise first candidate, else focus.
     """
-    if syms:
-        return syms[0]
     focus = (focus_symbol or "").strip().upper() or None
-    return focus
+    if not syms:
+        return focus
+    if focus and focus in syms:
+        return focus
+    return syms[0]
 
 
 def _pattern_hit(msg: str, patterns: List[str]) -> bool:
@@ -374,16 +397,23 @@ def _run_tool(
     timeout_s: float,
 ) -> Dict[str, Any]:
     kwargs = _filter_kwargs(fn, arguments)
+    ex = ThreadPoolExecutor(max_workers=1)
     try:
-        with ThreadPoolExecutor(max_workers=1) as ex:
-            fut = ex.submit(fn, **kwargs)
-            return fut.result(timeout=timeout_s)
+        fut = ex.submit(fn, **kwargs)
+        return fut.result(timeout=timeout_s)
     except FuturesTimeout:
         logger.warning("Tool %s timed out after %.0fs", name, timeout_s)
         return {"success": False, "error": f"timeout after {timeout_s:.0f}s"}
     except Exception as e:
         logger.warning("Tool %s failed: %s", name, e)
         return {"success": False, "error": str(e)}
+    finally:
+        # Context manager shutdown(wait=True) would block until a timed-out call
+        # finishes; non-blocking shutdown returns promptly.
+        try:
+            ex.shutdown(wait=False, cancel_futures=True)
+        except Exception as e:
+            logger.debug("Tool %s executor shutdown: %s", name, e)
 
 
 def execute_with_tools(

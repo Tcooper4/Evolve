@@ -180,6 +180,15 @@ with st.sidebar:
     except Exception:
         st.caption("Market status: —")
     st.markdown("---")
+    # Always-visible navigation (supplements st.navigation grouping/labels)
+    st.page_link("pages/1_Dashboard.py", label="🏠 Home")
+    with st.expander("Advanced tools", expanded=False):
+        st.page_link("pages/2_Analyze.py", label="📊 Analyze")
+        st.page_link("pages/3_Scanner.py", label="🔍 Scanner")
+        st.page_link("pages/4_Trade.py", label="💼 Trade")
+        st.page_link("pages/5_Backtest.py", label="⏮ Backtest")
+        st.page_link("pages/6_Chat.py", label="💬 Chat")
+    st.page_link("pages/7_Settings.py", label="⚙️ Settings")
 
 # ── Inject theme globally ────────────────────────────
 try:

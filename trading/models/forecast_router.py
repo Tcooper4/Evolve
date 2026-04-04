@@ -1376,10 +1376,42 @@ class ForecastRouter:
                     except FuturesTimeout:
                         failed.append(f"{name}(timeout {_to:.0f}s)")
                         continue
+                # Exclude models with unreliable fit (wild MAPE) from consensus
+                MAX_RELIABLE_MAPE = 100.0
+                _vmape = (result or {}).get("validation_mape")
+                _ismape = (result or {}).get("in_sample_mape")
+                _mape_vals = []
+                for _mv in (_vmape, _ismape):
+                    if _mv is not None and np.isfinite(float(_mv)):
+                        _mape_vals.append(float(_mv))
+                if _mape_vals:
+                    _worst_mape = max(_mape_vals)
+                    if _worst_mape > MAX_RELIABLE_MAPE:
+                        logger.warning(
+                            "Excluding %s from consensus: MAPE=%.1f%% exceeds "
+                            "reliability threshold (%.0f%%)",
+                            name,
+                            _worst_mape,
+                            MAX_RELIABLE_MAPE,
+                        )
+                        failed.append(f"{name}(MAPE {_worst_mape:.1f}%)")
+                        continue
                 fc_result = (result or {}).get("forecast", [])
                 fc = np.asarray(fc_result, dtype="float64").ravel()
                 if fc.size < horizon_int:
                     raise ValueError("forecast shorter than horizon")
+                # Exclude pathological level jumps vs last close (continuity sanity)
+                if last_price > 0 and fc.size > 0:
+                    _cont = abs(float(fc[0]) - last_price) / last_price
+                    if _cont > 5.0:
+                        logger.warning(
+                            "Excluding %s from consensus: first-step gap vs "
+                            "last price = %.1f%% (>500%% threshold)",
+                            name,
+                            _cont * 100.0,
+                        )
+                        failed.append(f"{name}(continuity gap {_cont*100:.0f}%)")
+                        continue
 
                 # Sanity: require some finite values within a broad multiple of last price
                 finite = fc[np.isfinite(fc)]

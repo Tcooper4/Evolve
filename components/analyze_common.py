@@ -132,6 +132,11 @@ def _generate_recommendation(
     trader_mode="Short-term",
 ):
     try:
+        import streamlit as st
+        from trading.data.price_cache import get_quote
+
+        _sym = (ticker or "").strip().upper()
+
         # Entry is always current price from latest quote
         _quote = get_quote(ticker) if ticker else {}
         last_price = _quote.get("price") or _quote.get("regularMarketPrice") or 0.0
@@ -176,10 +181,37 @@ def _generate_recommendation(
             _action = "HOLD"
             _conv = "LOW"
 
-        # Get consensus forecast for context (direction/conviction may be absent)
-        _consensus = st.session_state.get("current_forecast_result", {}) or (
-            forecast_result or {}
-        )
+        # Consensus for direction / conviction: prefer explicit forecast_result from this
+        # call (e.g. fresh router output for `ticker`). Session `current_forecast_result`
+        # is only used when no argument was passed or it is unusable — otherwise a stale
+        # non-empty session dict would override the correct ticker’s forecast.
+        def _fc_symbol(fc):
+            if not isinstance(fc, dict):
+                return None
+            v = fc.get("symbol") or fc.get("ticker") or fc.get("Symbol")
+            return str(v).strip().upper() if v else None
+
+        _passed = forecast_result
+        _sess_raw = st.session_state.get("current_forecast_result")
+        _sess = _sess_raw if isinstance(_sess_raw, dict) else {}
+
+        if _passed is not None and isinstance(_passed, dict):
+            if _passed.get("error"):
+                _consensus = {}
+            else:
+                ps = _fc_symbol(_passed)
+                if ps and _sym and ps != _sym:
+                    _consensus = {}
+                else:
+                    _consensus = _passed
+        elif _sess and not _sess.get("error"):
+            ss = _fc_symbol(_sess)
+            if ss and _sym and ss != _sym:
+                _consensus = {}
+            else:
+                _consensus = _sess
+        else:
+            _consensus = {}
         _fc_arr = _consensus.get("forecast", [])
         _consensus_dir = _consensus.get("direction", "NEUTRAL")
         _consensus_conv = (

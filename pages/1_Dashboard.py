@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Evolve Home — single scroll: pulse, watchlist, news, deep dive, chat, briefing.
+Evolve Home — single scroll: pulse, briefing, watchlist, news, chat, deep dive.
 """
 import logging
 import sys
@@ -217,8 +217,8 @@ if not st.session_state["onboarding_done"]:
 
 st.title("Home")
 st.caption(
-    "Your trading copilot — scroll for pulse, watchlist, news, chat; "
-    "briefing loads at the bottom (cached 30m)."
+    "Your trading copilot — market pulse and morning briefing first; "
+    "watchlist, news, and chat; open a ticker for deep dive at the bottom."
 )
 
 try:
@@ -262,6 +262,103 @@ with c_vx:
         st.metric("VIX", f"{vx['price']:.2f}", f"{vx['chg']:+.2f}%")
     else:
         st.caption("Markets loading...")
+
+# --- Morning briefing (primary value — cached 30m) ---
+st.markdown("---")
+st.subheader("Morning briefing")
+_bkey, _btkey = "home_briefing_report", "home_briefing_ts"
+_now = time.time()
+_cached = st.session_state.get(_bkey)
+_cached_ts = st.session_state.get(_btkey, 0)
+if _cached and (_now - _cached_ts) < 1800:
+    report = _cached
+else:
+    try:
+        from agents.briefing.morning_briefing import MorningBriefing
+
+        st.info(
+            "Generating briefing: parallel AI scores on up to 50 tickers, "
+            "then 5 fast models per top pick (~20–60s typical, 3 picks). "
+            "Watchlist and news below load in parallel.",
+            icon="⏳",
+        )
+        _mb = MorningBriefing(universe="sp100")
+        progress = st.progress(0, text="AI-scoring universe (parallel)…")
+
+        def _brief_progress(done: int, total: int) -> None:
+            if total <= 0:
+                return
+            progress.progress(
+                min(1.0, float(done) / float(total)),
+                text=f"AI-scoring universe… {done}/{total}",
+            )
+
+        try:
+            report = _mb.generate(progress_callback=_brief_progress)
+        finally:
+            progress.empty()
+        st.session_state[_bkey] = report
+        st.session_state[_btkey] = _now
+    except Exception as e:
+        report = {"error": str(e), "top_opportunities": [], "market_regime": {}}
+        st.caption(f"unavailable: {e}")
+
+reg = report.get("market_regime") or {}
+reg_lbl = reg.get("regime", "NEUTRAL")
+vix_l = reg.get("vix_level")
+reg_line = f"{reg_lbl.replace('_', '-').title()}"
+if vix_l is not None:
+    reg_line += f" · VIX {vix_l:.1f}"
+st.markdown(f"**{reg_line}** — {reg.get('description', '')}")
+try:
+    from datetime import datetime
+
+    from trading.utils.time_utils import format_timestamp
+
+    _ts = report.get("timestamp") or ""
+    if _ts:
+        _dt = datetime.fromisoformat(_ts.replace("Z", "+00:00"))
+        st.caption(
+            f"Briefing generated: "
+            f"{format_timestamp(_dt, timezone='America/New_York')}"
+        )
+except Exception:
+    pass
+
+opps = report.get("top_opportunities") or []
+if opps:
+    for opp in opps[:5]:
+        sym = opp.get("symbol", "")
+        if not sym:
+            continue
+        info = {}
+        try:
+            info = get_info(sym) or {}
+        except Exception:
+            pass
+        co = info.get("longName") or info.get("shortName") or ""
+        sec = info.get("sector") or ""
+        sc = float(opp.get("ai_score") or 0)
+        col_a, col_b = st.columns([4, 1])
+        with col_a:
+            st.markdown(
+                f"**{sym}** · {co} · _{sec}_ — "
+                f":{_score_color(sc)}[AI {sc:.1f}]"
+            )
+            th = opp.get("thesis") or ""
+            if th:
+                st.caption(th)
+            fc = opp.get("forecast") or {}
+            if fc:
+                st.caption(
+                    f"Entry **{opp.get('entry')}** → Target "
+                    f"**{fc.get('consensus_price')}**"
+                )
+        with col_b:
+            if st.button("Open", key=f"hb_{sym}"):
+                _set_deep_dive(sym)
+else:
+    st.caption("No opportunities passed the score threshold right now.")
 
 # --- Watchlist ---
 st.subheader("Your watchlist")
@@ -396,12 +493,6 @@ try:
 except Exception as e:
     st.caption(f"unavailable: {e}")
 
-# --- Deep dive ---
-dd = st.session_state.get("deep_dive_ticker")
-if dd:
-    st.markdown("---")
-    render_deep_dive(str(dd))
-
 # --- Chat ---
 st.markdown("---")
 st.subheader("Chat")
@@ -442,102 +533,11 @@ if _prompt:
         }
     )
 
-# --- Morning briefing (after watchlist / news / chat so those render first) ---
-st.markdown("---")
-st.subheader("Morning briefing")
-_bkey, _btkey = "home_briefing_report", "home_briefing_ts"
-_now = time.time()
-_cached = st.session_state.get(_bkey)
-_cached_ts = st.session_state.get(_btkey, 0)
-if _cached and (_now - _cached_ts) < 1800:
-    report = _cached
-else:
-    try:
-        from agents.briefing.morning_briefing import MorningBriefing
-
-        st.info(
-            "Generating briefing: parallel AI scores on up to 50 tickers, "
-            "then 5 fast models per top pick (~20–60s typical, 3 picks). "
-            "Watchlist and news above are already loaded.",
-            icon="⏳",
-        )
-        _mb = MorningBriefing(universe="sp100")
-        progress = st.progress(0, text="AI-scoring universe (parallel)…")
-
-        def _brief_progress(done: int, total: int) -> None:
-            if total <= 0:
-                return
-            progress.progress(
-                min(1.0, float(done) / float(total)),
-                text=f"AI-scoring universe… {done}/{total}",
-            )
-
-        try:
-            report = _mb.generate(progress_callback=_brief_progress)
-        finally:
-            progress.empty()
-        st.session_state[_bkey] = report
-        st.session_state[_btkey] = _now
-    except Exception as e:
-        report = {"error": str(e), "top_opportunities": [], "market_regime": {}}
-        st.caption(f"unavailable: {e}")
-
-reg = report.get("market_regime") or {}
-reg_lbl = reg.get("regime", "NEUTRAL")
-vix_l = reg.get("vix_level")
-reg_line = f"{reg_lbl.replace('_', '-').title()}"
-if vix_l is not None:
-    reg_line += f" · VIX {vix_l:.1f}"
-st.markdown(f"**{reg_line}** — {reg.get('description', '')}")
-try:
-    from datetime import datetime
-
-    from trading.utils.time_utils import format_timestamp
-
-    _ts = report.get("timestamp") or ""
-    if _ts:
-        _dt = datetime.fromisoformat(_ts.replace("Z", "+00:00"))
-        st.caption(
-            f"Briefing generated: "
-            f"{format_timestamp(_dt, timezone='America/New_York')}"
-        )
-except Exception:
-    pass
-
-opps = report.get("top_opportunities") or []
-if opps:
-    for opp in opps[:5]:
-        sym = opp.get("symbol", "")
-        if not sym:
-            continue
-        info = {}
-        try:
-            info = get_info(sym) or {}
-        except Exception:
-            pass
-        co = info.get("longName") or info.get("shortName") or ""
-        sec = info.get("sector") or ""
-        sc = float(opp.get("ai_score") or 0)
-        col_a, col_b = st.columns([4, 1])
-        with col_a:
-            st.markdown(
-                f"**{sym}** · {co} · _{sec}_ — "
-                f":{_score_color(sc)}[AI {sc:.1f}]"
-            )
-            th = opp.get("thesis") or ""
-            if th:
-                st.caption(th)
-            fc = opp.get("forecast") or {}
-            if fc:
-                st.caption(
-                    f"Entry **{opp.get('entry')}** → Target "
-                    f"**{fc.get('consensus_price')}**"
-                )
-        with col_b:
-            if st.button("Open", key=f"hb_{sym}"):
-                _set_deep_dive(sym)
-else:
-    st.caption("No opportunities passed the score threshold right now.")
+# --- Deep dive (user-selected ticker — bottom of page) ---
+dd = st.session_state.get("deep_dive_ticker")
+if dd:
+    st.markdown("---")
+    render_deep_dive(str(dd))
 
 try:
     from trading.services.alert_checker import check_alerts_for_user
