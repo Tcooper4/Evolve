@@ -1249,6 +1249,9 @@ class ForecastRouter:
         """
         Run multiple models and build a consensus forecast.
 
+        model_configs: optional per-model kwargs forwarded to get_forecast (e.g.
+        {"arima": {"fast_mode": True}}).
+
         Returns a dict containing:
         - consensus_forecast: mean path across models
         - upper_bound / lower_bound: mean ± std across models (model agreement
