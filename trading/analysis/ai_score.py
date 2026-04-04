@@ -24,6 +24,36 @@ from trading.utils.safe_math import safe_rsi
 logger = logging.getLogger(__name__)
 
 _MACRO_FACTORS_INSTANCE = None
+
+
+def _has_external_api_keys() -> bool:
+    """True only if at least one paid/external API key is configured."""
+    import os
+
+    keys = [
+        "TWITTER_API_KEY",
+        "FRED_API_KEY",
+        "TRADIER_TOKEN",
+        "NEWS_API_KEY",
+    ]
+    try:
+        _ss = st.session_state
+    except Exception:
+        _ss = None
+
+    for key in keys:
+        env_v = (os.environ.get(key, "") or "").strip()
+        sess_v = ""
+        if _ss is not None:
+            try:
+                sess_v = str(
+                    _ss.get(f"user_key_{key}", "") or ""
+                ).strip()
+            except Exception:
+                sess_v = ""
+        if env_v or sess_v:
+            return True
+    return False
 _ML_TRAINER_INSTANCE = None
 
 
@@ -137,17 +167,20 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
     """Internal AI score computation (used by compute_ai_score)."""
     try:
         _external_bundle: Optional[Dict[str, Any]] = None
-        try:
-            import asyncio
+        if _has_external_api_keys():
+            try:
+                import asyncio
 
-            from trading.data.external_signals import get_external_signals_manager
+                from trading.data.external_signals import (
+                    get_external_signals_manager,
+                )
 
-            _esm = get_external_signals_manager()
-            _external_bundle = asyncio.run(
-                _esm.get_all_signals(symbol, days_back=3)
-            )
-        except Exception:
-            _external_bundle = None
+                _esm = get_external_signals_manager()
+                _external_bundle = asyncio.run(
+                    _esm.get_all_signals(symbol, days_back=3)
+                )
+            except Exception:
+                _external_bundle = None
 
         # --- Fetch data ---
         if hist is None or hist.empty:

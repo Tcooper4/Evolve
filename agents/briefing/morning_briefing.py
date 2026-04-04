@@ -32,6 +32,9 @@ class MorningBriefing:
     5. Summarize market regime
     """
 
+    # Cap universe for briefing speed; Scanner page uses full list.
+    BRIEFING_UNIVERSE_CAP = 50
+
     def __init__(
         self,
         universe: str = "sp100",
@@ -187,6 +190,7 @@ class MorningBriefing:
                 uni = uni[:50]
             elif u in ("sp30", "core"):
                 uni = uni[:30]
+            uni = uni[: self.BRIEFING_UNIVERSE_CAP]
 
             raw = scan_market(
                 filters=[],
@@ -558,8 +562,9 @@ class MorningBriefing:
                 )
 
         lines.append(
-            f"\n---\n*Briefing covers {self.universe.upper()} universe. "
-            f"Always verify signals before trading.*"
+            f"\n---\n*Briefing scans up to {self.BRIEFING_UNIVERSE_CAP} "
+            f"tickers from {self.universe.upper()} for speed; use Scanner "
+            f"for the full universe. Always verify signals before trading.*"
         )
 
         return "\n".join(lines)
