@@ -18,6 +18,8 @@ import time
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
 
 
@@ -229,6 +231,73 @@ class MorningBriefing:
                     sym,
                     elapsed,
                 )
+
+            if len(opportunities) >= 2:
+                try:
+                    from trading.data.price_cache import get_history
+                    from trading.optimization.portfolio_optimizer import (
+                        get_portfolio_optimizer,
+                    )
+
+                    _opt = get_portfolio_optimizer()
+                    _syms = [
+                        str(o.get("symbol", "")).upper()
+                        for o in opportunities
+                    ]
+                    _returns_dict: Dict[str, pd.Series] = {}
+                    for sym in _syms:
+                        try:
+                            h = get_history(
+                                sym, period="126d", interval="1d"
+                            )
+                            if h is not None and len(h) >= 30:
+                                col = {
+                                    c.lower(): c for c in h.columns
+                                }.get("close", h.columns[0])
+                                _returns_dict[sym] = (
+                                    h[col].pct_change().dropna()
+                                )
+                        except Exception:
+                            continue
+                    if len(_returns_dict) >= 2:
+                        _returns_df = pd.DataFrame(_returns_dict).dropna(
+                            how="any"
+                        )
+                        if len(_returns_df) >= 30:
+                            _result = _opt.mean_variance_optimization(
+                                _returns_df, target_return=None
+                            )
+                            if (
+                                isinstance(_result, dict)
+                                and "weights" in _result
+                                and "error" not in _result
+                            ):
+                                _weights = _result["weights"]
+                                for opp in opportunities:
+                                    sym = opp["symbol"]
+                                    w = float(
+                                        _weights.get(
+                                            sym, 1.0 / len(_syms)
+                                        )
+                                    )
+                                    opp["suggested_weight"] = round(w, 3)
+                                    opp["weight_pct"] = f"{w * 100:.0f}%"
+                                report["portfolio"] = {
+                                    "method": "max_sharpe",
+                                    "expected_sharpe": _result.get(
+                                        "sharpe_ratio"
+                                    ),
+                                    "weights": _weights,
+                                    "note": (
+                                        "Mean-variance optimized weights "
+                                        "(6-month history)"
+                                    ),
+                                }
+                                logger.info(
+                                    "Portfolio optimized: %s", _weights
+                                )
+                except Exception as e:
+                    logger.debug("Portfolio opt failed: %s", e)
 
             report["top_opportunities"] = opportunities
 

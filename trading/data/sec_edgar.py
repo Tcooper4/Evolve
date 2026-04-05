@@ -16,7 +16,7 @@ import json
 import logging
 import re
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
@@ -324,12 +324,8 @@ def _build_llm_client() -> Optional[Callable[[str], str]]:
         return None
 
 
-def get_sec_signal(ticker: str) -> dict:
-    """
-    Trading-oriented bundle from SEC analysis.
-
-    Keys: sec_sentiment, sec_label, sec_themes, sec_filing_date, sec_source.
-    """
+def _get_sec_signal_impl(ticker: str) -> dict:
+    """Uncached SEC signal bundle (network + optional LLM)."""
     try:
         llm_fn = _build_llm_client()
         sentiment = get_sec_sentiment(ticker, llm_client=llm_fn)
@@ -349,3 +345,48 @@ def get_sec_signal(ticker: str) -> dict:
             "sec_filing_date": None,
             "sec_source": "error",
         }
+
+
+_SEC_SIGNAL_CACHE: Dict[str, Tuple[dict, float]] = {}
+
+try:
+    import streamlit as st
+
+    @st.cache_data(ttl=86400, show_spinner=False)
+    def _streamlit_cached_sec_signal(ticker: str) -> dict:
+        return _get_sec_signal_impl(ticker)
+
+except ImportError:
+    _streamlit_cached_sec_signal = None  # type: ignore[misc, assignment]
+
+
+def get_sec_signal(ticker: str) -> dict:
+    """
+    Trading-oriented bundle from SEC analysis.
+
+    Keys: sec_sentiment, sec_label, sec_themes, sec_filing_date, sec_source.
+    Cached 24h in-process and via Streamlit cache_data when applicable.
+    """
+    t = str(ticker).upper().strip()
+    hit = _SEC_SIGNAL_CACHE.get(t)
+    if hit:
+        result, ts = hit
+        if time.time() - ts < 86400:
+            return dict(result)
+
+    out: dict
+    if _streamlit_cached_sec_signal is not None:
+        try:
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+            if get_script_run_ctx() is not None:
+                out = dict(_streamlit_cached_sec_signal(t))
+            else:
+                out = dict(_get_sec_signal_impl(t))
+        except Exception:
+            out = dict(_get_sec_signal_impl(t))
+    else:
+        out = dict(_get_sec_signal_impl(t))
+
+    _SEC_SIGNAL_CACHE[t] = (out, time.time())
+    return dict(out)

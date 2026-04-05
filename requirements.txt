@@ -69,8 +69,8 @@ XlsxWriter==3.2.3
 # Sentiment
 vaderSentiment==3.3.2
 
-# Technical indicators — pandas-ta on PyPI currently requires Python>=3.12 (0.4.x only);
-# platform uses Python 3.10. Optional after Python upgrade: pip install pandas-ta
+# Technical indicators — pandas_ta>=0.3.14b not on PyPI for Python 3.10; 0.4.x requires Python>=3.12
+pandas-ta>=0.4.67b0; python_version >= "3.12"
 
 # Optimization and tuning
 optuna>=3.0.0

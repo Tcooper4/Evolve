@@ -326,6 +326,15 @@ except Exception:
     pass
 
 opps = report.get("top_opportunities") or []
+_portfolio = report.get("portfolio")
+if _portfolio and len(opps) >= 2:
+    _sharpe = _portfolio.get("expected_sharpe")
+    if _sharpe is not None:
+        st.caption(
+            f"📐 Portfolio Sharpe: "
+            f"{float(_sharpe):.2f} | "
+            f"{_portfolio.get('note', '')}"
+        )
 if opps:
     for opp in opps[:5]:
         sym = opp.get("symbol", "")
@@ -356,6 +365,12 @@ if opps:
                 )
             if opp.get("risk_note"):
                 st.caption(opp["risk_note"])
+            _weight = opp.get("weight_pct")
+            if _weight:
+                st.caption(
+                    f"Suggested allocation: **{_weight}** of portfolio "
+                    f"(mean-variance optimized)"
+                )
         with col_b:
             if st.button("Open", key=f"hb_{sym}"):
                 _set_deep_dive(sym)

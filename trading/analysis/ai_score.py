@@ -791,6 +791,57 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                     signals.append(_msig)
             except Exception:
                 pass
+
+            try:
+                from trading.analysis.factor_model import FactorModel
+
+                _fm = FactorModel()
+                if hist is not None and len(hist) >= 20:
+                    _col = {c.lower(): c for c in hist.columns}
+                    _close = _col.get("close", hist.columns[0])
+                    _prices = hist[_close].dropna()
+                    _returns = _prices.pct_change().dropna()
+                    if len(_returns) >= 10:
+                        _exposures = _fm.compute_exposures(
+                            symbol, _returns, ohlcv=hist
+                        )
+                        _mom = float(_exposures.get("momentum", 0.0))
+                        if abs(_mom) > 0.01:
+                            _factor_adj = float(_mom * 2.0)
+                            fundamental_score = float(
+                                np.clip(
+                                    fundamental_score + _factor_adj,
+                                    0,
+                                    10,
+                                )
+                            )
+                            signals.append(
+                                {
+                                    "name": "Factor: Momentum",
+                                    "value": round(_mom, 3),
+                                    "impact": (
+                                        "positive"
+                                        if _mom > 0
+                                        else "negative"
+                                    ),
+                                    "description": (
+                                        f"Factor momentum exposure: {_mom:+.3f}"
+                                    ),
+                                }
+                            )
+                        _vol = float(_exposures.get("volatility", 0.0))
+                        if _vol > 0:
+                            _vol_score = max(0, 1 - _vol * 5)
+                            fundamental_score = float(
+                                np.clip(
+                                    fundamental_score * 0.9
+                                    + _vol_score * 10 * 0.1,
+                                    0,
+                                    10,
+                                )
+                            )
+            except Exception:
+                pass
         except Exception:
             pass
 
