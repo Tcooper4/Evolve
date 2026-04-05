@@ -40,16 +40,18 @@ _auto_mode = st.toggle(
 )
 
 if _auto_mode:
-    try:
-        from agents.briefing.morning_briefing import (
-            MorningBriefing,
-        )
-        MorningBriefing(universe="sp100").render_streamlit()
-        st.markdown("---")
-    except Exception as e:
-        st.caption(
-            f"Morning briefing unavailable: {e}"
-        )
+
+    @st.fragment
+    def _render_chat_briefing():
+        try:
+            from agents.briefing.morning_briefing import MorningBriefing
+
+            MorningBriefing(universe="sp100").render_streamlit()
+            st.markdown("---")
+        except Exception as e:
+            st.caption(f"Morning briefing unavailable: {e}")
+
+    _render_chat_briefing()
 
 st.markdown("### Chat")
 st.caption("Ask about portfolio, strategies, risk. News and market context on the right.")

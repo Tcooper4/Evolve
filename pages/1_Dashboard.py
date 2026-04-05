@@ -266,116 +266,123 @@ with c_vx:
 # --- Morning briefing (primary value — cached 30m) ---
 st.markdown("---")
 st.subheader("Morning briefing")
-_bkey, _btkey = "home_briefing_report", "home_briefing_ts"
-_now = time.time()
-_cached = st.session_state.get(_bkey)
-_cached_ts = st.session_state.get(_btkey, 0)
-if _cached and (_now - _cached_ts) < 1800:
-    report = _cached
-else:
+
+
+@st.fragment
+def _render_briefing():
+    _bkey, _btkey = "home_briefing_report", "home_briefing_ts"
+    _now = time.time()
+    _cached = st.session_state.get(_bkey)
+    _cached_ts = st.session_state.get(_btkey, 0)
+    if _cached and (_now - _cached_ts) < 1800:
+        report = _cached
+    else:
+        try:
+            from agents.briefing.morning_briefing import MorningBriefing
+
+            st.info(
+                "Generating briefing: parallel AI scores on up to 50 tickers, "
+                "then 5 fast models per top pick (~20–60s typical, 3 picks). "
+                "Watchlist and news below load in parallel.",
+                icon="⏳",
+            )
+            _mb = MorningBriefing(universe="sp100")
+            progress = st.progress(0, text="AI-scoring universe (parallel)…")
+
+            def _brief_progress(done: int, total: int) -> None:
+                if total <= 0:
+                    return
+                progress.progress(
+                    min(1.0, float(done) / float(total)),
+                    text=f"AI-scoring universe… {done}/{total}",
+                )
+
+            try:
+                report = _mb.generate(progress_callback=_brief_progress)
+            finally:
+                progress.empty()
+            st.session_state[_bkey] = report
+            st.session_state[_btkey] = _now
+        except Exception as e:
+            report = {"error": str(e), "top_opportunities": [], "market_regime": {}}
+            st.caption(f"unavailable: {e}")
+
+    reg = report.get("market_regime") or {}
+    reg_lbl = reg.get("regime", "NEUTRAL")
+    vix_l = reg.get("vix_level")
+    reg_line = f"{reg_lbl.replace('_', '-').title()}"
+    if vix_l is not None:
+        reg_line += f" · VIX {vix_l:.1f}"
+    st.markdown(f"**{reg_line}** — {reg.get('description', '')}")
     try:
-        from agents.briefing.morning_briefing import MorningBriefing
+        from datetime import datetime
 
-        st.info(
-            "Generating briefing: parallel AI scores on up to 50 tickers, "
-            "then 5 fast models per top pick (~20–60s typical, 3 picks). "
-            "Watchlist and news below load in parallel.",
-            icon="⏳",
-        )
-        _mb = MorningBriefing(universe="sp100")
-        progress = st.progress(0, text="AI-scoring universe (parallel)…")
+        from trading.utils.time_utils import format_timestamp
 
-        def _brief_progress(done: int, total: int) -> None:
-            if total <= 0:
-                return
-            progress.progress(
-                min(1.0, float(done) / float(total)),
-                text=f"AI-scoring universe… {done}/{total}",
+        _ts = report.get("timestamp") or ""
+        if _ts:
+            _dt = datetime.fromisoformat(_ts.replace("Z", "+00:00"))
+            st.caption(
+                f"Briefing generated: "
+                f"{format_timestamp(_dt, timezone='America/New_York')}"
             )
+    except Exception:
+        pass
 
-        try:
-            report = _mb.generate(progress_callback=_brief_progress)
-        finally:
-            progress.empty()
-        st.session_state[_bkey] = report
-        st.session_state[_btkey] = _now
-    except Exception as e:
-        report = {"error": str(e), "top_opportunities": [], "market_regime": {}}
-        st.caption(f"unavailable: {e}")
-
-reg = report.get("market_regime") or {}
-reg_lbl = reg.get("regime", "NEUTRAL")
-vix_l = reg.get("vix_level")
-reg_line = f"{reg_lbl.replace('_', '-').title()}"
-if vix_l is not None:
-    reg_line += f" · VIX {vix_l:.1f}"
-st.markdown(f"**{reg_line}** — {reg.get('description', '')}")
-try:
-    from datetime import datetime
-
-    from trading.utils.time_utils import format_timestamp
-
-    _ts = report.get("timestamp") or ""
-    if _ts:
-        _dt = datetime.fromisoformat(_ts.replace("Z", "+00:00"))
-        st.caption(
-            f"Briefing generated: "
-            f"{format_timestamp(_dt, timezone='America/New_York')}"
-        )
-except Exception:
-    pass
-
-opps = report.get("top_opportunities") or []
-_portfolio = report.get("portfolio")
-if _portfolio and len(opps) >= 2:
-    _sharpe = _portfolio.get("expected_sharpe")
-    if _sharpe is not None:
-        st.caption(
-            f"📐 Portfolio Sharpe: "
-            f"{float(_sharpe):.2f} | "
-            f"{_portfolio.get('note', '')}"
-        )
-if opps:
-    for opp in opps[:5]:
-        sym = opp.get("symbol", "")
-        if not sym:
-            continue
-        info = {}
-        try:
-            info = get_info(sym) or {}
-        except Exception:
-            pass
-        co = info.get("longName") or info.get("shortName") or ""
-        sec = info.get("sector") or ""
-        sc = float(opp.get("ai_score") or 0)
-        col_a, col_b = st.columns([4, 1])
-        with col_a:
-            st.markdown(
-                f"**{sym}** · {co} · _{sec}_ — "
-                f":{_score_color(sc)}[AI {sc:.1f}]"
+    opps = report.get("top_opportunities") or []
+    _portfolio = report.get("portfolio")
+    if _portfolio and len(opps) >= 2:
+        _sharpe = _portfolio.get("expected_sharpe")
+        if _sharpe is not None:
+            st.caption(
+                f"📐 Portfolio Sharpe: "
+                f"{float(_sharpe):.2f} | "
+                f"{_portfolio.get('note', '')}"
             )
-            th = opp.get("thesis") or ""
-            if th:
-                st.caption(th)
-            fc = opp.get("forecast") or {}
-            if fc:
-                st.caption(
-                    f"Entry **{opp.get('entry')}** → Target "
-                    f"**{fc.get('consensus_price')}**"
+    if opps:
+        for opp in opps[:5]:
+            sym = opp.get("symbol", "")
+            if not sym:
+                continue
+            info = {}
+            try:
+                info = get_info(sym) or {}
+            except Exception:
+                pass
+            co = info.get("longName") or info.get("shortName") or ""
+            sec = info.get("sector") or ""
+            sc = float(opp.get("ai_score") or 0)
+            col_a, col_b = st.columns([4, 1])
+            with col_a:
+                st.markdown(
+                    f"**{sym}** · {co} · _{sec}_ — "
+                    f":{_score_color(sc)}[AI {sc:.1f}]"
                 )
-            if opp.get("risk_note"):
-                st.caption(opp["risk_note"])
-            _weight = opp.get("weight_pct")
-            if _weight:
-                st.caption(
-                    f"Suggested allocation: **{_weight}** of portfolio "
-                    f"(mean-variance optimized)"
-                )
-        with col_b:
-            if st.button("Open", key=f"hb_{sym}"):
-                _set_deep_dive(sym)
-else:
-    st.caption("No opportunities passed the score threshold right now.")
+                th = opp.get("thesis") or ""
+                if th:
+                    st.caption(th)
+                fc = opp.get("forecast") or {}
+                if fc:
+                    st.caption(
+                        f"Entry **{opp.get('entry')}** → Target "
+                        f"**{fc.get('consensus_price')}**"
+                    )
+                if opp.get("risk_note"):
+                    st.caption(opp["risk_note"])
+                _weight = opp.get("weight_pct")
+                if _weight:
+                    st.caption(
+                        f"Suggested allocation: **{_weight}** of portfolio "
+                        f"(mean-variance optimized)"
+                    )
+            with col_b:
+                if st.button("Open", key=f"hb_{sym}"):
+                    _set_deep_dive(sym)
+    else:
+        st.caption("No opportunities passed the score threshold right now.")
+
+
+_render_briefing()
 
 # --- Watchlist ---
 st.subheader("Your watchlist")
