@@ -1719,3 +1719,16 @@ class ForecastRouter:
             logger.debug("walk-forward session merge skipped: %s", _wf_e)
         return out
 
+
+import streamlit as st
+
+
+@st.cache_resource(show_spinner=False)
+def get_router_singleton() -> "ForecastRouter":
+    """
+    Returns a single shared ForecastRouter instance for the
+    lifetime of the Streamlit server process. This preserves
+    _trained_model_cache across reruns so models are not
+    retrained on every widget interaction.
+    """
+    return ForecastRouter()

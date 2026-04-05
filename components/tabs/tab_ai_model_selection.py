@@ -328,11 +328,14 @@ def render(
                         _hist["Close"] = _hist["close"]
                     _horizon = st.session_state.get("analyze_forecast_horizon", 7)
                     try:
-                        from trading.models.forecast_router import ForecastRouter
+                        from trading.models.forecast_router import (
+                            ForecastRouter,
+                            get_router_singleton,
+                        )
                         from trading.models.model_registry import get_registry
 
                         _registry = get_registry()
-                        _router = ForecastRouter()
+                        _router = get_router_singleton()
                         _model_names = (
                             _registry.list_models()
                             if hasattr(_registry, "list_models")

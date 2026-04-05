@@ -191,9 +191,12 @@ class MorningBriefing:
             opportunities = []
             shared_router = None
             try:
-                from trading.models.forecast_router import ForecastRouter
+                from trading.models.forecast_router import (
+                    ForecastRouter,
+                    get_router_singleton,
+                )
 
-                shared_router = ForecastRouter()
+                shared_router = get_router_singleton()
             except Exception as e:
                 logger.warning("Morning briefing: ForecastRouter init failed: %s", e)
 
@@ -512,9 +515,12 @@ class MorningBriefing:
 
             # Get consensus forecast
             try:
-                from trading.models.forecast_router import ForecastRouter
+                from trading.models.forecast_router import (
+                    ForecastRouter,
+                    get_router_singleton,
+                )
 
-                _router = router if router is not None else ForecastRouter()
+                _router = router if router is not None else get_router_singleton()
                 forecast = _router.get_consensus_forecast(
                     data=hist,
                     horizon=7,

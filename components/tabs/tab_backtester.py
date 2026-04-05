@@ -127,8 +127,11 @@ def render(
                         data_for_best = st.session_state.get("analyze_forecast_data")
                         if data_for_best is not None and len(data_for_best) >= 60:
                             try:
-                                from trading.models.forecast_router import ForecastRouter
-                                _router = ForecastRouter()
+                                from trading.models.forecast_router import (
+                                    ForecastRouter,
+                                    get_router_singleton,
+                                )
+                                _router = get_router_singleton()
                                 _horizon = st.session_state.get("analyze_forecast_horizon", 7)
                                 _symbol = st.session_state.get("analyze_symbol", "")
                                 _df = data_for_best.copy()

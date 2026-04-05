@@ -624,11 +624,14 @@ def render(
                             used_router = False
                             consensus = None
                             try:
-                                from trading.models.forecast_router import ForecastRouter
+                                from trading.models.forecast_router import (
+                                    ForecastRouter,
+                                    get_router_singleton,
+                                )
                                 import hashlib as _hashlib
                                 import time as _time
 
-                                _router = ForecastRouter()
+                                _router = get_router_singleton()
                                 _data_hash = _hashlib.md5(
                                     str(data.index[-1]).encode()
                                     + str(len(data)).encode()
@@ -996,9 +999,12 @@ def render(
                 try:
                     hist_data_cons = st.session_state.get("analyze_forecast_data")
                     if hist_data_cons is not None and len(hist_data_cons) >= 2:
-                        from trading.models.forecast_router import ForecastRouter
+                        from trading.models.forecast_router import (
+                            ForecastRouter,
+                            get_router_singleton,
+                        )
 
-                        router = ForecastRouter()
+                        router = get_router_singleton()
                         horizon = st.session_state.get("analyze_forecast_horizon", 7)
                         import hashlib as _hashlib
                         import time as _time

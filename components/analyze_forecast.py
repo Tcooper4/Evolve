@@ -13,9 +13,12 @@ def render_forecast(
         if hist is None or hist.empty:
             st.caption("Load price history to run a forecast.")
             return None
-        from trading.models.forecast_router import ForecastRouter
+        from trading.models.forecast_router import (
+            ForecastRouter,
+            get_router_singleton,
+        )
 
-        router = ForecastRouter()
+        router = get_router_singleton()
         fc = router.get_consensus_forecast(
             data=hist,
             horizon=int(horizon),

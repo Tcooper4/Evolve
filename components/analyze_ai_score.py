@@ -38,9 +38,12 @@ def render_ai_score(ticker: str, hist, *, trader_mode: str = "Short-term") -> No
         st.caption(f"News sentiment score: {news_score:.1f}/10")
         forecast_result = None
         try:
-            from trading.models.forecast_router import ForecastRouter
+            from trading.models.forecast_router import (
+                ForecastRouter,
+                get_router_singleton,
+            )
 
-            router = ForecastRouter()
+            router = get_router_singleton()
             if hist is not None and not hist.empty:
                 forecast_result = router.get_consensus_forecast(
                     data=hist, horizon=7, symbol=_sym
@@ -97,7 +100,10 @@ def get_ai_recommendation_dict(
     """Structured recommendation for Deep Dive header card (no Streamlit)."""
     try:
         from trading.analysis.ai_score import compute_ai_score
-        from trading.models.forecast_router import ForecastRouter
+        from trading.models.forecast_router import (
+            ForecastRouter,
+            get_router_singleton,
+        )
 
         _sym = (ticker or "").strip().upper() or "AAPL"
         score_result = compute_ai_score(_sym, hist)
@@ -105,7 +111,7 @@ def get_ai_recommendation_dict(
             return None
         forecast_result = None
         try:
-            router = ForecastRouter()
+            router = get_router_singleton()
             if hist is not None and not hist.empty:
                 forecast_result = router.get_consensus_forecast(
                     data=hist, horizon=7, symbol=_sym

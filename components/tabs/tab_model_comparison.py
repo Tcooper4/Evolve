@@ -60,10 +60,13 @@ def render(
             if st.session_state.get("analyze_forecast_data") is None:
                 st.warning("⚠️ Please load data first in the Quick Forecast tab")
             else:
-                from trading.models.forecast_router import ForecastRouter
+                from trading.models.forecast_router import (
+                    ForecastRouter,
+                    get_router_singleton,
+                )
                 import plotly.graph_objects as go
 
-                _router = ForecastRouter()
+                _router = get_router_singleton()
                 _hist = st.session_state.get("analyze_forecast_data").copy()
                 if "Close" not in _hist.columns and "close" in _hist.columns:
                     _hist["Close"] = _hist["close"]
