@@ -31,10 +31,10 @@ if "auto_forecast_key" not in text:
 else:
     fail("auto-forecast block still present")
 
-if "st.rerun()" in text:
-    ok("st.rerun() present after data load")
+if "st.rerun()" not in text:
+    ok("No st.rerun() in Analyze page")
 else:
-    fail("st.rerun() missing")
+    fail("st.rerun() should be removed from Analyze page")
 
 if "Auto-run consensus forecast" not in text:
     ok("auto-forecast comment removed")

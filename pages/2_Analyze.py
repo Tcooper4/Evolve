@@ -138,10 +138,11 @@ if _needs_load:
             st.session_state["analyze_forecast_data"] = _auto_hist
             st.session_state["_last_autoload_key"] = _cache_key
             st.session_state["analyze_symbol"] = ticker
-            # Rerun so tabs render with fresh data immediately
-            st.rerun()
     except Exception as _e:
-        logger.warning("Analyze: history load failed for %s: %s", ticker, _e)
+        logger.warning(
+            "Analyze: history load failed for %s: %s",
+            ticker, _e,
+        )
         st.caption(f"⚠️ Could not load price history: {_e}")
 
 _st_ver = tuple(int(x) for x in st.__version__.split(".")[:2])
