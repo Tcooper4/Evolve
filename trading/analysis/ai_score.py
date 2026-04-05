@@ -26,6 +26,21 @@ logger = logging.getLogger(__name__)
 
 _MACRO_FACTORS_INSTANCE = None
 
+# Order preserved for signal_completeness score denominator
+SIGNAL_SOURCES = [
+    "technical",
+    "momentum",
+    "options_flow",
+    "chart_patterns",
+    "social_sentiment",
+    "macro_factors",
+    "earnings_calendar",
+    "insider_flow",
+    "sec_edgar",
+    "factor_model",
+    "ml_score",
+]
+
 
 def _get_scoring_weights() -> Dict[str, float]:
     """Dimension weights; adjusted by Settings → scoring_style when available."""
@@ -267,6 +282,9 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             "macro": "unavailable",
             "insider": "unavailable",
         }
+        _signal_status: Dict[str, str] = {
+            k: "unavailable" for k in SIGNAL_SOURCES
+        }
         earnings_near = False
         earnings_days_until = None
 
@@ -318,6 +336,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             tech_divisor = 1.0
 
         technical_score = min(10.0, tech_points / tech_divisor)
+        _signal_status["technical"] = "real"
 
         try:
             from trading.analysis.chart_pattern_detector import (
@@ -372,6 +391,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                         }
                     )
                     _seen_bear = True
+            _signal_status["chart_patterns"] = "real"
         except Exception as _pe:
             logger.debug("Chart pattern AI score hook skipped: %s", _pe)
 
@@ -413,6 +433,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             )
 
         momentum_score = min(10.0, mom_points / max(mom_signals, 1))
+        _signal_status["momentum"] = "real"
 
         try:
             from utils.math_helpers import (
@@ -446,6 +467,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             _of = get_options_flow(symbol)
             if _of.get("success"):
                 data_quality["options"] = "real"
+                _signal_status["options_flow"] = "real"
                 _pcr = float(_of.get("put_call_ratio") or 0.0)
                 _uc = len(_of.get("unusual_calls") or [])
                 _up = len(_of.get("unusual_puts") or [])
@@ -470,6 +492,10 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                             "description": "Options: unusual put activity",
                         }
                     )
+            elif _of.get("error"):
+                _signal_status["options_flow"] = "fallback"
+            else:
+                _signal_status["options_flow"] = "fallback"
         except Exception as _oe:
             logger.debug("Options flow AI score hook skipped: %s", _oe)
 
@@ -549,8 +575,10 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             insider = get_insider_flow(symbol)
             if insider.get("error"):
                 data_quality["insider"] = "unavailable"
+                _signal_status["insider_flow"] = "unavailable"
             else:
                 data_quality["insider"] = "real"
+                _signal_status["insider_flow"] = "real"
             signal = insider.get("signal", "NO_ACTIVITY")
             insider_score = {
                 "INSIDER_BUYING": 8.5,
@@ -587,6 +615,15 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             social = get_social_sentiment(symbol)
             if social and social.get("success") and social.get("source") == "reddit":
                 data_quality["sentiment"] = "real"
+                _signal_status["social_sentiment"] = "real"
+            elif social and social.get("source") == "unavailable":
+                _signal_status["social_sentiment"] = "fallback"
+            elif (
+                social
+                and social.get("success")
+                and int(social.get("mention_count") or 0) > 0
+            ):
+                _signal_status["social_sentiment"] = "real"
             if social and social.get("source") == "unavailable":
                 signals.append(
                     {
@@ -643,6 +680,12 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             _sec = get_sec_signal(symbol)
             _sec_sent = float(_sec.get("sec_sentiment", 0.0))
             _sec_source = str(_sec.get("sec_source", "unavailable"))
+            if _sec_source in ("unavailable", "error"):
+                _signal_status["sec_edgar"] = "unavailable"
+            elif _sec_source == "no_filing":
+                _signal_status["sec_edgar"] = "fallback"
+            else:
+                _signal_status["sec_edgar"] = "real"
 
             if _sec_source not in ("unavailable", "error", "no_filing"):
                 _sec_score = 5.0 + _sec_sent * 4.0
@@ -691,6 +734,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             from trading.data.earnings_calendar import get_upcoming_earnings
 
             earnings = get_upcoming_earnings(symbol)
+            _signal_status["earnings_calendar"] = "real"
             surprise = earnings.get("last_eps_surprise_pct")
             if surprise is not None:
                 fund_score = 8.0 if surprise > 5 else 6.0 if surprise > 0 else 4.0 if surprise > -5 else 2.0
@@ -781,6 +825,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                     sector=sector
                 )
                 data_quality["macro"] = "real"
+                _signal_status["macro_factors"] = "real"
                 _macro_score_adj = _macro_adj.get(
                     "score_adjustment", 0.0
                 )
@@ -790,7 +835,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                 for _msig in _macro_adj.get("signals", []):
                     signals.append(_msig)
             except Exception:
-                pass
+                _signal_status["macro_factors"] = "unavailable"
 
             try:
                 from trading.analysis.factor_model import FactorModel
@@ -805,6 +850,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                         _exposures = _fm.compute_exposures(
                             symbol, _returns, ohlcv=hist
                         )
+                        _signal_status["factor_model"] = "real"
                         _mom = float(_exposures.get("momentum", 0.0))
                         if abs(_mom) > 0.01:
                             _factor_adj = float(_mom * 2.0)
@@ -864,6 +910,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             if (not _ml_result.get("fallback")
                     and _ml_result.get("ml_score") is not None):
                 _ml_score = float(_ml_result["ml_score"])
+                _signal_status["ml_score"] = "real"
                 # Blend 40% ML, 60% rules-based
                 overall = round(
                     overall * 0.6 + _ml_score * 0.4, 1
@@ -883,8 +930,10 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                         f"({_ml_result.get('direction', 'NEUTRAL')})"
                     ),
                 })
+            else:
+                _signal_status["ml_score"] = "fallback"
         except Exception:
-            pass
+            _signal_status["ml_score"] = "unavailable"
 
         if earnings_near:
             overall = min(overall, 7.5)
@@ -914,6 +963,22 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             f"{direction} based on {len(signals)} technical and fundamental indicators."
         )
 
+        _n_real = len(
+            [v for v in _signal_status.values() if v == "real"]
+        )
+        signal_completeness = {
+            "available": [
+                k for k, v in _signal_status.items() if v == "real"
+            ],
+            "fallback": [
+                k for k, v in _signal_status.items() if v == "fallback"
+            ],
+            "unavailable": [
+                k for k, v in _signal_status.items() if v == "unavailable"
+            ],
+            "score": _n_real / float(len(SIGNAL_SOURCES)),
+        }
+
         return {
             "symbol": symbol,
             "overall_score": overall,
@@ -924,6 +989,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             "fundamental_score": round(fundamental_score, 1),
             "signals": signals,
             "data_quality": data_quality,
+            "signal_completeness": signal_completeness,
             "summary": summary,
             "last_price": last_price,
             "error": None,
@@ -949,6 +1015,12 @@ def _error_score(symbol: str, error: str) -> Dict[str, Any]:
             "options": "unavailable",
             "macro": "unavailable",
             "insider": "unavailable",
+        },
+        "signal_completeness": {
+            "available": [],
+            "fallback": [],
+            "unavailable": list(SIGNAL_SOURCES),
+            "score": 0.0,
         },
         "summary": f"Score unavailable: {error}",
         "last_price": None,

@@ -21,11 +21,62 @@ def _vol_col(df: pd.DataFrame):
     return df["Volume"] if "Volume" in df.columns else df["volume"]
 
 
+def _factor_momentum(df: pd.DataFrame) -> pd.Series:
+    """Long-horizon return; period capped when history < 252 bars."""
+    c = _close_col(df)
+    n = len(c)
+    if n < 3:
+        return pd.Series(np.nan, index=c.index)
+    if n <= 22:
+        periods = max(1, n - 1)
+    else:
+        periods = min(252, max(5, n // 2), n - 20)
+    return c.pct_change(periods)
+
+
+def _factor_short_term_reversal(df: pd.DataFrame) -> pd.Series:
+    c = _close_col(df)
+    n = len(c)
+    if n < 2:
+        return pd.Series(np.nan, index=c.index)
+    p = max(1, min(5, n - 1))
+    return c.pct_change(p) * -1.0
+
+
+def _factor_volatility(df: pd.DataFrame) -> pd.Series:
+    c = _close_col(df)
+    n = len(c)
+    if n < 3:
+        return pd.Series(np.nan, index=c.index)
+    win = max(2, min(20, n - 1))
+    mp = max(2, min(win - 1, max(2, win // 2)))
+    return (
+        c.pct_change()
+        .rolling(win, min_periods=mp)
+        .std()
+        * np.sqrt(252.0)
+    )
+
+
+def _factor_volume_trend(df: pd.DataFrame) -> pd.Series:
+    v = _vol_col(df)
+    n = len(v)
+    if n < 4:
+        return pd.Series(np.nan, index=v.index)
+    w_long = max(3, min(60, n - 1))
+    w_short = max(2, min(20, w_long - 1))
+    mp_l = max(2, w_long // 3)
+    mp_s = max(2, w_short // 3)
+    num = v.rolling(w_short, min_periods=mp_s).mean()
+    den = v.rolling(w_long, min_periods=mp_l).mean().replace(0, np.nan)
+    return num / den
+
+
 STANDARD_FACTORS = {
-    "momentum": lambda df: _close_col(df).pct_change(252),  # 12-month momentum
-    "short_term_reversal": lambda df: _close_col(df).pct_change(5) * -1,  # 1-week reversal
-    "volatility": lambda df: _close_col(df).pct_change().rolling(20).std() * np.sqrt(252),
-    "volume_trend": lambda df: _vol_col(df).rolling(20).mean() / _vol_col(df).rolling(60).mean().replace(0, np.nan),
+    "momentum": _factor_momentum,
+    "short_term_reversal": _factor_short_term_reversal,
+    "volatility": _factor_volatility,
+    "volume_trend": _factor_volume_trend,
 }
 
 
@@ -60,8 +111,11 @@ def compute_factor_exposures(
                     factors_df[name] = s
             except Exception:
                 pass
-        factors_df = factors_df.dropna(how="all").replace([np.inf, -np.inf], np.nan).dropna()
-        if factors_df.empty or len(factors_df) < window:
+        factors_df = factors_df.dropna(how="all").replace(
+            [np.inf, -np.inf], np.nan
+        ).dropna()
+        _min_rows = min(window, max(15, len(factors_df)))
+        if factors_df.empty or len(factors_df) < _min_rows:
             return {k: 0.0 for k in STANDARD_FACTORS}
         common = returns.index.intersection(factors_df.index)
         if len(common) < 20:
@@ -112,9 +166,12 @@ def factor_attribution_pct(
                     factors_df[name] = s
             except Exception:
                 pass
-        factors_df = factors_df.dropna(how="all").replace([np.inf, -np.inf], np.nan).dropna()
+        factors_df = factors_df.dropna(how="all").replace(
+            [np.inf, -np.inf], np.nan
+        ).dropna()
         common = returns.index.intersection(factors_df.index).intersection(df.index)
-        if len(common) < window:
+        _min_c = min(window, max(15, len(common)))
+        if len(common) < _min_c:
             return {k: 0.0 for k in exposures}
         r = returns.reindex(common).dropna().tail(window)
         F = factors_df.reindex(common).dropna().tail(window)
@@ -185,6 +242,21 @@ class FactorModel:
             )
         try:
             df = self._ohlcv_for_returns(returns, ohlcv)
+            _rs = returns if returns is not None else pd.Series(dtype=float)
+            logger.debug(
+                "compute_exposures(%s): returns len=%s, dtype=%s, NaN count=%s",
+                symbol,
+                len(_rs),
+                getattr(_rs, "dtype", type(_rs)),
+                int(_rs.isna().sum()) if len(_rs) else 0,
+            )
+            if ohlcv is not None:
+                logger.debug(
+                    "compute_exposures(%s): ohlcv columns=%s, len=%s",
+                    symbol,
+                    list(ohlcv.columns),
+                    len(ohlcv),
+                )
             result = compute_factor_exposures(df, returns, window=window)
             self._exposures[str(symbol)] = result
             return result

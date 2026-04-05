@@ -339,13 +339,41 @@ def render_deep_dive(ticker: str) -> None:
             st.markdown(f"{icon} **{nm}** — {val}")
         st.caption(top_signals_summary(signals))
 
-        quality = (score or {}).get("data_quality") or {}
-        unavailable = [k for k, v in quality.items() if v == "unavailable"]
-        if unavailable:
-            st.caption(
-                f"Data unavailable: {', '.join(unavailable)}. "
-                f"Score reflects available signals only."
+        _completeness = (score or {}).get("signal_completeness") or {}
+        if _completeness:
+            _available = _completeness.get("available", [])
+            _unavailable = _completeness.get("unavailable", [])
+            _fallback = _completeness.get("fallback", [])
+            _n = len(_available)
+            _total = 11
+            _color = (
+                "🟢" if _n >= 8
+                else "🟡" if _n >= 5
+                else "🔴"
             )
+            st.caption(
+                f"{_color} Signal completeness: "
+                f"**{_n}/{_total}** sources "
+                f"returning real data"
+            )
+            if _unavailable:
+                st.caption(
+                    f"Unavailable: {', '.join(_unavailable)}"
+                )
+            if _fallback:
+                st.caption(
+                    f"Using fallback (0/neutral): {', '.join(_fallback)}"
+                )
+        else:
+            quality = (score or {}).get("data_quality") or {}
+            unavailable = [
+                k for k, v in quality.items() if v == "unavailable"
+            ]
+            if unavailable:
+                st.caption(
+                    f"Data unavailable: {', '.join(unavailable)}. "
+                    f"Score reflects available signals only."
+                )
 
         try:
             from trading.data.sec_edgar import get_latest_filing, get_sec_signal
