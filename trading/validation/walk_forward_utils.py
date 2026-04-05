@@ -217,8 +217,11 @@ class WalkForwardValidator:
         accuracy vs path co-movement.
         """
         try:
-            from trading.models.forecast_router import ForecastRouter
-            router = ForecastRouter()
+            from trading.models.forecast_router import (
+                ForecastRouter,
+                get_router_singleton,
+            )
+            router = get_router_singleton()
 
             preds: List[float] = []
             actuals: List[float] = []

@@ -44,7 +44,10 @@ from trading.data.news_aggregator import get_news
 from trading.data.short_interest import get_short_interest
 from trading.utils.data_manager import disk_cache_get, disk_cache_set
 from trading.execution.trade_execution_simulator import TradeExecutionSimulator
-from trading.models.forecast_router import ForecastRouter
+from trading.models.forecast_router import (
+    ForecastRouter,
+    get_router_singleton,
+)
 from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
 from trading.strategies.gatekeeper import StrategyGatekeeper
 
@@ -202,7 +205,7 @@ class PromptAgent:
             pass
 
         # Initialize components
-        self.forecast_router = ForecastRouter()
+        self.forecast_router = get_router_singleton()
 
         # Initialize model creator for dynamic model generation
         try:
@@ -2186,12 +2189,15 @@ class PromptAgent:
                 cache_key = f"consensus:{symbol}:7d"
                 consensus = disk_cache_get(cache_key)
                 if consensus is None:
-                    from trading.models.forecast_router import ForecastRouter
+                    from trading.models.forecast_router import (
+                        ForecastRouter,
+                        get_router_singleton,
+                    )
                     import yfinance as yf
 
                     hist = yf.Ticker(symbol).history(period="6mo")
                     if hist is not None and not hist.empty:
-                        router = ForecastRouter()
+                        router = get_router_singleton()
                         consensus = router.get_consensus_forecast(
                             hist, horizon=7, symbol=symbol
                         )
@@ -2271,7 +2277,12 @@ class PromptAgent:
             prompt_lower = (prompt or "").lower()
             if symbol and ("forecast" in prompt_lower or "predict" in prompt_lower or "outlook" in prompt_lower):
                 try:
-                    router = ForecastRouter()
+                    from trading.models.forecast_router import (
+                        ForecastRouter,
+                        get_router_singleton,
+                    )
+
+                    router = get_router_singleton()
                     end_date = datetime.now()
                     start_date = end_date - timedelta(days=365)
                     data = self.data_provider.get_historical_data(symbol, start_date, end_date, "1d")

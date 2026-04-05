@@ -232,7 +232,10 @@ def get_forecast(symbol: str, horizon: int = 7) -> Dict[str, Any]:
     """Consensus multi-model forecast. Use when user asks price targets or direction."""
     try:
         import yfinance as yf
-        from trading.models.forecast_router import ForecastRouter
+        from trading.models.forecast_router import (
+            ForecastRouter,
+            get_router_singleton,
+        )
 
         sym = (symbol or "").strip().upper()
         if not sym:
@@ -240,7 +243,7 @@ def get_forecast(symbol: str, horizon: int = 7) -> Dict[str, Any]:
         hist = yf.Ticker(sym).history(period="2y")
         if hist.empty:
             return {"success": False, "error": f"No data for {sym}"}
-        router = ForecastRouter()
+        router = get_router_singleton()
         fc = router.get_consensus_forecast(
             data=hist, horizon=int(horizon), symbol=sym
         )
