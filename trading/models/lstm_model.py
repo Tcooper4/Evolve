@@ -941,7 +941,22 @@ class LSTMForecaster(BaseModel):
         try:
             cache_path = os.path.join(self.cache_dir, f"{cache_key}.joblib")
             if os.path.exists(cache_path):
-                self.compiled_model = joblib.load(cache_path)
+                loaded = joblib.load(cache_path)
+                if isinstance(loaded, dict):
+                    self.compiled_model = loaded["model"]
+                    if "X_scaler" in loaded:
+                        self.X_scaler = loaded["X_scaler"]
+                    if "y_scaler" in loaded:
+                        self.y_scaler = loaded["y_scaler"]
+                else:
+                    # Legacy format — bare model, no scalers
+                    # Do NOT use this cache entry for prediction
+                    # as scalers are missing; treat as cache miss
+                    self.logger.warning(
+                        "Cached model is legacy format "
+                        "(no scalers). Retraining."
+                    )
+                    return False
                 self.logger.info(f"Loaded cached model from {cache_path}")
                 return True
         except Exception as e:
@@ -956,7 +971,12 @@ class LSTMForecaster(BaseModel):
         """
         try:
             cache_path = os.path.join(self.cache_dir, f"{cache_key}.joblib")
-            joblib.dump(self.compiled_model, cache_path)
+            cache_data = {
+                "model": self.compiled_model,
+                "X_scaler": self.X_scaler,
+                "y_scaler": self.y_scaler,
+            }
+            joblib.dump(cache_data, cache_path)
             self.logger.info(f"Saved model to cache: {cache_path}")
         except Exception as e:
             self.logger.warning(f"Failed to save model to cache: {e}")

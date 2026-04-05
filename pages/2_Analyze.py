@@ -125,7 +125,13 @@ period_label = st.radio(
 period = period_map.get(period_label, "1y")
 
 _cache_key = f"autoloaded_{ticker}_{period}"
-if st.session_state.get("_last_autoload_key") != _cache_key:
+_existing_data = st.session_state.get("analyze_forecast_data")
+_needs_load = (
+    st.session_state.get("_last_autoload_key") != _cache_key
+    or _existing_data is None
+    or (hasattr(_existing_data, "empty") and _existing_data.empty)
+)
+if _needs_load:
     try:
         _auto_hist = get_history(ticker, period=period)
         if not _auto_hist.empty:
@@ -135,6 +141,85 @@ if st.session_state.get("_last_autoload_key") != _cache_key:
     except Exception as _e:
         logger.warning("Analyze: history load failed for %s: %s", ticker, _e)
         st.caption(f"⚠️ Could not load price history: {_e}")
+
+# Auto-run consensus forecast on page load
+# so all tabs are populated without button press
+_auto_forecast_key = f"auto_forecast_{ticker}_{period}"
+_auto_forecast_ts_key = f"auto_forecast_ts_{ticker}_{period}"
+_auto_forecast_age = __import__("time").time() - st.session_state.get(
+    _auto_forecast_ts_key, 0
+)
+_auto_hist = st.session_state.get("analyze_forecast_data")
+
+if (
+    st.session_state.get(_auto_forecast_key) is None or _auto_forecast_age > 600
+) and _auto_hist is not None and not getattr(_auto_hist, "empty", True):
+    try:
+        from trading.models.forecast_router import get_router_singleton
+
+        import hashlib as _hl
+
+        _dh = _auto_hist.copy()
+        _col_map = {c.lower(): c for c in _dh.columns}
+        if "close" not in _dh.columns and "Close" in _dh.columns:
+            _dh["close"] = _dh["Close"]
+        _data_hash = _hl.md5(str(_dh.shape).encode()).hexdigest()[:8]
+        _cons_key = f"consensus_{ticker}_{_data_hash}"
+        _cons_ts_key = f"consensus_ts_{ticker}_{_data_hash}"
+        _cons_age = __import__("time").time() - st.session_state.get(
+            _cons_ts_key, 0
+        )
+        if st.session_state.get(_cons_key) is None or _cons_age > 600:
+            with st.spinner("Loading forecast data..."):
+                _router = get_router_singleton()
+                _horizon = st.session_state.get("analyze_forecast_horizon", 7)
+                _consensus = _router.get_consensus_forecast(
+                    _dh,
+                    horizon=_horizon,
+                    symbol=ticker,
+                )
+                if _consensus and not _consensus.get("error"):
+                    st.session_state[_cons_key] = _consensus
+                    st.session_state[_cons_ts_key] = __import__("time").time()
+                    st.session_state[_auto_forecast_key] = True
+                    st.session_state[_auto_forecast_ts_key] = __import__(
+                        "time"
+                    ).time()
+                    # Populate keys that tabs depend on
+                    import pandas as _pd
+
+                    _fc_arr = _consensus.get("consensus_forecast", [])
+                    if _fc_arr:
+                        _last_date = _dh.index[-1]
+                        _fc_dates = _pd.date_range(
+                            start=_last_date,
+                            periods=len(_fc_arr) + 1,
+                            freq="B",
+                        )[1:]
+                        st.session_state["current_forecast"] = _pd.DataFrame(
+                            {"forecast": _fc_arr[: len(_fc_dates)]},
+                            index=_fc_dates,
+                        )
+                        st.session_state["current_model"] = "Consensus"
+                        _last_price = float(
+                            _dh["close"].iloc[-1]
+                            if "close" in _dh.columns
+                            else _dh.iloc[-1, 0]
+                        )
+                        st.session_state["current_forecast_result"] = {
+                            "forecast": _fc_arr,
+                            "last_actual_price": _last_price,
+                            "confidence_label": _consensus.get(
+                                "confidence_label", "Medium"
+                            ),
+                            "warnings": _consensus.get("warnings", []),
+                        }
+    except Exception as _afe:
+        logger.warning(
+            "Auto-forecast failed for %s: %s",
+            ticker,
+            _afe,
+        )
 
 _st_ver = tuple(int(x) for x in st.__version__.split(".")[:2])
 
