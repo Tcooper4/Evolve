@@ -44,11 +44,9 @@ if _auto_mode:
     @st.fragment
     def _render_chat_briefing():
         try:
-            from agents.briefing.morning_briefing import MorningBriefing
             import time
 
-            # Try Dashboard cache first (MorningBriefing has no _render_report;
-            # mirror render_streamlit() report rendering for cached dicts.)
+            # Reuse Home briefing cache (same session keys as Dashboard).
             _db_report = st.session_state.get("home_briefing_report")
             _db_ts = st.session_state.get("home_briefing_ts", 0)
             _now = time.time()
@@ -92,7 +90,11 @@ if _auto_mode:
                     df = pd.DataFrame(rows)
                     st.dataframe(df, use_container_width=True)
             else:
-                MorningBriefing(universe="sp100").render_streamlit()
+                st.info(
+                    "No briefing available. "
+                    "Generate one on the "
+                    "Home page first."
+                )
             st.markdown("---")
         except Exception as e:
             st.caption(

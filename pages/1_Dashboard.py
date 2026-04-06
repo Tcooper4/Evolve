@@ -428,19 +428,51 @@ st.caption(
     "Briefing forecasts use a fast "
     "consensus model optimised for "
     "speed. For full precision, open "
-    "any ticker in the Analyze page."
+    "any ticker in the Analyze page. "
+    "Generate on demand below (cached 30 minutes)."
 )
 
 
 @st.fragment
 def _render_briefing():
-    _bkey, _btkey = "home_briefing_report", "home_briefing_ts"
+    _bkey = "home_briefing_report"
+    _btkey = "home_briefing_ts"
     _now = time.time()
     _cached = st.session_state.get(_bkey)
     _cached_ts = st.session_state.get(_btkey, 0)
-    if _cached and (_now - _cached_ts) < 1800:
-        report = _cached
-    else:
+    _fresh = (
+        _cached is not None
+        and (_now - _cached_ts) < 1800
+    )
+
+    def _run_briefing() -> None:
+        try:
+            from config.user_store import load_user_preferences
+            from utils.session_utils import get_stable_user_id
+
+            _uid = st.session_state.get(
+                "evolve_session_id"
+            ) or get_stable_user_id()
+            _prefs = (
+                load_user_preferences(_uid)
+                or {}
+            )
+        except Exception:
+            _prefs = {}
+
+        _universe_pref = _prefs.get(
+            "briefing_universe",
+            "SP100 (balanced, ~60s)",
+        )
+        _universe_map = {
+            "Top 25 (fastest, ~30s)": "sp100",
+            "SP100 (balanced, ~60s)": "sp100",
+            "SP500 (broadest, ~3min)": "sp500",
+            "NASDAQ100 (tech-heavy)": "nasdaq100",
+        }
+        _universe = _universe_map.get(_universe_pref, "sp100")
+        _min_score = float(_prefs.get("min_ai_score", 5.5))
+
         try:
             from agents.briefing.morning_briefing import MorningBriefing
 
@@ -450,7 +482,10 @@ def _render_briefing():
                 "News and watchlist above refresh independently.",
                 icon="⏳",
             )
-            _mb = MorningBriefing(universe="sp100")
+            _mb = MorningBriefing(
+                universe=_universe,
+                min_ai_score=_min_score,
+            )
             progress = st.progress(0, text="AI-scoring universe (parallel)…")
 
             def _brief_progress(done: int, total: int) -> None:
@@ -466,84 +501,109 @@ def _render_briefing():
             finally:
                 progress.empty()
             st.session_state[_bkey] = report
-            st.session_state[_btkey] = _now
+            st.session_state[_btkey] = time.time()
+            st.rerun()
         except Exception as e:
-            report = {"error": str(e), "top_opportunities": [], "market_regime": {}}
             st.caption(f"unavailable: {e}")
 
-    reg = report.get("market_regime") or {}
-    reg_lbl = reg.get("regime", "NEUTRAL")
-    vix_l = reg.get("vix_level")
-    reg_line = f"{reg_lbl.replace('_', '-').title()}"
-    if vix_l is not None:
-        reg_line += f" · VIX {vix_l:.1f}"
-    st.markdown(f"**{reg_line}** — {reg.get('description', '')}")
-    try:
-        from datetime import datetime
+    def _render_briefing_report(report: dict) -> None:
+        reg = report.get("market_regime") or {}
+        reg_lbl = reg.get("regime", "NEUTRAL")
+        vix_l = reg.get("vix_level")
+        reg_line = f"{reg_lbl.replace('_', '-').title()}"
+        if vix_l is not None:
+            reg_line += f" · VIX {vix_l:.1f}"
+        st.markdown(f"**{reg_line}** — {reg.get('description', '')}")
+        try:
+            from datetime import datetime
 
-        from trading.utils.time_utils import format_timestamp
+            from trading.utils.time_utils import format_timestamp
 
-        _ts = report.get("timestamp") or ""
-        if _ts:
-            _dt = datetime.fromisoformat(_ts.replace("Z", "+00:00"))
-            st.caption(
-                f"Briefing generated: "
-                f"{format_timestamp(_dt, timezone='America/New_York')}"
-            )
-    except Exception:
-        pass
-
-    opps = report.get("top_opportunities") or []
-    _portfolio = report.get("portfolio")
-    if _portfolio and len(opps) >= 2:
-        _sharpe = _portfolio.get("expected_sharpe")
-        if _sharpe is not None:
-            st.caption(
-                f"📐 Portfolio Sharpe: "
-                f"{float(_sharpe):.2f} | "
-                f"{_portfolio.get('note', '')}"
-            )
-    if opps:
-        for opp in opps[:5]:
-            sym = opp.get("symbol", "")
-            if not sym:
-                continue
-            info = {}
-            try:
-                info = get_info(sym) or {}
-            except Exception:
-                pass
-            co = info.get("longName") or info.get("shortName") or ""
-            sec = info.get("sector") or ""
-            sc = float(opp.get("ai_score") or 0)
-            col_a, col_b = st.columns([4, 1])
-            with col_a:
-                st.markdown(
-                    f"**{sym}** · {co} · _{sec}_ — "
-                    f":{_score_color(sc)}[AI {sc:.1f}]"
+            _ts = report.get("timestamp") or ""
+            if _ts:
+                _dt = datetime.fromisoformat(_ts.replace("Z", "+00:00"))
+                st.caption(
+                    f"Briefing generated: "
+                    f"{format_timestamp(_dt, timezone='America/New_York')}"
                 )
-                th = opp.get("thesis") or ""
-                if th:
-                    st.caption(th)
-                fc = opp.get("forecast") or {}
-                if fc:
-                    st.caption(
-                        f"Entry **{opp.get('entry')}** → Target "
-                        f"**{fc.get('consensus_price')}**"
+        except Exception:
+            pass
+
+        opps = report.get("top_opportunities") or []
+        _portfolio = report.get("portfolio")
+        if _portfolio and len(opps) >= 2:
+            _sharpe = _portfolio.get("expected_sharpe")
+            if _sharpe is not None:
+                st.caption(
+                    f"📐 Portfolio Sharpe: "
+                    f"{float(_sharpe):.2f} | "
+                    f"{_portfolio.get('note', '')}"
+                )
+        if opps:
+            for opp in opps[:5]:
+                sym = opp.get("symbol", "")
+                if not sym:
+                    continue
+                info = {}
+                try:
+                    info = get_info(sym) or {}
+                except Exception:
+                    pass
+                co = info.get("longName") or info.get("shortName") or ""
+                sec = info.get("sector") or ""
+                sc = float(opp.get("ai_score") or 0)
+                col_a, col_b = st.columns([4, 1])
+                with col_a:
+                    st.markdown(
+                        f"**{sym}** · {co} · _{sec}_ — "
+                        f":{_score_color(sc)}[AI {sc:.1f}]"
                     )
-                if opp.get("risk_note"):
-                    st.caption(opp["risk_note"])
-                _weight = opp.get("weight_pct")
-                if _weight:
-                    st.caption(
-                        f"Suggested allocation: **{_weight}** of portfolio "
-                        f"(mean-variance optimized)"
-                    )
-            with col_b:
-                if st.button("Open", key=f"hb_{sym}"):
-                    _set_deep_dive(sym)
-    else:
-        st.caption("No opportunities passed the score threshold right now.")
+                    th = opp.get("thesis") or ""
+                    if th:
+                        st.caption(th)
+                    fc = opp.get("forecast") or {}
+                    if fc:
+                        st.caption(
+                            f"Entry **{opp.get('entry')}** → Target "
+                            f"**{fc.get('consensus_price')}**"
+                        )
+                    if opp.get("risk_note"):
+                        st.caption(opp["risk_note"])
+                    _weight = opp.get("weight_pct")
+                    if _weight:
+                        st.caption(
+                            f"Suggested allocation: **{_weight}** of portfolio "
+                            f"(mean-variance optimized)"
+                        )
+                with col_b:
+                    if st.button("Open", key=f"hb_{sym}"):
+                        _set_deep_dive(sym)
+        else:
+            st.caption(
+                "No opportunities passed the score threshold right now."
+            )
+
+    if not _fresh:
+        st.info(
+            "Morning briefing not yet "
+            "generated for this session."
+        )
+        if st.button(
+            "🌅 Generate Morning Briefing",
+            key="gen_briefing_btn",
+            type="primary",
+        ):
+            _run_briefing()
+        return
+
+    _render_briefing_report(st.session_state[_bkey])
+    if st.button(
+        "🔄 Refresh Briefing",
+        key="refresh_briefing_btn",
+    ):
+        st.session_state.pop(_bkey, None)
+        st.session_state.pop(_btkey, None)
+        st.rerun()
 
 
 _render_briefing()
