@@ -117,36 +117,6 @@ try:
 except Exception as _e:
     pass  # Never block app load for this
 
-session_id = check_onboarding()
-
-# Always inject API keys from user store on every run
-try:
-    _sid = session_id or st.session_state.get("evolve_session_id", "") or ""
-    import os as _os2
-    _is_cloud2 = (
-        _os2.environ.get("STREAMLIT_SHARING_MODE") or
-        _os2.environ.get("IS_STREAMLIT_CLOUD") or
-        not _os2.path.exists(".env")
-    )
-    if _is_cloud2:
-        from config.user_store import inject_user_keys_to_session
-        inject_user_keys_to_session(_sid)
-    else:
-        inject_user_keys_to_env(_sid)
-except Exception:
-    # Keys may not be set yet; continue without failing
-    pass
-
-if not session_id:
-    st.stop()
-
-try:
-    from utils.session_utils import prune_streamlit_session_cache
-
-    prune_streamlit_session_cache(max_tickers=10)
-except Exception:
-    pass
-
 
 def _market_status() -> str:
     """US/Eastern session label for sidebar (approximate NYSE-style hours)."""
@@ -227,6 +197,99 @@ with st.sidebar:
         st.caption("Market status: **" + _market_status() + "**")
     except Exception:
         st.caption("Market status: —")
+    st.markdown("---")
+    try:
+        st.page_link(
+            "pages/1_Dashboard.py",
+            label="🏠 Home",
+        )
+        with st.expander(
+            "Advanced tools",
+            expanded=False,
+        ):
+            st.page_link(
+                "pages/2_Analyze.py",
+                label="📊 Analyze",
+            )
+            st.page_link(
+                "pages/3_Scanner.py",
+                label="🔍 Scanner",
+            )
+            st.page_link(
+                "pages/4_Trade.py",
+                label="💼 Trade",
+            )
+            st.page_link(
+                "pages/5_Backtest.py",
+                label="⏮ Backtest",
+            )
+            st.page_link(
+                "pages/6_Chat.py",
+                label="💬 Chat",
+            )
+        st.page_link(
+            "pages/7_Settings.py",
+            label="⚙️ Settings",
+        )
+    except Exception:
+        if st.button(
+            "🏠 Home",
+            key="nav_home",
+        ):
+            st.switch_page(
+                "pages/1_Dashboard.py",
+            )
+        if st.button(
+            "📊 Analyze",
+            key="nav_analyze",
+        ):
+            st.switch_page(
+                "pages/2_Analyze.py",
+            )
+        if st.button(
+            "🔍 Scanner",
+            key="nav_scanner",
+        ):
+            st.switch_page(
+                "pages/3_Scanner.py",
+            )
+        if st.button(
+            "⚙️ Settings",
+            key="nav_settings",
+        ):
+            st.switch_page(
+                "pages/7_Settings.py",
+            )
+
+session_id = check_onboarding()
+
+# Always inject API keys from user store on every run
+try:
+    _sid = session_id or st.session_state.get("evolve_session_id", "") or ""
+    import os as _os2
+    _is_cloud2 = (
+        _os2.environ.get("STREAMLIT_SHARING_MODE") or
+        _os2.environ.get("IS_STREAMLIT_CLOUD") or
+        not _os2.path.exists(".env")
+    )
+    if _is_cloud2:
+        from config.user_store import inject_user_keys_to_session
+        inject_user_keys_to_session(_sid)
+    else:
+        inject_user_keys_to_env(_sid)
+except Exception:
+    # Keys may not be set yet; continue without failing
+    pass
+
+if not session_id:
+    st.stop()
+
+try:
+    from utils.session_utils import prune_streamlit_session_cache
+
+    prune_streamlit_session_cache(max_tickers=10)
+except Exception:
+    pass
 
 # ── Inject theme globally ────────────────────────────
 try:
