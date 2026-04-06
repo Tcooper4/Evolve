@@ -175,6 +175,35 @@ def _market_status() -> str:
 if "global_search_ticker" not in st.session_state:
     st.session_state["global_search_ticker"] = ""
 
+_home = st.Page(
+    "pages/1_Dashboard.py",
+    title="Home",
+    icon="🏠",
+    default=True,
+)
+_analyze = st.Page("pages/2_Analyze.py", title="Analyze", icon="📊")
+_scanner = st.Page("pages/3_Scanner.py", title="Scanner", icon="🔍")
+_trade = st.Page("pages/4_Trade.py", title="Trade", icon="💼")
+_backtest = st.Page("pages/5_Backtest.py", title="Backtest", icon="⏮")
+_chat = st.Page("pages/6_Chat.py", title="Chat", icon="💬")
+_settings = st.Page("pages/7_Settings.py", title="Settings", icon="⚙️")
+
+_pg = st.navigation(
+    {
+        "": [_home],
+        "Advanced tools": [
+            _analyze,
+            _scanner,
+            _trade,
+            _backtest,
+            _chat,
+        ],
+        "System": [_settings],
+    },
+    position="sidebar",
+    expanded=True,
+)
+
 with st.sidebar:
     st.markdown("### Evolve")
     st.caption("Trading copilot")
@@ -226,33 +255,4 @@ if "llm_processor" not in st.session_state:
     except Exception:
         st.session_state.llm_processor = None
 
-_home = st.Page(
-    "pages/1_Dashboard.py",
-    title="Home",
-    icon="🏠",
-    default=True,
-)
-_analyze = st.Page("pages/2_Analyze.py", title="Analyze", icon="📊")
-_scanner = st.Page("pages/3_Scanner.py", title="Scanner", icon="🔍")
-_trade = st.Page("pages/4_Trade.py", title="Trade", icon="💼")
-_backtest = st.Page("pages/5_Backtest.py", title="Backtest", icon="⏮")
-_chat = st.Page("pages/6_Chat.py", title="Chat", icon="💬")
-_settings = st.Page("pages/7_Settings.py", title="Settings", icon="⚙️")
-
-_pg = st.navigation(
-    {
-        "": [_home],
-        "Advanced tools": [
-            _analyze,
-            _scanner,
-            _trade,
-            _backtest,
-            _chat,
-        ],
-        "System": [_settings],
-    },
-    position="sidebar",
-    expanded=True,
-)
 _pg.run()
-
