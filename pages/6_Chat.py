@@ -45,11 +45,60 @@ if _auto_mode:
     def _render_chat_briefing():
         try:
             from agents.briefing.morning_briefing import MorningBriefing
+            import time
 
-            MorningBriefing(universe="sp100").render_streamlit()
+            # Try Dashboard cache first (MorningBriefing has no _render_report;
+            # mirror render_streamlit() report rendering for cached dicts.)
+            _db_report = st.session_state.get("home_briefing_report")
+            _db_ts = st.session_state.get("home_briefing_ts", 0)
+            _now = time.time()
+            if _db_report and (_now - _db_ts) < 1800:
+                st.subheader("🌅 Morning Briefing")
+                _report = _db_report if isinstance(_db_report, dict) else {}
+                if _report.get("error"):
+                    st.warning(f"Briefing error: {_report['error']}")
+                markdown = _report.get("markdown", "")
+                if markdown:
+                    st.markdown(markdown)
+                opps = _report.get("top_opportunities", [])
+                if opps:
+                    st.markdown("---")
+                    st.markdown("**Quick Reference Table**")
+                    rows = []
+                    for opp in opps:
+                        forecast = opp.get("forecast", {})
+                        rows.append({
+                            "Symbol": opp["symbol"],
+                            "AI Score": opp.get("ai_score", "N/A"),
+                            "Price": (
+                                f"${float(opp['current_price']):.2f}"
+                                if opp.get("current_price") is not None
+                                else "N/A"
+                            ),
+                            "Direction": forecast.get("direction", "N/A"),
+                            "Target": f"${opp.get('target', 0):.2f}"
+                            if opp.get("target") else "N/A",
+                            "Stop": f"${opp.get('stop', 0):.2f}"
+                            if opp.get("stop") else "N/A",
+                            "Expected Move": (
+                                f"{forecast.get('expected_move_pct', 0):+.1f}%"
+                                if forecast else "N/A"
+                            ),
+                            "Risk note": opp.get("risk_note") or "",
+                            "Strategy": opp.get("strategy_note") or "",
+                        })
+                    import pandas as pd
+
+                    df = pd.DataFrame(rows)
+                    st.dataframe(df, use_container_width=True)
+            else:
+                MorningBriefing(universe="sp100").render_streamlit()
             st.markdown("---")
         except Exception as e:
-            st.caption(f"Morning briefing unavailable: {e}")
+            st.caption(
+                f"Morning briefing "
+                f"unavailable: {e}"
+            )
 
     _render_chat_briefing()
 

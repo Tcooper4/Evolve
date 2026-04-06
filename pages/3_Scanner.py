@@ -310,6 +310,15 @@ def _scanner_table():
     if "News" not in df_display.columns and "news_score" in df.columns:
         df_display["News"] = df["news_score"]
 
+    # Drop internal display columns
+    _drop = ["_news_color", "news_color"]
+    df_display = df_display.drop(
+        columns=[
+            c for c in _drop
+            if c in df_display.columns
+        ]
+    )
+
     # Normalize signals column for Arrow
     # compatibility — convert lists to
     # comma-separated strings
@@ -441,7 +450,6 @@ with col_score:
         "Min AI Score",
         min_value=0.0,
         max_value=10.0,
-        value=6.5,
         step=0.5,
         key="scanner_min_ai_score",
         label_visibility="collapsed",

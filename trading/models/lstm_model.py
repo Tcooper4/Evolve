@@ -836,6 +836,20 @@ class LSTMForecaster(BaseModel):
                 _col_map = {c.lower(): c for c in data.columns}
                 _fitted = getattr(self, "_fitted_feature_cols",
                                   self.config["feature_columns"])
+                # Normalize column names to match
+                # scaler's fitted feature names (before _feat_cols)
+                if hasattr(self.X_scaler, "feature_names_in_"):
+                    _expected = list(self.X_scaler.feature_names_in_)
+                    _rename = {}
+                    for col in data.columns:
+                        if (
+                            col not in _expected
+                            and col.lower() in _expected
+                        ):
+                            _rename[col] = col.lower()
+                    if _rename:
+                        data = data.rename(columns=_rename)
+                        _col_map = {c.lower(): c for c in data.columns}
                 _feat_cols = [_col_map.get(f.lower(), f)
                               for f in _fitted
                               if f.lower() in _col_map]

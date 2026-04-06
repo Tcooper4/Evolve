@@ -91,6 +91,8 @@ def _has_external_api_keys() -> bool:
         "FRED_API_KEY",
         "TRADIER_TOKEN",
         "NEWS_API_KEY",
+        "REDDIT_CLIENT_ID",
+        "REDDIT_CLIENT_SECRET",
     ]
     try:
         _ss = st.session_state

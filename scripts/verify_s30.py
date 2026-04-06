@@ -1,111 +1,119 @@
-"""Session 30 verification — orchestrator cleanup + noise final fix."""
-import sys
-import os
+import ast, subprocess, sys
 
-sys.path.insert(0, ".")
+python = r".\evolve_venv\Scripts\python.exe"
+print("=== Session 30 Verification ===\n")
+PASS, FAIL = [], []
+def ok(msg):   PASS.append(msg); print(f"OK    {msg}")
+def fail(msg): FAIL.append(msg); print(f"FAIL  {msg}")
 
-print("=" * 60)
-print("SESSION 30 VERIFICATION")
-print("=" * 60)
-
-# 1. Orchestrator init — clean, no warnings
-print("\n[1] TaskOrchestrator init — clean...")
-import io
-from contextlib import redirect_stderr, redirect_stdout
-
-_buf = io.StringIO()
-with redirect_stdout(_buf), redirect_stderr(_buf):
-    try:
-        for mod in list(sys.modules.keys()):
-            if "core" in mod or "trading" in mod or "agents" in mod:
-                del sys.modules[mod]
-        from core.orchestrator.task_orchestrator import TaskOrchestrator
-
-        _orch = TaskOrchestrator()
-    except Exception as _e:
-        print(f"IMPORT ERROR: {_e}")
-_output = _buf.getvalue()
-_fail_lines = [l for l in _output.split("\n") if "Failed" in l or "Error" in l]
-_warn_lines = [l for l in _output.split("\n") if "WARNING" in l]
-print(f"  'Failed to initialize' lines: {len(_fail_lines)}")
-print(f"  WARNING lines: {len(_warn_lines)}")
-for l in _fail_lines:
-    print(f"    {l[:100]}")
-print(f"  {'PASS' if len(_fail_lines) == 0 else 'STILL HAS FAILURES'}")
-
-# 2. TaskType has alert_manager
-print("\n[2] TaskType enum includes alert_manager...")
-try:
-    from core.orchestrator.task_models import TaskType
-
-    has_alert = hasattr(TaskType, "ALERT_MANAGER") or "alert_manager" in [
-        t.value for t in TaskType
-    ]
-    all_types = [t.value for t in TaskType]
-    print(f"  alert_manager present: {has_alert}")
-    print(f"  All types: {all_types}")
-    print(f"  {'PASS' if has_alert else 'MISSING'}")
-except Exception as e:
-    print(f"  ERROR: {e}")
-
-# 3. Startup noise — all import paths
-print("\n[3] Startup noise — trading.memory import path...")
-_buf2 = io.StringIO()
-with redirect_stdout(_buf2), redirect_stderr(_buf2):
-    try:
-        for mod in list(sys.modules.keys()):
-            if "trading" in mod:
-                del sys.modules[mod]
-        from trading.memory import get_memory_store
-
-        _m = get_memory_store()
-    except Exception:
-        pass
-_combined = _buf2.getvalue()
-_info_lines = [
-    l
-    for l in _combined.split("\n")
-    if ("INFO" in l or l.strip().startswith("{")) and l.strip()
-]
-print(f"  INFO/JSON lines: {len(_info_lines)}")
-for l in _info_lines[:3]:
-    print(f"    {l[:80]}")
-print(f"  {'PASS' if len(_info_lines) == 0 else 'STILL ' + str(len(_info_lines)) + ' lines'}")
-
-# 4. CHANGELOG v1.3.1
-print("\n[4] CHANGELOG v1.3.1...")
-try:
-    with open("CHANGELOG.md", encoding="utf-8", errors="replace") as f:
-        c = f.read()
-    has_v131 = "1.3.1" in c
-    print(f"  v1.3.1 entry: {has_v131}")
-    print(f"  {'PASS' if has_v131 else 'MISSING'}")
-except Exception as e:
-    print(f"  ERROR: {e}")
-
-# 5. Git tags
-print("\n[5] Git tags...")
-import subprocess
-
-r = subprocess.run(["git", "tag"], capture_output=True, text=True)
-tags = [t for t in r.stdout.strip().split("\n") if t.startswith("v")]
-print(f"  Tags: {tags}")
-print(f"  v1.3.1: {'PASS' if 'v1.3.1' in tags else 'MISSING'}")
-
-# 6. Smoke tests
-print("\n[6] Model smoke tests...")
-result = subprocess.run(
-    [sys.executable, "tests/model_smoke_test.py"],
-    capture_output=True,
-    text=True,
-)
-output = result.stdout + result.stderr
-if "All smoke tests completed. All PASS" in output:
-    print("  PASS: All 12 models")
+# Fix 1 - scanner slider
+t = open("pages/3_Scanner.py",
+    encoding="utf-8", errors="replace").read()
+if "scanner_min_ai_score" in t:
+    ok("scanner_min_ai_score key present")
 else:
-    fails = [l.strip() for l in output.split("\n") if "FAIL" in l]
-    print(f"  ISSUES: {fails}")
+    fail("scanner_min_ai_score key missing")
 
-print("\n" + "=" * 60)
-print("Session 30 complete. Paste output back.")
-print("=" * 60)
+# Fix 2 - _news_color dropped
+if "_news_color" in t and "_drop" in t:
+    ok("_news_color drop block present")
+else:
+    fail("_news_color drop block missing")
+
+# Fix 3 - Reddit keys
+t2 = open(
+    "trading/analysis/ai_score.py",
+    encoding="utf-8", errors="replace"
+).read()
+if "REDDIT_CLIENT_ID" in t2:
+    ok("REDDIT_CLIENT_ID in external keys")
+else:
+    fail("REDDIT_CLIENT_ID missing")
+if "REDDIT_CLIENT_SECRET" in t2:
+    ok("REDDIT_CLIENT_SECRET in external keys")
+else:
+    fail("REDDIT_CLIENT_SECRET missing")
+
+# Fix 4 - Chat cache
+t3 = open("pages/6_Chat.py",
+    encoding="utf-8", errors="replace").read()
+if "home_briefing_report" in t3:
+    ok("Chat reads Dashboard cache key")
+else:
+    fail("Chat not reading Dashboard cache")
+
+# Fix 5 - sidebar init
+import os
+sidebar_files = []
+for root, dirs, files in os.walk("."):
+    dirs[:] = [d for d in dirs
+               if d not in [
+                   "evolve_venv", ".git",
+                   "__pycache__", "_archive"
+               ]]
+    for f in files:
+        if f.endswith(".py"):
+            path = os.path.join(root, f)
+            content = open(
+                path, encoding="utf-8",
+                errors="replace"
+            ).read()
+            if ("sidebar" in content.lower()
+                    and "ticker" in content.lower()
+                    and "session_state" in content
+                    and "text_input" in content):
+                sidebar_files.append(path)
+if sidebar_files:
+    ok(f"Sidebar ticker init found in: "
+       f"{sidebar_files[0]}")
+else:
+    fail("Sidebar ticker session init not found")
+
+# Fix 6 - LSTM column norm
+t4 = open(
+    "trading/models/lstm_model.py",
+    encoding="utf-8", errors="replace"
+).read()
+if "feature_names_in_" in t4:
+    ok("LSTM column normalization present")
+else:
+    fail("LSTM column normalization missing")
+
+# Syntax checks
+for fpath in [
+    "pages/3_Scanner.py",
+    "trading/analysis/ai_score.py",
+    "pages/6_Chat.py",
+    "trading/models/lstm_model.py",
+]:
+    try:
+        ast.parse(open(
+            fpath, encoding="utf-8",
+            errors="replace"
+        ).read())
+        ok(f"Syntax valid: {fpath}")
+    except SyntaxError as e:
+        fail(f"Syntax error {fpath}: {e}")
+
+print()
+print("--- Smoke test ---")
+result = subprocess.run(
+    [python, "tests/model_smoke_test.py"],
+    capture_output=True, text=True
+)
+print((result.stdout + result.stderr)[-1500:])
+if result.returncode == 0:
+    ok("Smoke test passed")
+else:
+    fail("Smoke test FAILED")
+
+print(f"\n=== {len(PASS)} passed, "
+      f"{len(FAIL)} failed ===")
+if FAIL:
+    for f in FAIL:
+        print(f"  FAIL  {f}")
+    sys.exit(1)
+else:
+    print("All checks passed. "
+          "Ready to commit v4.1.7.")
+    sys.exit(0)
