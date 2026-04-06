@@ -1,131 +1,111 @@
-"""Session 32 verification."""
-import sys
-import os
+import ast, subprocess, sys
 
-sys.path.insert(0, ".")
+python = r".\evolve_venv\Scripts\python.exe"
+print("=== Session 32 Verification ===\n")
+PASS, FAIL = [], []
+def ok(msg):   PASS.append(msg); print(f"OK    {msg}")
+def fail(msg): FAIL.append(msg); print(f"FAIL  {msg}")
 
-print("=" * 60)
-print("SESSION 32 VERIFICATION")
-print("=" * 60)
-
-# 1. Orchestrator init — no live data fetching
-print("\n[1] Orchestrator init — no network calls...")
-import io
-import time
-from contextlib import redirect_stderr, redirect_stdout
-
-_buf = io.StringIO()
-_t0 = time.time()
-with redirect_stdout(_buf), redirect_stderr(_buf):
-    try:
-        for mod in list(sys.modules.keys()):
-            if any(x in mod for x in ["core", "trading", "agents"]):
-                del sys.modules[mod]
-        from core.orchestrator.task_orchestrator import TaskOrchestrator
-
-        _orch = TaskOrchestrator()
-    except Exception as _e:
-        _buf.write(f"IMPORT ERROR: {_e}\n")
-_elapsed = time.time() - _t0
-_output = _buf.getvalue()
-_fail_lines = [l for l in _output.split("\n") if "Failed" in l or "Error" in l]
-_fetch_lines = [
-    l
-    for l in _fail_lines
-    if any(t in l for t in ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "fetching", "yfinance"])
-]
-print(f"  Init time: {_elapsed:.2f}s")
-print(f"  Data fetch errors: {len(_fetch_lines)}")
-print(f"  Other errors: {len(_fail_lines) - len(_fetch_lines)}")
-for l in [x for x in _fail_lines if x not in _fetch_lines]:
-    print(f"    {l[:100]}")
-print(f"  {'PASS' if len(_fetch_lines) == 0 else 'STILL FETCHING DATA ON INIT'}")
-
-# 2. Startup noise — all info calls now debug
-print("\n[2] Startup noise — config + root INFO eliminated...")
-_buf2 = io.StringIO()
-with redirect_stdout(_buf2), redirect_stderr(_buf2):
-    try:
-        for mod in list(sys.modules.keys()):
-            if "trading" in mod:
-                del sys.modules[mod]
-        from trading.memory import get_memory_store
-
-        _m = get_memory_store()
-    except Exception:
-        pass
-_combined = _buf2.getvalue()
-_info_lines = [
-    l
-    for l in _combined.split("\n")
-    if ("INFO" in l or l.strip().startswith("{")) and l.strip()
-]
-_config_lines = [
-    l for l in _info_lines if "config" in l.lower() or "validation" in l.lower()
-]
-_core_lines = [
-    l for l in _info_lines if "core" in l.lower() or "trading system" in l.lower()
-]
-print(f"  Total INFO/JSON lines: {len(_info_lines)}")
-print(f"  Config INFO lines: {len(_config_lines)}")
-print(f"  Core init INFO lines: {len(_core_lines)}")
-for l in _info_lines[:5]:
-    print(f"    {l[:80]}")
-print(f"  {'PASS' if len(_info_lines) == 0 else 'STILL ' + str(len(_info_lines)) + ' lines'}")
-
-# 3. yfinance DatetimeArray fix
-print("\n[3] yfinance DatetimeArray type coercion...")
-import glob
-
-_fixed = False
-for _pattern in ["trading/data/providers/*.py", "trading/data/*.py"]:
-    for _fpath in glob.glob(_pattern):
-        try:
-            _c = open(_fpath, encoding="utf-8", errors="replace").read()
-            if "history(" in _c and ("strftime" in _c or "Timestamp" in _c):
-                if (
-                    "DatetimeArray" in _c
-                    or "isinstance(start" in _c
-                    or "isinstance(end" in _c
-                ):
-                    print(f"  Fix found in: {_fpath}")
-                    _fixed = True
-        except Exception:
-            pass
-# Also check if the specific error still appears in a quick fetch attempt
-try:
-    import yfinance as yf
-    import pandas as pd
-
-    # Simulate the bug: pass DatetimeArray as start
-    _dates = pd.date_range("2024-01-01", periods=3)
-    # The fix should coerce this before passing to yfinance
-    _start = _dates  # DatetimeArray
-    if not isinstance(_start, str):
-        _start = pd.Timestamp(_start[0]).strftime("%Y-%m-%d")
-    print(f"  DatetimeArray coercion works: True")
-    print(f"  Coerced value: {_start}")
-    _fixed = True
-except Exception as _e:
-    print(f"  Coercion test error: {_e}")
-print(f"  {'PASS' if _fixed else 'CHECK provider files manually'}")
-
-# 4. Smoke tests
-print("\n[4] Model smoke tests...")
-import subprocess
-
-result = subprocess.run(
-    [sys.executable, "tests/model_smoke_test.py"],
-    capture_output=True,
-    text=True,
-)
-output = result.stdout + result.stderr
-if "All smoke tests completed. All PASS" in output:
-    print("  PASS: All 12 models")
+# Fix 1 - Reddit
+t = open(
+    "trading/data/social_sentiment.py",
+    encoding="utf-8", errors="replace"
+).read()
+if "not rid and not rsec" in t:
+    ok("Reddit early return present")
 else:
-    fails = [l.strip() for l in output.split("\n") if "FAIL" in l]
-    print(f"  ISSUES: {fails}")
+    fail("Reddit early return missing")
 
-print("\n" + "=" * 60)
-print("Session 32 complete. Paste output back.")
-print("=" * 60)
+# Fix 2 - trading.ui warning
+t2 = open(
+    "trading/ui/__init__.py",
+    encoding="utf-8", errors="replace"
+).read()
+if "config.registry" not in t2:
+    ok("trading.ui.config.registry "
+       "import removed")
+else:
+    fail("trading.ui.config.registry "
+         "still imported")
+
+# Fix 3 - timezone
+t3 = open(
+    "agents/briefing/morning_briefing.py",
+    encoding="utf-8", errors="replace"
+).read()
+t4 = open(
+    "trading/data/price_cache.py",
+    encoding="utf-8", errors="replace"
+).read()
+if "tz_localize(None)" in t3:
+    ok("TZ fix in morning_briefing.py")
+else:
+    fail("TZ fix missing in "
+         "morning_briefing.py")
+if "tz_localize(None)" in t4:
+    ok("TZ fix in price_cache.py")
+else:
+    fail("TZ fix missing in price_cache.py")
+
+# Fix 4 - Prophet
+t5 = open(
+    "trading/models/prophet_model.py",
+    encoding="utf-8", errors="replace"
+).read()
+if "_unavailable" in t5:
+    ok("Prophet graceful failure present")
+else:
+    fail("Prophet graceful failure missing")
+
+# Fix 5 - Layout
+t6 = open(
+    "pages/1_Dashboard.py",
+    encoding="utf-8", errors="replace"
+).read()
+if "_render_watchlist" in t6:
+    ok("Watchlist fragment present")
+else:
+    fail("Watchlist fragment missing")
+if "it.get(\"url\"" in t6 or \
+   "it.get('url'" in t6:
+    ok("News URL links present")
+else:
+    fail("News URL links missing")
+
+# Syntax checks
+for fpath in [
+    "trading/data/social_sentiment.py",
+    "trading/ui/__init__.py",
+    "agents/briefing/morning_briefing.py",
+    "trading/data/price_cache.py",
+    "trading/models/prophet_model.py",
+    "pages/1_Dashboard.py",
+]:
+    try:
+        ast.parse(open(fpath,
+            encoding="utf-8",
+            errors="replace").read())
+        ok(f"Syntax valid: {fpath}")
+    except SyntaxError as e:
+        fail(f"Syntax error {fpath}: {e}")
+
+print()
+print("--- Smoke test ---")
+result = subprocess.run(
+    [python, "tests/model_smoke_test.py"],
+    capture_output=True, text=True
+)
+print((result.stdout + result.stderr)[-1500:])
+if result.returncode == 0:
+    ok("Smoke test passed")
+else:
+    fail("Smoke test FAILED")
+
+print(f"\n=== {len(PASS)} passed, "
+      f"{len(FAIL)} failed ===")
+if FAIL:
+    sys.exit(1)
+else:
+    print("All checks passed. "
+          "Ready to commit v4.1.9.")
+    sys.exit(0)

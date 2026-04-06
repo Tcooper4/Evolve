@@ -282,4 +282,18 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
     """
     rid, rsec = _reddit_creds_from_runtime()
     mode = "praw" if _reddit_use_praw(rid, rsec) else "json"
+    if not rid and not rsec:
+        return {
+            "symbol": symbol,
+            "sentiment_score": 0.0,
+            "sentiment_label": "NEUTRAL",
+            "confidence": 0.0,
+            "source": "unavailable",
+            "reason": (
+                "Reddit credentials "
+                "not configured"
+            ),
+            "success": False,
+            "mention_count": 0,
+        }
     return _get_social_sentiment_impl(symbol, limit, mode)

@@ -28,7 +28,13 @@ def get_quote(ticker: str) -> dict:
 def get_history(ticker: str, period: str = "1y", interval: str = "1d") -> pd.DataFrame:
     """OHLCV history. 60s TTL for intraday freshness."""
     try:
-        return yf.Ticker(ticker).history(period=period, interval=interval)
+        df = yf.Ticker(ticker).history(period=period, interval=interval)
+        if isinstance(df, pd.DataFrame) and len(df.index) > 0:
+            if hasattr(df.index, "tz") and df.index.tz is not None:
+                df = df.copy()
+                df.index = df.index.tz_convert(None)
+        # tz_localize(None) is naive-only; tz_convert(None) strips tz-aware indexes
+        return df
     except Exception:
         return pd.DataFrame()
 

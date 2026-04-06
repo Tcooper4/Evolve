@@ -126,6 +126,12 @@ def scan_market(
             progress=False,
             threads=True,
         )
+        # Normalize timezone to prevent tz-naive/tz-aware join errors
+        if isinstance(raw, pd.DataFrame) and len(raw.index) > 0:
+            if hasattr(raw.index, "tz") and raw.index.tz is not None:
+                raw = raw.copy()
+                raw.index = raw.index.tz_convert(None)
+        # tz_localize(None) is naive-only; tz_convert(None) strips tz-aware indexes
     except Exception as e:
         return {
             "results": [],

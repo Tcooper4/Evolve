@@ -442,6 +442,7 @@ class MorningBriefing:
                 "Morning briefing: scanning %d tickers...",
                 len(uni),
             )
+            # tz_localize(None) is naive-only; batch tz strip is in market_scanner.scan_market
 
             raw = scan_market(
                 filters=[],

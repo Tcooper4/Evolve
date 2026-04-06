@@ -15,6 +15,8 @@ from utils.time_utils import (
     validate_date_column,
 )
 
+from trading.exceptions import ModelInitializationError
+
 from .base_model import BaseModel, ModelRegistry
 
 # Try to import Prophet, but make it optional
@@ -52,6 +54,7 @@ if PROPHET_AVAILABLE:
             self.fitted = False
             self.is_fitted = False
             self.history = None
+            self._unavailable = False
 
             try:
                 super().__init__(config)
@@ -77,22 +80,28 @@ if PROPHET_AVAILABLE:
                         "seasonality_prior_scale", 10.0
                     )
 
-                # Initialize Prophet model with error handling
+                # Initialize Prophet model with error handling (stan_backend probe)
                 try:
                     from prophet import Prophet
 
-                    self.model = Prophet(**prophet_params)
+                    _p = Prophet(**prophet_params)
+                    _ = _p.stan_backend
+                    self.model = _p
+                    self._unavailable = False
                     self.fitted = False
                     self.is_fitted = False
                     self.history = None
                     logger.info("Prophet model initialized successfully")
-                except Exception as e:
-                    logger.error(f"Failed to initialize Prophet model: {e}")
+                except (AttributeError, ImportError, Exception) as _pe:
+                    logger.warning(
+                        "Prophet backend unavailable: %s", _pe
+                    )
                     self.model = None
+                    self._unavailable = True
                     self.available = False
                     self.fitted = False
                     self.is_fitted = False
-                    logger.warning("Prophet model unavailable (init failure): %s", e)
+                    logger.warning("Prophet model unavailable (init failure): %s", _pe)
 
             except Exception as e:
                 logger.error(f"Failed to initialize ProphetModel: {e}")
@@ -116,10 +125,14 @@ if PROPHET_AVAILABLE:
             # Fallback minimal instance if initialization in __init__ failed
             if getattr(self, "model", None) is None:
                 try:
-                    self.model = Prophet()
-                except Exception as e:
-                    logger.error(f"Failed to build Prophet model: {e}")
+                    _p = Prophet()
+                    _ = _p.stan_backend
+                    self.model = _p
+                    self._unavailable = False
+                except (AttributeError, ImportError, Exception) as _pe:
+                    logger.warning("Prophet backend unavailable: %s", _pe)
                     self.model = None
+                    self._unavailable = True
             return self.model
 
         def _df_with_ds_for_horizon(self, data: pd.DataFrame) -> tuple[pd.DataFrame, str]:
@@ -186,6 +199,10 @@ if PROPHET_AVAILABLE:
                 ValueError: If data is missing or malformed
                 RuntimeError: If Prophet fitting fails
             """
+            if getattr(self, "_unavailable", False):
+                raise ModelInitializationError(
+                    "Prophet backend unavailable on this platform"
+                )
             train_data = self._normalize_columns(
                 train_data.copy() if hasattr(train_data, "copy") else train_data
             )
@@ -486,6 +503,10 @@ if PROPHET_AVAILABLE:
             Returns:
                 Predicted values
             """
+            if getattr(self, "_unavailable", False):
+                raise ModelInitializationError(
+                    "Prophet backend unavailable on this platform"
+                )
             if not self.available:
                 logger.warning("ProphetModel unavailable (init failure).")
                 return np.array([])
@@ -572,6 +593,10 @@ if PROPHET_AVAILABLE:
 
         def forecast(self, data: pd.DataFrame, horizon: int = 30, **kwargs) -> Dict[str, Any]:
             """Forward to predict() with horizon support."""
+            if getattr(self, "_unavailable", False):
+                raise ModelInitializationError(
+                    "Prophet backend unavailable on this platform"
+                )
             try:
                 result = self.predict(data, horizon=horizon)
                 if result is None or (hasattr(result, '__len__') and len(result) == 0):
@@ -597,6 +622,10 @@ if PROPHET_AVAILABLE:
             Returns:
                 Dictionary containing forecast results
             """
+            if getattr(self, "_unavailable", False):
+                raise ModelInitializationError(
+                    "Prophet backend unavailable on this platform"
+                )
             if not self.available:
                 logger.warning("ProphetModel unavailable (init failure).")
                 # Return simple fallback forecast
