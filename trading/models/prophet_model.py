@@ -80,12 +80,11 @@ if PROPHET_AVAILABLE:
                         "seasonality_prior_scale", 10.0
                     )
 
-                # Initialize Prophet model with error handling (stan_backend probe)
+                # Initialize Prophet model with error handling
                 try:
                     from prophet import Prophet
 
                     _p = Prophet(**prophet_params)
-                    _ = _p.stan_backend
                     self.model = _p
                     self._unavailable = False
                     self.fitted = False
@@ -126,7 +125,6 @@ if PROPHET_AVAILABLE:
             if getattr(self, "model", None) is None:
                 try:
                     _p = Prophet()
-                    _ = _p.stan_backend
                     self.model = _p
                     self._unavailable = False
                 except (AttributeError, ImportError, Exception) as _pe:
@@ -304,7 +302,7 @@ if PROPHET_AVAILABLE:
                     "timestamp": datetime.now().isoformat(),
                 }
             except AttributeError as ae:
-                # e.g. 'Prophet' object has no attribute 'stan_backend' on some cloud versions
+                # Prophet / dependency version mismatch during fit
                 logger.warning("Prophet fit AttributeError (version mismatch): %s", ae)
                 self.available = False
                 return {"success": False, "error": str(ae), "train_loss": [], "val_loss": []}
@@ -708,7 +706,7 @@ if PROPHET_AVAILABLE:
                 }
 
             except AttributeError as ae:
-                # e.g. 'Prophet' object has no attribute 'stan_backend' on some cloud versions
+                # Prophet / dependency version mismatch during forecast
                 logger.warning("Prophet forecast AttributeError (version mismatch): %s", ae)
                 self.available = False
                 h = horizon or 30

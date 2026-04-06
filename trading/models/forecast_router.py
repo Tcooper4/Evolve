@@ -287,6 +287,14 @@ class ForecastRouter:
             logger.info(f"Trying fallback model: {fallback_model}")
             model_class = self.model_registry[fallback_model]
             fallback_config = self._get_model_defaults(fallback_model)
+            if selected_model == "prophet" and fallback_model == "arima":
+                fallback_config.update(
+                    {
+                        "use_auto_arima": False,
+                        "order": (0, 1, 0),
+                        "seasonal": False,
+                    }
+                )
             if fallback_model == "lstm":
                 fallback_config["input_dim"] = (
                     data.shape[1] if hasattr(data, "shape") else 1

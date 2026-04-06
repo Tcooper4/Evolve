@@ -424,6 +424,12 @@ _render_watchlist()
 # --- Morning briefing (primary value — cached 30m) ---
 st.markdown("---")
 st.subheader("Morning briefing")
+st.caption(
+    "Briefing forecasts use a fast "
+    "consensus model optimised for "
+    "speed. For full precision, open "
+    "any ticker in the Analyze page."
+)
 
 
 @st.fragment
