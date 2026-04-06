@@ -252,7 +252,7 @@ _pg = st.navigation(
         "System": [_settings],
     },
     position="sidebar",
-    expanded=False,
+    expanded=True,
 )
 _pg.run()
 
