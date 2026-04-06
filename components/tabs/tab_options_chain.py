@@ -109,7 +109,7 @@ def render(
                     st.session_state["options_loaded_" + ticker] = True
                 else:
                     st.caption("Click to load live options data.")
-                    st.stop()
+                    return
 
             _expiries = _t.options
             if _expiries:
@@ -144,7 +144,7 @@ def render(
                 _chain = st.session_state.get(_cache_key)
                 if _chain is None:
                     st.warning("Options chain timed out. Try again.")
-                    st.stop()
+                    return
                 _calls = _chain.calls
                 _puts = _chain.puts
 

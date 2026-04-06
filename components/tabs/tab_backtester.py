@@ -535,7 +535,7 @@ def render(
                                 if isinstance(fit_result, dict):
                                     detail = fit_result.get("error") or str(fit_result)
                                 st.error(f"{model_type} training did not complete successfully. Details: {detail}")
-                                st.stop()
+                                return
 
                             # Generate forecast - try with uncertainty if available; support both forecast() and predict() (e.g. HybridModel)
                             progress_bar.progress(0.9)
@@ -637,7 +637,7 @@ def render(
 
                             if forecast_array.size == 0:
                                 st.error(f"{model_type} returned an empty forecast. Please check the model configuration.")
-                                st.stop()
+                                return
 
                             # Sanity-check price range relative to last known price
                             # Allow forecasts in the range [0.4 * last_price, 2.0 * last_price]
@@ -657,7 +657,7 @@ def render(
                                         f"[{lower_bound:.2f}, {upper_bound:.2f}] based on last close "
                                         f"({last_price:.2f}). Please review the model configuration and data scaling."
                                     )
-                                    st.stop()
+                                    return
 
                             # Store forecast
                             forecast_df = pd.DataFrame(

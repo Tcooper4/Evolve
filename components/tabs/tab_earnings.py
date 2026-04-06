@@ -139,6 +139,4 @@ def render(
             import traceback
             st.code(traceback.format_exc())
     except Exception as e:
-        import traceback
-        st.error(f"Tab error: {type(e).__name__}: {e}")
-        st.code(traceback.format_exc())
+        st.caption(f"Tab unavailable: {e}")

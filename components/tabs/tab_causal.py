@@ -133,6 +133,4 @@ def render(
         except Exception as _cae2:
             st.caption(f"Causal section error: {_cae2}")
     except Exception as e:
-        import traceback
-        st.error(f"Tab error: {type(e).__name__}: {e}")
-        st.code(traceback.format_exc())
+        st.caption(f"Tab unavailable: {e}")

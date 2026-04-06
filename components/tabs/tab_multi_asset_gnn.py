@@ -365,10 +365,6 @@ def render(
                         with st.expander("Traceback"):
                             st.code(traceback.format_exc(), language="python")
         except Exception as e:
-            st.error(f"Tab error: {type(e).__name__}: {e}")
-            import traceback
-            st.code(traceback.format_exc(), language="python")
+            st.caption(f"Tab unavailable: {e}")
     except Exception as e:
-        import traceback
-        st.error(f"Tab error: {type(e).__name__}: {e}")
-        st.code(traceback.format_exc())
+        st.caption(f"Tab unavailable: {e}")

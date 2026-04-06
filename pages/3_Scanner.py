@@ -214,6 +214,13 @@ def _scanner_table():
         f"✅ Scanned {scan_result.get('scanned', 0)} stocks — "
         f"{scan_result.get('passed', 0)} passed filters",
     )
+    _uni_lbl = st.session_state.get("scanner_universe_choice", "selected universe")
+    _fa = scan_result.get("filters_applied") or []
+    _fa_s = ", ".join(_fa) if _fa else "none"
+    st.caption(
+        f"{scan_result.get('passed', 0)} of {scan_result.get('scanned', 0)} stocks "
+        f"passed filters ({_uni_lbl}). Filters applied: {_fa_s}."
+    )
     if not results:
         st.info("No stocks passed the selected filters. Try relaxing criteria.")
         return
@@ -302,6 +309,31 @@ def _scanner_table():
     )
     if "News" not in df_display.columns and "news_score" in df.columns:
         df_display["News"] = df["news_score"]
+
+    # Normalize signals column for Arrow
+    # compatibility — convert lists to
+    # comma-separated strings
+    if "signals" in df_display.columns:
+        def _fmt_signals(val):
+            if isinstance(val, list):
+                names = [
+                    s.get("name", str(s))
+                    if isinstance(s, dict)
+                    else str(s)
+                    for s in val
+                ]
+                return ", ".join(names) if names else "—"
+            if val is None or (
+                isinstance(val, float)
+                and val != val
+            ):
+                return "—"
+            return str(val) if val else "—"
+
+        df_display["signals"] = (
+            df_display["signals"].apply(
+                _fmt_signals)
+        )
 
     def _color_score(val):
         try:
