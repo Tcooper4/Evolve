@@ -96,7 +96,8 @@ def scan_market(
         filters: list of filter keys from SCAN_FILTERS, or None for all
         universe: list of tickers, or None for DEFAULT_UNIVERSE
         max_results: cap on returned rows
-        progress_callback: callable(completed, total) for UI progress bar
+        progress_callback: callable(completed, total, phase=...) for UI;
+            phase is "filter" (per ticker) or "ai" (scoring); optional kwarg.
 
     Returns:
         dict with:
@@ -145,9 +146,24 @@ def scan_market(
     results = []
     total = len(universe)
     pending: List[Tuple[str, pd.DataFrame, Dict[str, Any]]] = []
+    # UI progress: phase="filter" (per ticker), then phase="ai" (pool scoring).
 
-    for symbol in universe:
+    def _emit_progress(done: int, tot: int, phase: str) -> None:
+        if not progress_callback:
+            return
         try:
+            progress_callback(done, tot, phase=phase)
+        except TypeError:
+            try:
+                progress_callback(done, tot)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    for _scan_i, symbol in enumerate(universe):
+        try:
+            _emit_progress(_scan_i + 1, total, "filter")
             # Extract per-ticker data from batch download
             if len(universe) == 1:
                 hist = raw.copy()
@@ -249,11 +265,7 @@ def scan_market(
 
     ai_by_symbol: Dict[str, Any] = {}
     n_pend = len(pending)
-    if progress_callback:
-        try:
-            progress_callback(0, max(1, n_pend))
-        except Exception:
-            pass
+    _emit_progress(0, max(1, n_pend), "ai")
     if pending:
         done_ai = 0
         with ThreadPoolExecutor(max_workers=_SCAN_AI_MAX_WORKERS) as executor:
@@ -265,16 +277,9 @@ def scan_market(
                 sym, ai = fut.result()
                 ai_by_symbol[sym] = ai
                 done_ai += 1
-                if progress_callback:
-                    try:
-                        progress_callback(done_ai, n_pend)
-                    except Exception:
-                        pass
-    elif progress_callback:
-        try:
-            progress_callback(1, 1)
-        except Exception:
-            pass
+                _emit_progress(done_ai, n_pend, "ai")
+    else:
+        _emit_progress(1, 1, "ai")
 
     for symbol, _hist, partial in pending:
         ai = ai_by_symbol.get(symbol)

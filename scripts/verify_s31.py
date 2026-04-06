@@ -1,91 +1,65 @@
-"""Session 31 — final two fixes."""
-import sys
-import os
+import ast, subprocess, sys
 
-sys.path.insert(0, ".")
+python = r".\evolve_venv\Scripts\python.exe"
+print("=== Session 31 Verification ===\n")
+PASS, FAIL = [], []
+def ok(msg):   PASS.append(msg); print(f"OK    {msg}")
+def fail(msg): FAIL.append(msg); print(f"FAIL  {msg}")
 
-print("=" * 60)
-print("SESSION 31 VERIFICATION")
-print("=" * 60)
-
-# 1. cache_management in TaskType
-print("\n[1] TaskType includes cache_management...")
-try:
-    from core.orchestrator.task_models import TaskType
-
-    all_types = [t.value for t in TaskType]
-    has_cache = "cache_management" in all_types
-    print(f"  cache_management present: {has_cache}")
-    print(f"  All types ({len(all_types)}): {all_types}")
-    print(f"  {'PASS' if has_cache else 'MISSING'}")
-except Exception as e:
-    print(f"  ERROR: {e}")
-
-# 2. Orchestrator init fully clean
-print("\n[2] TaskOrchestrator init — fully clean...")
-import io
-from contextlib import redirect_stderr, redirect_stdout
-
-_buf = io.StringIO()
-with redirect_stdout(_buf), redirect_stderr(_buf):
-    try:
-        for mod in list(sys.modules.keys()):
-            if any(x in mod for x in ["core", "trading", "agents"]):
-                del sys.modules[mod]
-        from core.orchestrator.task_orchestrator import TaskOrchestrator
-
-        _orch = TaskOrchestrator()
-    except Exception as _e:
-        _buf.write(f"IMPORT ERROR: {_e}\n")
-_output = _buf.getvalue()
-_fail_lines = [l for l in _output.split("\n") if "Failed" in l or "Error" in l]
-_warn_lines = [l for l in _output.split("\n") if "WARNING" in l]
-print(f"  'Failed' lines: {len(_fail_lines)}")
-print(f"  WARNING lines: {len(_warn_lines)}")
-for l in _fail_lines:
-    print(f"    {l[:100]}")
-print(f"  {'PASS' if len(_fail_lines) == 0 else 'STILL HAS ISSUES'}")
-
-# 3. Startup noise fully dead
-print("\n[3] Startup noise — root logger...")
-_buf2 = io.StringIO()
-with redirect_stdout(_buf2), redirect_stderr(_buf2):
-    try:
-        for mod in list(sys.modules.keys()):
-            if "trading" in mod:
-                del sys.modules[mod]
-        from trading.memory import get_memory_store
-
-        _m = get_memory_store()
-    except Exception:
-        pass
-_combined = _buf2.getvalue()
-_info_lines = [
-    l
-    for l in _combined.split("\n")
-    if ("INFO" in l or l.strip().startswith("{")) and l.strip()
-]
-print(f"  INFO/JSON lines: {len(_info_lines)}")
-for l in _info_lines[:3]:
-    print(f"    {l[:80]}")
-print(f"  {'PASS' if len(_info_lines) == 0 else 'STILL ' + str(len(_info_lines)) + ' lines'}")
-
-# 4. Smoke tests
-print("\n[4] Model smoke tests...")
-import subprocess
-
-result = subprocess.run(
-    [sys.executable, "tests/model_smoke_test.py"],
-    capture_output=True,
-    text=True,
-)
-output = result.stdout + result.stderr
-if "All smoke tests completed. All PASS" in output:
-    print("  PASS: All 12 models")
+t = open(
+    "trading/analysis/market_scanner.py",
+    encoding="utf-8", errors="replace"
+).read()
+if 'phase="filter"' in t:
+    ok("filter phase progress in scanner")
 else:
-    fails = [l.strip() for l in output.split("\n") if "FAIL" in l]
-    print(f"  ISSUES: {fails}")
+    fail("filter phase progress missing")
+if 'phase="ai"' in t:
+    ok("ai phase progress in scanner")
+else:
+    fail("ai phase progress missing")
 
-print("\n" + "=" * 60)
-print("Session 31 complete. Paste output back.")
-print("=" * 60)
+t2 = open("pages/3_Scanner.py",
+    encoding="utf-8", errors="replace"
+).read()
+if "Filtering universe" in t2:
+    ok("filter phase text in Scanner page")
+else:
+    fail("filter phase text missing")
+if "AI scoring" in t2:
+    ok("AI scoring text in Scanner page")
+else:
+    fail("AI scoring text missing")
+
+for fpath in [
+    "trading/analysis/market_scanner.py",
+    "pages/3_Scanner.py",
+]:
+    try:
+        ast.parse(open(fpath,
+            encoding="utf-8",
+            errors="replace").read())
+        ok(f"Syntax valid: {fpath}")
+    except SyntaxError as e:
+        fail(f"Syntax error {fpath}: {e}")
+
+print()
+print("--- Smoke test ---")
+result = subprocess.run(
+    [python, "tests/model_smoke_test.py"],
+    capture_output=True, text=True
+)
+print((result.stdout + result.stderr)[-1500:])
+if result.returncode == 0:
+    ok("Smoke test passed")
+else:
+    fail("Smoke test FAILED")
+
+print(f"\n=== {len(PASS)} passed, "
+      f"{len(FAIL)} failed ===")
+if FAIL:
+    sys.exit(1)
+else:
+    print("All checks passed. "
+          "Ready to commit v4.1.8.")
+    sys.exit(0)

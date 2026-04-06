@@ -527,9 +527,30 @@ with tab_scan:
     if st.button("Run Scan", type="primary", key="scanner_run_btn"):
         progress_bar = st.progress(0.0, text="Scanning...")
 
-        def _progress(done, total):
-            pct = done / total if total > 0 else 0
-            progress_bar.progress(pct, text=f"Scanning {done}/{total}...")
+        def _progress(done, total, phase="filter"):
+            pct = (done / total
+                   if total > 0 else 0)
+            if phase == "filter":
+                # Scale filter phase to first 80% of bar
+                scaled = pct * 0.8
+                progress_bar.progress(
+                    scaled,
+                    text=(
+                        f"Filtering universe... "
+                        f"{done}/{total} stocks"
+                    ),
+                )
+            else:
+                # AI scoring phase: 80-100%
+                scaled = 0.8 + pct * 0.2
+                progress_bar.progress(
+                    min(scaled, 1.0),
+                    text=(
+                        f"AI scoring... "
+                        f"{done}/{total} "
+                        f"passed filters"
+                    ),
+                )
 
         with st.spinner("Running scan..."):
             _filters_for_scan = [f for f in selected_filters if f != "top_ai_score"]
