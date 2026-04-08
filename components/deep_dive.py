@@ -6,7 +6,7 @@ from datetime import datetime
 
 import streamlit as st
 
-from components.analyze_ai_score import get_ai_recommendation_dict, top_signals_summary
+from components.analyze_ai_score import top_signals_summary
 from components.analyze_chart import render_price_chart
 from components.analyze_diagnostics import render_diagnostics
 from components.analyze_forecast import render_forecast
@@ -244,7 +244,23 @@ def render_deep_dive(ticker: str) -> None:
             score = compute_ai_score(sym, hist)
         except Exception:
             score = None
-        rec = get_ai_recommendation_dict(sym, hist, trader_mode="Short-term")
+        _rec_key = f"deep_dive_rec_{sym}"
+        rec = st.session_state.get(_rec_key)
+        if rec is None:
+            _fc_key_for_rec = f"deep_dive_forecast_{sym}"
+            if st.session_state.get(_fc_key_for_rec):
+                try:
+                    from components.analyze_ai_score import (
+                        get_ai_recommendation_dict,
+                    )
+
+                    rec = get_ai_recommendation_dict(
+                        sym, hist, trader_mode="Short-term"
+                    )
+                    if rec:
+                        st.session_state[_rec_key] = rec
+                except Exception as _rec_e:
+                    logger.debug("Deep dive recommendation: %s", _rec_e)
         st.markdown("### Recommendation")
         if rec:
             act = rec.get("action", "HOLD")
@@ -446,7 +462,61 @@ def render_deep_dive(ticker: str) -> None:
 
         tf, tn, tr, tp = st.tabs(["Forecast", "News", "Risk", "Patterns"])
         with tf:
-            forecast_result = render_forecast(sym, hist, horizon=7)
+            import time as _time_fc
+
+            _fc_key = f"deep_dive_forecast_{sym}"
+            _fc_ts_key = f"deep_dive_forecast_ts_{sym}"
+            _cached_fc = st.session_state.get(_fc_key)
+            _cached_fc_age = _time_fc.time() - st.session_state.get(
+                _fc_ts_key, 0.0
+            )
+            forecast_result = None
+            if _cached_fc is None or _cached_fc_age > 600:
+                if st.button(
+                    "📈 Generate Forecast",
+                    key=f"dd_forecast_btn_{sym}",
+                ):
+                    with st.spinner("Running consensus forecast..."):
+                        _fc = render_forecast(sym, hist, horizon=7)
+                    if _fc:
+                        st.session_state[_fc_key] = _fc
+                        st.session_state[_fc_ts_key] = _time_fc.time()
+                    forecast_result = _fc
+                else:
+                    st.info(
+                        "Click **Generate Forecast** to run the multi-model "
+                        "consensus.",
+                        icon="📈",
+                    )
+            else:
+                forecast_result = _cached_fc
+                _cm = {c.lower(): c for c in hist.columns}
+                _cc = _cm.get("close", hist.columns[0])
+                last = float(hist[_cc].iloc[-1])
+                cp = (_cached_fc or {}).get("consensus_price")
+                direction = (_cached_fc or {}).get("direction", "—")
+                conviction = (_cached_fc or {}).get("conviction", "—")
+                models = (_cached_fc or {}).get("models_used") or []
+                st.subheader("Consensus forecast")
+                st.metric(
+                    "Direction",
+                    direction,
+                    delta=f"{conviction} conviction",
+                )
+                if cp:
+                    pct = (float(cp) - last) / last * 100 if last else 0
+                    st.metric(
+                        "Consensus price",
+                        f"${float(cp):.2f}",
+                        delta=f"{pct:+.1f}%",
+                    )
+                if models:
+                    st.caption(
+                        "Models: " + ", ".join(str(m) for m in models[:12])
+                    )
+                st.caption(
+                    "Using cached forecast (refreshes every 10 min)."
+                )
             _wf_conf = (forecast_result or {}).get("walk_forward_confidence")
             _wf_warn = (forecast_result or {}).get("walk_forward_warnings") or []
             if _wf_conf:

@@ -11,7 +11,8 @@ Each dimension is computed from already-available data pipelines.
 No new external APIs required.
 """
 import logging
-from typing import Any, Dict, Optional
+from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -36,6 +37,7 @@ SIGNAL_SOURCES = [
     "macro_factors",
     "earnings_calendar",
     "insider_flow",
+    "analyst_signals",
     "sec_edgar",
     "factor_model",
     "ml_score",
@@ -186,6 +188,308 @@ SECTOR_RISK_FLAGS = {
 }
 
 
+AI_SCORE_PARALLEL_TIMEOUT = 15
+
+
+def _fetch_options_flow_safe(symbol: str) -> Dict[str, Any]:
+    try:
+        from trading.data.options_flow import get_options_flow
+
+        return get_options_flow(symbol)
+    except Exception as e:
+        logger.debug("options_flow AI score fetch: %s", e)
+        return {}
+
+
+def _fetch_insider_flow_safe(symbol: str) -> Dict[str, Any]:
+    try:
+        from trading.data.insider_flow import get_insider_flow
+
+        return get_insider_flow(symbol)
+    except Exception as e:
+        logger.debug("insider_flow AI score fetch: %s", e)
+        return {}
+
+
+def _fetch_social_sentiment_safe(symbol: str) -> Optional[Dict[str, Any]]:
+    try:
+        from trading.data.social_sentiment import get_social_sentiment
+
+        return get_social_sentiment(symbol)
+    except Exception as e:
+        logger.debug("social_sentiment AI score fetch: %s", e)
+        return None
+
+
+def _fetch_short_and_sec_safe(symbol: str) -> Dict[str, Any]:
+    out: Dict[str, Any] = {"short": None, "sec": None}
+    try:
+        from trading.data.short_interest import get_short_interest
+
+        out["short"] = get_short_interest(symbol)
+    except Exception as e:
+        logger.debug("short_interest AI score fetch: %s", e)
+    try:
+        from trading.data.sec_edgar import get_sec_signal
+
+        out["sec"] = get_sec_signal(symbol)
+    except Exception as e:
+        logger.debug("sec_edgar AI score fetch: %s", e)
+    return out
+
+
+def _fetch_analyst_safe(
+    symbol: str, _hist: Optional[pd.DataFrame] = None
+) -> Dict[str, Any]:
+    try:
+        from trading.data.analyst_signals import get_analyst_signals
+
+        return get_analyst_signals(symbol)
+    except Exception as e:
+        logger.debug("analyst_signals AI score fetch: %s", e)
+        return {
+            "signal": "NEUTRAL",
+            "signal_strength": 5.0,
+            "success": False,
+        }
+
+
+def _bundle_technical(
+    symbol: str,
+    hist: pd.DataFrame,
+    close: np.ndarray,
+    last_price: float,
+) -> Dict[str, Any]:
+    """RSI, Bollinger, chart patterns → technical_score and signal rows."""
+    signals: List[Dict[str, Any]] = []
+    signal_status: Dict[str, str] = {}
+    tech_points = 0.0
+
+    _rsi_series = safe_rsi(close, 14)
+    _rsi_flat = np.asarray(_rsi_series, dtype=float).ravel()
+    rsi = float(_rsi_flat[-1]) if _rsi_flat.size else None
+    if rsi is not None and np.isfinite(rsi):
+        if 40 <= rsi <= 60:
+            rsi_score = 5.0
+        elif 30 <= rsi < 40 or 60 < rsi <= 70:
+            rsi_score = 7.0
+        elif rsi < 30:
+            rsi_score = 9.0
+        else:
+            rsi_score = 3.0
+        tech_points += rsi_score
+        signals.append(
+            {
+                "name": "RSI",
+                "value": round(float(rsi), 1),
+                "impact": "positive" if rsi < 50 else "neutral" if rsi < 70 else "negative",
+                "description": f"RSI {rsi:.1f} — {'oversold' if rsi < 30 else 'neutral' if rsi < 70 else 'overbought'}",
+            }
+        )
+
+    if len(close) >= 20:
+        sma20 = np.mean(close[-20:])
+        std20 = np.std(close[-20:])
+        bb_upper = sma20 + 2 * std20
+        bb_lower = sma20 - 2 * std20
+        bb_pct = (last_price - bb_lower) / (bb_upper - bb_lower + 1e-8)
+        bb_score = 8.0 if bb_pct < 0.2 else 6.0 if bb_pct < 0.5 else 4.0 if bb_pct < 0.8 else 2.0
+        tech_points += bb_score
+        signals.append(
+            {
+                "name": "Bollinger Position",
+                "value": round(float(bb_pct * 100), 1),
+                "impact": "positive" if bb_pct < 0.3 else "negative" if bb_pct > 0.8 else "neutral",
+                "description": f"Price at {bb_pct*100:.0f}% of Bollinger Band",
+            }
+        )
+        tech_divisor = 2.0
+    else:
+        tech_divisor = 1.0
+
+    technical_score = min(10.0, tech_points / tech_divisor)
+    signal_status["technical"] = "real"
+
+    try:
+        from trading.analysis.chart_pattern_detector import (
+            ChartPatternDetector,
+        )
+
+        _pat = ChartPatternDetector(symbol, hist).detect_all()
+        _bull = {
+            "Inverse Head and Shoulders",
+            "Double Bottom",
+            "Ascending Triangle",
+            "Golden Cross",
+        }
+        _bear = {
+            "Head and Shoulders",
+            "Double Top",
+            "Descending Triangle",
+            "Death Cross",
+        }
+        _seen_bull = _seen_bear = False
+        for _p in _pat.get("patterns") or []:
+            _nm = str((_p or {}).get("name") or "")
+            if _nm in _bull and not _seen_bull:
+                technical_score = min(10.0, technical_score + 0.3)
+                signals.append(
+                    {
+                        "name": f"Pattern: {_nm}",
+                        "value": round(
+                            float((_p or {}).get("confidence") or 0), 2
+                        ),
+                        "impact": "positive",
+                        "description": (_p or {}).get(
+                            "description", ""
+                        )
+                        or f"Bullish pattern: {_nm}",
+                    }
+                )
+                _seen_bull = True
+            elif _nm in _bear and not _seen_bear:
+                technical_score = max(0.0, technical_score - 0.3)
+                signals.append(
+                    {
+                        "name": f"Pattern: {_nm}",
+                        "value": round(
+                            float((_p or {}).get("confidence") or 0), 2
+                        ),
+                        "impact": "negative",
+                        "description": (_p or {}).get(
+                            "description", ""
+                        )
+                        or f"Bearish pattern: {_nm}",
+                    }
+                )
+                _seen_bear = True
+        signal_status["chart_patterns"] = "real"
+    except Exception as _pe:
+        logger.debug("Chart pattern AI score hook skipped: %s", _pe)
+
+    return {
+        "technical_score": technical_score,
+        "signals": signals,
+        "signal_status": signal_status,
+    }
+
+
+def _bundle_momentum_base(
+    close: np.ndarray,
+    last_price: float,
+    hist: pd.DataFrame,
+) -> Dict[str, Any]:
+    """SMA / 20d momentum / regime refinement → momentum_score."""
+    signals: List[Dict[str, Any]] = []
+    signal_status: Dict[str, str] = {}
+    mom_points = 0.0
+    mom_signals = 0
+
+    sma_periods = [(20, "SMA20"), (50, "SMA50"), (200, "SMA200")]
+    for period, name in sma_periods:
+        if len(close) >= period:
+            sma = float(np.mean(close[-period:]))
+            above = last_price > sma
+            pct_diff = (last_price - sma) / sma * 100
+            score = 7.0 if above else 3.0
+            mom_points += score
+            mom_signals += 1
+            signals.append(
+                {
+                    "name": f"Price vs {name}",
+                    "value": round(pct_diff, 2),
+                    "impact": "positive" if above else "negative",
+                    "description": f"{'Above' if above else 'Below'} {name} by {abs(pct_diff):.1f}%",
+                }
+            )
+
+    if len(close) >= 20:
+        momentum_20d = (close[-1] / close[-20] - 1) * 100
+        mom_score = 8.0 if momentum_20d > 5 else 6.0 if momentum_20d > 0 else 4.0 if momentum_20d > -5 else 2.0
+        mom_points += mom_score
+        mom_signals += 1
+        signals.append(
+            {
+                "name": "20d Momentum",
+                "value": round(float(momentum_20d), 2),
+                "impact": "positive" if momentum_20d > 0 else "negative",
+                "description": f"Price {momentum_20d:+.1f}% over 20 days",
+            }
+        )
+
+    momentum_score = min(10.0, mom_points / max(mom_signals, 1))
+    signal_status["momentum"] = "real"
+
+    try:
+        from utils.math_helpers import (
+            calculate_momentum_score as _mh_momentum,
+            calculate_regime_probability as _mh_regime,
+        )
+
+        close_s = pd.Series(close)
+        _ms = _mh_momentum(close_s)
+        if len(_ms) and not bool(pd.isna(_ms.iloc[-1])):
+            _z = float(_ms.iloc[-1])
+            _adj = 0.25 * float(np.tanh(_z))
+            momentum_score = float(
+                min(10.0, max(0.0, momentum_score + _adj))
+            )
+        _rets = close_s.pct_change().dropna()
+        if len(_rets) >= 30:
+            _rp = _mh_regime(_rets, window=min(60, len(_rets)))
+            _bull = _rp.get("bull")
+            if _bull is not None and len(_bull) and not pd.isna(_bull.iloc[-1]):
+                _bp = float(_bull.iloc[-1])
+                momentum_score = float(
+                    min(10.0, max(0.0, momentum_score + 0.3 * (_bp - 0.5)))
+                )
+    except Exception as _e:
+        logger.debug("math_helpers momentum/regime refinement skipped: %s", _e)
+
+    # Overextension penalty: at/near 52w high after large recent run
+    try:
+        _cm = {c.lower(): c for c in hist.columns}
+        _hi_col = _cm.get("high")
+        _cl_col = _cm.get(
+            "close",
+            list(hist.select_dtypes(include="number").columns)[0],
+        )
+        if _hi_col is not None and len(hist) >= 32:
+            _hi52 = float(
+                hist[_hi_col].astype(float).rolling(252, min_periods=20).max().iloc[-1]
+            )
+            _last = float(hist[_cl_col].astype(float).iloc[-1])
+            _clf = hist[_cl_col].astype(float)
+            _run30 = float(
+                (_clf.iloc[-1] - _clf.iloc[-31]) / _clf.iloc[-31]
+            )
+            _near_high = _last >= _hi52 * 0.95
+            _big_run = _run30 >= 0.20
+            if _near_high and _big_run:
+                _penalty = min(1.5, round(_run30 * 3, 1))
+                momentum_score = max(0.0, momentum_score - _penalty)
+                signals.append(
+                    {
+                        "name": "Overextension",
+                        "value": round(_penalty, 1),
+                        "impact": "negative",
+                        "description": (
+                            "⚠️ Overextended: near 52w high after "
+                            f"{_run30 * 100:.0f}% "
+                            "30d run — elevated mean reversion risk"
+                        ),
+                    }
+                )
+    except Exception as _ox:
+        logger.debug("Overextension momentum check skipped: %s", _ox)
+
+    return {
+        "momentum_score": momentum_score,
+        "signals": signals,
+        "signal_status": signal_status,
+    }
+
+
 def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
     """
     Compute AI Score for a ticker.
@@ -290,183 +594,64 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
         earnings_near = False
         earnings_days_until = None
 
-        # ── TECHNICAL SCORE (0-10) ──────────────────────────────────
-        tech_points = 0.0
-
-        # RSI (0-100 → score) — Wilder smoothing via safe_rsi (same as XGBoost / platform)
-        _rsi_series = safe_rsi(close, 14)
-        _rsi_flat = np.asarray(_rsi_series, dtype=float).ravel()
-        rsi = float(_rsi_flat[-1]) if _rsi_flat.size else None
-        if rsi is not None and np.isfinite(rsi):
-            if 40 <= rsi <= 60:
-                rsi_score = 5.0
-            elif 30 <= rsi < 40 or 60 < rsi <= 70:
-                rsi_score = 7.0
-            elif rsi < 30:
-                rsi_score = 9.0  # oversold = potential buy
-            else:
-                rsi_score = 3.0  # overbought
-            tech_points += rsi_score
-            signals.append(
-                {
-                    "name": "RSI",
-                    "value": round(float(rsi), 1),
-                    "impact": "positive" if rsi < 50 else "neutral" if rsi < 70 else "negative",
-                    "description": f"RSI {rsi:.1f} — {'oversold' if rsi < 30 else 'neutral' if rsi < 70 else 'overbought'}",
-                }
+        # ── Technical / momentum + I/O signals (parallel) ─────────
+        _parallel_results: Dict[str, Any] = {}
+        with ThreadPoolExecutor(max_workers=7) as ex:
+            _futures = {
+                ex.submit(
+                    _bundle_technical, symbol, hist, close, last_price
+                ): "technical",
+                ex.submit(
+                    _bundle_momentum_base, close, last_price, hist
+                ): "momentum",
+                ex.submit(_fetch_options_flow_safe, symbol): "options",
+                ex.submit(_fetch_insider_flow_safe, symbol): "insider",
+                ex.submit(_fetch_social_sentiment_safe, symbol): "social",
+                ex.submit(_fetch_short_and_sec_safe, symbol): "short_sec",
+                ex.submit(_fetch_analyst_safe, symbol, hist): "analyst",
+            }
+            _done, _not_done = wait(
+                _futures.keys(),
+                timeout=AI_SCORE_PARALLEL_TIMEOUT,
+                return_when=ALL_COMPLETED,
             )
+            for _nf in _not_done:
+                _nf.cancel()
+            for _df in _done:
+                _lab = _futures[_df]
+                try:
+                    _parallel_results[_lab] = _df.result()
+                except Exception as _pe:
+                    logger.debug(
+                        "AI score parallel task %s failed: %s", _lab, _pe
+                    )
+                    _parallel_results[_lab] = None
 
-        # Bollinger Band position
-        if len(close) >= 20:
-            sma20 = np.mean(close[-20:])
-            std20 = np.std(close[-20:])
-            bb_upper = sma20 + 2 * std20
-            bb_lower = sma20 - 2 * std20
-            bb_pct = (last_price - bb_lower) / (bb_upper - bb_lower + 1e-8)
-            bb_score = 8.0 if bb_pct < 0.2 else 6.0 if bb_pct < 0.5 else 4.0 if bb_pct < 0.8 else 2.0
-            tech_points += bb_score
-            signals.append(
-                {
-                    "name": "Bollinger Position",
-                    "value": round(float(bb_pct * 100), 1),
-                    "impact": "positive" if bb_pct < 0.3 else "negative" if bb_pct > 0.8 else "neutral",
-                    "description": f"Price at {bb_pct*100:.0f}% of Bollinger Band",
-                }
-            )
-            tech_divisor = 2.0
+        _tb = _parallel_results.get("technical")
+        if isinstance(_tb, dict) and _tb.get("technical_score") is not None:
+            technical_score = float(_tb["technical_score"])
+            signals.extend(_tb.get("signals") or [])
+            for _k, _v in (_tb.get("signal_status") or {}).items():
+                _signal_status[_k] = _v
         else:
-            tech_divisor = 1.0
+            technical_score = 5.0
+            _signal_status["technical"] = "unavailable"
 
-        technical_score = min(10.0, tech_points / tech_divisor)
-        _signal_status["technical"] = "real"
+        _mb = _parallel_results.get("momentum")
+        if isinstance(_mb, dict) and _mb.get("momentum_score") is not None:
+            momentum_score = float(_mb["momentum_score"])
+            signals.extend(_mb.get("signals") or [])
+            for _k, _v in (_mb.get("signal_status") or {}).items():
+                _signal_status[_k] = _v
+        else:
+            momentum_score = 5.0
+            _signal_status["momentum"] = "unavailable"
 
-        try:
-            from trading.analysis.chart_pattern_detector import (
-                ChartPatternDetector,
-            )
-
-            _pat = ChartPatternDetector(symbol, hist).detect_all()
-            _bull = {
-                "Inverse Head and Shoulders",
-                "Double Bottom",
-                "Ascending Triangle",
-                "Golden Cross",
-            }
-            _bear = {
-                "Head and Shoulders",
-                "Double Top",
-                "Descending Triangle",
-                "Death Cross",
-            }
-            _seen_bull = _seen_bear = False
-            for _p in _pat.get("patterns") or []:
-                _nm = str((_p or {}).get("name") or "")
-                if _nm in _bull and not _seen_bull:
-                    technical_score = min(10.0, technical_score + 0.3)
-                    signals.append(
-                        {
-                            "name": f"Pattern: {_nm}",
-                            "value": round(
-                                float((_p or {}).get("confidence") or 0), 2
-                            ),
-                            "impact": "positive",
-                            "description": (_p or {}).get(
-                                "description", ""
-                            )
-                            or f"Bullish pattern: {_nm}",
-                        }
-                    )
-                    _seen_bull = True
-                elif _nm in _bear and not _seen_bear:
-                    technical_score = max(0.0, technical_score - 0.3)
-                    signals.append(
-                        {
-                            "name": f"Pattern: {_nm}",
-                            "value": round(
-                                float((_p or {}).get("confidence") or 0), 2
-                            ),
-                            "impact": "negative",
-                            "description": (_p or {}).get(
-                                "description", ""
-                            )
-                            or f"Bearish pattern: {_nm}",
-                        }
-                    )
-                    _seen_bear = True
-            _signal_status["chart_patterns"] = "real"
-        except Exception as _pe:
-            logger.debug("Chart pattern AI score hook skipped: %s", _pe)
-
-        # ── MOMENTUM SCORE (0-10) ──────────────────────────────────
-        mom_points = 0.0
-        mom_signals = 0
-
-        sma_periods = [(20, "SMA20"), (50, "SMA50"), (200, "SMA200")]
-        for period, name in sma_periods:
-            if len(close) >= period:
-                sma = float(np.mean(close[-period:]))
-                above = last_price > sma
-                pct_diff = (last_price - sma) / sma * 100
-                score = 7.0 if above else 3.0
-                mom_points += score
-                mom_signals += 1
-                signals.append(
-                    {
-                        "name": f"Price vs {name}",
-                        "value": round(pct_diff, 2),
-                        "impact": "positive" if above else "negative",
-                        "description": f"{'Above' if above else 'Below'} {name} by {abs(pct_diff):.1f}%",
-                    }
-                )
-
-        # 20-day price momentum
-        if len(close) >= 20:
-            momentum_20d = (close[-1] / close[-20] - 1) * 100
-            mom_score = 8.0 if momentum_20d > 5 else 6.0 if momentum_20d > 0 else 4.0 if momentum_20d > -5 else 2.0
-            mom_points += mom_score
-            mom_signals += 1
-            signals.append(
-                {
-                    "name": "20d Momentum",
-                    "value": round(float(momentum_20d), 2),
-                    "impact": "positive" if momentum_20d > 0 else "negative",
-                    "description": f"Price {momentum_20d:+.1f}% over 20 days",
-                }
-            )
-
-        momentum_score = min(10.0, mom_points / max(mom_signals, 1))
-        _signal_status["momentum"] = "real"
+        _of = _parallel_results.get("options")
+        if not isinstance(_of, dict):
+            _of = {}
 
         try:
-            from utils.math_helpers import (
-                calculate_momentum_score as _mh_momentum,
-                calculate_regime_probability as _mh_regime,
-            )
-
-            close_s = pd.Series(close)
-            _ms = _mh_momentum(close_s)
-            if len(_ms) and not bool(pd.isna(_ms.iloc[-1])):
-                _z = float(_ms.iloc[-1])
-                _adj = 0.25 * float(np.tanh(_z))
-                momentum_score = float(
-                    min(10.0, max(0.0, momentum_score + _adj))
-                )
-            _rets = close_s.pct_change().dropna()
-            if len(_rets) >= 30:
-                _rp = _mh_regime(_rets, window=min(60, len(_rets)))
-                _bull = _rp.get("bull")
-                if _bull is not None and len(_bull) and not pd.isna(_bull.iloc[-1]):
-                    _bp = float(_bull.iloc[-1])
-                    momentum_score = float(
-                        min(10.0, max(0.0, momentum_score + 0.3 * (_bp - 0.5)))
-                    )
-        except Exception as _e:
-            logger.debug("math_helpers momentum/regime refinement skipped: %s", _e)
-
-        try:
-            from trading.data.options_flow import get_options_flow
-
-            _of = get_options_flow(symbol)
             if _of.get("success"):
                 data_quality["options"] = "real"
                 _signal_status["options_flow"] = "real"
@@ -503,52 +688,57 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
 
         # ── SENTIMENT SCORE (0-10) ──────────────────────────────────
         sentiment_score = 5.0  # neutral default
+        _short_sec = _parallel_results.get("short_sec")
+        si = None
+        _sec = None
+        if isinstance(_short_sec, dict):
+            si = _short_sec.get("short")
+            _sec = _short_sec.get("sec")
+
         try:
-            from trading.data.short_interest import get_short_interest
+            if si is not None:
+                squeeze_score = si.get("short_squeeze_score", 0) or 0
+                short_pct = si.get("short_pct_float")
+                if short_pct is None:
+                    short_pct = 0
+                short_pct_f = float(short_pct)
+                if short_pct_f >= 20:
+                    si_sentiment = 9.0
+                elif short_pct_f >= 15:
+                    si_sentiment = 7.5
+                elif short_pct_f >= 10:
+                    si_sentiment = 6.5
+                elif short_pct_f >= 5:
+                    si_sentiment = 5.5
+                else:
+                    si_sentiment = 4.0
+                squeeze_tier = (
+                    "EXTREME"
+                    if short_pct_f >= 20
+                    else "HIGH"
+                    if short_pct_f >= 15
+                    else "ELEVATED"
+                    if short_pct_f >= 10
+                    else "MODERATE"
+                    if short_pct_f >= 5
+                    else "LOW"
+                )
 
-            si = get_short_interest(symbol)
-            squeeze_score = si.get("short_squeeze_score", 0) or 0
-            short_pct = si.get("short_pct_float")
-            if short_pct is None:
-                short_pct = 0
-            short_pct_f = float(short_pct)
-            if short_pct_f >= 20:
-                si_sentiment = 9.0
-            elif short_pct_f >= 15:
-                si_sentiment = 7.5
-            elif short_pct_f >= 10:
-                si_sentiment = 6.5
-            elif short_pct_f >= 5:
-                si_sentiment = 5.5
-            else:
-                si_sentiment = 4.0
-            squeeze_tier = (
-                "EXTREME"
-                if short_pct_f >= 20
-                else "HIGH"
-                if short_pct_f >= 15
-                else "ELEVATED"
-                if short_pct_f >= 10
-                else "MODERATE"
-                if short_pct_f >= 5
-                else "LOW"
-            )
+                # If float short is very elevated, also lift momentum
+                if short_pct_f >= 25:
+                    momentum_score = min(10.0, momentum_score + 2.0)
+                elif short_pct_f >= 15:
+                    momentum_score = min(10.0, momentum_score + 1.5)
 
-            # If float short is very elevated, also lift momentum
-            if short_pct_f >= 25:
-                momentum_score = min(10.0, momentum_score + 2.0)
-            elif short_pct_f >= 15:
-                momentum_score = min(10.0, momentum_score + 1.5)
-
-            signals.append(
-                {
-                    "name": "Short Squeeze Score",
-                    "value": round(float(squeeze_score), 1),
-                    "impact": "positive" if squeeze_score > 50 else "neutral",
-                    "description": f"Float short: {short_pct_f:.1f}% — Squeeze: {squeeze_tier}",
-                }
-            )
-            sentiment_score = si_sentiment
+                signals.append(
+                    {
+                        "name": "Short Squeeze Score",
+                        "value": round(float(squeeze_score), 1),
+                        "impact": "positive" if squeeze_score > 50 else "neutral",
+                        "description": f"Float short: {short_pct_f:.1f}% — Squeeze: {squeeze_tier}",
+                    }
+                )
+                sentiment_score = si_sentiment
         except Exception:
             pass
 
@@ -571,10 +761,10 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             except Exception as _e:
                 logger.debug("external_signals bundle annotate skipped: %s", _e)
 
+        insider = _parallel_results.get("insider")
+        if not isinstance(insider, dict):
+            insider = {}
         try:
-            from trading.data.insider_flow import get_insider_flow
-
-            insider = get_insider_flow(symbol)
             if insider.get("error"):
                 data_quality["insider"] = "unavailable"
                 _signal_status["insider_flow"] = "unavailable"
@@ -611,10 +801,8 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
         except Exception:
             pass
 
+        social = _parallel_results.get("social")
         try:
-            from trading.data.social_sentiment import get_social_sentiment
-
-            social = get_social_sentiment(symbol)
             if social and social.get("success") and social.get("source") == "reddit":
                 data_quality["sentiment"] = "real"
                 _signal_status["social_sentiment"] = "real"
@@ -676,56 +864,121 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
         except Exception as e:
             logger.debug("Social sentiment skipped: %s", e)
 
-        try:
-            from trading.data.sec_edgar import get_sec_signal
+        _analyst = _parallel_results.get("analyst")
+        if not isinstance(_analyst, dict):
+            _analyst = {}
+        _an_sig = str(_analyst.get("signal", "NEUTRAL"))
+        _an_str = float(_analyst.get("signal_strength", 5.0))
+        _upside = _analyst.get("upside_pct")
+        _n_analysts = int(_analyst.get("n_analysts", 0) or 0)
 
-            _sec = get_sec_signal(symbol)
-            _sec_sent = float(_sec.get("sec_sentiment", 0.0))
-            _sec_source = str(_sec.get("sec_source", "unavailable"))
-            if _sec_source in ("unavailable", "error"):
-                _signal_status["sec_edgar"] = "unavailable"
-            elif _sec_source == "no_filing":
-                _signal_status["sec_edgar"] = "fallback"
-            else:
-                _signal_status["sec_edgar"] = "real"
-
-            if _sec_source not in ("unavailable", "error", "no_filing"):
-                _sec_score = 5.0 + _sec_sent * 4.0
-                _sec_score = max(0.0, min(10.0, _sec_score))
-                sentiment_score = sentiment_score * 0.70 + _sec_score * 0.30
-
-                _desc_parts = []
-                if _sec_sent > 0.1:
-                    _desc_parts.append(
-                        f"SEC filing: positive tone ({_sec.get('sec_label')})"
+        if _analyst.get("success"):
+            _signal_status["analyst_signals"] = "real"
+            if _an_sig == "BUY" and _an_str >= 7.0:
+                sentiment_score = min(10.0, sentiment_score + 0.8)
+                _rec = str(_analyst.get("recommendation", "") or "").replace("_", " ").title()
+                _desc = (
+                    f"📈 Analyst consensus: {_rec} "
+                    f"({_n_analysts} analysts"
+                    + (
+                        f", {_upside:+.1f}% to target"
+                        if _upside is not None
+                        else ""
                     )
-                elif _sec_sent < -0.1:
-                    _desc_parts.append(
-                        f"SEC filing: cautious tone ({_sec.get('sec_label')})"
-                    )
-                themes = _sec.get("sec_themes") or []
-                if themes:
-                    _desc_parts.append(
-                        "SEC themes: " + ", ".join(str(t) for t in themes[:2])
-                    )
+                    + ")"
+                )
                 signals.append(
                     {
-                        "name": "SEC filings",
-                        "value": round(_sec_score, 1),
-                        "impact": (
-                            "positive"
-                            if _sec_sent > 0.1
-                            else "negative"
-                            if _sec_sent < -0.1
-                            else "neutral"
-                        ),
+                        "name": "Analyst consensus",
+                        "value": round(_an_str, 1),
+                        "impact": "positive",
+                        "description": _desc,
+                    }
+                )
+            elif _an_sig == "SELL" and _an_str <= 3.0:
+                sentiment_score = max(0.0, sentiment_score - 1.0)
+                _rec = str(_analyst.get("recommendation", "") or "").replace("_", " ").title()
+                _desc = (
+                    f"📉 Analyst consensus: {_rec} "
+                    f"({_n_analysts} analysts"
+                    + (
+                        f", {_upside:+.1f}% to target"
+                        if _upside is not None
+                        else ""
+                    )
+                    + ")"
+                )
+                signals.append(
+                    {
+                        "name": "Analyst consensus",
+                        "value": round(_an_str, 1),
+                        "impact": "negative",
+                        "description": _desc,
+                    }
+                )
+            if _upside is not None and _upside < -15:
+                signals.append(
+                    {
+                        "name": "Analyst target",
+                        "value": round(float(_upside), 1),
+                        "impact": "neutral",
                         "description": (
-                            " · ".join(_desc_parts)
-                            if _desc_parts
-                            else f"SEC EDGAR ({_sec_source})"
+                            f"⚠️ Trading {abs(float(_upside)):.0f}% "
+                            "above analyst mean target"
                         ),
                     }
                 )
+        else:
+            _signal_status["analyst_signals"] = "fallback"
+
+        try:
+            if _sec is not None:
+                _sec_sent = float(_sec.get("sec_sentiment", 0.0))
+                _sec_source = str(_sec.get("sec_source", "unavailable"))
+                if _sec_source in ("unavailable", "error"):
+                    _signal_status["sec_edgar"] = "unavailable"
+                elif _sec_source == "no_filing":
+                    _signal_status["sec_edgar"] = "fallback"
+                else:
+                    _signal_status["sec_edgar"] = "real"
+
+                if _sec_source not in ("unavailable", "error", "no_filing"):
+                    _sec_score = 5.0 + _sec_sent * 4.0
+                    _sec_score = max(0.0, min(10.0, _sec_score))
+                    sentiment_score = sentiment_score * 0.70 + _sec_score * 0.30
+
+                    _desc_parts = []
+                    if _sec_sent > 0.1:
+                        _desc_parts.append(
+                            f"SEC filing: positive tone ({_sec.get('sec_label')})"
+                        )
+                    elif _sec_sent < -0.1:
+                        _desc_parts.append(
+                            f"SEC filing: cautious tone ({_sec.get('sec_label')})"
+                        )
+                    themes = _sec.get("sec_themes") or []
+                    if themes:
+                        _desc_parts.append(
+                            "SEC themes: " + ", ".join(str(t) for t in themes[:2])
+                        )
+                    signals.append(
+                        {
+                            "name": "SEC filings",
+                            "value": round(_sec_score, 1),
+                            "impact": (
+                                "positive"
+                                if _sec_sent > 0.1
+                                else "negative"
+                                if _sec_sent < -0.1
+                                else "neutral"
+                            ),
+                            "description": (
+                                " · ".join(_desc_parts)
+                                if _desc_parts
+                                else f"SEC EDGAR ({_sec_source})"
+                            ),
+                        }
+                    )
         except Exception:
             pass
 

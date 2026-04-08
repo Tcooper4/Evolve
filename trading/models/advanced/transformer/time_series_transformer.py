@@ -997,6 +997,15 @@ class TransformerForecaster(BaseModel):
         Saves model to 'checkpoints/transformer_model.pt' if successful.
         """
         try:
+            # Populate norm stats so predict() can run without "not fitted" error
+            try:
+                self._prepare_data(data, is_training=True)
+            except Exception as _pe:
+                logger.warning(
+                    "Transformer norm stat init failed: %s",
+                    _pe,
+                )
+
             # Usual transformer training logic
             # ... (assume self.model is a torch.nn.Module)
             # Example: self.model.train(); optimizer.step(); etc.

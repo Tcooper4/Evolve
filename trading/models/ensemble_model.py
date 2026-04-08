@@ -199,18 +199,33 @@ class EnsembleModel(BaseModel):
         """Initialize all models in the ensemble."""
         models_cfg = self.config.get("models") or []
 
-        # If no sub-models configured, default to Ridge + XGBoost which are both
-        # lightweight, CPU-friendly, and confirmed working in smoke tests.
+        # If no sub-models configured, default to a diverse 5-model set (registry names).
         if not models_cfg:
             models_cfg = [
                 {
-                    "name": "Ridge",
-                    "class_path": "trading.models.ridge_model.RidgeModel",
+                    "name": "ARIMA",
                     "target_column": "close",
+                    "use_auto_arima": True,
                 },
                 {
                     "name": "XGBoost",
-                    "class_path": "trading.models.xgboost_model.XGBoostModel",
+                    "target_column": "close",
+                    "n_estimators": 100,
+                    "max_depth": 5,
+                },
+                {
+                    "name": "Ridge",
+                    "target_column": "close",
+                    "alpha": 1.0,
+                },
+                {
+                    "name": "CatBoost",
+                    "target_column": "close",
+                    "iterations": 200,
+                    "depth": 4,
+                },
+                {
+                    "name": "Prophet",
                     "target_column": "close",
                 },
             ]
@@ -1039,6 +1054,20 @@ class EnsembleModel(BaseModel):
             Dictionary containing forecast results
         """
         try:
+            _col_map_fc = {c.lower(): c for c in data.columns}
+            _tgt_cfg_fc = self.config.get("target_column", "close")
+            _tgt_col = _col_map_fc.get(
+                str(_tgt_cfg_fc).lower(), _tgt_cfg_fc
+            )
+            if _tgt_col not in data.columns:
+                _num_fc = list(data.select_dtypes(include="number").columns)
+                if _num_fc:
+                    _tgt_col = _num_fc[0]
+                else:
+                    raise ValueError(
+                        f"No numeric columns found in data for {self.__class__.__name__}.forecast"
+                    )
+
             # Make initial prediction
             self.predict(data)
 
@@ -1049,6 +1078,17 @@ class EnsembleModel(BaseModel):
             for i in range(horizon):
                 # Get prediction for next step
                 pred = self.predict(current_data)
+                pred = np.asarray(pred, dtype="float64").ravel()
+
+                # Denormalize if output appears to be in normalized/ratio scale
+                # rather than price space (avoids walk-forward ~0–1 values vs $ last)
+                try:
+                    _last = float(current_data[_tgt_col].iloc[-1])
+                    if _last > 10 and pred.size > 0 and abs(pred[-1]) < 1.5:
+                        pred = pred * _last
+                except Exception:
+                    pass
+
                 if len(pred) > 0:
                     forecast_values.append(pred[-1])
                 else:
@@ -1059,7 +1099,7 @@ class EnsembleModel(BaseModel):
                     new_row = current_data.iloc[-1].copy()
                 else:
                     break
-                new_row["close"] = pred[-1]  # Update with prediction
+                new_row[_tgt_col] = pred[-1]  # Update with prediction
                 current_data = pd.concat(
                     [current_data, pd.DataFrame([new_row])], ignore_index=True
                 )
