@@ -172,345 +172,355 @@ def render(
                 from trading.analysis.ai_score import compute_ai_score
                 _sym = st.session_state.get("analyze_symbol") or symbol
                 if _sym:
-                    _hist = data.copy()
-                    if "close" in _hist.columns and "Close" not in _hist.columns:
-                        _hist = _hist.rename(columns={"close": "Close"})
-                    if "volume" in _hist.columns and "Volume" not in _hist.columns:
-                        _hist = _hist.rename(columns={"volume": "Volume"})
-
-                    # Cache AI score per symbol for 5 minutes to avoid recompute on tab switch
-                    import time as _time
-
-                    _ai_score_key = f"ai_score_{_sym}"
-                    _ai_score_ts_key = f"ai_score_ts_{_sym}"
-                    _cached_score = st.session_state.get(_ai_score_key)
-                    _cached_ts = st.session_state.get(_ai_score_ts_key, 0.0)
-                    _score_age = _time.time() - _cached_ts
-
-                    if _cached_score is None or _score_age > 300:
-                        with st.spinner("Computing AI Score..."):
-                            score_result = compute_ai_score(_sym, _hist)
-                        st.session_state[_ai_score_key] = score_result
-                        # Also store under canonical key for cross-component access
-                        st.session_state["ai_score_result"] = score_result
-                        st.session_state[_ai_score_ts_key] = _time.time()
-                    else:
-                        score_result = _cached_score
-                    if score_result.get("error") is None:
-                        score = score_result["overall_score"]
-                        grade = score_result["grade"]
-
-                        # Trader-mode-specific display weights
-                        if trader_mode == "Short-term":
-                            display_weights = {
-                                "technical": 0.45,
-                                "momentum": 0.40,
-                                "sentiment": 0.10,
-                                "fundamental": 0.05,
-                            }
-                            mode_label = "Short-term weights"
-                        else:
-                            display_weights = {
-                                "technical": 0.20,
-                                "momentum": 0.20,
-                                "sentiment": 0.15,
-                                "fundamental": 0.45,
-                            }
-                            mode_label = "Long-term weights"
-
-                        component_scores = {
-                            "technical": score_result.get("technical_score", 0),
-                            "momentum": score_result.get("momentum_score", 0),
-                            "sentiment": score_result.get("sentiment_score", 0),
-                            "fundamental": score_result.get("fundamental_score", 0),
-                        }
-                        weighted_score = sum(
-                            component_scores[k] * display_weights[k] for k in display_weights
+                    _has_forecast = any(
+                        k.startswith(f"consensus_{ticker}_")
+                        for k in st.session_state.keys()
+                    )
+                    if not _has_forecast:
+                        st.caption(
+                            "AI Score will appear after "
+                            "generating a forecast."
                         )
-                        weighted_score = round(min(10.0, max(0.0, weighted_score)), 1)
+                    else:
+                        _hist = data.copy()
+                        if "close" in _hist.columns and "Close" not in _hist.columns:
+                            _hist = _hist.rename(columns={"close": "Close"})
+                        if "volume" in _hist.columns and "Volume" not in _hist.columns:
+                            _hist = _hist.rename(columns={"volume": "Volume"})
 
-                        # Show mode impact clearly (diff vs base score)
-                        try:
-                            base_score = float(score_result.get("overall_score", 0) or 0)
-                            diff = round(weighted_score - base_score, 1)
-                            diff_str = (
-                                f"+{diff}" if diff > 0
-                                else str(diff) if diff < 0
-                                else "="
-                            )
-                            diff_color = (
-                                "#26a69a" if diff > 0
-                                else "#ef5350" if diff < 0
-                                else "#4a6080"
-                            )
-                            st.markdown(
-                                f'<span style="font-size:11px;color:{diff_color}">'
-                                f"{trader_mode} view: {diff_str} vs base score"
-                                f"</span>",
-                                unsafe_allow_html=True,
-                            )
-                        except Exception:
-                            pass
+                        # Cache AI score per symbol for 5 minutes to avoid recompute on tab switch
+                        import time as _time
 
-                        # News sentiment score feeding into sentiment view
-                        news_score = _news_sentiment_score(_sym)
-                        if news_score >= 7.5:
-                            ns_label, ns_color = "HOT", "#ff9800"
-                        elif news_score >= 6.0:
-                            ns_label, ns_color = "POS", "#26a69a"
-                        elif news_score <= 3.0:
-                            ns_label, ns_color = "NEG", "#ef5350"
+                        _ai_score_key = f"ai_score_{_sym}"
+                        _ai_score_ts_key = f"ai_score_ts_{_sym}"
+                        _cached_score = st.session_state.get(_ai_score_key)
+                        _cached_ts = st.session_state.get(_ai_score_ts_key, 0.0)
+                        _score_age = _time.time() - _cached_ts
+
+                        if _cached_score is None or _score_age > 300:
+                            with st.spinner("Computing AI Score..."):
+                                score_result = compute_ai_score(_sym, _hist)
+                            st.session_state[_ai_score_key] = score_result
+                            # Also store under canonical key for cross-component access
+                            st.session_state["ai_score_result"] = score_result
+                            st.session_state[_ai_score_ts_key] = _time.time()
                         else:
-                            ns_label, ns_color = "NEU", "#4a6080"
+                            score_result = _cached_score
+                        if score_result.get("error") is None:
+                            score = score_result["overall_score"]
+                            grade = score_result["grade"]
 
-                        st.markdown("### 🤖 AI Score")
-                        top_cols = st.columns([2, 2, 2, 2])
-                        with top_cols[0]:
-                            st.metric(
-                                "Model Score",
-                                f"{score}/10",
-                                delta=grade,
-                                delta_color="normal" if score >= 5 else "inverse",
-                            )
-                        with top_cols[1]:
-                            st.metric("Weighted Score", f"{weighted_score}/10", help=mode_label)
-                        with top_cols[2]:
-                            st.markdown("**News Score**")
-                            _ns_ic = sentiment_icon_for_label(ns_label)
-                            st.markdown(
-                                f"{_ns_ic} **{news_score:.1f}** · {ns_label}"
-                            )
-                        with top_cols[3]:
-                            st.caption(mode_label)
-
-                        # Component bars with weights
-                        bar_rows = [
-                            ("Technical", "technical"),
-                            ("Momentum", "momentum"),
-                            ("Sentiment", "sentiment"),
-                            ("Fundamental", "fundamental"),
-                        ]
-                        for label, key_name in bar_rows:
-                            val = float(component_scores.get(key_name, 0) or 0)
-                            w = display_weights.get(key_name, 0)
-                            pct = int(round(w * 100))
-                            cols_row = st.columns([2, 5, 1])
-                            with cols_row[0]:
-                                st.markdown(f"**{label}**")
-                            with cols_row[1]:
-                                st.progress(min(1.0, max(0.0, val / 10.0)))
-                            with cols_row[2]:
-                                st.markdown(f"{val:.1f}  ({pct}%)")
-
-                        st.caption(score_result["summary"])
-                        with st.expander("What drives this score?", expanded=False):
-                            signals = score_result.get("signals", [])
-                            if signals:
-                                by_impact = sorted(
-                                    signals,
-                                    key=lambda s: (
-                                        s.get("impact") == "positive",
-                                        s.get("impact") == "negative",
-                                    ),
-                                    reverse=True,
-                                )
-                                for sig in by_impact[:3]:
-                                    st.caption(
-                                        f"• {sig.get('name', '')}: {sig.get('value', '')} — {sig.get('description', '')}"
-                                    )
+                            # Trader-mode-specific display weights
+                            if trader_mode == "Short-term":
+                                display_weights = {
+                                    "technical": 0.45,
+                                    "momentum": 0.40,
+                                    "sentiment": 0.10,
+                                    "fundamental": 0.05,
+                                }
+                                mode_label = "Short-term weights"
                             else:
-                                st.caption("No signal breakdown available.")
-                        with st.expander("📊 Signal Breakdown", expanded=False):
-                            signals = score_result.get("signals", [])
-                            if signals:
-                                sig_df = pd.DataFrame(
-                                    signals
-                                )[["name", "value", "impact", "description"]]
-                                sig_df.columns = [
-                                    "Signal",
-                                    "Value",
-                                    "Impact",
-                                    "Description",
-                                ]
+                                display_weights = {
+                                    "technical": 0.20,
+                                    "momentum": 0.20,
+                                    "sentiment": 0.15,
+                                    "fundamental": 0.45,
+                                }
+                                mode_label = "Long-term weights"
 
-                                def _color_impact(val):
-                                    colors = {
-                                        "positive": "background-color: #1a4a2a; color: #26a69a",
-                                        "negative": "background-color: #3a1a1a; color: #ef5350",
-                                        "neutral": "background-color: #3a2a0a; color: #ff9800",
-                                    }
-                                    return colors.get(val, "")
-
-                                try:
-                                    styler = sig_df.style.applymap(
-                                        _color_impact, subset=["Impact"]
-                                    )
-                                    st.dataframe(styler, width='stretch')
-                                except Exception:
-                                    st.dataframe(normalize_for_display(sig_df), width='stretch')
-                        # Recommendation panel
-                        try:
-                            _rec = _generate_recommendation(
-                                ticker,
-                                score_result,
-                                st.session_state.get("current_forecast_result"),
-                                trader_mode,
+                            component_scores = {
+                                "technical": score_result.get("technical_score", 0),
+                                "momentum": score_result.get("momentum_score", 0),
+                                "sentiment": score_result.get("sentiment_score", 0),
+                                "fundamental": score_result.get("fundamental_score", 0),
+                            }
+                            weighted_score = sum(
+                                component_scores[k] * display_weights[k] for k in display_weights
                             )
-                            if _rec:
-                                _action = _rec["action"]
-                                _conv = _rec["conviction"]
-                                _score = _rec["signal_score"]
-                                _color = (
-                                    "#26a69a"
-                                    if "BUY" in _action
-                                    else "#ef5350"
-                                    if "SELL" in _action
-                                    else "#ff9800"
+                            weighted_score = round(min(10.0, max(0.0, weighted_score)), 1)
+
+                            # Show mode impact clearly (diff vs base score)
+                            try:
+                                base_score = float(score_result.get("overall_score", 0) or 0)
+                                diff = round(weighted_score - base_score, 1)
+                                diff_str = (
+                                    f"+{diff}" if diff > 0
+                                    else str(diff) if diff < 0
+                                    else "="
                                 )
-                                _reasons_html = ""
-                                for _s, _t2 in _rec["reasons"]:
-                                    # _s is one of "+", "-", "⚠", or "~"
-                                    _icon = _s if _s in ("+", "-", "⚠") else "~"
-                                    if _icon == "+":
-                                        _rc = "#26a60a"
-                                    elif _icon == "-":
-                                        _rc = "#ef5350"
-                                    elif _icon == "⚠":
-                                        _rc = "#ffb74d"
-                                    else:
-                                        _rc = "#8899aa"
-                                    _reasons_html += (
-                                        f'<div style="display:flex;gap:10px;'
-                                        f'margin-bottom:6px">'
-                                        f'<span style="color:{_rc};'
-                                        f'font-family:monospace;font-weight:bold;'
-                                        f'min-width:14px">{_icon}</span>'
-                                        f'<span style="color:#c8d4e0;'
-                                        f'font-size:13px">{_t2}</span></div>'
+                                diff_color = (
+                                    "#26a69a" if diff > 0
+                                    else "#ef5350" if diff < 0
+                                    else "#4a6080"
+                                )
+                                st.markdown(
+                                    f'<span style="font-size:11px;color:{diff_color}">'
+                                    f"{trader_mode} view: {diff_str} vs base score"
+                                    f"</span>",
+                                    unsafe_allow_html=True,
+                                )
+                            except Exception:
+                                pass
+
+                            # News sentiment score feeding into sentiment view
+                            news_score = _news_sentiment_score(_sym)
+                            if news_score >= 7.5:
+                                ns_label, ns_color = "HOT", "#ff9800"
+                            elif news_score >= 6.0:
+                                ns_label, ns_color = "POS", "#26a69a"
+                            elif news_score <= 3.0:
+                                ns_label, ns_color = "NEG", "#ef5350"
+                            else:
+                                ns_label, ns_color = "NEU", "#4a6080"
+
+                            st.markdown("### 🤖 AI Score")
+                            top_cols = st.columns([2, 2, 2, 2])
+                            with top_cols[0]:
+                                st.metric(
+                                    "Model Score",
+                                    f"{score}/10",
+                                    delta=grade,
+                                    delta_color="normal" if score >= 5 else "inverse",
+                                )
+                            with top_cols[1]:
+                                st.metric("Weighted Score", f"{weighted_score}/10", help=mode_label)
+                            with top_cols[2]:
+                                st.markdown("**News Score**")
+                                _ns_ic = sentiment_icon_for_label(ns_label)
+                                st.markdown(
+                                    f"{_ns_ic} **{news_score:.1f}** · {ns_label}"
+                                )
+                            with top_cols[3]:
+                                st.caption(mode_label)
+
+                            # Component bars with weights
+                            bar_rows = [
+                                ("Technical", "technical"),
+                                ("Momentum", "momentum"),
+                                ("Sentiment", "sentiment"),
+                                ("Fundamental", "fundamental"),
+                            ]
+                            for label, key_name in bar_rows:
+                                val = float(component_scores.get(key_name, 0) or 0)
+                                w = display_weights.get(key_name, 0)
+                                pct = int(round(w * 100))
+                                cols_row = st.columns([2, 5, 1])
+                                with cols_row[0]:
+                                    st.markdown(f"**{label}**")
+                                with cols_row[1]:
+                                    st.progress(min(1.0, max(0.0, val / 10.0)))
+                                with cols_row[2]:
+                                    st.markdown(f"{val:.1f}  ({pct}%)")
+
+                            st.caption(score_result["summary"])
+                            with st.expander("What drives this score?", expanded=False):
+                                signals = score_result.get("signals", [])
+                                if signals:
+                                    by_impact = sorted(
+                                        signals,
+                                        key=lambda s: (
+                                            s.get("impact") == "positive",
+                                            s.get("impact") == "negative",
+                                        ),
+                                        reverse=True,
                                     )
-                                _mh = ""
-                                _info_row = ""
-                                if _rec.get("fc_target") is not None:
-                                    _entry = float(_rec.get("entry", 0.0))
-                                    _target = float(_rec.get("target", _rec["fc_target"]))
-                                    _stop = float(_rec.get("stop", _entry))
-                                    if _entry and _entry > 0:
-                                        _pct2 = ((_target / _entry) - 1.0) * 100.0
-                                        _stop2 = _stop
-                                        _rr2 = float(_rec.get("risk_reward", 1.0))
-                                        _tc2 = "#26a69a" if _pct2 > 0 else "#ef5350"
-
-                                        # Trade horizon estimate (7 business days by default)
-                                        try:
-                                            from datetime import datetime as _dtime
-                                            from datetime import timedelta as _tdelta
-
-                                            _today = _dtime.now()
-                                            _bdays = 0
-                                            _end_dt = _today
-                                            _fc_horizon = 7
-                                            while _bdays < _fc_horizon:
-                                                _end_dt += _tdelta(days=1)
-                                                if _end_dt.weekday() < 5:
-                                                    _bdays += 1
-                                            _horizon_str = _end_dt.strftime("%b %d")
-                                        except Exception:
-                                            _horizon_str = "~7 days"
-                                            _fc_horizon = 7
-
-                                        _conv_explain = {
-                                            "HIGH": "Multiple models agree",
-                                            "MEDIUM": "Models show mixed signals",
-                                            "LOW": "Weak or conflicting signals",
-                                        }.get(str(_conv).upper(), "Signal strength unknown")
-
-                                        _mh = (
-                                            f'<div style="display:grid;'
-                                            f'grid-template-columns:repeat(3,1fr);'
-                                            f'gap:1px;background:#1e2d45;'
-                                            f'border-radius:4px;overflow:hidden;'
-                                            f'margin-top:10px">'
-                                            f'<div style="background:#0f1525;'
-                                            f'padding:10px 14px">'
-                                            f'<div style="font-size:10px;'
-                                            f'color:#4a6080;'
-                                            f'letter-spacing:1px;'
-                                            f'margin-bottom:3px">'
-                                            f'ENTRY</div>'
-                                            f'<div style="font-size:15px;'
-                                            f'font-weight:bold;'
-                                            f'color:#e0e6f0">'
-                                            f'${_entry:.2f}</div></div>'
-                                            f'<div style="background:#0f1525;'
-                                            f'padding:10px 14px">'
-                                            f'<div style="font-size:10px;'
-                                            f'color:#4a6080;'
-                                            f'letter-spacing:1px;'
-                                            f'margin-bottom:3px">'
-                                            f'{"TARGET ↑" if "BUY" in _action else "TARGET ↓" if "SELL" in _action else "RANGE"}</div>'
-                                            f'<div style="font-size:15px;'
-                                            f'font-weight:bold;'
-                                            f'color:{_tc2}">'
-                                            f'${_rec["fc_target"]:.2f}</div>'
-                                            f'<div style="font-size:11px;'
-                                            f'color:{_tc2}">'
-                                            f'{_pct2:+.1f}%</div></div>'
-                                            f'<div style="background:#0f1525;'
-                                            f'padding:10px 14px">'
-                                            f'<div style="font-size:10px;'
-                                            f'color:#4a6080;'
-                                            f'letter-spacing:1px;'
-                                            f'margin-bottom:3px">'
-                                            f'STOP</div>'
-                                            f'<div style="font-size:15px;'
-                                            f'font-weight:bold;'
-                                            f'color:#ef5350">'
-                                            f'${_stop2:.2f}</div>'
-                                            f'<div style="font-size:11px;'
-                                            f'color:#ef5350">'
-                                            f'R/R {_rr2:.1f}:1</div>'
-                                            f'</div></div>'
+                                    for sig in by_impact[:3]:
+                                        st.caption(
+                                            f"• {sig.get('name', '')}: {sig.get('value', '')} — {sig.get('description', '')}"
                                         )
+                                else:
+                                    st.caption("No signal breakdown available.")
+                            with st.expander("📊 Signal Breakdown", expanded=False):
+                                signals = score_result.get("signals", [])
+                                if signals:
+                                    sig_df = pd.DataFrame(
+                                        signals
+                                    )[["name", "value", "impact", "description"]]
+                                    sig_df.columns = [
+                                        "Signal",
+                                        "Value",
+                                        "Impact",
+                                        "Description",
+                                    ]
 
-                                        _info_row = (
-                                            f'<div style="padding:8px 16px;'
-                                            f'border-top:1px solid #1e2d45;'
-                                            f'display:flex;justify-content:space-between;'
-                                            f'flex-wrap:wrap;gap:8px">'
-                                            f'<span style="font-size:11px;'
-                                            f'color:#4a6080">⏱ Until: {_horizon_str}</span>'
-                                            f'<span style="font-size:11px;'
-                                            f'color:#4a6080">📊 Move: {_pct2:+.1f}%</span>'
-                                            f'<span style="font-size:11px;'
-                                            f'color:#4a6080">❌ Cut if: &lt;${_stop2:.2f}</span>'
-                                            f'<span style="font-size:11px;'
-                                            f'color:#4a6080" title="{_conv_explain}">💡 {_conv_explain}</span>'
-                                            f'</div>'
+                                    def _color_impact(val):
+                                        colors = {
+                                            "positive": "background-color: #1a4a2a; color: #26a69a",
+                                            "negative": "background-color: #3a1a1a; color: #ef5350",
+                                            "neutral": "background-color: #3a2a0a; color: #ff9800",
+                                        }
+                                        return colors.get(val, "")
+
+                                    try:
+                                        styler = sig_df.style.applymap(
+                                            _color_impact, subset=["Impact"]
                                         )
-                                _rec_min_h = 300 if _mh else 160
-                                st.html(
-                                    f'<div style="background:#0a0e1a;border:1px solid '
-                                    f'#1e2d45;border-radius:6px;overflow:hidden;'
-                                    f'font-family:Courier New,monospace;'
-                                    f'margin:4px 0;min-height:{_rec_min_h}px">'
-                                    f'<div style="padding:10px 16px;border-bottom:'
-                                    f'1px solid #1e2d45;display:flex;align-items:'
-                                    f'center;gap:14px">'
-                                    f'<span style="font-size:18px;font-weight:bold;'
-                                    f'color:{_color}">{_action}</span>'
-                                    f'<span style="font-size:11px;color:#4a6080;'
-                                    f'background:#0f1525;padding:2px 8px;border:1px '
-                                    f'solid #1e2d45;border-radius:3px">'
-                                    f'{_conv} conviction</span>'
-                                    f'<span style="font-size:11px;color:#4a6080;'
-                                    f'margin-left:auto">score {_score}/10</span>'
-                                    f'</div>'
-                                    f'<div style="padding:10px 16px">{_reasons_html}'
-                                    f'</div>{_mh}{_info_row}</div>',
-                                    width="stretch",
+                                        st.dataframe(styler, width='stretch')
+                                    except Exception:
+                                        st.dataframe(normalize_for_display(sig_df), width='stretch')
+                            # Recommendation panel
+                            try:
+                                _rec = _generate_recommendation(
+                                    ticker,
+                                    score_result,
+                                    st.session_state.get("current_forecast_result"),
+                                    trader_mode,
                                 )
-                        except Exception as _re:
-                            st.caption(f"Recommendation unavailable: {_re}")
+                                if _rec:
+                                    _action = _rec["action"]
+                                    _conv = _rec["conviction"]
+                                    _score = _rec["signal_score"]
+                                    _color = (
+                                        "#26a69a"
+                                        if "BUY" in _action
+                                        else "#ef5350"
+                                        if "SELL" in _action
+                                        else "#ff9800"
+                                    )
+                                    _reasons_html = ""
+                                    for _s, _t2 in _rec["reasons"]:
+                                        # _s is one of "+", "-", "⚠", or "~"
+                                        _icon = _s if _s in ("+", "-", "⚠") else "~"
+                                        if _icon == "+":
+                                            _rc = "#26a60a"
+                                        elif _icon == "-":
+                                            _rc = "#ef5350"
+                                        elif _icon == "⚠":
+                                            _rc = "#ffb74d"
+                                        else:
+                                            _rc = "#8899aa"
+                                        _reasons_html += (
+                                            f'<div style="display:flex;gap:10px;'
+                                            f'margin-bottom:6px">'
+                                            f'<span style="color:{_rc};'
+                                            f'font-family:monospace;font-weight:bold;'
+                                            f'min-width:14px">{_icon}</span>'
+                                            f'<span style="color:#c8d4e0;'
+                                            f'font-size:13px">{_t2}</span></div>'
+                                        )
+                                    _mh = ""
+                                    _info_row = ""
+                                    if _rec.get("fc_target") is not None:
+                                        _entry = float(_rec.get("entry", 0.0))
+                                        _target = float(_rec.get("target", _rec["fc_target"]))
+                                        _stop = float(_rec.get("stop", _entry))
+                                        if _entry and _entry > 0:
+                                            _pct2 = ((_target / _entry) - 1.0) * 100.0
+                                            _stop2 = _stop
+                                            _rr2 = float(_rec.get("risk_reward", 1.0))
+                                            _tc2 = "#26a69a" if _pct2 > 0 else "#ef5350"
+
+                                            # Trade horizon estimate (7 business days by default)
+                                            try:
+                                                from datetime import datetime as _dtime
+                                                from datetime import timedelta as _tdelta
+
+                                                _today = _dtime.now()
+                                                _bdays = 0
+                                                _end_dt = _today
+                                                _fc_horizon = 7
+                                                while _bdays < _fc_horizon:
+                                                    _end_dt += _tdelta(days=1)
+                                                    if _end_dt.weekday() < 5:
+                                                        _bdays += 1
+                                                _horizon_str = _end_dt.strftime("%b %d")
+                                            except Exception:
+                                                _horizon_str = "~7 days"
+                                                _fc_horizon = 7
+
+                                            _conv_explain = {
+                                                "HIGH": "Multiple models agree",
+                                                "MEDIUM": "Models show mixed signals",
+                                                "LOW": "Weak or conflicting signals",
+                                            }.get(str(_conv).upper(), "Signal strength unknown")
+
+                                            _mh = (
+                                                f'<div style="display:grid;'
+                                                f'grid-template-columns:repeat(3,1fr);'
+                                                f'gap:1px;background:#1e2d45;'
+                                                f'border-radius:4px;overflow:hidden;'
+                                                f'margin-top:10px">'
+                                                f'<div style="background:#0f1525;'
+                                                f'padding:10px 14px">'
+                                                f'<div style="font-size:10px;'
+                                                f'color:#4a6080;'
+                                                f'letter-spacing:1px;'
+                                                f'margin-bottom:3px">'
+                                                f'ENTRY</div>'
+                                                f'<div style="font-size:15px;'
+                                                f'font-weight:bold;'
+                                                f'color:#e0e6f0">'
+                                                f'${_entry:.2f}</div></div>'
+                                                f'<div style="background:#0f1525;'
+                                                f'padding:10px 14px">'
+                                                f'<div style="font-size:10px;'
+                                                f'color:#4a6080;'
+                                                f'letter-spacing:1px;'
+                                                f'margin-bottom:3px">'
+                                                f'{"TARGET ↑" if "BUY" in _action else "TARGET ↓" if "SELL" in _action else "RANGE"}</div>'
+                                                f'<div style="font-size:15px;'
+                                                f'font-weight:bold;'
+                                                f'color:{_tc2}">'
+                                                f'${_rec["fc_target"]:.2f}</div>'
+                                                f'<div style="font-size:11px;'
+                                                f'color:{_tc2}">'
+                                                f'{_pct2:+.1f}%</div></div>'
+                                                f'<div style="background:#0f1525;'
+                                                f'padding:10px 14px">'
+                                                f'<div style="font-size:10px;'
+                                                f'color:#4a6080;'
+                                                f'letter-spacing:1px;'
+                                                f'margin-bottom:3px">'
+                                                f'STOP</div>'
+                                                f'<div style="font-size:15px;'
+                                                f'font-weight:bold;'
+                                                f'color:#ef5350">'
+                                                f'${_stop2:.2f}</div>'
+                                                f'<div style="font-size:11px;'
+                                                f'color:#ef5350">'
+                                                f'R/R {_rr2:.1f}:1</div>'
+                                                f'</div></div>'
+                                            )
+
+                                            _info_row = (
+                                                f'<div style="padding:8px 16px;'
+                                                f'border-top:1px solid #1e2d45;'
+                                                f'display:flex;justify-content:space-between;'
+                                                f'flex-wrap:wrap;gap:8px">'
+                                                f'<span style="font-size:11px;'
+                                                f'color:#4a6080">⏱ Until: {_horizon_str}</span>'
+                                                f'<span style="font-size:11px;'
+                                                f'color:#4a6080">📊 Move: {_pct2:+.1f}%</span>'
+                                                f'<span style="font-size:11px;'
+                                                f'color:#4a6080">❌ Cut if: &lt;${_stop2:.2f}</span>'
+                                                f'<span style="font-size:11px;'
+                                                f'color:#4a6080" title="{_conv_explain}">💡 {_conv_explain}</span>'
+                                                f'</div>'
+                                            )
+                                    _rec_min_h = 300 if _mh else 160
+                                    st.html(
+                                        f'<div style="background:#0a0e1a;border:1px solid '
+                                        f'#1e2d45;border-radius:6px;overflow:hidden;'
+                                        f'font-family:Courier New,monospace;'
+                                        f'margin:4px 0;min-height:{_rec_min_h}px">'
+                                        f'<div style="padding:10px 16px;border-bottom:'
+                                        f'1px solid #1e2d45;display:flex;align-items:'
+                                        f'center;gap:14px">'
+                                        f'<span style="font-size:18px;font-weight:bold;'
+                                        f'color:{_color}">{_action}</span>'
+                                        f'<span style="font-size:11px;color:#4a6080;'
+                                        f'background:#0f1525;padding:2px 8px;border:1px '
+                                        f'solid #1e2d45;border-radius:3px">'
+                                        f'{_conv} conviction</span>'
+                                        f'<span style="font-size:11px;color:#4a6080;'
+                                        f'margin-left:auto">score {_score}/10</span>'
+                                        f'</div>'
+                                        f'<div style="padding:10px 16px">{_reasons_html}'
+                                        f'</div>{_mh}{_info_row}</div>',
+                                        width="stretch",
+                                    )
+                            except Exception as _re:
+                                st.caption(f"Recommendation unavailable: {_re}")
             except Exception as _e:
                 st.caption(f"AI Score unavailable: {_e}")
 
@@ -995,19 +1005,12 @@ def render(
                         st.code(traceback.format_exc())
                         st.info("Try adjusting the date range or selecting a different model.")
 
-                # Display consensus view using the ForecastRouter
+                # Display consensus view (cached only; computation runs on Generate Forecast)
                 try:
                     hist_data_cons = st.session_state.get("analyze_forecast_data")
                     if hist_data_cons is not None and len(hist_data_cons) >= 2:
-                        from trading.models.forecast_router import (
-                            ForecastRouter,
-                            get_router_singleton,
-                        )
-
-                        router = get_router_singleton()
                         horizon = st.session_state.get("analyze_forecast_horizon", 7)
                         import hashlib as _hashlib
-                        import time as _time
 
                         try:
                             _data_hash = _hashlib.md5(
@@ -1016,204 +1019,197 @@ def render(
                                 + ticker.encode()
                             ).hexdigest()[:8]
                             _cons_key = f"consensus_{ticker}_{_data_hash}"
-                            _cons_ts_key = f"consensus_ts_{ticker}_{_data_hash}"
-                            _cached_cons = st.session_state.get(_cons_key)
-                            _cached_cons_ts = st.session_state.get(_cons_ts_key, 0.0)
-                            _cons_age = _time.time() - _cached_cons_ts
-
-                            if _cached_cons is None or _cons_age > 600:
-                                consensus = router.get_consensus_forecast(
-                                    data=hist_data_cons,
-                                    horizon=horizon,
-                                    symbol=str(ticker).strip().upper()
-                                    or None,
+                            consensus = st.session_state.get(_cons_key)
+                            if consensus is None:
+                                st.info(
+                                    "Run **Generate Forecast** "
+                                    "above to see model consensus.",
+                                    icon="🎯",
                                 )
-                                st.session_state[_cons_key] = consensus
-                                st.session_state[_cons_ts_key] = _time.time()
                             else:
-                                consensus = _cached_cons
                                 st.caption(
                                     "Using cached forecast (refreshes every 10 min)"
                                 )
                         except Exception as _ce:
                             st.caption(f"Consensus error: {_ce}")
                             consensus = {"error": str(_ce)}
-                        _used = consensus.get("models_used", []) if isinstance(consensus, dict) else []
-                        _failed = consensus.get("models_failed", []) if isinstance(consensus, dict) else []
-                        if _failed:
-                            st.caption(
-                                f"Models available: {_used} | Unavailable: {_failed}"
-                            )
-                        if "error" not in consensus:
-                            raw = consensus.get("consensus_forecast") or (
-                                consensus.get("consensus_price")
-                                and [consensus["consensus_price"]]
-                            ) or []
-                            if not raw and (
-                                consensus.get("price_targets") or consensus.get("models_failed")
-                            ):
-                                pt = consensus.get("price_targets") or {}
-                                failed = consensus.get("models_failed") or []
-                                n_ok, total = len(pt), len(pt) + len(failed)
-                                st.caption(f"Partial consensus — {n_ok} of {total} models")
-
-                            with st.expander("🎯 Model Consensus", expanded=True):
-                                direction = consensus.get("direction", "NEUTRAL")
-                                conviction = consensus.get("conviction", "INSUFFICIENT")
-                                last_price = float(consensus.get("last_price") or 0.0)
-                                consensus_price = float(
+                        if consensus is not None:
+                            _used = consensus.get("models_used", []) if isinstance(consensus, dict) else []
+                            _failed = consensus.get("models_failed", []) if isinstance(consensus, dict) else []
+                            if _failed:
+                                st.caption(
+                                    f"Models available: {_used} | Unavailable: {_failed}"
+                                )
+                            if "error" not in consensus:
+                                raw = consensus.get("consensus_forecast") or (
                                     consensus.get("consensus_price")
-                                    or consensus.get("consensus_forecast", [0.0])[-1]
-                                )
-                                price_targets = consensus.get("price_targets") or {}
-                                models_failed = consensus.get("models_failed") or []
+                                    and [consensus["consensus_price"]]
+                                ) or []
+                                if not raw and (
+                                    consensus.get("price_targets") or consensus.get("models_failed")
+                                ):
+                                    pt = consensus.get("price_targets") or {}
+                                    failed = consensus.get("models_failed") or []
+                                    n_ok, total = len(pt), len(pt) + len(failed)
+                                    st.caption(f"Partial consensus — {n_ok} of {total} models")
 
-                                _ff_hint = ""
-                                try:
-                                    from trading.utils.forecast_formatter import (
-                                        ForecastFormatter,
+                                with st.expander("🎯 Model Consensus", expanded=True):
+                                    direction = consensus.get("direction", "NEUTRAL")
+                                    conviction = consensus.get("conviction", "INSUFFICIENT")
+                                    last_price = float(consensus.get("last_price") or 0.0)
+                                    consensus_price = float(
+                                        consensus.get("consensus_price")
+                                        or consensus.get("consensus_forecast", [0.0])[-1]
                                     )
+                                    price_targets = consensus.get("price_targets") or {}
+                                    models_failed = consensus.get("models_failed") or []
 
-                                    _ff = ForecastFormatter()
-                                    _pv = pd.DataFrame(
-                                        {"close": [last_price, consensus_price]}
-                                    )
-                                    _pv.index = pd.DatetimeIndex(
-                                        pd.date_range(
-                                            end=pd.Timestamp.utcnow(),
-                                            periods=2,
-                                            freq="D",
+                                    _ff_hint = ""
+                                    try:
+                                        from trading.utils.forecast_formatter import (
+                                            ForecastFormatter,
                                         )
-                                    )
-                                    _val = _ff.validate_forecast_format(_pv)
-                                    if _val.get("warnings"):
-                                        _ff_hint = " · ".join(
-                                            _val["warnings"][:3]
+
+                                        _ff = ForecastFormatter()
+                                        _pv = pd.DataFrame(
+                                            {"close": [last_price, consensus_price]}
                                         )
-                                except Exception:
-                                    pass
-                                if _ff_hint:
-                                    st.caption(f"Forecast format: {_ff_hint}")
+                                        _pv.index = pd.DatetimeIndex(
+                                            pd.date_range(
+                                                end=pd.Timestamp.utcnow(),
+                                                periods=2,
+                                                freq="D",
+                                            )
+                                        )
+                                        _val = _ff.validate_forecast_format(_pv)
+                                        if _val.get("warnings"):
+                                            _ff_hint = " · ".join(
+                                                _val["warnings"][:3]
+                                            )
+                                    except Exception:
+                                        pass
+                                    if _ff_hint:
+                                        st.caption(f"Forecast format: {_ff_hint}")
 
-                                # Row 1: direction, conviction, consensus price
-                                col1, col2, col3 = st.columns(3)
-                                direction_emoji = (
-                                    "📈"
-                                    if direction == "BULLISH"
-                                    else "📉"
-                                    if direction == "BEARISH"
-                                    else "➡️"
-                                )
-                                with col1:
-                                    col1.metric(
-                                        "Consensus Direction",
-                                        f"{direction_emoji} {direction}",
+                                    # Row 1: direction, conviction, consensus price
+                                    col1, col2, col3 = st.columns(3)
+                                    direction_emoji = (
+                                        "📈"
+                                        if direction == "BULLISH"
+                                        else "📉"
+                                        if direction == "BEARISH"
+                                        else "➡️"
                                     )
-                                with col2:
-                                    col2.metric("Conviction", conviction)
-                                with col3:
-                                    delta_pct = (
-                                        (consensus_price / last_price - 1.0) * 100.0
-                                        if last_price
-                                        else 0.0
+                                    with col1:
+                                        col1.metric(
+                                            "Consensus Direction",
+                                            f"{direction_emoji} {direction}",
+                                        )
+                                    with col2:
+                                        col2.metric("Conviction", conviction)
+                                    with col3:
+                                        delta_pct = (
+                                            (consensus_price / last_price - 1.0) * 100.0
+                                            if last_price
+                                            else 0.0
+                                        )
+                                        col3.metric(
+                                            f"Consensus Price (Day {horizon})",
+                                            f"${consensus_price:.2f}",
+                                            delta=f"{delta_pct:+.2f}%",
+                                        )
+
+                                    # Signal synthesis: reconcile consensus, AI Score, and outlier exclusions
+                                    _consensus_dir = direction
+                                    _conv = conviction
+                                    # Try canonical key first, then dynamic key, then any ai_score key
+                                    _symbol = st.session_state.get("analyze_symbol", "")
+                                    _ai_result = (
+                                        st.session_state.get("ai_score_result")
+                                        or st.session_state.get(f"ai_score_{_symbol}")
+                                        or {}
                                     )
-                                    col3.metric(
-                                        f"Consensus Price (Day {horizon})",
-                                        f"${consensus_price:.2f}",
-                                        delta=f"{delta_pct:+.2f}%",
+                                    _excluded = consensus.get("models_excluded", {}) or {}
+
+                                    try:
+                                        _ai_val_f = float(
+                                            _ai_result.get("weighted_score")
+                                            or _ai_result.get("overall_score")
+                                            or _ai_result.get("model_score")
+                                            or 5.0)
+                                    except Exception:
+                                        _ai_val_f = 5.0
+                                    if _ai_val_f == 5.0 and _ai_result:
+                                        import logging as _lg
+                                        _lg.getLogger(__name__).warning(
+                                            "AI score result found but score keys missing: %s",
+                                            list(_ai_result.keys()))
+
+                                    _signals = []
+                                    if _consensus_dir == "BULLISH":
+                                        _signals.append("models lean bullish")
+                                    elif _consensus_dir == "BEARISH":
+                                        _signals.append("models lean bearish")
+                                    else:
+                                        _signals.append("models are mixed")
+
+                                    if _ai_val_f >= 7.0:
+                                        _signals.append("AI Score is strong")
+                                    elif _ai_val_f >= 5.5:
+                                        _signals.append("AI Score is neutral")
+                                    else:
+                                        _signals.append("AI Score is weak")
+
+                                    _excl_str = ""
+                                    if _excluded:
+                                        _excl_names = ", ".join(
+                                            f"{k} ({v.get('deviation_std', 0)}σ)"
+                                            for k, v in _excluded.items()
+                                        )
+                                        _excl_str = f" ⚠️ Outlier excluded: {_excl_names}."
+
+                                    _synthesis = (
+                                        f"**Signal synthesis:** "
+                                        f"{' · '.join(_signals)}."
+                                        f"{_excl_str} "
+                                        "Consensus and Monte Carlo measure different things — "
+                                        "point forecast vs probability distribution. "
+                                        "Use Monte Carlo for risk sizing and consensus for direction bias."
                                     )
+                                    st.info(_synthesis)
 
-                                # Signal synthesis: reconcile consensus, AI Score, and outlier exclusions
-                                _consensus_dir = direction
-                                _conv = conviction
-                                # Try canonical key first, then dynamic key, then any ai_score key
-                                _symbol = st.session_state.get("analyze_symbol", "")
-                                _ai_result = (
-                                    st.session_state.get("ai_score_result")
-                                    or st.session_state.get(f"ai_score_{_symbol}")
-                                    or {}
-                                )
-                                _excluded = consensus.get("models_excluded", {}) or {}
+                                    # Row 2: per-model price targets table
+                                    if price_targets:
+                                        targets_df = pd.DataFrame(
+                                            [
+                                                {
+                                                    "Model": k,
+                                                    "Day 7 Price": f"${v:.2f}",
+                                                    "vs Current": (
+                                                        f"{((v/last_price)-1)*100:.1f}%"
+                                                        if last_price
+                                                        else "N/A"
+                                                    ),
+                                                }
+                                                for k, v in price_targets.items()
+                                            ]
+                                        )
+                                        st.dataframe(
+                                            normalize_for_display(targets_df),
+                                            width='stretch',
+                                            hide_index=True,
+                                        )
 
-                                try:
-                                    _ai_val_f = float(
-                                        _ai_result.get("weighted_score")
-                                        or _ai_result.get("overall_score")
-                                        or _ai_result.get("model_score")
-                                        or 5.0)
-                                except Exception:
-                                    _ai_val_f = 5.0
-                                if _ai_val_f == 5.0 and _ai_result:
-                                    import logging as _lg
-                                    _lg.getLogger(__name__).warning(
-                                        "AI score result found but score keys missing: %s",
-                                        list(_ai_result.keys()))
-
-                                _signals = []
-                                if _consensus_dir == "BULLISH":
-                                    _signals.append("models lean bullish")
-                                elif _consensus_dir == "BEARISH":
-                                    _signals.append("models lean bearish")
-                                else:
-                                    _signals.append("models are mixed")
-
-                                if _ai_val_f >= 7.0:
-                                    _signals.append("AI Score is strong")
-                                elif _ai_val_f >= 5.5:
-                                    _signals.append("AI Score is neutral")
-                                else:
-                                    _signals.append("AI Score is weak")
-
-                                _excl_str = ""
-                                if _excluded:
-                                    _excl_names = ", ".join(
-                                        f"{k} ({v.get('deviation_std', 0)}σ)"
-                                        for k, v in _excluded.items()
-                                    )
-                                    _excl_str = f" ⚠️ Outlier excluded: {_excl_names}."
-
-                                _synthesis = (
-                                    f"**Signal synthesis:** "
-                                    f"{' · '.join(_signals)}."
-                                    f"{_excl_str} "
-                                    "Consensus and Monte Carlo measure different things — "
-                                    "point forecast vs probability distribution. "
-                                    "Use Monte Carlo for risk sizing and consensus for direction bias."
-                                )
-                                st.info(_synthesis)
-
-                                # Row 2: per-model price targets table
-                                if price_targets:
-                                    targets_df = pd.DataFrame(
-                                        [
-                                            {
-                                                "Model": k,
-                                                "Day 7 Price": f"${v:.2f}",
-                                                "vs Current": (
-                                                    f"{((v/last_price)-1)*100:.1f}%"
-                                                    if last_price
-                                                    else "N/A"
-                                                ),
-                                            }
-                                            for k, v in price_targets.items()
-                                        ]
-                                    )
-                                    st.dataframe(
-                                        normalize_for_display(targets_df),
-                                        width='stretch',
-                                        hide_index=True,
-                                    )
-
-                                # Row 3: failed models (optional)
-                                if models_failed:
-                                    with st.expander(
-                                        f"⚠️ {len(models_failed)} model(s) excluded",
-                                        expanded=False,
-                                    ):
-                                        for f in models_failed:
-                                            st.caption(f"• {f}")
-                        else:
-                            st.warning("Consensus forecast temporarily unavailable.")
+                                    # Row 3: failed models (optional)
+                                    if models_failed:
+                                        with st.expander(
+                                            f"⚠️ {len(models_failed)} model(s) excluded",
+                                            expanded=False,
+                                        ):
+                                            for f in models_failed:
+                                                st.caption(f"• {f}")
+                            else:
+                                st.warning("Consensus forecast temporarily unavailable.")
                 except Exception:
                     try:
                         if isinstance(consensus, dict) and consensus.get("error"):
