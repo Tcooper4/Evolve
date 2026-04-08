@@ -57,9 +57,23 @@ def render(
         try:
             st.header("📊 Market Analysis")
             st.markdown("Rolling correlation vs SPY and volatility regime. Load data in Quick Forecast first.")
+            # Self-fetch if session data missing
             if st.session_state.get("analyze_forecast_data") is None:
-                st.warning(
-                    "⚠️ No data yet — enter a ticker at the top and open the Forecast tab."
+                try:
+                    from trading.data.price_cache import get_history as _gh
+
+                    _fetched = _gh(ticker, period="1y")
+                    if not _fetched.empty:
+                        st.session_state["analyze_forecast_data"] = _fetched
+                        st.session_state["analyze_symbol"] = ticker
+                except Exception:
+                    pass
+
+            if st.session_state.get("analyze_forecast_data") is None:
+                st.info(
+                    "Enter a ticker above and "
+                    "press Enter to load data.",
+                    icon="📈",
                 )
             else:
                 _symbol = st.session_state.get("analyze_symbol", "Symbol")
