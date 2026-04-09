@@ -10,6 +10,7 @@ Dimensions scored:
 Each dimension is computed from already-available data pipelines.
 No new external APIs required.
 """
+import copy
 import logging
 from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
 from typing import Any, Dict, List, Optional
@@ -92,6 +93,8 @@ def _get_scoring_weights() -> Dict[str, float]:
 def _compute_ic_weights(
     symbol: str,
     _user_style: str = "Balanced",
+    regime_label: str = "",
+    vix_level: float = 0.0,
 ) -> Dict[str, float]:
     """
     Computes IC-derived dimension weights
@@ -138,7 +141,21 @@ def _compute_ic_weights(
         if _data is None:
             _global = get_global_dimension_scores(min_rows=100)
             if _global is None:
-                return _static
+                _w = dict(_static)
+                try:
+                    if regime_label:
+                        _w = _apply_regime_tilt(
+                            _w,
+                            regime_label,
+                            vix_level,
+                        )
+                except Exception:
+                    pass
+                _blend_total = sum(_w.values())
+                return {
+                    d: round(_w[d] / _blend_total, 4)
+                    for d in _w
+                }
             _rows = _global["data"]
         else:
             _rows = _data["data"]
@@ -174,12 +191,125 @@ def _compute_ic_weights(
             for d in _dims
         }
 
+        try:
+            if regime_label:
+                _blended = _apply_regime_tilt(
+                    _blended,
+                    regime_label,
+                    vix_level,
+                )
+        except Exception:
+            pass
         _blend_total = sum(_blended.values())
-        return {d: round(_blended[d] / _blend_total, 4) for d in _dims}
+        return {
+            d: round(
+                _blended[d] / _blend_total,
+                4,
+            )
+            for d in _dims
+        }
 
     except Exception as e:
         logger.debug("IC weight computation failed: %s", e)
-        return _static
+        try:
+            _tilted = _apply_regime_tilt(
+                dict(_static),
+                regime_label,
+                vix_level,
+            )
+            return _tilted
+        except Exception:
+            return _static
+
+
+def _apply_regime_tilt(
+    weights: Dict[str, float],
+    regime_label: str,
+    vix_level: float,
+) -> Dict[str, float]:
+    """
+    Applies regime-conditional tilt
+    to base/IC-derived weights.
+
+    Academic basis: in risk-off regimes,
+    quality/fundamental factors
+    outperform. In risk-on regimes,
+    momentum factors outperform.
+    (Asness, Moskowitz & Pedersen 2013;
+    Fama & French 2015)
+
+    Regime labels from MacroFactors:
+      RISK_ON     → tilt toward momentum
+      RISK_OFF    → tilt toward fundamental
+      HIGH_VOL    → tilt toward fundamental
+                    + reduce momentum
+      LOW_VOL     → tilt toward momentum
+                    + reduce fundamental
+      NEUTRAL     → no tilt
+
+    Tilt is capped at ±20% of each
+    weight to prevent extreme
+    reweighting.
+    """
+    _w = copy.deepcopy(weights)
+    _label = (regime_label or "").upper()
+
+    # Maximum tilt per dimension
+    _MAX_TILT = 0.08
+
+    def _tilt(
+        w: Dict[str, float],
+        dim_up: str,
+        dim_down: str,
+        amount: float,
+    ) -> None:
+        _adj = min(amount, _MAX_TILT)
+        _up_new = min(
+            0.70,
+            w.get(dim_up, 0) + _adj,
+        )
+        _dn_new = max(
+            0.05,
+            w.get(dim_down, 0) - _adj,
+        )
+        w[dim_up] = _up_new
+        w[dim_down] = _dn_new
+
+    if _label in ("RISK_ON", "LOW_VOL"):
+        _tilt(_w, "momentum", "fundamental", 0.05)
+        if vix_level > 0:
+            _tilt_amt = min(
+                0.03,
+                max(0, (20 - vix_level) / 100),
+            )
+            _tilt(_w, "technical", "sentiment", _tilt_amt)
+
+    elif _label in (
+        "RISK_OFF",
+        "HIGH_VOL",
+        "HIGH",
+        "STRESS",
+    ):
+        _tilt(_w, "fundamental", "momentum", 0.06)
+        if vix_level > 25:
+            _extra = min(
+                0.04,
+                (vix_level - 25) / 100,
+            )
+            _tilt(_w, "fundamental", "momentum", _extra)
+
+    elif _label == "STAGFLATION":
+        _tilt(_w, "fundamental", "momentum", 0.05)
+        _tilt(_w, "technical", "sentiment", 0.03)
+
+    _total = sum(_w.values())
+    if _total > 0:
+        _w = {
+            d: round(v / _total, 4)
+            for d, v in _w.items()
+        }
+
+    return _w
 
 
 def _persist_ai_score_result(
@@ -787,8 +917,24 @@ def _compute_ai_score_cached(symbol: str) -> Dict[str, Any]:
 def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
     """Internal AI score computation (used by compute_ai_score)."""
     try:
+        _regime_label = ""
+        _vix_level = 0.0
         try:
-            weights = _compute_ic_weights(symbol)
+            _mf = _get_macro_factors()
+            _factors = _mf.get_factors()
+            _ov = _factors.get("overall_regime") or {}
+            _regime_label = str(_ov.get("label") or "")
+            _vx = _factors.get("vix") or {}
+            _vix_level = float(_vx.get("current") or 0)
+        except Exception:
+            pass
+
+        try:
+            weights = _compute_ic_weights(
+                symbol,
+                regime_label=_regime_label,
+                vix_level=_vix_level,
+            )
         except Exception:
             weights = {
                 "technical": 0.30,
@@ -796,6 +942,15 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                 "sentiment": 0.20,
                 "fundamental": 0.15,
             }
+            try:
+                if _regime_label:
+                    weights = _apply_regime_tilt(
+                        dict(weights),
+                        _regime_label,
+                        _vix_level,
+                    )
+            except Exception:
+                pass
         _external_bundle: Optional[Dict[str, Any]] = None
         if _has_external_api_keys():
             try:
@@ -837,6 +992,45 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
         last_price = float(close[-1])
 
         signals = []
+        if _regime_label and _regime_label not in (
+            "",
+            "NEUTRAL",
+            "UNKNOWN",
+        ):
+            _mv = (
+                "momentum"
+                if _regime_label in ("RISK_ON", "LOW_VOL")
+                else "fundamental"
+            )
+            _env = (
+                "risk-on"
+                if _regime_label in ("RISK_ON", "LOW_VOL")
+                else "risk-off"
+            )
+            signals.append(
+                {
+                    "name": "Market Regime",
+                    "value": _regime_label.replace("_", " ").title(),
+                    "impact": (
+                        "positive"
+                        if _regime_label in ("RISK_ON", "LOW_VOL")
+                        else "negative"
+                        if _regime_label
+                        in (
+                            "RISK_OFF",
+                            "HIGH_VOL",
+                            "HIGH",
+                            "STRESS",
+                        )
+                        else "neutral"
+                    ),
+                    "description": (
+                        f"Regime-conditional weights active: {_mv} "
+                        f"signals weighted higher in current {_env} "
+                        "environment"
+                    ),
+                }
+            )
         data_quality: Dict[str, str] = {
             "sentiment": "unavailable",
             "options": "unavailable",
