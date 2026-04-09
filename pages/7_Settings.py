@@ -588,6 +588,49 @@ with tab_research:
         )
 
     st.markdown("---")
+    st.markdown("### 📊 Signal IC Status")
+    st.caption(
+        "Dynamic signal weights activate after 30+ scored observations per symbol "
+        "or 100+ globally."
+    )
+    try:
+        import os
+        import sqlite3
+
+        from trading.analysis.signal_score_store import (
+            _DB_PATH,
+            _TABLE,
+            fill_forward_returns,
+        )
+
+        if os.path.exists(_DB_PATH):
+            with sqlite3.connect(_DB_PATH) as _c:
+                _n = _c.execute(
+                    f"SELECT COUNT(*) FROM {_TABLE}"
+                ).fetchone()[0]
+                _n_filled = _c.execute(
+                    f"SELECT COUNT(*) FROM {_TABLE} "
+                    "WHERE return_7d IS NOT NULL"
+                ).fetchone()[0]
+            st.metric("Scored observations", _n)
+            st.metric("With realized returns", _n_filled)
+            if st.button(
+                "Fill forward returns now",
+                key="fill_returns",
+            ):
+                _filled = fill_forward_returns()
+                st.success(
+                    f"Filled {_filled} return observations"
+                )
+        else:
+            st.caption(
+                "No data yet — score some tickers in Analyze to begin "
+                "accumulating data."
+            )
+    except Exception as _ie:
+        st.caption(f"IC status unavailable: {_ie}")
+
+    st.markdown("---")
     if st.button("Save preferences", key="save_research_prefs", type="primary"):
         try:
             from config.user_store import save_user_preferences as _save_rp

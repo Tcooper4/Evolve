@@ -86,6 +86,123 @@ def _get_scoring_weights() -> Dict[str, float]:
     return base
 
 
+def _compute_ic_weights(
+    symbol: str,
+    _user_style: str = "Balanced",
+) -> Dict[str, float]:
+    """
+    Computes IC-derived dimension weights
+    for a specific symbol (or global
+    pool if per-symbol data is sparse).
+
+    Falls back to static weights when
+    insufficient data exists.
+
+    IC-to-weight conversion:
+    1. Compute Spearman IC per dimension
+    2. Clip ICs to [-1, 1]
+    3. Shift to positive: ic + 1
+    4. Softmax normalize to sum=1
+    5. Blend 60% IC-derived +
+       40% user style weights
+    """
+    try:
+        _static = _get_scoring_weights()
+    except Exception:
+        _static = {
+            "technical": 0.30,
+            "momentum": 0.35,
+            "sentiment": 0.20,
+            "fundamental": 0.15,
+        }
+
+    try:
+        from scipy.stats import spearmanr
+
+        import numpy as np
+        import pandas as pd
+
+        from trading.analysis.signal_score_store import (
+            get_dimension_scores_and_returns,
+            get_global_dimension_scores,
+        )
+
+        sym = str(symbol or "").strip().upper()
+        _data = None
+        if sym:
+            _data = get_dimension_scores_and_returns(sym, min_rows=30)
+
+        if _data is None:
+            _global = get_global_dimension_scores(min_rows=100)
+            if _global is None:
+                return _static
+            _rows = _global["data"]
+        else:
+            _rows = _data["data"]
+
+        _df = pd.DataFrame(_rows)
+        _dims = [
+            "technical",
+            "momentum",
+            "sentiment",
+            "fundamental",
+        ]
+        _ics: Dict[str, float] = {}
+        for dim in _dims:
+            if dim not in _df.columns:
+                _ics[dim] = 0.0
+                continue
+            _valid = _df[[dim, "return_7d"]].dropna()
+            if len(_valid) < 10:
+                _ics[dim] = 0.0
+                continue
+            _ic, _ = spearmanr(
+                _valid[dim].values,
+                _valid["return_7d"].values,
+            )
+            _ics[dim] = float(_ic if np.isfinite(_ic) else 0.0)
+
+        _shifted = {d: max(0.01, _ics[d] + 1.0) for d in _dims}
+        _total = sum(_shifted.values())
+        _ic_weights = {d: _shifted[d] / _total for d in _dims}
+
+        _blended = {
+            d: (0.60 * _ic_weights[d] + 0.40 * _static[d])
+            for d in _dims
+        }
+
+        _blend_total = sum(_blended.values())
+        return {d: round(_blended[d] / _blend_total, 4) for d in _dims}
+
+    except Exception as e:
+        logger.debug("IC weight computation failed: %s", e)
+        return _static
+
+
+def _persist_ai_score_result(
+    symbol: str, result: Dict[str, Any]
+) -> None:
+    try:
+        from trading.analysis.signal_score_store import (
+            init_score_db,
+            record_score,
+        )
+
+        init_score_db()
+        if result.get("error") is None:
+            record_score(
+                symbol=symbol,
+                technical=float(result.get("technical_score", 5.0) or 5.0),
+                momentum=float(result.get("momentum_score", 5.0) or 5.0),
+                sentiment=float(result.get("sentiment_score", 5.0) or 5.0),
+                fundamental=float(result.get("fundamental_score", 5.0) or 5.0),
+                overall=float(result.get("overall_score", 5.0) or 5.0),
+                price_at_score=float(result.get("last_price", 0.0) or 0.0),
+            )
+    except Exception:
+        pass
+
+
 def _has_external_api_keys() -> bool:
     """True only if at least one paid/external API key is configured."""
     import os
@@ -601,11 +718,15 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         error: str | None
     """
     if hist is not None and not hist.empty:
-        return _compute_ai_score_impl(symbol, hist)
+        result = _compute_ai_score_impl(symbol, hist)
+        _persist_ai_score_result(symbol, result)
+        return result
     sym_key = str(symbol or "").strip().upper()
     if not sym_key:
         return _error_score(str(symbol or ""), "Invalid symbol")
-    return _compute_ai_score_cached(sym_key)
+    result = _compute_ai_score_cached(sym_key)
+    _persist_ai_score_result(sym_key, result)
+    return result
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -622,7 +743,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
     """Internal AI score computation (used by compute_ai_score)."""
     try:
         try:
-            weights = _get_scoring_weights()
+            weights = _compute_ic_weights(symbol)
         except Exception:
             weights = {
                 "technical": 0.30,
