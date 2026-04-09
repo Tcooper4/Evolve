@@ -168,7 +168,7 @@ def get_insider_cluster_signal(
                     insiders["Start Date"],
                     errors="coerce",
                     utc=True,
-                ).dt.tz_localize(None)
+                ).dt.tz_convert(None)
             else:
                 idx = insiders.index
                 if not isinstance(idx, pd.DatetimeIndex):

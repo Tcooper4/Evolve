@@ -670,7 +670,8 @@ class TransformerForecaster(BaseModel):
             X, _ = self._prepare_data(data, is_training=False)
 
             # Set model to evaluation mode
-            self.eval()
+            if hasattr(self, "model") and self.model is not None:
+                self.model.eval()
 
             # Make predictions
             with torch.no_grad():

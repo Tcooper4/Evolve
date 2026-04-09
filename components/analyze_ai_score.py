@@ -82,14 +82,27 @@ def render_ai_score(ticker: str, hist, *, trader_mode: str = "Short-term") -> No
         if signals:
             import pandas as pd
 
-            try:
-                from utils.dataframe_utils import normalize_for_display
-            except ImportError:
-                def normalize_for_display(df):
-                    return df
-
             sig_df = pd.DataFrame(signals)
-            st.dataframe(normalize_for_display(sig_df), width="stretch")
+            # Force string columns to prevent
+            # PyArrow type conversion errors
+            # on mixed-type values like
+            # "88% OTC volume"
+            for _col in ["value", "Value",
+                         "description",
+                         "Description",
+                         "impact", "Impact",
+                         "name", "Name"]:
+                if _col in sig_df.columns:
+                    sig_df[_col] = (
+                        sig_df[_col]
+                        .fillna("")
+                        .astype(str)
+                    )
+            st.dataframe(
+                sig_df,
+                width="stretch",
+                hide_index=True,
+            )
     except Exception as e:
         st.caption(f"unavailable: {e}")
 

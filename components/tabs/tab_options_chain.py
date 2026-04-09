@@ -278,493 +278,493 @@ def render(
                         key="options_puts_table",
                     )
 
-                    try:
-                        from trading.data.options_flow import get_options_flow
+                try:
+                    from trading.data.options_flow import get_options_flow
 
-                        flow = get_options_flow(ticker)
-                        if flow and not flow.get("error"):
-                            st.markdown("**Unusual Options Activity**")
-                            net = flow.get("net_flow", "NEUTRAL")
-                            color = (
-                                "green"
-                                if net == "BULLISH"
-                                else "red"
-                                if net == "BEARISH"
-                                else "gray"
-                            )
-                            st.markdown(
-                                f"Net flow: :{color}[**{net}**] · "
-                                f"P/C Ratio: {flow.get('put_call_ratio', 0):.2f} · "
-                                f"Max pain: ${flow.get('max_pain', 0):.2f}"
-                            )
-                            calls = flow.get("unusual_calls", [])
-                            puts = flow.get("unusual_puts", [])
-                            if calls:
-                                st.caption(
-                                    "Unusual calls: "
-                                    + ", ".join(
-                                        f"${c['strike']:.0f} "
-                                        f"({c['expiry']})"
-                                        for c in calls[:5]
-                                    )
+                    flow = get_options_flow(ticker)
+                    if flow and not flow.get("error"):
+                        st.markdown("**Unusual Options Activity**")
+                        net = flow.get("net_flow", "NEUTRAL")
+                        color = (
+                            "green"
+                            if net == "BULLISH"
+                            else "red"
+                            if net == "BEARISH"
+                            else "gray"
+                        )
+                        st.markdown(
+                            f"Net flow: :{color}[**{net}**] · "
+                            f"P/C Ratio: {flow.get('put_call_ratio', 0):.2f} · "
+                            f"Max pain: ${flow.get('max_pain', 0):.2f}"
+                        )
+                        calls = flow.get("unusual_calls", [])
+                        puts = flow.get("unusual_puts", [])
+                        if calls:
+                            st.caption(
+                                "Unusual calls: "
+                                + ", ".join(
+                                    f"${c['strike']:.0f} "
+                                    f"({c['expiry']})"
+                                    for c in calls[:5]
                                 )
-                            if puts:
-                                st.caption(
-                                    "Unusual puts: "
-                                    + ", ".join(
-                                        f"${p['strike']:.0f} "
-                                        f"({p['expiry']})"
-                                        for p in puts[:5]
-                                    )
+                            )
+                        if puts:
+                            st.caption(
+                                "Unusual puts: "
+                                + ", ".join(
+                                    f"${p['strike']:.0f} "
+                                    f"({p['expiry']})"
+                                    for p in puts[:5]
                                 )
-                    except Exception as e:
-                        st.caption(f"Options flow unavailable: {e}")
+                            )
+                except Exception as e:
+                    st.caption(f"Options flow unavailable: {e}")
 
-                    # ── OPTIONS STRATEGY VISUALIZER ──
-                    st.markdown("---")
-                    st.markdown("### 📐 Strategy Visualizer")
-                    st.caption(
-                        "Select a strategy to see P&L at expiration "
-                        "and key metrics."
+                # ── OPTIONS STRATEGY VISUALIZER ──
+                st.markdown("---")
+                st.markdown("### 📐 Strategy Visualizer")
+                st.caption(
+                    "Select a strategy to see P&L at expiration "
+                    "and key metrics."
+                )
+                try:
+                    _ref_spot = float(_cur_price) if _cur_price else 0.0
+                    _all_strikes = sorted(
+                        set(
+                            list(
+                                _calls["strike"]
+                                .dropna()
+                                .astype(float)
+                            )
+                            + list(
+                                _puts["strike"]
+                                .dropna()
+                                .astype(float)
+                            )
+                        )
                     )
-                    try:
-                        _ref_spot = float(_cur_price) if _cur_price else 0.0
-                        _all_strikes = sorted(
-                            set(
-                                list(
-                                    _calls["strike"]
-                                    .dropna()
-                                    .astype(float)
-                                )
-                                + list(
-                                    _puts["strike"]
-                                    .dropna()
-                                    .astype(float)
-                                )
+                    if not _all_strikes:
+                        st.caption("No strikes available for strategies.")
+                    else:
+                        if _ref_spot <= 0:
+                            _ref_spot = float(
+                                _all_strikes[len(_all_strikes) // 2]
                             )
+                        _strat = st.selectbox(
+                            "Strategy",
+                            [
+                                "Long Call",
+                                "Long Put",
+                                "Covered Call",
+                                "Cash-Secured Put",
+                                "Bull Call Spread",
+                                "Bear Put Spread",
+                                "Long Straddle",
+                                "Long Strangle",
+                            ],
+                            key=f"opt_strat_{ticker}",
                         )
-                        if not _all_strikes:
-                            st.caption("No strikes available for strategies.")
-                        else:
-                            if _ref_spot <= 0:
-                                _ref_spot = float(
-                                    _all_strikes[len(_all_strikes) // 2]
+                        _atm_idx = min(
+                            range(len(_all_strikes)),
+                            key=lambda i: abs(
+                                _all_strikes[i] - _ref_spot
+                            ),
+                        )
+                        _col_sv1, _col_sv2 = st.columns(2)
+                        _legs: list = []
+
+                        if _strat == "Long Call":
+                            with _col_sv1:
+                                _k1 = st.selectbox(
+                                    "Call Strike",
+                                    _all_strikes,
+                                    index=_atm_idx,
+                                    key=f"k1_{ticker}_{_strat}",
                                 )
-                            _strat = st.selectbox(
-                                "Strategy",
-                                [
-                                    "Long Call",
-                                    "Long Put",
-                                    "Covered Call",
-                                    "Cash-Secured Put",
-                                    "Bull Call Spread",
-                                    "Bear Put Spread",
-                                    "Long Straddle",
-                                    "Long Strangle",
-                                ],
-                                key=f"opt_strat_{ticker}",
-                            )
-                            _atm_idx = min(
-                                range(len(_all_strikes)),
-                                key=lambda i: abs(
-                                    _all_strikes[i] - _ref_spot
-                                ),
-                            )
-                            _col_sv1, _col_sv2 = st.columns(2)
-                            _legs: list = []
-
-                            if _strat == "Long Call":
-                                with _col_sv1:
-                                    _k1 = st.selectbox(
-                                        "Call Strike",
-                                        _all_strikes,
-                                        index=_atm_idx,
-                                        key=f"k1_{ticker}_{_strat}",
-                                    )
-                                _prem1 = _get_premium(_calls, _k1, "call")
-                                with _col_sv2:
-                                    _prem1 = st.number_input(
-                                        "Call Premium ($)",
-                                        value=float(_prem1),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p1_{ticker}_{_strat}",
-                                    )
-                                _legs = [("call", _k1, _prem1, 1)]
-
-                            elif _strat == "Covered Call":
-                                with _col_sv1:
-                                    _k1 = st.selectbox(
-                                        "Short Call Strike",
-                                        _all_strikes,
-                                        index=_atm_idx,
-                                        key=f"k1_{ticker}_{_strat}",
-                                    )
-                                _prem1 = _get_premium(_calls, _k1, "call")
-                                with _col_sv2:
-                                    _prem1 = st.number_input(
-                                        "Call Premium ($) (received)",
-                                        value=float(_prem1),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p1_{ticker}_{_strat}",
-                                    )
-                                _legs = [
-                                    ("stock", _ref_spot, _ref_spot, 1),
-                                    ("call", _k1, _prem1, -1),
-                                ]
-
-                            elif _strat == "Long Put":
-                                with _col_sv1:
-                                    _k1 = st.selectbox(
-                                        "Put Strike",
-                                        _all_strikes,
-                                        index=_atm_idx,
-                                        key=f"k1_{ticker}_{_strat}",
-                                    )
-                                _prem1 = _get_premium(_puts, _k1, "put")
-                                with _col_sv2:
-                                    _prem1 = st.number_input(
-                                        "Put Premium ($)",
-                                        value=float(_prem1),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p1_{ticker}_{_strat}",
-                                    )
-                                _legs = [("put", _k1, _prem1, 1)]
-
-                            elif _strat == "Cash-Secured Put":
-                                with _col_sv1:
-                                    _k1 = st.selectbox(
-                                        "Short Put Strike",
-                                        _all_strikes,
-                                        index=_atm_idx,
-                                        key=f"k1_{ticker}_{_strat}",
-                                    )
-                                _prem1 = _get_premium(_puts, _k1, "put")
-                                with _col_sv2:
-                                    _prem1 = st.number_input(
-                                        "Put Premium ($) (received)",
-                                        value=float(_prem1),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p1_{ticker}_{_strat}",
-                                    )
-                                _legs = [("put", _k1, _prem1, -1)]
-
-                            elif _strat == "Bull Call Spread":
-                                _strikes_list = _all_strikes
-                                with _col_sv1:
-                                    _k1 = st.selectbox(
-                                        "Buy Call Strike",
-                                        _strikes_list,
-                                        index=max(0, _atm_idx - 1),
-                                        key=f"k1_{ticker}_{_strat}",
-                                    )
-                                    _k2 = st.selectbox(
-                                        "Sell Call Strike",
-                                        _strikes_list,
-                                        index=min(
-                                            len(_strikes_list) - 1,
-                                            _atm_idx + 1,
-                                        ),
-                                        key=f"k2_{ticker}_{_strat}",
-                                    )
-                                _p1 = _get_premium(_calls, _k1, "call")
-                                _p2 = _get_premium(_calls, _k2, "call")
-                                with _col_sv2:
-                                    _p1 = st.number_input(
-                                        "Buy Premium ($)",
-                                        value=float(_p1),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p1_{ticker}_{_strat}",
-                                    )
-                                    _p2 = st.number_input(
-                                        "Sell Premium ($)",
-                                        value=float(_p2),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p2_{ticker}_{_strat}",
-                                    )
-                                _legs = [
-                                    ("call", _k1, _p1, 1),
-                                    ("call", _k2, _p2, -1),
-                                ]
-
-                            elif _strat == "Bear Put Spread":
-                                with _col_sv1:
-                                    _k1 = st.selectbox(
-                                        "Buy Put Strike",
-                                        _all_strikes,
-                                        index=min(
-                                            len(_all_strikes) - 1,
-                                            _atm_idx + 1,
-                                        ),
-                                        key=f"k1_{ticker}_{_strat}",
-                                    )
-                                    _k2 = st.selectbox(
-                                        "Sell Put Strike",
-                                        _all_strikes,
-                                        index=max(0, _atm_idx - 1),
-                                        key=f"k2_{ticker}_{_strat}",
-                                    )
-                                _p1 = _get_premium(_puts, _k1, "put")
-                                _p2 = _get_premium(_puts, _k2, "put")
-                                with _col_sv2:
-                                    _p1 = st.number_input(
-                                        "Buy Premium ($)",
-                                        value=float(_p1),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p1_{ticker}_{_strat}",
-                                    )
-                                    _p2 = st.number_input(
-                                        "Sell Premium ($)",
-                                        value=float(_p2),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p2_{ticker}_{_strat}",
-                                    )
-                                _legs = [
-                                    ("put", _k1, _p1, 1),
-                                    ("put", _k2, _p2, -1),
-                                ]
-
-                            elif _strat == "Long Straddle":
-                                with _col_sv1:
-                                    _k1 = st.selectbox(
-                                        "ATM Strike",
-                                        _all_strikes,
-                                        index=_atm_idx,
-                                        key=f"k1_{ticker}_{_strat}",
-                                    )
-                                _pc = _get_premium(_calls, _k1, "call")
-                                _pp = _get_premium(_puts, _k1, "put")
-                                with _col_sv2:
-                                    _pc = st.number_input(
-                                        "Call Premium ($)",
-                                        value=float(_pc),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p1_{ticker}_{_strat}",
-                                    )
-                                    _pp = st.number_input(
-                                        "Put Premium ($)",
-                                        value=float(_pp),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p2_{ticker}_{_strat}",
-                                    )
-                                _legs = [
-                                    ("call", _k1, _pc, 1),
-                                    ("put", _k1, _pp, 1),
-                                ]
-
-                            elif _strat == "Long Strangle":
-                                with _col_sv1:
-                                    _k_call = st.selectbox(
-                                        "OTM Call Strike",
-                                        _all_strikes,
-                                        index=min(
-                                            len(_all_strikes) - 1,
-                                            _atm_idx + 2,
-                                        ),
-                                        key=f"k1_{ticker}_{_strat}",
-                                    )
-                                    _k_put = st.selectbox(
-                                        "OTM Put Strike",
-                                        _all_strikes,
-                                        index=max(0, _atm_idx - 2),
-                                        key=f"k2_{ticker}_{_strat}",
-                                    )
-                                _pc = _get_premium(_calls, _k_call, "call")
-                                _pp = _get_premium(_puts, _k_put, "put")
-                                with _col_sv2:
-                                    _pc = st.number_input(
-                                        "Call Premium ($)",
-                                        value=float(_pc),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p1_{ticker}_{_strat}",
-                                    )
-                                    _pp = st.number_input(
-                                        "Put Premium ($)",
-                                        value=float(_pp),
-                                        min_value=0.01,
-                                        step=0.01,
-                                        key=f"p2_{ticker}_{_strat}",
-                                    )
-                                _legs = [
-                                    ("call", _k_call, _pc, 1),
-                                    ("put", _k_put, _pp, 1),
-                                ]
-
-                            if _legs:
-                                import numpy as _np
-                                import plotly.graph_objects as _go
-
-                                _price_range = _np.linspace(
-                                    _ref_spot * 0.7,
-                                    _ref_spot * 1.3,
-                                    200,
+                            _prem1 = _get_premium(_calls, _k1, "call")
+                            with _col_sv2:
+                                _prem1 = st.number_input(
+                                    "Call Premium ($)",
+                                    value=float(_prem1),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p1_{ticker}_{_strat}",
                                 )
-                                _pnl = _np.zeros(len(_price_range))
+                            _legs = [("call", _k1, _prem1, 1)]
 
-                                for _typ, _k, _p, _dir in _legs:
-                                    if _typ == "call":
-                                        _pnl += (
-                                            _dir
-                                            * (
-                                                _np.maximum(
-                                                    _price_range - _k,
-                                                    0,
-                                                )
-                                                - _p
+                        elif _strat == "Covered Call":
+                            with _col_sv1:
+                                _k1 = st.selectbox(
+                                    "Short Call Strike",
+                                    _all_strikes,
+                                    index=_atm_idx,
+                                    key=f"k1_{ticker}_{_strat}",
+                                )
+                            _prem1 = _get_premium(_calls, _k1, "call")
+                            with _col_sv2:
+                                _prem1 = st.number_input(
+                                    "Call Premium ($) (received)",
+                                    value=float(_prem1),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p1_{ticker}_{_strat}",
+                                )
+                            _legs = [
+                                ("stock", _ref_spot, _ref_spot, 1),
+                                ("call", _k1, _prem1, -1),
+                            ]
+
+                        elif _strat == "Long Put":
+                            with _col_sv1:
+                                _k1 = st.selectbox(
+                                    "Put Strike",
+                                    _all_strikes,
+                                    index=_atm_idx,
+                                    key=f"k1_{ticker}_{_strat}",
+                                )
+                            _prem1 = _get_premium(_puts, _k1, "put")
+                            with _col_sv2:
+                                _prem1 = st.number_input(
+                                    "Put Premium ($)",
+                                    value=float(_prem1),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p1_{ticker}_{_strat}",
+                                )
+                            _legs = [("put", _k1, _prem1, 1)]
+
+                        elif _strat == "Cash-Secured Put":
+                            with _col_sv1:
+                                _k1 = st.selectbox(
+                                    "Short Put Strike",
+                                    _all_strikes,
+                                    index=_atm_idx,
+                                    key=f"k1_{ticker}_{_strat}",
+                                )
+                            _prem1 = _get_premium(_puts, _k1, "put")
+                            with _col_sv2:
+                                _prem1 = st.number_input(
+                                    "Put Premium ($) (received)",
+                                    value=float(_prem1),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p1_{ticker}_{_strat}",
+                                )
+                            _legs = [("put", _k1, _prem1, -1)]
+
+                        elif _strat == "Bull Call Spread":
+                            _strikes_list = _all_strikes
+                            with _col_sv1:
+                                _k1 = st.selectbox(
+                                    "Buy Call Strike",
+                                    _strikes_list,
+                                    index=max(0, _atm_idx - 1),
+                                    key=f"k1_{ticker}_{_strat}",
+                                )
+                                _k2 = st.selectbox(
+                                    "Sell Call Strike",
+                                    _strikes_list,
+                                    index=min(
+                                        len(_strikes_list) - 1,
+                                        _atm_idx + 1,
+                                    ),
+                                    key=f"k2_{ticker}_{_strat}",
+                                )
+                            _p1 = _get_premium(_calls, _k1, "call")
+                            _p2 = _get_premium(_calls, _k2, "call")
+                            with _col_sv2:
+                                _p1 = st.number_input(
+                                    "Buy Premium ($)",
+                                    value=float(_p1),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p1_{ticker}_{_strat}",
+                                )
+                                _p2 = st.number_input(
+                                    "Sell Premium ($)",
+                                    value=float(_p2),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p2_{ticker}_{_strat}",
+                                )
+                            _legs = [
+                                ("call", _k1, _p1, 1),
+                                ("call", _k2, _p2, -1),
+                            ]
+
+                        elif _strat == "Bear Put Spread":
+                            with _col_sv1:
+                                _k1 = st.selectbox(
+                                    "Buy Put Strike",
+                                    _all_strikes,
+                                    index=min(
+                                        len(_all_strikes) - 1,
+                                        _atm_idx + 1,
+                                    ),
+                                    key=f"k1_{ticker}_{_strat}",
+                                )
+                                _k2 = st.selectbox(
+                                    "Sell Put Strike",
+                                    _all_strikes,
+                                    index=max(0, _atm_idx - 1),
+                                    key=f"k2_{ticker}_{_strat}",
+                                )
+                            _p1 = _get_premium(_puts, _k1, "put")
+                            _p2 = _get_premium(_puts, _k2, "put")
+                            with _col_sv2:
+                                _p1 = st.number_input(
+                                    "Buy Premium ($)",
+                                    value=float(_p1),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p1_{ticker}_{_strat}",
+                                )
+                                _p2 = st.number_input(
+                                    "Sell Premium ($)",
+                                    value=float(_p2),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p2_{ticker}_{_strat}",
+                                )
+                            _legs = [
+                                ("put", _k1, _p1, 1),
+                                ("put", _k2, _p2, -1),
+                            ]
+
+                        elif _strat == "Long Straddle":
+                            with _col_sv1:
+                                _k1 = st.selectbox(
+                                    "ATM Strike",
+                                    _all_strikes,
+                                    index=_atm_idx,
+                                    key=f"k1_{ticker}_{_strat}",
+                                )
+                            _pc = _get_premium(_calls, _k1, "call")
+                            _pp = _get_premium(_puts, _k1, "put")
+                            with _col_sv2:
+                                _pc = st.number_input(
+                                    "Call Premium ($)",
+                                    value=float(_pc),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p1_{ticker}_{_strat}",
+                                )
+                                _pp = st.number_input(
+                                    "Put Premium ($)",
+                                    value=float(_pp),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p2_{ticker}_{_strat}",
+                                )
+                            _legs = [
+                                ("call", _k1, _pc, 1),
+                                ("put", _k1, _pp, 1),
+                            ]
+
+                        elif _strat == "Long Strangle":
+                            with _col_sv1:
+                                _k_call = st.selectbox(
+                                    "OTM Call Strike",
+                                    _all_strikes,
+                                    index=min(
+                                        len(_all_strikes) - 1,
+                                        _atm_idx + 2,
+                                    ),
+                                    key=f"k1_{ticker}_{_strat}",
+                                )
+                                _k_put = st.selectbox(
+                                    "OTM Put Strike",
+                                    _all_strikes,
+                                    index=max(0, _atm_idx - 2),
+                                    key=f"k2_{ticker}_{_strat}",
+                                )
+                            _pc = _get_premium(_calls, _k_call, "call")
+                            _pp = _get_premium(_puts, _k_put, "put")
+                            with _col_sv2:
+                                _pc = st.number_input(
+                                    "Call Premium ($)",
+                                    value=float(_pc),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p1_{ticker}_{_strat}",
+                                )
+                                _pp = st.number_input(
+                                    "Put Premium ($)",
+                                    value=float(_pp),
+                                    min_value=0.01,
+                                    step=0.01,
+                                    key=f"p2_{ticker}_{_strat}",
+                                )
+                            _legs = [
+                                ("call", _k_call, _pc, 1),
+                                ("put", _k_put, _pp, 1),
+                            ]
+
+                        if _legs:
+                            import numpy as _np
+                            import plotly.graph_objects as _go
+
+                            _price_range = _np.linspace(
+                                _ref_spot * 0.7,
+                                _ref_spot * 1.3,
+                                200,
+                            )
+                            _pnl = _np.zeros(len(_price_range))
+
+                            for _typ, _k, _p, _dir in _legs:
+                                if _typ == "call":
+                                    _pnl += (
+                                        _dir
+                                        * (
+                                            _np.maximum(
+                                                _price_range - _k,
+                                                0,
                                             )
-                                            * 100
+                                            - _p
                                         )
-                                    elif _typ == "put":
-                                        _pnl += (
-                                            _dir
-                                            * (
-                                                _np.maximum(
-                                                    _k - _price_range,
-                                                    0,
-                                                )
-                                                - _p
+                                        * 100
+                                    )
+                                elif _typ == "put":
+                                    _pnl += (
+                                        _dir
+                                        * (
+                                            _np.maximum(
+                                                _k - _price_range,
+                                                0,
                                             )
-                                            * 100
+                                            - _p
                                         )
-                                    elif _typ == "stock":
-                                        _pnl += (_price_range - _k) * 100
+                                        * 100
+                                    )
+                                elif _typ == "stock":
+                                    _pnl += (_price_range - _k) * 100
 
-                                _max_profit = float(_np.max(_pnl))
-                                _max_loss = float(_np.min(_pnl))
-                                _breakevens = []
-                                for _i in range(1, len(_pnl)):
-                                    if (_pnl[_i - 1] < 0 and _pnl[_i] >= 0) or (
-                                        _pnl[_i - 1] >= 0 and _pnl[_i] < 0
-                                    ):
-                                        _be = float(_price_range[_i])
-                                        _breakevens.append(round(_be, 2))
+                            _max_profit = float(_np.max(_pnl))
+                            _max_loss = float(_np.min(_pnl))
+                            _breakevens = []
+                            for _i in range(1, len(_pnl)):
+                                if (_pnl[_i - 1] < 0 and _pnl[_i] >= 0) or (
+                                    _pnl[_i - 1] >= 0 and _pnl[_i] < 0
+                                ):
+                                    _be = float(_price_range[_i])
+                                    _breakevens.append(round(_be, 2))
 
+                            _pop = 0.0
+                            try:
+                                _profitable = (_pnl > 0).sum()
+                                _pop = _profitable / len(_pnl) * 100
+                            except Exception:
                                 _pop = 0.0
-                                try:
-                                    _profitable = (_pnl > 0).sum()
-                                    _pop = _profitable / len(_pnl) * 100
-                                except Exception:
-                                    _pop = 0.0
 
-                                _fig = _go.Figure()
-                                _fig.add_trace(
-                                    _go.Scatter(
-                                        x=list(_price_range),
-                                        y=list(_pnl),
-                                        mode="lines",
-                                        line=dict(color="#00D4FF", width=2),
-                                        fill="tozeroy",
-                                        fillcolor="rgba(0,212,255,0.08)",
-                                        name="P&L",
-                                    )
+                            _fig = _go.Figure()
+                            _fig.add_trace(
+                                _go.Scatter(
+                                    x=list(_price_range),
+                                    y=list(_pnl),
+                                    mode="lines",
+                                    line=dict(color="#00D4FF", width=2),
+                                    fill="tozeroy",
+                                    fillcolor="rgba(0,212,255,0.08)",
+                                    name="P&L",
                                 )
-                                _fig.add_hline(
-                                    y=0,
-                                    line_dash="dash",
-                                    line_color="#666666",
-                                    line_width=1,
-                                )
+                            )
+                            _fig.add_hline(
+                                y=0,
+                                line_dash="dash",
+                                line_color="#666666",
+                                line_width=1,
+                            )
+                            _fig.add_vline(
+                                x=_ref_spot,
+                                line_dash="dot",
+                                line_color="#FFD700",
+                                line_width=1,
+                                annotation_text=(
+                                    f"Current ${_ref_spot:.2f}"
+                                ),
+                                annotation_position="top right",
+                            )
+                            for _be in _breakevens[:2]:
                                 _fig.add_vline(
-                                    x=_ref_spot,
-                                    line_dash="dot",
-                                    line_color="#FFD700",
+                                    x=_be,
+                                    line_dash="dash",
+                                    line_color="#FF6B6B",
                                     line_width=1,
-                                    annotation_text=(
-                                        f"Current ${_ref_spot:.2f}"
-                                    ),
-                                    annotation_position="top right",
                                 )
-                                for _be in _breakevens[:2]:
-                                    _fig.add_vline(
-                                        x=_be,
-                                        line_dash="dash",
-                                        line_color="#FF6B6B",
-                                        line_width=1,
-                                    )
 
-                                _fig.update_layout(
-                                    title=(
-                                        f"{_strat} P&L at Expiration "
-                                        f"(per 100 shares)"
-                                    ),
-                                    xaxis_title="Stock Price ($)",
-                                    yaxis_title="P&L ($)",
-                                    template="plotly_dark",
-                                    height=380,
-                                    margin=dict(
-                                        l=40,
-                                        r=20,
-                                        t=40,
-                                        b=40,
-                                    ),
-                                    showlegend=False,
+                            _fig.update_layout(
+                                title=(
+                                    f"{_strat} P&L at Expiration "
+                                    f"(per 100 shares)"
+                                ),
+                                xaxis_title="Stock Price ($)",
+                                yaxis_title="P&L ($)",
+                                template="plotly_dark",
+                                height=380,
+                                margin=dict(
+                                    l=40,
+                                    r=20,
+                                    t=40,
+                                    b=40,
+                                ),
+                                showlegend=False,
+                            )
+                            st.plotly_chart(_fig, width="stretch")
+
+                            _m1, _m2, _m3, _m4 = st.columns(4)
+                            with _m1:
+                                _mp_show = (
+                                    "Unlimited"
+                                    if _max_profit >= 1e6
+                                    else f"${_max_profit:,.0f}"
                                 )
-                                st.plotly_chart(_fig, width="stretch")
+                                st.metric("Max Profit", _mp_show)
+                            with _m2:
+                                st.metric(
+                                    "Max Loss",
+                                    f"${abs(_max_loss):,.0f}",
+                                )
+                            with _m3:
+                                _be_str = (
+                                    " / ".join(
+                                        f"${b:.2f}"
+                                        for b in _breakevens[:2]
+                                    )
+                                    if _breakevens
+                                    else "N/A"
+                                )
+                                st.metric("Breakeven(s)", _be_str)
+                            with _m4:
+                                st.metric(
+                                    "Prob. of Profit",
+                                    f"{_pop:.0f}%"
+                                    if _pop > 0
+                                    else "N/A",
+                                )
+                except Exception as _sve:
+                    st.caption(
+                        f"Strategy visualizer unavailable: {_sve}"
+                    )
 
-                                _m1, _m2, _m3, _m4 = st.columns(4)
-                                with _m1:
-                                    _mp_show = (
-                                        "Unlimited"
-                                        if _max_profit >= 1e6
-                                        else f"${_max_profit:,.0f}"
-                                    )
-                                    st.metric("Max Profit", _mp_show)
-                                with _m2:
-                                    st.metric(
-                                        "Max Loss",
-                                        f"${abs(_max_loss):,.0f}",
-                                    )
-                                with _m3:
-                                    _be_str = (
-                                        " / ".join(
-                                            f"${b:.2f}"
-                                            for b in _breakevens[:2]
-                                        )
-                                        if _breakevens
-                                        else "N/A"
-                                    )
-                                    st.metric("Breakeven(s)", _be_str)
-                                with _m4:
-                                    st.metric(
-                                        "Prob. of Profit",
-                                        f"{_pop:.0f}%"
-                                        if _pop > 0
-                                        else "N/A",
-                                    )
-                    except Exception as _sve:
-                        st.caption(
-                            f"Strategy visualizer unavailable: {_sve}"
-                        )
+                try:
+                    from trading.options.options_forecaster import (
+                        OptionsForecaster,
+                    )
 
-                    try:
-                        from trading.options.options_forecaster import (
-                            OptionsForecaster,
-                        )
-
-                        _of = OptionsForecaster()
-                        _surf = _of.build_volatility_surface(ticker)
-                        _ivm = float(
-                            np.mean(_surf.implied_volatilities)
-                            if len(_surf.implied_volatilities)
-                            else 0.0
-                        )
-                        st.markdown("**Implied volatility surface**")
-                        st.caption(
-                            f"Sampled {len(_surf.strikes)} strikes · "
-                            f"mean IV ≈ {_ivm * 100:.1f}%"
-                        )
-                    except Exception as _ive:
-                        st.caption(f"Options forecasting unavailable: {_ive}")
+                    _of = OptionsForecaster()
+                    _surf = _of.build_volatility_surface(ticker)
+                    _ivm = float(
+                        np.mean(_surf.implied_volatilities)
+                        if len(_surf.implied_volatilities)
+                        else 0.0
+                    )
+                    st.markdown("**Implied volatility surface**")
+                    st.caption(
+                        f"Sampled {len(_surf.strikes)} strikes · "
+                        f"mean IV ≈ {_ivm * 100:.1f}%"
+                    )
+                except Exception as _ive:
+                    st.caption(f"Options forecasting unavailable: {_ive}")
             else:
                 st.info("No options data available for " + ticker)
         except Exception as _oe:

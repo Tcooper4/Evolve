@@ -86,9 +86,15 @@ def render(
                     "(archive module)."
                 )
                 try:
-                    _dh = st.session_state.get("analyze_forecast_data") or get_history(
-                        ticker, period="1y"
-                    )
+                    _ss_data = st.session_state.get(
+                        "analyze_forecast_data")
+                    if (_ss_data is not None
+                            and hasattr(_ss_data, "empty")
+                            and not _ss_data.empty):
+                        _dh = _ss_data
+                    else:
+                        _dh = get_history(
+                            ticker, period="1y")
                     if _dh is None or _dh.empty:
                         st.caption("Load a symbol to build a causal graph.")
                     else:

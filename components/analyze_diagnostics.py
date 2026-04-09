@@ -21,9 +21,19 @@ def render_diagnostics(ticker: str, hist) -> None:
         import numpy as np
         from trading.data.price_cache import get_history
 
-        _dh = st.session_state.get("analyze_forecast_data") or hist or get_history(
-            ticker, period="1y"
-        )
+        _ss_data = st.session_state.get(
+            "analyze_forecast_data")
+        if (_ss_data is not None
+                and hasattr(_ss_data, "empty")
+                and not _ss_data.empty):
+            _dh = _ss_data
+        elif (hist is not None
+                and hasattr(hist, "empty")
+                and not hist.empty):
+            _dh = hist
+        else:
+            _dh = get_history(
+                ticker, period="1y")
         if _dh is None or _dh.empty:
             st.caption("Load price data to see quick diagnostics.")
             return

@@ -284,13 +284,29 @@ def _scanner_table():
     current_filter = st.session_state.scanner_signal_filter
 
     if current_filter == "Score A+":
-        df = df[df.get("ai_grade", "") == "A"] if "ai_grade" in df.columns else df
+        if "ai_grade" in df.columns:
+            df = df[df["ai_grade"] == "A"]
     elif current_filter == "Breakout":
-        df = df[df.get("vs_sma20", 0) > 2] if "vs_sma20" in df.columns else df
+        if "vs_sma20" in df.columns:
+            df = df[
+                pd.to_numeric(
+                    df["vs_sma20"],
+                    errors="coerce"
+                ).fillna(0) > 2
+            ]
     elif current_filter == "Oversold":
-        df = df[df.get("rsi", 50) < 30] if "rsi" in df.columns else df
+        if "rsi" in df.columns:
+            df = df[
+                pd.to_numeric(
+                    df["rsi"],
+                    errors="coerce"
+                ).fillna(50) < 30
+            ]
     elif current_filter == "News Surge":
-        df = df[df.get("news_score", "") == "HOT"] if "news_score" in df.columns else df
+        if "news_score" in df.columns:
+            df = df[
+                df["news_score"] == "HOT"
+            ]
 
     df_display = df.rename(
         columns={

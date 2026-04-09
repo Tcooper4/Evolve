@@ -224,3 +224,5 @@ memory.json
 
 hybrid_performance.json.backup
 hybrid_weights.json.backup
+
+results/portfolio_optimization/

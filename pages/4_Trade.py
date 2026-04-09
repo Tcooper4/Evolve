@@ -536,7 +536,17 @@ with tab_portfolio:
                     "port_opt_method", ""
                 )
 
-                if _cached and "error" not in _cached:
+                _has_cached = False
+                _cached_has_error = False
+                if isinstance(_cached, pd.DataFrame):
+                    _has_cached = not _cached.empty
+                elif isinstance(_cached, dict):
+                    _has_cached = True
+                    _cached_has_error = "error" in _cached
+                elif _cached is not None:
+                    _has_cached = True
+
+                if _has_cached and not _cached_has_error:
                     st.markdown("**Optimization Results**")
 
                     if _cached_method.startswith("Compare"):
@@ -624,7 +634,7 @@ with tab_portfolio:
                             except Exception:
                                 pass
 
-                elif _cached and "error" in _cached:
+                elif _has_cached and _cached_has_error:
                     st.warning(
                         f"Optimization failed: {_cached['error']}"
                     )
@@ -988,3 +998,6 @@ try:
     render_page_assistant("Trade")
 except Exception:
     pass
+
+
+

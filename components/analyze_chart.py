@@ -255,7 +255,7 @@ def render_price_chart(
                                 dict(bounds=["sat", "mon"]),
                                 dict(bounds=[16, 9.5], pattern="hour"),
                             ]
-                            if period == "1d"
+                            if period in ("1d", "5d")
                             else [dict(bounds=["sat", "mon"])]
                         ),
                     ),
@@ -269,7 +269,7 @@ def render_price_chart(
                                 dict(bounds=["sat", "mon"]),
                                 dict(bounds=[16, 9.5], pattern="hour"),
                             ]
-                            if period == "1d"
+                            if period in ("1d", "5d")
                             else [dict(bounds=["sat", "mon"])]
                         ),
                     ),
@@ -388,7 +388,7 @@ def render_price_chart(
                                 dict(bounds=["sat", "mon"]),
                                 dict(bounds=[16, 9.5], pattern="hour"),
                             ]
-                            if period == "1d"
+                            if period in ("1d", "5d")
                             else [dict(bounds=["sat", "mon"])]
                         ),
                     ),
@@ -656,6 +656,19 @@ def render_price_chart(
                     _price_thresh = st.session_state.get(
                         "news_price_threshold", 0.5
                     )
+                    # Scale threshold by period —
+                    # intraday bars rarely move 0.5%
+                    _period_thresh = {
+                        "1d": 0.15,
+                        "5d": 0.25,
+                        "1mo": 0.5,
+                        "3mo": 1.0,
+                        "6mo": 1.5,
+                        "1y": 2.0,
+                        "5y": 3.0,
+                    }
+                    _price_thresh = _period_thresh.get(
+                        period, _price_thresh)
                     _plotted = 0
                     if _news_items and not hist.empty:
                         from datetime import datetime
@@ -773,12 +786,17 @@ def render_price_chart(
                                 else "#ff9800"
                             )
 
+                            _ann_text = (
+                                _title[:30] + "…"
+                                if len(_title) > 30
+                                else _title
+                            )
                             _vline_kwargs = dict(
                                 x=_pub_dt,
                                 line_dash="dot",
                                 line_color=_ann_color,
                                 line_width=1,
-                                annotation_text="N",
+                                annotation_text=_ann_text,
                                 annotation_position="top",
                                 annotation_font_color=_ann_color,
                                 annotation_font_size=10,
