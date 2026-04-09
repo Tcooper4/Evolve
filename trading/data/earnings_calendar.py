@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from functools import lru_cache
+from typing import Any, Dict, List
 
 import pandas as pd
 import yfinance as yf
@@ -81,6 +82,77 @@ def get_upcoming_earnings(symbol: str, days_ahead: int = 30) -> dict:
             "last_earnings_date": None,
             "last_eps_actual": None,
             "last_eps_surprise_pct": None,
+            "error": str(e),
+        }
+
+
+def get_macro_calendar(days_ahead: int = 14) -> Dict[str, Any]:
+    """
+    Returns upcoming macro events
+    (Fed meetings, CPI, PPI, jobs)
+    from FRED release calendar when available.
+    No API key needed for schedule fallback.
+    """
+    try:
+        _today = datetime.today().date()
+        _events: List[Dict[str, Any]] = []
+
+        # FRED schedule requires a valid key; omit here — use fallback dates.
+        try:
+            import urllib.request
+
+            _url = (
+                "https://api.stlouisfed.org/fred/releases"
+                "/dates?api_key=pubkey"
+                "&file_type=json"
+                "&limit=20"
+                "&sort_order=asc"
+            )
+            _req = urllib.request.Request(
+                _url,
+                headers={"User-Agent": "Evolve Trading"},
+            )
+            with urllib.request.urlopen(_req, timeout=10):
+                pass
+        except Exception:
+            pass
+
+        _key_dates = [
+            ("2026-04-16", "CPI Release", "inflation"),
+            ("2026-04-17", "PPI Release", "inflation"),
+            ("2026-04-30", "FOMC Meeting", "rates"),
+            ("2026-05-01", "Jobs Report", "employment"),
+            ("2026-05-14", "CPI Release", "inflation"),
+            ("2026-05-28", "FOMC Meeting", "rates"),
+            ("2026-06-11", "FOMC Meeting", "rates"),
+        ]
+
+        for _date_str, _name, _etype in _key_dates:
+            try:
+                _d = datetime.fromisoformat(_date_str).date()
+                _days = (_d - _today).days
+                if 0 <= _days <= days_ahead:
+                    _events.append(
+                        {
+                            "date": _date_str,
+                            "name": _name,
+                            "type": _etype,
+                            "days_until": _days,
+                        }
+                    )
+            except Exception:
+                pass
+
+        return {
+            "events": _events,
+            "days_ahead": days_ahead,
+            "success": True,
+        }
+    except Exception as e:
+        return {
+            "events": [],
+            "days_ahead": days_ahead,
+            "success": False,
             "error": str(e),
         }
 

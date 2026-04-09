@@ -39,6 +39,7 @@ SIGNAL_SOURCES = [
     "earnings_calendar",
     "insider_flow",
     "analyst_signals",
+    "congressional_trading",
     "sec_edgar",
     "factor_model",
     "ml_score",
@@ -317,6 +318,24 @@ def _fetch_analyst_safe(
         return get_analyst_signals(symbol)
     except Exception as e:
         logger.debug("analyst_signals AI score fetch: %s", e)
+        return {
+            "signal": "NEUTRAL",
+            "signal_strength": 5.0,
+            "success": False,
+        }
+
+
+def _fetch_congressional_safe(
+    symbol: str, _hist: Optional[pd.DataFrame] = None
+) -> Dict[str, Any]:
+    try:
+        from trading.data.congressional_trading import (
+            get_congressional_trades,
+        )
+
+        return get_congressional_trades(symbol)
+    except Exception as e:
+        logger.debug("congressional AI score fetch: %s", e)
         return {
             "signal": "NEUTRAL",
             "signal_strength": 5.0,
@@ -666,7 +685,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
 
         # ── Technical / momentum + I/O signals (parallel) ─────────
         _parallel_results: Dict[str, Any] = {}
-        with ThreadPoolExecutor(max_workers=7) as ex:
+        with ThreadPoolExecutor(max_workers=8) as ex:
             _futures = {
                 ex.submit(
                     _bundle_technical, symbol, hist, close, last_price
@@ -679,6 +698,9 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                 ex.submit(_fetch_social_sentiment_safe, symbol): "social",
                 ex.submit(_fetch_short_and_sec_safe, symbol): "short_sec",
                 ex.submit(_fetch_analyst_safe, symbol, hist): "analyst",
+                ex.submit(
+                    _fetch_congressional_safe, symbol, hist
+                ): "congressional",
             }
             _done, _not_done = wait(
                 _futures.keys(),
@@ -1001,6 +1023,45 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
         else:
             _signal_status["analyst_signals"] = "fallback"
 
+        _cong = _parallel_results.get("congressional")
+        if not isinstance(_cong, dict):
+            _cong = {}
+        if _cong.get("success") and _cong.get("total_trades", 0) > 0:
+            _cong_sig = _cong.get("signal", "NEUTRAL")
+            _cong_b = _cong.get("buys", 0)
+            _cong_s = _cong.get("sells", 0)
+            _signal_status["congressional_trading"] = "real"
+            if _cong_sig == "BUY":
+                sentiment_score = min(10.0, sentiment_score + 0.6)
+                signals.append(
+                    {
+                        "name": "Congressional",
+                        "value": "Buying",
+                        "impact": "positive",
+                        "description": (
+                            f"{_cong_b} congressional"
+                            f" buys vs {_cong_s} "
+                            f"sells recently"
+                        ),
+                    }
+                )
+            elif _cong_sig == "SELL":
+                sentiment_score = max(0.0, sentiment_score - 0.6)
+                signals.append(
+                    {
+                        "name": "Congressional",
+                        "value": "Selling",
+                        "impact": "negative",
+                        "description": (
+                            f"{_cong_s} congressional"
+                            f" sells vs {_cong_b} "
+                            f"buys recently"
+                        ),
+                    }
+                )
+        else:
+            _signal_status["congressional_trading"] = "fallback"
+
         try:
             if _sec is not None:
                 _sec_sent = float(_sec.get("sec_sentiment", 0.0))
@@ -1084,6 +1145,31 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                 )
                 earnings_near = True
                 earnings_days_until = days_until
+
+            try:
+                from trading.data.earnings_calendar import (
+                    get_macro_calendar,
+                )
+
+                _mac = get_macro_calendar(days_ahead=7)
+                for _ev in _mac.get("events", []):
+                    if _ev.get("days_until", 99) <= 3:
+                        signals.append(
+                            {
+                                "name": "Macro Event",
+                                "value": _ev["name"],
+                                "impact": "neutral",
+                                "description": (
+                                    f"In "
+                                    f"{_ev['days_until']}"
+                                    f" days — forecasts "
+                                    f"may be less "
+                                    f"reliable"
+                                ),
+                            }
+                        )
+            except Exception:
+                pass
 
             # Valuation overlay vs sector-average P/E
             try:
