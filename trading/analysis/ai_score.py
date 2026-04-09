@@ -35,6 +35,7 @@ SIGNAL_SOURCES = [
     "chart_patterns",
     "social_sentiment",
     "macro_factors",
+    "sector_rotation",
     "earnings_calendar",
     "insider_flow",
     "analyst_signals",
@@ -150,6 +151,75 @@ SECTOR_PE = {
     "Materials": 18.0,
     "Real Estate": 35.0,
     "Communication Services": 20.0,
+}
+
+SECTOR_VALUATION_MEDIANS = {
+    "Technology": {
+        "pe": 28,
+        "forward_pe": 24,
+        "pb": 8,
+        "ev_ebitda": 22,
+    },
+    "Healthcare": {
+        "pe": 22,
+        "forward_pe": 19,
+        "pb": 4,
+        "ev_ebitda": 16,
+    },
+    "Financials": {
+        "pe": 14,
+        "forward_pe": 12,
+        "pb": 1.5,
+        "ev_ebitda": 12,
+    },
+    "Consumer Discretionary": {
+        "pe": 24,
+        "forward_pe": 20,
+        "pb": 5,
+        "ev_ebitda": 18,
+    },
+    "Consumer Staples": {
+        "pe": 20,
+        "forward_pe": 18,
+        "pb": 4,
+        "ev_ebitda": 14,
+    },
+    "Industrials": {
+        "pe": 20,
+        "forward_pe": 17,
+        "pb": 3.5,
+        "ev_ebitda": 14,
+    },
+    "Energy": {
+        "pe": 12,
+        "forward_pe": 10,
+        "pb": 2,
+        "ev_ebitda": 8,
+    },
+    "Materials": {
+        "pe": 16,
+        "forward_pe": 14,
+        "pb": 2.5,
+        "ev_ebitda": 10,
+    },
+    "Real Estate": {
+        "pe": 35,
+        "forward_pe": 28,
+        "pb": 2,
+        "ev_ebitda": 20,
+    },
+    "Utilities": {
+        "pe": 18,
+        "forward_pe": 16,
+        "pb": 1.8,
+        "ev_ebitda": 12,
+    },
+    "Communication Services": {
+        "pe": 20,
+        "forward_pe": 17,
+        "pb": 3,
+        "ev_ebitda": 14,
+    },
 }
 
 SECTOR_RISK_FLAGS = {
@@ -1055,6 +1125,62 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                             ),
                         }
                     )
+
+                try:
+                    _fwd_pe = _info.get("forwardPE")
+                    _pb = _info.get("priceToBook")
+                    _ev_ebitda = _info.get("enterpriseToEbitda")
+                    _med = SECTOR_VALUATION_MEDIANS.get(sector, {})
+                    _overvalued_count = 0
+                    _undervalued_count = 0
+
+                    for _metric, _val, _key in [
+                        ("Forward P/E", _fwd_pe, "forward_pe"),
+                        ("P/B", _pb, "pb"),
+                        ("EV/EBITDA", _ev_ebitda, "ev_ebitda"),
+                    ]:
+                        if _val and _key in _med:
+                            _med_val = _med[_key]
+                            if float(_val) > _med_val * 1.4:
+                                _overvalued_count += 1
+                            elif float(_val) < _med_val * 0.7:
+                                _undervalued_count += 1
+
+                    if _overvalued_count >= 2:
+                        fundamental_score = max(
+                            0.0,
+                            fundamental_score - 0.8,
+                        )
+                        signals.append(
+                            {
+                                "name": "Valuation",
+                                "value": "Overvalued",
+                                "impact": "negative",
+                                "description": (
+                                    f"Trading at premium on {_overvalued_count}"
+                                    f"/3 valuation metrics vs {sector} sector"
+                                ),
+                            }
+                        )
+                    elif _undervalued_count >= 2:
+                        fundamental_score = min(
+                            10.0,
+                            fundamental_score + 0.8,
+                        )
+                        signals.append(
+                            {
+                                "name": "Valuation",
+                                "value": "Undervalued",
+                                "impact": "positive",
+                                "description": (
+                                    f"Attractive on {_undervalued_count}"
+                                    f"/3 valuation metrics vs {sector} sector"
+                                ),
+                            }
+                        )
+                except Exception:
+                    pass
+
             except Exception:
                 pass
 
@@ -1091,6 +1217,52 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                     signals.append(_msig)
             except Exception:
                 _signal_status["macro_factors"] = "unavailable"
+
+            # Sector rotation context
+            try:
+                from trading.analysis.sector_rotation import (
+                    get_sector_signal_for_ticker,
+                )
+
+                _sr = get_sector_signal_for_ticker(sector)
+                if _sr and _sr.get("trend"):
+                    _sr_score = float(_sr.get("composite_score", 0))
+                    if _sr_score > 3:
+                        fundamental_score = min(
+                            10.0,
+                            fundamental_score + 0.5,
+                        )
+                        _signal_status["sector_rotation"] = "real"
+                        signals.append(
+                            {
+                                "name": "Sector Momentum",
+                                "value": "Outperforming",
+                                "impact": "positive",
+                                "description": (
+                                    f"{sector} sector outperforming SPY "
+                                    f"by {_sr_score:.1f}% composite"
+                                ),
+                            }
+                        )
+                    elif _sr_score < -3:
+                        fundamental_score = max(
+                            0.0,
+                            fundamental_score - 0.5,
+                        )
+                        _signal_status["sector_rotation"] = "real"
+                        signals.append(
+                            {
+                                "name": "Sector Momentum",
+                                "value": "Underperforming",
+                                "impact": "negative",
+                                "description": (
+                                    f"{sector} sector underperforming SPY "
+                                    f"by {abs(_sr_score):.1f}% composite"
+                                ),
+                            }
+                        )
+            except Exception:
+                pass
 
             try:
                 from trading.analysis.factor_model import FactorModel

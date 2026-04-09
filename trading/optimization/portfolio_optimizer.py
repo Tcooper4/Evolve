@@ -143,18 +143,28 @@ class PortfolioOptimizer:
             problem.solve()
 
             if problem.status == "optimal":
-                weights = w.value
-                portfolio_return = mu @ weights
-                portfolio_vol = np.sqrt(weights @ Sigma @ weights)
+                # Safely extract weights array (w.value can be ndarray, None, or odd types)
+                _w = w.value
+                if _w is None:
+                    raise ValueError("Optimizer returned no solution")
+                _w = np.array(_w, dtype=float).ravel()
+                if len(_w) != len(returns.columns):
+                    raise ValueError(
+                        f"Weight count {len(_w)} != asset count {len(returns.columns)}"
+                    )
+                weights_dict = dict(zip(returns.columns, _w.tolist()))
+
+                portfolio_return = mu @ _w
+                portfolio_vol = np.sqrt(_w @ Sigma @ _w)
                 sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
 
                 # Calculate asset contributions
                 asset_contributions = self._calculate_asset_contributions(
-                    weights, mu, Sigma
+                    _w, mu, Sigma
                 )
 
                 result = {
-                    "weights": dict(zip(returns.columns, weights)),
+                    "weights": weights_dict,
                     "portfolio_return": portfolio_return,
                     "portfolio_volatility": portfolio_vol,
                     "sharpe_ratio": sharpe_ratio,
