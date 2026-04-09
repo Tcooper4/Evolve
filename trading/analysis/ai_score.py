@@ -247,9 +247,12 @@ def _apply_regime_tilt(
                     + reduce fundamental
       NEUTRAL     → no tilt
 
-    Tilt is capped at ±20% of each
-    weight to prevent extreme
-    reweighting.
+    Each paired tilt (e.g. fundamental
+    vs momentum) uses at most 0.08
+    absolute weight shift in one step;
+    combined adjustments on the same
+    pair are merged so the cap is not
+    exceeded cumulatively.
     """
     _w = copy.deepcopy(weights)
     _label = (regime_label or "").upper()
@@ -290,13 +293,14 @@ def _apply_regime_tilt(
         "HIGH",
         "STRESS",
     ):
-        _tilt(_w, "fundamental", "momentum", 0.06)
+        _extra = 0.0
         if vix_level > 25:
             _extra = min(
                 0.04,
                 (vix_level - 25) / 100,
             )
-            _tilt(_w, "fundamental", "momentum", _extra)
+        _fm_amount = min(0.06 + _extra, _MAX_TILT)
+        _tilt(_w, "fundamental", "momentum", _fm_amount)
 
     elif _label == "STAGFLATION":
         _tilt(_w, "fundamental", "momentum", 0.05)
@@ -523,13 +527,23 @@ def _fetch_options_flow_safe(symbol: str) -> Dict[str, Any]:
 
 
 def _fetch_insider_flow_safe(symbol: str) -> Dict[str, Any]:
+    out: Dict[str, Any] = {
+        "flow": {},
+        "insider_cluster": None,
+    }
     try:
         from trading.data.insider_flow import get_insider_flow
 
-        return get_insider_flow(symbol)
+        out["flow"] = get_insider_flow(symbol)
     except Exception as e:
         logger.debug("insider_flow AI score fetch: %s", e)
-        return {}
+    try:
+        from trading.data.insider_flow import get_insider_cluster_signal
+
+        out["insider_cluster"] = get_insider_cluster_signal(symbol)
+    except Exception as _ce:
+        logger.debug("insider_cluster fetch: %s", _ce)
+    return out
 
 
 def _fetch_social_sentiment_safe(symbol: str) -> Optional[Dict[str, Any]]:
@@ -1021,6 +1035,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                             "HIGH_VOL",
                             "HIGH",
                             "STRESS",
+                            "STAGFLATION",
                         )
                         else "neutral"
                     ),
@@ -1273,14 +1288,21 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
         insider = _parallel_results.get("insider")
         if not isinstance(insider, dict):
             insider = {}
+        _insider_flow = (
+            insider.get("flow")
+            if isinstance(insider.get("flow"), dict)
+            else insider
+        )
+        if not isinstance(_insider_flow, dict):
+            _insider_flow = {}
         try:
-            if insider.get("error"):
+            if _insider_flow.get("error"):
                 data_quality["insider"] = "unavailable"
                 _signal_status["insider_flow"] = "unavailable"
             else:
                 data_quality["insider"] = "real"
                 _signal_status["insider_flow"] = "real"
-            signal = insider.get("signal", "NO_ACTIVITY")
+            signal = _insider_flow.get("signal", "NO_ACTIVITY")
             insider_score = {
                 "INSIDER_BUYING": 8.5,
                 "MIXED": 5.5,
@@ -1288,8 +1310,8 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                 "INSIDER_SELLING": 2.5,
             }.get(signal, 5.0)
             sentiment_score = (sentiment_score + insider_score) / 2
-            _buy = insider.get("buy_count", 0) or 0
-            _sell = insider.get("sell_count", 0) or 0
+            _buy = _insider_flow.get("buy_count", 0) or 0
+            _sell = _insider_flow.get("sell_count", 0) or 0
             _insider_val = (
                 "No Activity"
                 if (_buy == 0 and _sell == 0)
@@ -1309,6 +1331,67 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
             )
         except Exception:
             pass
+        try:
+            _cluster = insider.get("insider_cluster") or {}
+            if _cluster.get("success"):
+                _csig = _cluster.get("cluster_signal", "NEUTRAL")
+                _cbuys = _cluster.get("cluster_buy_count", 0)
+                _buyers = _cluster.get("recent_buyers", [])
+
+                if _csig == "STRONG_BUY":
+                    sentiment_score = min(10.0, sentiment_score + 1.2)
+                    signals.append(
+                        {
+                            "name": "Insider Cluster",
+                            "value": f"{_cbuys} insiders buying",
+                            "impact": "positive",
+                            "description": (
+                                f"Strong cluster: {_cbuys} insiders "
+                                f"bought in same 30d window — "
+                                "historically predicts +4-6% abnormal return"
+                                + (
+                                    f" ({', '.join(_buyers[:2])})"
+                                    if _buyers
+                                    else ""
+                                )
+                            ),
+                        }
+                    )
+                elif _csig == "BUY":
+                    sentiment_score = min(10.0, sentiment_score + 0.6)
+                    signals.append(
+                        {
+                            "name": "Insider Cluster",
+                            "value": f"{_cbuys} insiders buying",
+                            "impact": "positive",
+                            "description": (
+                                f"{_cbuys} insiders bought in same "
+                                "30-day window"
+                                + (
+                                    f" ({', '.join(_buyers[:2])})"
+                                    if _buyers
+                                    else ""
+                                )
+                            ),
+                        }
+                    )
+                elif _csig == "SELL":
+                    _csells = _cluster.get("cluster_sell_count", 0)
+                    sentiment_score = max(0.0, sentiment_score - 0.5)
+                    signals.append(
+                        {
+                            "name": "Insider Cluster",
+                            "value": f"{_csells} insiders selling",
+                            "impact": "negative",
+                            "description": (
+                                f"{_csells} insiders sold in same "
+                                "30-day window (note: sells are less "
+                                "predictive than cluster buys)"
+                            ),
+                        }
+                    )
+        except Exception as _ice:
+            logger.debug("insider cluster merge skipped: %s", _ice)
 
         social = _parallel_results.get("social")
         try:

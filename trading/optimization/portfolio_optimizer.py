@@ -357,6 +357,148 @@ class PortfolioOptimizer:
             logger.error(f"Error in risk parity optimization: {e}")
             return self._simple_risk_parity(returns, target_risk, risk_measure)
 
+    def hierarchical_risk_parity(
+        self,
+        returns: pd.DataFrame,
+        method: str = "ward",
+    ) -> Dict[str, Any]:
+        """
+        Hierarchical Risk Parity (HRP).
+
+        Lopez de Prado (2016). Does not
+        require matrix inversion —
+        more robust than mean-variance
+        with small samples or correlated
+        assets.
+
+        Algorithm:
+        1. Compute correlation matrix
+        2. Convert to distance matrix
+        3. Hierarchical clustering
+           (Ward linkage by default)
+        4. Quasi-diagonalization
+           (reorder assets by cluster)
+        5. Recursive bisection to
+           allocate weights
+
+        Args:
+            returns: DataFrame of asset
+                returns (rows=dates,
+                cols=symbols)
+            method: linkage method
+                ('ward', 'single',
+                'complete', 'average')
+
+        Returns:
+            weights: Dict[symbol, weight]
+            expected_return: float
+            expected_volatility: float
+            sharpe_ratio: float
+            method: "hrp"
+        """
+        try:
+            from scipy.cluster.hierarchy import leaves_list, linkage
+            from scipy.spatial.distance import squareform
+
+            if returns is None or returns.empty:
+                return {
+                    "error": "No returns data",
+                    "method": "hrp",
+                }
+
+            returns = returns.dropna(axis=1, how="all")
+            returns = returns.dropna(axis=0, how="any")
+
+            if len(returns) < 10 or len(returns.columns) < 2:
+                return self._simple_risk_parity(
+                    returns, None, "volatility"
+                )
+
+            _n = len(returns.columns)
+            _syms = list(returns.columns)
+
+            _corr = returns.corr().fillna(0)
+            _cov = returns.cov().fillna(0)
+
+            _dist = np.sqrt(0.5 * (1 - _corr.values))
+            np.fill_diagonal(_dist, 0)
+            _dist = np.clip(_dist, 0, None)
+
+            _condensed = squareform(_dist, checks=False)
+            _link = linkage(_condensed, method=method)
+
+            _order = leaves_list(_link)
+            _ordered_syms = [_syms[i] for i in _order]
+
+            def _get_cluster_var(
+                cov: pd.DataFrame, cluster_items: list
+            ) -> float:
+                _sub = cov.loc[cluster_items, cluster_items]
+                _ivol = 1.0 / np.sqrt(np.diag(_sub.values))
+                _ivol /= _ivol.sum()
+                return float(_ivol @ _sub.values @ _ivol)
+
+            def _recursive_bisect(
+                cov: pd.DataFrame, items: list
+            ) -> Dict[str, float]:
+                if len(items) == 1:
+                    return {items[0]: 1.0}
+                mid = len(items) // 2
+                left = items[:mid]
+                right = items[mid:]
+                _lv = _get_cluster_var(cov, left)
+                _rv = _get_cluster_var(cov, right)
+                _alpha = 1.0 - (_lv / (_lv + _rv))
+                _lw = _recursive_bisect(cov, left)
+                _rw = _recursive_bisect(cov, right)
+                return {
+                    k: v * _alpha for k, v in _lw.items()
+                } | {
+                    k: v * (1 - _alpha) for k, v in _rw.items()
+                }
+
+            _weights_raw = _recursive_bisect(_cov, _ordered_syms)
+
+            _total = sum(_weights_raw.values())
+            _weights = {
+                k: round(v / _total, 4) for k, v in _weights_raw.items()
+            }
+
+            _w_arr = np.array([_weights.get(s, 0) for s in _syms])
+            _ann = 252
+            _port_ret = float(returns.mean().values @ _w_arr * _ann)
+            _port_vol = float(
+                np.sqrt(_w_arr @ _cov.values @ _w_arr * _ann)
+            )
+            _sharpe = (
+                (_port_ret - self.risk_free_rate) / _port_vol
+                if _port_vol > 0
+                else 0.0
+            )
+
+            result = {
+                "weights": _weights,
+                "portfolio_return": float(returns.mean().values @ _w_arr),
+                "portfolio_volatility": float(
+                    np.sqrt(_w_arr @ _cov.values @ _w_arr)
+                ),
+                "expected_return": round(_port_ret, 4),
+                "expected_volatility": round(_port_vol, 4),
+                "sharpe_ratio": round(_sharpe, 3),
+                "method": "hrp",
+                "n_assets": _n,
+                "linkage_method": method,
+            }
+            self._save_optimization_results("hrp", result)
+            return result
+
+        except Exception as e:
+            logger.error("HRP optimization failed: %s", e)
+            return {
+                "error": str(e),
+                "method": "hrp",
+            }
+
     def enhanced_black_litterman_optimization(
         self,
         returns: pd.DataFrame,

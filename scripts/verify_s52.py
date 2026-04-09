@@ -1,56 +1,109 @@
-﻿from pathlib import Path
+﻿import ast, subprocess, sys
 
-def read(p):
-    try:
-        return Path(p).read_text(encoding="utf-8", errors="replace")
-    except FileNotFoundError:
-        return ""
+python = r".\evolve_venv\Scripts\python.exe"
+print("=== Session 52 Verification ===\n")
+PASS, FAIL = [], []
+def ok(msg):
+    PASS.append(msg)
+    print(f"OK    {msg}")
+def fail(msg):
+    FAIL.append(msg)
+    print(f"FAIL  {msg}")
 
-results = []
+# insider_flow.py
+t = open(
+    "trading/data/insider_flow.py",
+    encoding="utf-8",
+    errors="replace").read()
+try:
+    ast.parse(t)
+    ok("Syntax valid: insider_flow.py")
+except SyntaxError as e:
+    fail(f"Syntax error: {e}")
 
-# Change 1 - transformer fixes
-ts = read("trading/models/advanced/transformer/time_series_transformer.py")
-results.append(("Transformer col_map_iter in forecast loop", "_col_map_iter" in ts or "_resolved_tgt" in ts))
-results.append(("Transformer norm stats shape validation", "shape mismatch" in ts and "ignoring cached stats" in ts))
-results.append(("Transformer norm stats load failure logged", "will refit from scratch" in ts or "norm stats load failed" in ts))
-results.append(("Transformer normalization shape guard", "X_mean.shape[-1] == X.shape[-1]" in ts or "refitting stats" in ts))
+for name, pat in [
+    ("get_insider_cluster_signal",
+     "get_insider_cluster_signal"),
+    ("Cluster window logic",
+     "cluster_window_days"),
+    ("Unique buyer detection",
+     "unique"),
+    ("STRONG_BUY signal",
+     "STRONG_BUY"),
+    ("Neutral fallback",
+     "_neutral_cluster"),
+]:
+    if pat in t:
+        ok(f"{name} present")
+    else:
+        fail(f"{name} missing")
 
-# Change 2 - transformer_model.py
-tm = read("trading/models/transformer_model.py")
-results.append(("transformer_model default lowercase close", 'target_column", "close"' in tm))
-results.append(("transformer_model _col_map in _prepare_features", "_col_map" in tm))
-results.append(("transformer_model no hardcoded Close fallback", '"Close"' not in tm or "_col_map" in tm))
+# ai_score.py
+t2 = open(
+    "trading/analysis/ai_score.py",
+    encoding="utf-8",
+    errors="replace").read()
+try:
+    ast.parse(t2)
+    ok("Syntax valid: ai_score.py")
+except SyntaxError as e:
+    fail(f"Syntax error: {e}")
 
-# Change 3 - _col_map in models
-models = [
-    "trading/models/xgboost_model.py",
-    "trading/models/garch_model.py",
-    "trading/models/prophet_model.py",
-    "trading/models/ensemble_model.py",
-    "trading/models/ridge_model.py",
-    "trading/models/tcn_model.py",
-    "trading/models/catboost_model.py",
-    "trading/models/arima_model.py",
-]
-for m in models:
-    src = read(m)
-    results.append((f"{Path(m).name} _col_map added", "_col_map" in src))
+for name, pat in [
+    ("Cluster fetch in worker",
+     "get_insider_cluster_signal"),
+    ("Cluster merge",
+     "insider_cluster"),
+    ("Cluster signal append",
+     "Insider Cluster"),
+    ("STRONG_BUY merge",
+     "STRONG_BUY"),
+]:
+    if pat in t2:
+        ok(f"{name} present")
+    else:
+        fail(f"{name} missing")
 
-# Change 4 - remaining dataframe calls
-analyze = read("pages/2_Analyze.py")
-results.append(("targets_df normalized", "normalize_for_display(targets_df)" in analyze))
-results.append(("_c_display normalized", "normalize_for_display(_c_display)" in analyze))
-results.append(("_p_display normalized", "normalize_for_display(_p_display)" in analyze))
-
-# Change 5 - silent exceptions fixed
-results.append(("history load failure logged", "history load failed" in analyze or "Could not load price history" in analyze))
-results.append(("no bare except pass in analyze", analyze.count("except Exception:\n        pass") == 0))
-
-# Change 6 - session state namespaced
-results.append(("analyze_symbol key present", "analyze_symbol" in analyze))
-results.append(("analyze_forecast_data key present", "analyze_forecast_data" in analyze))
+# Functional test
+print("\n--- Cluster neutral test ---")
+_r = subprocess.run(
+    [python, "-c",
+     "import sys; sys.path.insert(0,'.');"
+     "from trading.data.insider_flow"
+     " import _neutral_cluster,"
+     " get_insider_cluster_signal;"
+     "r = _neutral_cluster('TEST');"
+     "assert r['success'] == False;"
+     "assert r['cluster_signal'] =="
+     " 'NEUTRAL';"
+     "assert 'cluster_buy_count' in r;"
+     "assert 'recent_buyers' in r;"
+     "print('Neutral cluster OK')"],
+    capture_output=True, text=True,
+    timeout=10)
+print(_r.stdout[:200])
+if _r.returncode == 0:
+    ok("Cluster neutral functional")
+else:
+    fail(f"Error: {_r.stderr[:200]}")
 
 print()
-for name, passed in results:
-    print(f"{'PASS' if passed else 'FAIL'}  {name}")
-print()
+print("--- Smoke test ---")
+result = subprocess.run(
+    [python, "tests/model_smoke_test.py"],
+    capture_output=True, text=True)
+print((result.stdout + result.stderr)
+      [-600:])
+if result.returncode == 0:
+    ok("Smoke test passed")
+else:
+    fail("Smoke test FAILED")
+
+print(f"\n=== {len(PASS)} passed, "
+      f"{len(FAIL)} failed ===")
+if FAIL:
+    sys.exit(1)
+else:
+    print("All checks passed. "
+          "Ready to commit v4.4.5.")
+    sys.exit(0)

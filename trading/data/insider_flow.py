@@ -133,3 +133,145 @@ def get_insider_flow(symbol: str, days_back: int = 90) -> dict:
             "error": str(e),
         }
 
+
+def get_insider_cluster_signal(
+    symbol: str,
+    days_back: int = 90,
+    cluster_window_days: int = 30,
+) -> dict:
+    """
+    Detects insider cluster buying —
+    multiple insiders buying in the
+    same time window.
+
+    Academic basis: Seyhun (1988) and
+    Lakonishok & Lee (2001) show cluster
+    insider buying (3+ insiders, same
+    month) predicts 4-6% abnormal
+    returns over 6 months vs ~1% for
+    single insider buys.
+    """
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        return _neutral_cluster(sym)
+
+    try:
+        t = yf.Ticker(sym)
+        insiders = t.insider_transactions
+        if insiders is None or getattr(insiders, "empty", True):
+            return _neutral_cluster(sym)
+
+        try:
+            if "Start Date" in insiders.columns:
+                insiders = insiders.copy()
+                insiders["_date"] = pd.to_datetime(
+                    insiders["Start Date"],
+                    errors="coerce",
+                    utc=True,
+                ).dt.tz_localize(None)
+            else:
+                idx = insiders.index
+                if not isinstance(idx, pd.DatetimeIndex):
+                    insiders.index = pd.to_datetime(
+                        idx,
+                        errors="coerce",
+                        utc=True,
+                    )
+                if getattr(insiders.index, "tz", None):
+                    insiders.index = insiders.index.tz_convert(None)
+                insiders["_date"] = insiders.index
+        except Exception:
+            return _neutral_cluster(sym)
+
+        _cutoff = datetime.utcnow() - timedelta(days=days_back)
+        _recent = insiders[insiders["_date"] >= _cutoff].copy()
+
+        if _recent.empty:
+            result = _neutral_cluster(sym)
+            result["success"] = True
+            return result
+
+        def _is_buy(row) -> bool:
+            _txt = str(row.get("Transaction", "") or "").lower()
+            _text = str(row.get("Text", "") or "").lower()
+            return (
+                "purchase" in _txt
+                or "buy" in _txt
+                or "acquisition" in _txt
+                or "purchase" in _text
+            )
+
+        def _is_sell(row) -> bool:
+            _txt = str(row.get("Transaction", "") or "").lower()
+            return "sale" in _txt or "sell" in _txt
+
+        _recent["_is_buy"] = _recent.apply(_is_buy, axis=1)
+        _recent["_is_sell"] = _recent.apply(_is_sell, axis=1)
+        _recent["_insider"] = _recent.get("Insider", _recent.index).astype(str)
+
+        _max_cluster_buys = 0
+        _max_cluster_sells = 0
+        _best_buy_window_buyers = []
+        _best_sell_window_sellers = []
+
+        _dates = sorted(_recent["_date"].dropna())
+        for _start in _dates:
+            _end = _start + timedelta(days=cluster_window_days)
+            _window = _recent[
+                (_recent["_date"] >= _start) & (_recent["_date"] < _end)
+            ]
+            _buyers = _window[_window["_is_buy"]]["_insider"].unique().tolist()
+            _sellers = _window[_window["_is_sell"]]["_insider"].unique().tolist()
+
+            if len(_buyers) > _max_cluster_buys:
+                _max_cluster_buys = len(_buyers)
+                _best_buy_window_buyers = _buyers
+
+            if len(_sellers) > _max_cluster_sells:
+                _max_cluster_sells = len(_sellers)
+                _best_sell_window_sellers = _sellers
+
+        _signal = "NEUTRAL"
+        _strength = 5.0
+
+        if _max_cluster_buys >= 3:
+            _signal = "STRONG_BUY"
+            _strength = min(9.0, 6.0 + _max_cluster_buys * 0.5)
+        elif _max_cluster_buys == 2:
+            _signal = "BUY"
+            _strength = 7.0
+        elif _max_cluster_sells >= 3:
+            _signal = "SELL"
+            _strength = max(2.0, 4.0 - _max_cluster_sells * 0.3)
+
+        _net = _max_cluster_buys - _max_cluster_sells * 0.5
+
+        return {
+            "symbol": sym,
+            "cluster_buy_count": _max_cluster_buys,
+            "cluster_sell_count": _max_cluster_sells,
+            "cluster_signal": _signal,
+            "cluster_strength": round(_strength, 1),
+            "recent_buyers": _best_buy_window_buyers[:5],
+            "recent_sellers": _best_sell_window_sellers[:3],
+            "net_sentiment": round(_net, 1),
+            "success": True,
+        }
+    except Exception as e:
+        logger.debug("Insider cluster failed %s: %s", sym, e)
+        return _neutral_cluster(sym)
+
+
+def _neutral_cluster(sym: str) -> dict:
+    return {
+        "symbol": sym,
+        "cluster_buy_count": 0,
+        "cluster_sell_count": 0,
+        "cluster_signal": "NEUTRAL",
+        "cluster_strength": 5.0,
+        "recent_buyers": [],
+        "recent_sellers": [],
+        "net_sentiment": 0.0,
+        "success": False,
+    }
+

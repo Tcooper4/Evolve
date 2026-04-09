@@ -414,6 +414,226 @@ with tab_portfolio:
             key="port_holdings_df",
         )
 
+    # Portfolio Optimizer
+    if st.session_state.evolve_paper_positions:
+        st.markdown("---")
+        st.markdown("#### 📐 Portfolio Optimizer")
+        st.caption(
+            "Optimize allocation across "
+            "your paper holdings using "
+            "multiple strategies."
+        )
+        try:
+            from trading.data.price_cache import get_history
+            from trading.optimization.portfolio_optimizer import (
+                PortfolioOptimizer,
+            )
+
+            _opt_syms = list(
+                st.session_state.evolve_paper_positions.keys()
+            )
+
+            if len(_opt_syms) < 2:
+                st.info(
+                    "Add at least 2 "
+                    "positions to run "
+                    "portfolio optimization."
+                )
+            else:
+                _opt_method = st.selectbox(
+                    "Optimization method",
+                    [
+                        "Hierarchical Risk Parity (HRP)",
+                        "Mean-Variance (Max Sharpe)",
+                        "Risk Parity",
+                        "Min CVaR",
+                        "Compare All",
+                    ],
+                    key="port_opt_method",
+                )
+                _opt_period = st.selectbox(
+                    "Lookback period",
+                    ["6mo", "1y", "2y"],
+                    index=1,
+                    key="port_opt_period",
+                )
+
+                if st.button(
+                    "🔧 Run Optimization",
+                    key="run_port_opt",
+                    type="primary",
+                ):
+                    with st.spinner(
+                        "Fetching returns "
+                        "and optimizing..."
+                    ):
+                        _price_data = {}
+                        for _s in _opt_syms:
+                            try:
+                                _h = get_history(
+                                    _s,
+                                    period=_opt_period,
+                                )
+                                if not _h.empty:
+                                    _col = (
+                                        "Close"
+                                        if "Close"
+                                        in _h.columns
+                                        else "close"
+                                    )
+                                    _price_data[_s] = _h[_col]
+                            except Exception:
+                                pass
+
+                        if len(_price_data) < 2:
+                            st.warning(
+                                "Could not fetch "
+                                "price data for "
+                                "enough symbols."
+                            )
+                        else:
+                            _prices = pd.DataFrame(
+                                _price_data
+                            ).dropna()
+                            _returns = _prices.pct_change().dropna()
+
+                            _opt = PortfolioOptimizer()
+
+                            if _opt_method.startswith(
+                                "Hierarchical",
+                            ):
+                                _res = _opt.hierarchical_risk_parity(
+                                    _returns
+                                )
+                            elif _opt_method.startswith(
+                                "Mean",
+                            ):
+                                _res = _opt.mean_variance_optimization(
+                                    _returns
+                                )
+                            elif _opt_method.startswith(
+                                "Risk Parity",
+                            ):
+                                _res = _opt.risk_parity_optimization(
+                                    _returns
+                                )
+                            elif _opt_method.startswith(
+                                "Min CVaR",
+                            ):
+                                _res = _opt.min_cvar_optimization(
+                                    _returns
+                                )
+                            else:
+                                _res = _opt.compare_strategies(
+                                    _returns
+                                )
+
+                            st.session_state["port_opt_result"] = _res
+                            st.session_state["port_opt_method"] = _opt_method
+
+                _cached = st.session_state.get("port_opt_result")
+                _cached_method = st.session_state.get(
+                    "port_opt_method", ""
+                )
+
+                if _cached and "error" not in _cached:
+                    st.markdown("**Optimization Results**")
+
+                    if _cached_method.startswith("Compare"):
+                        if isinstance(_cached, pd.DataFrame):
+                            st.dataframe(
+                                _cached,
+                                width='stretch',
+                            )
+                        else:
+                            st.json(_cached)
+                    else:
+                        _pr = float(
+                            _cached.get("portfolio_return", 0) or 0
+                        )
+                        _pv = float(
+                            _cached.get("portfolio_volatility", 0) or 0
+                        )
+                        _ann_r = _pr * 252.0
+                        _ann_v = _pv * (252.0 ** 0.5)
+                        _mc1, _mc2, _mc3 = st.columns(3)
+                        with _mc1:
+                            st.metric(
+                                "Expected Return (ann.)",
+                                f"{_ann_r * 100:.1f}%",
+                            )
+                        with _mc2:
+                            st.metric(
+                                "Expected Vol (ann.)",
+                                f"{_ann_v * 100:.1f}%",
+                            )
+                        with _mc3:
+                            st.metric(
+                                "Sharpe Ratio",
+                                f"{_cached.get('sharpe_ratio', 0):.2f}",
+                            )
+
+                        _w = _cached.get("weights", {})
+                        if _w:
+                            st.markdown("**Suggested weights:**")
+                            _w_df = pd.DataFrame(
+                                [
+                                    {
+                                        "Symbol": k,
+                                        "Weight": f"{v * 100:.1f}%",
+                                        "Weight (raw)": v,
+                                    }
+                                    for k, v in sorted(
+                                        _w.items(),
+                                        key=lambda x: x[1],
+                                        reverse=True,
+                                    )
+                                ]
+                            )
+                            st.dataframe(
+                                _w_df[["Symbol", "Weight"]],
+                                width='stretch',
+                            )
+
+                            try:
+                                import plotly.graph_objects as go
+
+                                _fig = go.Figure(
+                                    go.Bar(
+                                        x=list(_w.keys()),
+                                        y=[
+                                            v * 100
+                                            for v in _w.values()
+                                        ],
+                                        marker_color="#00D4FF",
+                                    )
+                                )
+                                _fig.update_layout(
+                                    title="Optimal Weights (%)",
+                                    yaxis_title="Weight (%)",
+                                    template="plotly_dark",
+                                    height=300,
+                                    margin=dict(
+                                        l=40, r=20, t=40, b=40
+                                    ),
+                                )
+                                st.plotly_chart(
+                                    _fig,
+                                    width='stretch',
+                                )
+                            except Exception:
+                                pass
+
+                elif _cached and "error" in _cached:
+                    st.warning(
+                        f"Optimization failed: {_cached['error']}"
+                    )
+
+        except Exception as _oe:
+            st.caption(
+                f"Portfolio optimizer unavailable: {_oe}"
+            )
+
     st.markdown("#### Platform portfolio (optional)")
     try:
         from trading.portfolio.portfolio_manager import PortfolioManager
