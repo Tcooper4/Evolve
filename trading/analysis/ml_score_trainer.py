@@ -20,7 +20,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -28,6 +28,15 @@ import pandas as pd
 from trading.utils.safe_math import safe_rsi
 
 logger = logging.getLogger(__name__)
+
+# Default training universe when none is passed or list is empty
+SP100_SAMPLE = [
+    "AAPL", "MSFT", "GOOGL", "AMZN",
+    "META", "NVDA", "TSLA", "JPM",
+    "JNJ", "XOM", "BRK-B", "UNH",
+    "V", "MA", "HD", "PG", "ABBV",
+    "MRK", "LLY", "PEP",
+]
 
 MODEL_CACHE_PATH = Path(".cache/ml_score")
 MODEL_CACHE_PATH.mkdir(parents=True, exist_ok=True)
@@ -190,6 +199,9 @@ class MLScoreTrainer:
         universe: List[str],
         lookback_days: int = 504,
         forward_days: int = 7,
+        progress_callback: Optional[
+            Callable[[str, int, int], None]
+        ] = None,
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
         Build training dataset from historical data.
@@ -207,7 +219,8 @@ class MLScoreTrainer:
             len(universe)
         )
 
-        for symbol in universe:
+        _n_uni = len(universe)
+        for _idx, symbol in enumerate(universe):
             try:
                 ticker = yf.Ticker(symbol)
                 hist = ticker.history(
@@ -245,6 +258,9 @@ class MLScoreTrainer:
             except Exception as e:
                 logger.debug("Skipping %s: %s", symbol, e)
                 continue
+            finally:
+                if progress_callback:
+                    progress_callback(symbol, _idx + 1, _n_uni)
 
         if not X_list:
             logger.warning("No training data collected")
@@ -279,6 +295,9 @@ class MLScoreTrainer:
         universe: Optional[List[str]] = None,
         X: Optional[pd.DataFrame] = None,
         y: Optional[pd.Series] = None,
+        progress_callback: Optional[
+            Callable[[str, int, int], None]
+        ] = None,
     ) -> Dict[str, Any]:
         """
         Train the ML score model.
@@ -287,15 +306,12 @@ class MLScoreTrainer:
         """
         try:
             if X is None or y is None:
-                if universe is None:
-                    # Default to SP100 subset
-                    universe = [
-                        "AAPL", "MSFT", "GOOGL", "AMZN", "META",
-                        "NVDA", "JPM", "JNJ", "V", "PG",
-                        "UNH", "HD", "MA", "DIS", "BAC",
-                        "XOM", "TSLA", "AVGO", "LLY", "CVX",
-                    ]
-                X, y = self.build_training_dataset(universe)
+                if universe is None or len(universe) == 0:
+                    universe = list(SP100_SAMPLE)
+                X, y = self.build_training_dataset(
+                    universe,
+                    progress_callback=progress_callback,
+                )
 
             if X.empty or len(y) == 0:
                 return {"error": "No training data available"}
@@ -450,6 +466,22 @@ class MLScoreTrainer:
                 "fallback": True,
             }
 
+    def score(self, symbol: str, hist: Any) -> float:
+        """
+        Single-number ML score (0-10) for pipelines.
+        Returns neutral 5.0 when model is untrained or data is insufficient.
+        """
+        if not isinstance(hist, pd.DataFrame):
+            try:
+                hist = pd.DataFrame(hist)
+            except Exception:
+                hist = pd.DataFrame()
+        out = self.predict(symbol, hist)
+        ms = out.get("ml_score")
+        if ms is None:
+            return 5.0
+        return float(np.clip(float(ms), 0.0, 10.0))
+
     def _explain_prediction(
         self,
         x: np.ndarray,
@@ -488,6 +520,7 @@ class MLScoreTrainer:
     def _save_model(self) -> None:
         """Save trained model to cache."""
         try:
+            MODEL_CACHE_PATH.mkdir(parents=True, exist_ok=True)
             import joblib
             model_path = MODEL_CACHE_PATH / "ml_score_model.joblib"
             scaler_path = MODEL_CACHE_PATH / "ml_score_scaler.joblib"

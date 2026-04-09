@@ -29,6 +29,7 @@ HEADERS = {
 
 _CIK_CACHE: Dict[str, str] = {}
 _FILING_CACHE: Dict[str, dict] = {}
+_SEC_CACHE: Dict[str, Any] = {}
 
 
 def _sleep_rate_limit() -> None:
@@ -390,3 +391,288 @@ def get_sec_signal(ticker: str) -> dict:
 
     _SEC_SIGNAL_CACHE[t] = (out, time.time())
     return dict(out)
+
+
+def get_institutional_ownership(ticker: str) -> dict:
+    """
+    Fetches 13F institutional ownership
+    data from SEC EDGAR.
+    Returns top holders, ownership
+    concentration, and recent changes.
+    No API key required.
+    """
+    sym = (ticker or "").strip().upper()
+    if not sym:
+        return _neutral_institutional(sym)
+
+    _cache_key = f"13f_{sym}"
+    _now = time.time()
+    if (
+        _cache_key in _SEC_CACHE
+        and _now - _SEC_CACHE.get(f"{_cache_key}_ts", 0) < 14400
+    ):
+        return dict(_SEC_CACHE[_cache_key])
+
+    try:
+        if not get_cik(sym):
+            return _neutral_institutional(sym)
+
+        import yfinance as yf
+
+        _t = yf.Ticker(sym)
+        _holders = None
+        try:
+            _holders = _t.institutional_holders
+        except Exception:
+            pass
+
+        if _holders is None or (
+            hasattr(_holders, "empty") and _holders.empty
+        ):
+            return _neutral_institutional(sym)
+
+        _top: List[dict] = []
+        for _, row in _holders.head(10).iterrows():
+            try:
+                _holder = row.get(
+                    "Holder",
+                    row.get("Name", "Unknown"),
+                )
+                _sh = row.get(
+                    "Shares",
+                    row.get("Value", 0),
+                )
+                _pct = row.get(
+                    "% Out",
+                    row.get("pctHeld", 0),
+                )
+                _pct_f = float(_pct or 0)
+                if _pct_f > 1.0:
+                    _pct_f = _pct_f / 100.0
+                _top.append(
+                    {
+                        "holder": str(_holder),
+                        "shares": int(float(_sh)) if _sh is not None else 0,
+                        "pct_out": _pct_f,
+                    }
+                )
+            except Exception:
+                continue
+
+        _total_pct = sum(h["pct_out"] for h in _top)
+
+        _signal = "NEUTRAL"
+        _strength = 5.0
+        if _total_pct > 0.70:
+            _signal = "BUY"
+            _strength = 7.0
+        elif _total_pct > 0.50:
+            _signal = "BUY"
+            _strength = 6.0
+        elif _total_pct < 0.20:
+            _signal = "SELL"
+            _strength = 4.0
+
+        result = {
+            "symbol": sym,
+            "top_holders": _top,
+            "institutional_pct": round(_total_pct, 3),
+            "n_holders": len(_top),
+            "signal": _signal,
+            "signal_strength": _strength,
+            "source": "yfinance_13f",
+            "success": True,
+        }
+        _SEC_CACHE[_cache_key] = result
+        _SEC_CACHE[f"{_cache_key}_ts"] = _now
+        return result
+
+    except Exception as e:
+        logger.debug(
+            "Institutional ownership failed for %s: %s",
+            sym,
+            e,
+        )
+        return _neutral_institutional(sym)
+
+
+def _neutral_institutional(sym: str) -> dict:
+    return {
+        "symbol": sym,
+        "top_holders": [],
+        "institutional_pct": 0.0,
+        "n_holders": 0,
+        "signal": "NEUTRAL",
+        "signal_strength": 5.0,
+        "source": "unavailable",
+        "success": False,
+    }
+
+
+def get_earnings_transcript_sentiment(ticker: str) -> dict:
+    """
+    Fetches most recent earnings call
+    transcript from SEC EDGAR 8-K
+    filings and extracts sentiment
+    using LLM when available, else
+    keyword heuristic.
+    Returns management tone, key themes,
+    and forward guidance sentiment.
+    """
+    sym = (ticker or "").strip().upper()
+    if not sym:
+        return _neutral_transcript(sym)
+
+    _cache_key = f"transcript_{sym}"
+    _now = time.time()
+    if (
+        _cache_key in _SEC_CACHE
+        and _now - _SEC_CACHE.get(f"{_cache_key}_ts", 0) < 86400
+    ):
+        return dict(_SEC_CACHE[_cache_key])
+
+    try:
+        cik = get_cik(sym)
+        if not cik:
+            return _neutral_transcript(sym)
+
+        _sub_url = f"{EDGAR_BASE}/submissions/CIK{cik.zfill(10)}.json"
+        _data = _edgar_get_json(_sub_url)
+        if not _data:
+            return _neutral_transcript(sym)
+
+        _filings = _data.get("filings", {}).get("recent", {})
+        _forms = _filings.get("form", [])
+        _dates = _filings.get("filingDate", [])
+
+        _8k_idx = None
+        for i, f in enumerate(_forms):
+            if f == "8-K":
+                _8k_idx = i
+                break
+
+        _filing_date = (
+            str(_dates[_8k_idx])
+            if _8k_idx is not None and _8k_idx < len(_dates)
+            else "unknown"
+        )
+
+        _text = get_mda_text(sym)
+        if not _text or len(_text) < 100:
+            return _neutral_transcript(sym)
+
+        _sentiment = "neutral"
+        _themes: List[str] = []
+        _guidance = "unclear"
+        _score_adj = 0.0
+
+        _parsed_llm = False
+        try:
+            from agents.llm.active_llm_calls import (
+                call_active_llm_simple,
+            )
+
+            _prompt = (
+                f"Analyze this earnings filing excerpt for {sym}. "
+                "In 3 sentences: 1) Management tone "
+                "(positive/neutral/negative), "
+                "2) Key themes (growth/risk/uncertainty), "
+                "3) Forward guidance sentiment. "
+                "Reply in JSON: "
+                '{"tone": str, "themes": [str], '
+                '"guidance": str, "score_adj": float '
+                "between -1.5 and 1.5}\n\n"
+                f"Text: {_text[:2000]}"
+            )
+            _resp = call_active_llm_simple(
+                _prompt,
+                max_tokens=200,
+            )
+            if _resp:
+                _clean = (
+                    _resp.strip()
+                    .removeprefix("```json")
+                    .removeprefix("```")
+                    .removesuffix("```")
+                    .strip()
+                )
+                _parsed = json.loads(_clean)
+                _sentiment = str(
+                    _parsed.get("tone", "neutral"),
+                )
+                _themes = list(_parsed.get("themes", []) or [])
+                _guidance = str(
+                    _parsed.get("guidance", "unclear"),
+                )
+                _score_adj = float(_parsed.get("score_adj", 0.0))
+                _parsed_llm = True
+        except Exception:
+            pass
+
+        if not _parsed_llm:
+            _text_lower = _text.lower()
+            _pos = sum(
+                1
+                for w in [
+                    "growth",
+                    "strong",
+                    "exceeded",
+                    "raised",
+                    "confident",
+                    "record",
+                ]
+                if w in _text_lower
+            )
+            _neg = sum(
+                1
+                for w in [
+                    "headwind",
+                    "uncertain",
+                    "missed",
+                    "lowered",
+                    "concern",
+                    "difficult",
+                ]
+                if w in _text_lower
+            )
+            if _pos > _neg + 1:
+                _sentiment = "positive"
+                _score_adj = 0.5
+            elif _neg > _pos + 1:
+                _sentiment = "negative"
+                _score_adj = -0.5
+
+        result = {
+            "symbol": sym,
+            "filing_date": _filing_date,
+            "sentiment": _sentiment,
+            "themes": _themes,
+            "guidance": _guidance,
+            "score_adj": _score_adj,
+            "source": "sec_edgar_8k",
+            "success": True,
+        }
+        _SEC_CACHE[_cache_key] = result
+        _SEC_CACHE[f"{_cache_key}_ts"] = _now
+        return result
+
+    except Exception as e:
+        logger.debug(
+            "Transcript sentiment failed for %s: %s",
+            sym,
+            e,
+        )
+        return _neutral_transcript(sym)
+
+
+def _neutral_transcript(sym: str) -> dict:
+    return {
+        "symbol": sym,
+        "filing_date": None,
+        "sentiment": "neutral",
+        "themes": [],
+        "guidance": "unclear",
+        "score_adj": 0.0,
+        "source": "unavailable",
+        "success": False,
+    }

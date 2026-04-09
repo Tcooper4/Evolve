@@ -1,27 +1,67 @@
-﻿import sys
-from pathlib import Path
+﻿import ast
+import subprocess
+import sys
 
-def read(p):
-    return Path(p).read_text(encoding='utf-8', errors='replace')
+python = r".\evolve_venv\Scripts\python.exe"
+print("=== Session 47 Verification ===\n")
+PASS, FAIL = [], []
 
-results = []
-src = read('trading/analysis/ai_score.py')
 
-results.append(('SECTOR_PE dict present',        'SECTOR_PE' in src))
-results.append(('Valuation overlay present',      'pe_premium' in src and 'val_label' in src))
-results.append(('Short squeeze tiered',           'si_sentiment = 9.0' in src and 'squeeze_tier' in src))
-results.append(('Momentum bonus for short squeeze','momentum_score + 2.0' in src or 'momentum_score + 1.5' in src))
-results.append(('earnings_near flag initialised', 'earnings_near = False' in src))
-results.append(('Earnings conviction cap',        'min(overall, 7.5)' in src))
-results.append(('Earnings typo fixed',            'Earningss' not in src))
-results.append(('Insider No Activity fix',        'No Activity' in src and '_insider_val' in src))
+def ok(msg):
+    PASS.append(msg)
+    print(f"OK    {msg}")
 
-prophet = read('trading/models/prophet_model.py')
-results.append(('Prophet hardcode 30 removed',    'periods=30' not in prophet or 'horizon' in prophet))
-results.append(('Prophet accepts horizon param',  'horizon' in prophet))
+
+def fail(msg):
+    FAIL.append(msg)
+    print(f"FAIL  {msg}")
+
+
+t = open(
+    "components/tabs/tab_options_chain.py",
+    encoding="utf-8",
+    errors="replace",
+).read()
+try:
+    ast.parse(t)
+    ok("Syntax valid: tab_options_chain.py")
+except SyntaxError as e:
+    fail(f"Syntax error: {e}")
+
+checks = [
+    ("Strategy Visualizer header", "Strategy Visualizer"),
+    ("_get_premium helper", "_get_premium"),
+    ("P&L computation", "tozeroy"),
+    ("Strategy selectbox", "opt_strat_"),
+    ("Probability of profit", "Prob. of Profit"),
+    ("Breakeven detection", "Breakeven"),
+    ("Long Call strategy", "Long Call"),
+    ("Bull Call Spread", "Bull Call Spread"),
+    ("Long Straddle", "Long Straddle"),
+    ("Max profit metric", "Max Profit"),
+]
+for name, pattern in checks:
+    if pattern in t:
+        ok(f"{name} present")
+    else:
+        fail(f"{name} missing")
 
 print()
-for name, passed in results:
-    status = 'PASS' if passed else 'FAIL'
-    print(f"{status}  {name}")
-print()
+print("--- Smoke test ---")
+result = subprocess.run(
+    [python, "tests/model_smoke_test.py"],
+    capture_output=True,
+    text=True,
+)
+print((result.stdout + result.stderr)[-600:])
+if result.returncode == 0:
+    ok("Smoke test passed")
+else:
+    fail("Smoke test FAILED")
+
+print(f"\n=== {len(PASS)} passed, {len(FAIL)} failed ===")
+if FAIL:
+    sys.exit(1)
+else:
+    print("All checks passed. Ready to commit v4.3.9.")
+    sys.exit(0)

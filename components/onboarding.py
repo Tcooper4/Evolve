@@ -184,13 +184,13 @@ def _render_onboarding_form(session_id: Optional[str]) -> bool:
             "Save keys and continue",
             type="primary",
             key="onboarding_save",
-            use_container_width=True,
+            width='stretch',
         )
     with col_skip:
         skip_btn = st.button(
             "Continue without keys",
             key="onboarding_skip",
-            use_container_width=True,
+            width='stretch',
             help="Core platform works without keys",
         )
 

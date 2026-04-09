@@ -260,7 +260,7 @@ def create_weight_evolution_chart(manager: HybridModelManager):
 
     fig.update_layout(xaxis_title="Time", yaxis_title="Weight", hovermode="x unified")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def create_performance_comparison_chart(manager: HybridModelManager):
@@ -301,7 +301,7 @@ def create_performance_comparison_chart(manager: HybridModelManager):
         xaxis_title="Time", yaxis_title="Performance", hovermode="x unified"
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def create_ensemble_optimization_interface(manager: HybridModelManager):
@@ -462,7 +462,7 @@ def main():
                         title="Current Weight Distribution", showlegend=True
                     )
 
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
 
             with col2:
                 st.subheader("Performance Summary")
@@ -524,7 +524,7 @@ def main():
 
             if performance_data:
                 df = pd.DataFrame(performance_data)
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(df, width='stretch')
 
 
 if __name__ == "__main__":

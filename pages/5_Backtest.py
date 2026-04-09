@@ -29,6 +29,7 @@ from utils.risk_metrics import compute_performance_metrics
 from trading.backtesting.backtester import Backtester
 from trading.backtesting.trade_models import TradeType
 from trading.strategies.registry import get_strategy_registry
+from trading.data.ticker_resolver import normalize_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +121,7 @@ with tab_wf:
             "AAPL",
             key="wf_symbol",
         )
+        wf_symbol = normalize_ticker(wf_symbol.strip().upper())
     with wf_col2:
         wf_model = st.selectbox(
             "Model",
@@ -243,7 +245,7 @@ with tab_wf:
                             st.markdown("#### Per-window results")
                             st.dataframe(
                                 normalize_for_display(df),
-                                use_container_width=True,
+                                width='stretch',
                                 key="wf_results_df",
                             )
 
@@ -322,6 +324,7 @@ with tab_backtest:
                 "AAPL",
                 key="bt_symbol",
             ).strip().upper()
+            bt_symbol = normalize_ticker(bt_symbol)
         with b3:
             bt_capital = st.number_input(
                 "Initial capital ($)",
@@ -477,7 +480,7 @@ with tab_backtest:
                                 tdf = pd.DataFrame(trades)
                                 st.dataframe(
                                     normalize_for_display(tdf),
-                                    use_container_width=True,
+                                    width='stretch',
                                     key="bt_trades_df",
                                 )
 
@@ -521,6 +524,7 @@ with tab_backtest:
             value="AAPL",
             key="enhanced_bt_symbol",
         ).strip().upper()
+        _e_sym = normalize_ticker(_e_sym)
         if st.button("Run enhanced backtest", key="enhanced_bt_btn", type="primary"):
             with st.spinner("Running multi-model comparison..."):
                 import yfinance as yf

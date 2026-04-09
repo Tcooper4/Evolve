@@ -777,7 +777,10 @@ with tab_admin:
         st.markdown("---")
         st.markdown("**ML Score Model**")
         try:
-            from trading.analysis.ml_score_trainer import MLScoreTrainer
+            from trading.analysis.ml_score_trainer import (
+                MLScoreTrainer,
+                SP100_SAMPLE,
+            )
 
             _ml_dir = project_root / ".cache" / "ml_score"
             _ml_model = _ml_dir / "ml_score_model.joblib"
@@ -834,29 +837,43 @@ with tab_admin:
             except Exception as _ue:
                 logger.warning("settings: universe load failed: %s", _ue)
             if st.button("Train ML Score Model", key="train_ml_score"):
-                _n = len(_train_uni) if _train_uni else 20
+                _n = len(_train_uni) if _train_uni else len(SP100_SAMPLE)
+                _prog_ml = st.progress(0, text="Preparing…")
+                _ml_status = st.empty()
+
+                def _ml_progress(sym: str, cur: int, total: int) -> None:
+                    if total <= 0:
+                        return
+                    p = min(float(cur) / float(total), 1.0)
+                    _prog_ml.progress(p, text=f"{sym} ({cur}/{total})")
+                    _ml_status.caption(
+                        f"Building dataset: {sym} — {cur} of {total} tickers"
+                    )
+
                 with st.spinner(
                     f"Training on {_n} stocks… this may take 5–10 minutes."
                 ):
                     trainer = MLScoreTrainer()
                     result = trainer.train(
-                        universe=_train_uni if _train_uni else None
+                        universe=_train_uni if _train_uni else None,
+                        progress_callback=_ml_progress,
                     )
-                    if result.get("error"):
-                        st.error(f"Training failed: {result['error']}")
-                    else:
-                        _da = float(
-                            result.get("val_directional_accuracy") or 0
-                        )
-                        _r2 = result.get("val_r2")
-                        st.success(
-                            f"Trained on {result.get('n_samples')} samples."
-                        )
-                        st.caption(
-                            f"Validation — directional accuracy: "
-                            f"{_da*100:.1f}% · R²: {_r2} · "
-                            f"n_samples: {result.get('n_samples')}"
-                        )
+                _prog_ml.progress(1.0, text="Done")
+                if result.get("error"):
+                    st.error(f"Training failed: {result['error']}")
+                else:
+                    _da = float(
+                        result.get("val_directional_accuracy") or 0
+                    )
+                    _r2 = result.get("val_r2")
+                    st.success(
+                        f"Trained on {result.get('n_samples')} samples."
+                    )
+                    st.caption(
+                        f"Validation — directional accuracy: "
+                        f"{_da*100:.1f}% · R²: {_r2} · "
+                        f"n_samples: {result.get('n_samples')}"
+                    )
         except Exception as e:
             st.caption(f"ML Score training unavailable: {e}")
 

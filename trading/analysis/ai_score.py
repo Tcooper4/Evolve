@@ -41,6 +41,7 @@ SIGNAL_SOURCES = [
     "analyst_signals",
     "congressional_trading",
     "sec_edgar",
+    "institutional_ownership",
     "factor_model",
     "ml_score",
 ]
@@ -460,6 +461,22 @@ def _fetch_congressional_safe(
         }
 
 
+def _fetch_institutional_safe(
+    symbol: str, _hist: Optional[pd.DataFrame] = None
+) -> Dict[str, Any]:
+    try:
+        from trading.data.sec_edgar import get_institutional_ownership
+
+        return get_institutional_ownership(symbol)
+    except Exception as e:
+        logger.debug("institutional AI score fetch: %s", e)
+        return {
+            "signal": "NEUTRAL",
+            "signal_strength": 5.0,
+            "success": False,
+        }
+
+
 def _bundle_technical(
     symbol: str,
     hist: pd.DataFrame,
@@ -806,7 +823,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
 
         # ── Technical / momentum + I/O signals (parallel) ─────────
         _parallel_results: Dict[str, Any] = {}
-        with ThreadPoolExecutor(max_workers=8) as ex:
+        with ThreadPoolExecutor(max_workers=9) as ex:
             _futures = {
                 ex.submit(
                     _bundle_technical, symbol, hist, close, last_price
@@ -822,6 +839,9 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                 ex.submit(
                     _fetch_congressional_safe, symbol, hist
                 ): "congressional",
+                ex.submit(
+                    _fetch_institutional_safe, symbol, hist
+                ): "institutional",
             }
             _done, _not_done = wait(
                 _futures.keys(),
@@ -1233,6 +1253,85 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                     )
         except Exception:
             pass
+
+        try:
+            from trading.data.sec_edgar import (
+                get_earnings_transcript_sentiment,
+            )
+
+            _trans = get_earnings_transcript_sentiment(symbol)
+            if _trans.get("success"):
+                _tadj = float(_trans.get("score_adj", 0.0))
+                _tone = _trans.get("sentiment", "neutral")
+                if abs(_tadj) > 0.2:
+                    sentiment_score = max(
+                        0.0,
+                        min(
+                            10.0,
+                            sentiment_score + _tadj,
+                        ),
+                    )
+                    _impact = (
+                        "positive" if _tadj > 0 else "negative"
+                    )
+                    signals.append(
+                        {
+                            "name": "Transcript",
+                            "value": _tone.title(),
+                            "impact": _impact,
+                            "description": (
+                                f"Earnings call tone: {_tone}. "
+                                + (
+                                    "Themes: "
+                                    + ", ".join(
+                                        _trans.get("themes", [])[:3]
+                                    )
+                                    if _trans.get("themes")
+                                    else ""
+                                )
+                            ),
+                        }
+                    )
+        except Exception:
+            pass
+
+        _inst = _parallel_results.get("institutional")
+        if not isinstance(_inst, dict):
+            _inst = {}
+        if _inst.get("success"):
+            _inst_pct = float(_inst.get("institutional_pct", 0))
+            _inst_sig = _inst.get("signal", "NEUTRAL")
+            _signal_status["institutional_ownership"] = "real"
+            if _inst_sig == "BUY" and _inst_pct > 0.50:
+                sentiment_score = min(10.0, sentiment_score + 0.5)
+                signals.append(
+                    {
+                        "name": "Institutional",
+                        "value": (
+                            f"{_inst_pct * 100:.0f}% institutional"
+                        ),
+                        "impact": "positive",
+                        "description": (
+                            "High institutional ownership — "
+                            "smart money present"
+                        ),
+                    }
+                )
+            elif _inst_sig == "SELL" and _inst_pct < 0.20:
+                signals.append(
+                    {
+                        "name": "Institutional",
+                        "value": (
+                            f"{_inst_pct * 100:.0f}% institutional"
+                        ),
+                        "impact": "neutral",
+                        "description": (
+                            "Low institutional coverage"
+                        ),
+                    }
+                )
+        else:
+            _signal_status["institutional_ownership"] = "fallback"
 
         # ── FUNDAMENTAL SCORE (0-10) ──────────────────────────────
         fundamental_score = 5.0

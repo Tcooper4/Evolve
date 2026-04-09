@@ -16,6 +16,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
+from trading.data.ticker_resolver import normalize_ticker
 from utils.dataframe_utils import normalize_for_display
 
 try:
@@ -139,6 +140,7 @@ with tab_paper:
     pc1, pc2, pc3 = st.columns(3)
     with pc1:
         p_sym = st.text_input("Symbol", "AAPL", key="paper_sym").strip().upper()
+        p_sym = normalize_ticker(p_sym)
     with pc2:
         p_side = st.selectbox("Side", ["Buy", "Sell"], key="paper_side")
     with pc3:
@@ -289,7 +291,7 @@ with tab_paper:
             })
         st.dataframe(
             normalize_for_display(pd.DataFrame(rows)),
-            use_container_width=True,
+            width='stretch',
             key="paper_positions_df",
         )
         st.caption("Close a full long via market fill at last mark.")
@@ -408,7 +410,7 @@ with tab_portfolio:
             })
         st.dataframe(
             normalize_for_display(pd.DataFrame(rows)),
-            use_container_width=True,
+            width='stretch',
             key="port_holdings_df",
         )
 
@@ -424,7 +426,7 @@ with tab_portfolio:
             st.caption("Positions from portfolio manager (if configured).")
             st.dataframe(
                 normalize_for_display(pd.DataFrame(ext)),
-                use_container_width=True,
+                width='stretch',
                 key="port_pm_df",
             )
         else:
@@ -455,7 +457,7 @@ with tab_portfolio:
         st.markdown("#### Trade history")
         st.dataframe(
             normalize_for_display(tdf),
-            use_container_width=True,
+            width='stretch',
             key="perf_trades_df",
         )
     else:
@@ -463,7 +465,7 @@ with tab_portfolio:
         st.markdown("#### Trade history")
         st.dataframe(
             normalize_for_display(tdf),
-            use_container_width=True,
+            width='stretch',
             key="perf_trades_df",
         )
 
@@ -535,7 +537,7 @@ with tab_portfolio:
                                 if _rows:
                                     st.dataframe(
                                         normalize_for_display(pd.DataFrame(_rows)),
-                                        use_container_width=True,
+                                        width='stretch',
                                     )
                                 try:
                                     _x1, _x2, _x3 = st.columns(3)
@@ -580,6 +582,7 @@ with tab_risk:
         "SPY",
         key="risk_kelly_symbol",
     ).strip().upper()
+    rk_sym = normalize_ticker(rk_sym)
     rk_pv = st.number_input(
         "Notional for VaR ($)",
         min_value=1000.0,
@@ -654,7 +657,7 @@ with tab_risk:
                             normalize_for_display(
                                 pd.DataFrame([s.__dict__ for s in _stress])
                             ),
-                            use_container_width=True,
+                            width='stretch',
                         )
     except Exception as _re:
         st.caption(f"Stress testing unavailable: {_re}")
@@ -713,6 +716,7 @@ with tab_risk:
     risk_col1, risk_col2 = st.columns(2)
     with risk_col1:
         risk_symbol = st.text_input("Symbol", "AAPL", key="risk_symbol")
+        risk_symbol = normalize_ticker(risk_symbol.strip().upper())
     with risk_col2:
         risk_portfolio_value = st.number_input(
             "Portfolio Value ($)",

@@ -584,7 +584,7 @@ def render_risk_metrics_streamlit(
                 list(metrics_dict.items()),
                 columns=["Metric", "Value"]
             )
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(df, width='stretch')
 
     except Exception as e:
         try:

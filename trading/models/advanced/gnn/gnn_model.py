@@ -512,17 +512,34 @@ class GNNForecaster:
         else:
             last_price = None
 
-        if last_price is not None and np.isfinite(last_price):
-            max_abs = float(np.nanmax(np.abs(forecast_array))) if forecast_array.size else 0.0
-            # Heuristic: treat small-magnitude outputs as returns; convert to prices iteratively.
-            if max_abs < 1.0:
-                price_path: List[float] = []
-                current_price = last_price
-                for r in forecast_array:
-                    r_float = float(r)
-                    current_price = current_price * (1.0 + r_float)
-                    price_path.append(current_price)
-                forecast_array = np.asarray(price_path, dtype=float)
+        # Explicit scale detection using last_price as anchor
+        if (
+            last_price is not None
+            and np.isfinite(last_price)
+            and last_price > 1.0
+        ):
+            _pred_arr = np.asarray(
+                forecast_array,
+                dtype=np.float64,
+            ).ravel()
+            if _pred_arr.size > 0:
+                _ratio = float(
+                    np.nanmean(np.abs(_pred_arr))
+                ) / float(last_price)
+                # If predictions are in return space: ratio << 1
+                # If in price space: ratio close to 1.0
+                if _ratio < 0.10:
+                    _prices: List[float] = []
+                    _cur = float(last_price)
+                    for _r in _pred_arr:
+                        _cur = _cur * (1.0 + float(_r))
+                        _prices.append(_cur)
+                    forecast_array = np.asarray(_prices)
+                elif _ratio > 10.0:
+                    forecast_array = np.full(
+                        len(_pred_arr),
+                        float(last_price),
+                    )
 
         # Create dates
         last_date = data.index[-1] if hasattr(data.index, 'freq') else pd.Timestamp.now()

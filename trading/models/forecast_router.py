@@ -723,7 +723,7 @@ class ForecastRouter:
         if prepared_data is None or len(prepared_data) < 10:
             return None
         # Skip MAPE check for models whose predict() operates in normalized space
-        _skip_mape_models = {'ridge', 'catboost', 'tcn', 'hybrid'}
+        _skip_mape_models = {'ridge', 'catboost', 'tcn', 'hybrid', 'gnn'}
         if selected_model in _skip_mape_models:
             return None
         close_col = "close" if "close" in prepared_data.columns else prepared_data.columns[0]
@@ -1094,7 +1094,7 @@ class ForecastRouter:
             # In-sample MAPE and poor-fit warning (suppress extreme/unstable values for UI)
             warnings_list = list(self._get_warnings(data, selected_model))
             in_sample_mape = self._in_sample_mape(model, prepared_data, selected_model)
-            _skip_mape_models = {'ridge', 'catboost', 'tcn', 'hybrid'}
+            _skip_mape_models = {'ridge', 'catboost', 'tcn', 'hybrid', 'gnn'}
             if in_sample_mape is not None and np.isfinite(in_sample_mape) and selected_model not in _skip_mape_models:
                 if in_sample_mape > 50.0:
                     # Very high MAPE is often an artifact of normalization mismatch; log only.

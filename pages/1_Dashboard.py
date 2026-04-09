@@ -336,6 +336,29 @@ try:
 except Exception as e:
     st.caption(f"unavailable: {e}")
 
+
+def _build_fallback_digest(scores: list) -> str:
+    """Plain text digest when LLM is unavailable."""
+    if not scores:
+        return "No watchlist data."
+    _top = scores[0]
+    _bot = scores[-1]
+    _bullish = [s for s in scores if s["score"] >= 6.5]
+    _bearish = [s for s in scores if s["score"] <= 4.0]
+    _lines = []
+    if _bullish:
+        _syms = ", ".join(s["symbol"] for s in _bullish[:3])
+        _lines.append(f"**Strongest setups:** {_syms}")
+    if _bearish:
+        _syms = ", ".join(s["symbol"] for s in _bearish[:3])
+        _lines.append(f"**Weak signals:** {_syms}")
+    _lines.append(
+        f"**Top pick:** {_top['symbol']} "
+        f"(score {_top['score']:.1f}, grade {_top['grade']})"
+    )
+    return " · ".join(_lines) if _lines else "No clear setups."
+
+
 # --- Watchlist (fragment — loads independently of briefing) ---
 @st.fragment
 def _render_watchlist():
@@ -393,6 +416,10 @@ def _render_watchlist():
                     if px is not None and prev not in (None, 0):
                         dlt = (float(px) - float(prev)) / float(prev) * 100
                     ai = compute_ai_score(sym)
+                    try:
+                        st.session_state[f"ai_cache_{sym}"] = ai
+                    except Exception:
+                        pass
                     asc = float(ai.get("overall_score", 0) or 0)
                     c1, c2 = st.columns([3, 1])
                     with c1:
@@ -415,6 +442,119 @@ def _render_watchlist():
                     scored_count += 1
                 except Exception as ex:
                     st.caption(f"unavailable: {ex}")
+
+            # Watchlist AI Digest
+            try:
+                import time as _wt
+
+                _dig_key = "wl_digest"
+                _dig_ts_key = "wl_digest_ts"
+                _dig_sym_key = "wl_digest_syms"
+                _now_dig = _wt.time()
+                _cached_dig = st.session_state.get(_dig_key)
+                _cached_ts = st.session_state.get(_dig_ts_key, 0)
+                _cached_syms = st.session_state.get(_dig_sym_key, [])
+
+                _wl_scores = []
+                for _s in syms[:15]:
+                    _ai = st.session_state.get(f"ai_cache_{_s}")
+                    if _ai and not _ai.get("error"):
+                        _top_sig = [
+                            sig.get("name", "")
+                            + ": "
+                            + str(sig.get("value", ""))
+                            for sig in _ai.get("signals", [])
+                            if sig.get("impact") in ("positive", "negative")
+                        ][:3]
+                        _wl_scores.append(
+                            {
+                                "symbol": _s,
+                                "score": _ai.get(
+                                    "overall_score",
+                                    5.0,
+                                ),
+                                "grade": _ai.get("grade", "C"),
+                                "top_signals": _top_sig,
+                            }
+                        )
+
+                _stale = (
+                    _now_dig - _cached_ts > 3600
+                    or set(_cached_syms) != set(syms)
+                )
+
+                st.markdown("---")
+                st.markdown("#### 🧠 Watchlist Digest")
+
+                _col_d1, _col_d2 = st.columns([6, 1])
+                with _col_d2:
+                    _refresh = st.button(
+                        "↻",
+                        key="wl_digest_refresh",
+                        help="Refresh digest",
+                    )
+
+                if _refresh:
+                    st.session_state.pop(_dig_key, None)
+                    _stale = True
+
+                if not _stale and _cached_dig:
+                    with _col_d1:
+                        st.markdown(_cached_dig)
+                elif _wl_scores:
+                    with _col_d1:
+                        with st.spinner("Generating digest..."):
+                            try:
+                                from agents.llm.active_llm_calls import (
+                                    call_active_llm_simple,
+                                )
+
+                                _sorted = sorted(
+                                    _wl_scores,
+                                    key=lambda x: x["score"],
+                                    reverse=True,
+                                )
+                                _top3 = _sorted[:3]
+                                _prompt = (
+                                    "You are a quant analyst. Write a "
+                                    "3-4 sentence plain-English digest "
+                                    "of this watchlist. Mention the "
+                                    "strongest and weakest setups, any "
+                                    "notable signals, and overall tone. "
+                                    "Be direct and specific. No "
+                                    "disclaimers.\n\n"
+                                    "Watchlist scores:\n"
+                                    f"{_sorted}\n\nTop signals:\n{_top3}"
+                                )
+                                _digest = call_active_llm_simple(
+                                    _prompt,
+                                    max_tokens=200,
+                                )
+                                if not _digest:
+                                    _digest = _build_fallback_digest(
+                                        _sorted,
+                                    )
+                            except Exception:
+                                _digest = _build_fallback_digest(
+                                    sorted(
+                                        _wl_scores,
+                                        key=lambda x: x["score"],
+                                        reverse=True,
+                                    ),
+                                )
+
+                            st.session_state[_dig_key] = _digest
+                            st.session_state[_dig_ts_key] = _now_dig
+                            st.session_state[_dig_sym_key] = list(syms)
+                            st.markdown(_digest)
+                else:
+                    with _col_d1:
+                        st.caption(
+                            "Add tickers to your watchlist to see "
+                            "your daily digest."
+                        )
+            except Exception as _de:
+                st.caption(f"Digest unavailable: {_de}")
     except Exception as e:
         st.caption(f"unavailable: {e}")
 

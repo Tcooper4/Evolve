@@ -575,7 +575,7 @@ class EconometricDiagnostics:
             xaxis_title="Lag",
             yaxis_title="Correlation",
         )
-        st.plotly_chart(fig_acf, use_container_width=True)
+        st.plotly_chart(fig_acf, width='stretch')
 
         # PACF plot
         fig_pacf = go.Figure()
@@ -594,7 +594,7 @@ class EconometricDiagnostics:
             xaxis_title="Lag",
             yaxis_title="Partial Correlation",
         )
-        st.plotly_chart(fig_pacf, use_container_width=True)
+        st.plotly_chart(fig_pacf, width='stretch')
 
         sig_acf = acf_data.get("significant_acf_lags", [])
         sig_pacf = acf_data.get("significant_pacf_lags", [])
@@ -641,7 +641,7 @@ class EconometricDiagnostics:
             xaxis_title="Daily Return",
             yaxis_title="Density",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Skewness", f"{norm.get('skewness', 'N/A'):.3f}")

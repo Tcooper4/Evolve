@@ -37,6 +37,8 @@ project_root = Path(__file__).resolve().parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+from trading.data.ticker_resolver import normalize_ticker
+
 
 def _shutdown():
     try:
@@ -184,11 +186,11 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     if _gsearch and len(_gsearch.strip()) >= 1:
-        _sym = _gsearch.strip().upper()
+        _sym = normalize_ticker(_gsearch.strip().upper())
         if st.sidebar.button(
             "Open " + _sym + " on Home",
             key="global_search_go",
-            use_container_width=True,
+            width='stretch',
         ):
             st.session_state["analyze_ticker"] = _sym
             st.session_state["deep_dive_ticker"] = _sym
