@@ -42,6 +42,7 @@ SIGNAL_SOURCES = [
     "congressional_trading",
     "sec_edgar",
     "institutional_ownership",
+    "dark_pool",
     "factor_model",
     "ml_score",
 ]
@@ -411,7 +412,11 @@ def _fetch_social_sentiment_safe(symbol: str) -> Optional[Dict[str, Any]]:
 
 
 def _fetch_short_and_sec_safe(symbol: str) -> Dict[str, Any]:
-    out: Dict[str, Any] = {"short": None, "sec": None}
+    out: Dict[str, Any] = {
+        "short": None,
+        "sec": None,
+        "dark_pool": None,
+    }
     try:
         from trading.data.short_interest import get_short_interest
 
@@ -424,6 +429,12 @@ def _fetch_short_and_sec_safe(symbol: str) -> Dict[str, Any]:
         out["sec"] = get_sec_signal(symbol)
     except Exception as e:
         logger.debug("sec_edgar AI score fetch: %s", e)
+    try:
+        from trading.data.dark_pool import get_dark_pool_activity
+
+        out["dark_pool"] = get_dark_pool_activity(symbol)
+    except Exception as e:
+        logger.debug("dark_pool AI score fetch: %s", e)
     return out
 
 
@@ -974,6 +985,57 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                 sentiment_score = si_sentiment
         except Exception:
             pass
+
+        try:
+            _dp = {}
+            if isinstance(_short_sec, dict):
+                _dp = _short_sec.get("dark_pool") or {}
+            if isinstance(_dp, dict) and _dp.get("success"):
+                _dp_pct = float(_dp.get("dark_pool_pct", 0))
+                _dp_sig = _dp.get("signal", "NEUTRAL")
+                _signal_status["dark_pool"] = "real"
+                if _dp_sig == "ACCUMULATION" and _dp_pct > 30:
+                    sentiment_score = min(
+                        10.0,
+                        sentiment_score + 0.5,
+                    )
+                    signals.append(
+                        {
+                            "name": "Dark Pool",
+                            "value": (
+                                f"{_dp_pct:.0f}% OTC volume"
+                            ),
+                            "impact": "positive",
+                            "description": (
+                                f"High dark pool activity "
+                                f"({_dp_pct:.0f}% of volume) — "
+                                "institutional accumulation signal"
+                            ),
+                        }
+                    )
+                elif _dp_sig == "DISTRIBUTION" and _dp_pct < 10:
+                    signals.append(
+                        {
+                            "name": "Dark Pool",
+                            "value": (
+                                f"{_dp_pct:.0f}% OTC volume"
+                            ),
+                            "impact": "neutral",
+                            "description": (
+                                f"Low dark pool activity "
+                                f"({_dp_pct:.0f}% of volume) — "
+                                "retail-driven price action"
+                            ),
+                        }
+                    )
+            else:
+                _signal_status["dark_pool"] = "fallback"
+        except Exception as _dpe:
+            logger.debug(
+                "dark pool AI score merge skipped: %s",
+                _dpe,
+            )
+            _signal_status["dark_pool"] = "fallback"
 
         if _external_bundle:
             try:
