@@ -37,6 +37,7 @@ SIGNAL_SOURCES = [
     "macro_factors",
     "sector_rotation",
     "earnings_calendar",
+    "earnings_quality",
     "insider_flow",
     "analyst_signals",
     "congressional_trading",
@@ -488,6 +489,22 @@ def _fetch_institutional_safe(
         }
 
 
+def _fetch_earnings_quality_safe(
+    symbol: str, _hist: Optional[pd.DataFrame] = None
+) -> Dict[str, Any]:
+    try:
+        from trading.data.earnings_quality import get_earnings_quality
+
+        return get_earnings_quality(symbol)
+    except Exception as e:
+        logger.debug("earnings_quality AI score fetch: %s", e)
+        return {
+            "signal": "NEUTRAL",
+            "composite_score": 5.0,
+            "success": False,
+        }
+
+
 def _bundle_technical(
     symbol: str,
     hist: pd.DataFrame,
@@ -834,7 +851,7 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
 
         # ── Technical / momentum + I/O signals (parallel) ─────────
         _parallel_results: Dict[str, Any] = {}
-        with ThreadPoolExecutor(max_workers=9) as ex:
+        with ThreadPoolExecutor(max_workers=10) as ex:
             _futures = {
                 ex.submit(
                     _bundle_technical, symbol, hist, close, last_price
@@ -853,6 +870,9 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                 ex.submit(
                     _fetch_institutional_safe, symbol, hist
                 ): "institutional",
+                ex.submit(
+                    _fetch_earnings_quality_safe, symbol, hist
+                ): "eq",
             }
             _done, _not_done = wait(
                 _futures.keys(),
@@ -1415,6 +1435,73 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
                         "description": f"Last earnings surprise: {surprise:+.1f}%",
                     }
                 )
+
+            _eq = _parallel_results.get("eq")
+            if not isinstance(_eq, dict):
+                _eq = {}
+            if _eq.get("success"):
+                _eq_sig = _eq.get("signal", "NEUTRAL")
+                _beat_rate = float(_eq.get("beat_rate", 0.5))
+                _accruals = _eq.get("accruals_signal", "NORMAL")
+                _rev_sig = _eq.get("revision_signal", "NEUTRAL")
+                _signal_status["earnings_quality"] = "real"
+
+                if _eq_sig == "QUALITY":
+                    fundamental_score = min(
+                        10.0,
+                        fundamental_score + 0.8,
+                    )
+                    signals.append(
+                        {
+                            "name": "Earnings Quality",
+                            "value": "High Quality",
+                            "impact": "positive",
+                            "description": (
+                                f"Beat rate: "
+                                f"{_beat_rate * 100:.0f}%"
+                                f" · EPS revisions: "
+                                f"{_rev_sig} · "
+                                f"Accruals: {_accruals}"
+                            ),
+                        }
+                    )
+                elif _eq_sig == "CONCERN":
+                    fundamental_score = max(
+                        0.0,
+                        fundamental_score - 0.8,
+                    )
+                    signals.append(
+                        {
+                            "name": "Earnings Quality",
+                            "value": "Concern",
+                            "impact": "negative",
+                            "description": (
+                                f"Beat rate: "
+                                f"{_beat_rate * 100:.0f}%"
+                                f" · EPS revisions: "
+                                f"{_rev_sig} · "
+                                f"Accruals: {_accruals}"
+                            ),
+                        }
+                    )
+
+                if _accruals == "HIGH":
+                    signals.append(
+                        {
+                            "name": "Accruals",
+                            "value": "High",
+                            "impact": "negative",
+                            "description": (
+                                "Earnings driven by "
+                                "non-cash accruals — "
+                                "Sloan anomaly risk "
+                                "(earnings may revert)"
+                            ),
+                        }
+                    )
+            else:
+                _signal_status["earnings_quality"] = "fallback"
+
             days_until = earnings.get("days_until")
             if days_until is not None and 0 <= days_until <= 14:
                 signals.append(
