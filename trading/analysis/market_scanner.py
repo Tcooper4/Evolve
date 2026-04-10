@@ -9,6 +9,7 @@ in Analyze → Signal breakdown when you select a symbol.
 import json
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -67,6 +68,22 @@ SCAN_FILTERS = {
         "Quick Score ⚡ ≥ threshold (technical estimate, instant)"
     ),
 }
+
+_SCAN_AI_MAX_WORKERS = 8
+
+
+def _score_ticker_ai(
+    symbol: str, hist: pd.DataFrame
+) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """Worker: AI score for one symbol (hist pre-sliced, thread-owned copy)."""
+    try:
+        from trading.analysis.ai_score import compute_ai_score
+
+        ai = compute_ai_score(symbol, hist)
+        return symbol, ai
+    except Exception as e:
+        logger.debug("Scanner AI score failed for %s: %s", symbol, e)
+        return symbol, None
 
 
 def scan_market(
@@ -270,7 +287,55 @@ def scan_market(
             logger.debug("Scanner: %s failed: %s", symbol, e)
             continue
 
-    # No bulk AI scoring — Quick Score only (fast). Full AI via Signal breakdown.
+    # Empty filters => full parallel AI scoring (briefing phase 2, agent tools).
+    if len(filters) == 0:
+        ai_by_symbol: Dict[str, Any] = {}
+        n_pend = len(pending)
+        _emit_progress(0, max(1, n_pend), "ai")
+        if pending:
+            done_ai = 0
+            with ThreadPoolExecutor(max_workers=_SCAN_AI_MAX_WORKERS) as executor:
+                future_map = {
+                    executor.submit(_score_ticker_ai, sym, h): sym
+                    for sym, h, _partial in pending
+                }
+                for fut in as_completed(future_map):
+                    sym, ai = fut.result()
+                    ai_by_symbol[sym] = ai
+                    done_ai += 1
+                    _emit_progress(done_ai, n_pend, "ai")
+        else:
+            _emit_progress(1, 1, "ai")
+
+        for symbol, _hist, partial in pending:
+            ai = ai_by_symbol.get(symbol)
+            if ai:
+                ai_score = float(ai.get("overall_score") or 5.0)
+                ai_grade = ai.get("grade", "C")
+                signals = ai.get("signals") or []
+            else:
+                ai_score = 5.0
+                ai_grade = "C"
+                signals = []
+            row = {
+                **partial,
+                "ai_score": ai_score,
+                "ai_grade": ai_grade,
+                "signals": signals,
+            }
+            results.append(row)
+
+        results.sort(key=lambda x: x.get("ai_score") or 0.0, reverse=True)
+        return {
+            "results": results[:max_results],
+            "filters_applied": filters,
+            "scanned": total,
+            "passed": len(results),
+            "scan_time_s": round(time.time() - t0, 1),
+            "error": None,
+        }
+
+    # Quick Score only (no bulk AI) — Scanner tab / briefing phase 1.
     n_pend = len(pending)
     _emit_progress(0, max(1, n_pend), "ai")
     _emit_progress(n_pend, max(1, n_pend), "ai")
@@ -284,7 +349,6 @@ def scan_market(
         }
         results.append(row)
 
-    # Sort by Quick Score descending
     results.sort(key=lambda x: x.get("quick_score") or 0.0, reverse=True)
 
     return {

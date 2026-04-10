@@ -1,0 +1,978 @@
+﻿1	"""
+2	Morning Briefing Pipeline
+3	==========================
+4	INTEGRATION NOTES:
+5	- Drop into: agents/briefing/morning_briefing.py
+6	- Wire into: pages/6_Chat.py autonomous mode toggle
+7	- Call pattern:
+8	    from agents.briefing.morning_briefing import MorningBriefing
+9	    briefing = MorningBriefing()
+10	    report = briefing.generate()  # returns formatted markdown
+11	    briefing.render_streamlit()   # renders full UI
+12	
+13	Dependencies: existing platform modules only
+14	"""
+15	
+16	import logging
+17	import time
+18	from datetime import datetime
+19	from typing import Any, Callable, Dict, List, Optional
+20	
+21	import pandas as pd
+22	
+23	logger = logging.getLogger(__name__)
+24	
+25	
+26	class MorningBriefing:
+27	    """
+28	    Autonomous morning briefing pipeline.
+29	
+30	    Steps:
+31	    1. Scan universe (SP100 by default) for top AI scores
+32	    2. Run consensus forecast on top candidates
+33	    3. Check short interest and earnings calendar
+34	    4. Generate structured report with entry/target/stop
+35	    5. Summarize market regime
+36	    """
+37	
+38	    # Cap universe for briefing speed; Scanner page uses full list.
+39	    BRIEFING_UNIVERSE_CAP = 50
+40	
+41	    # Fast consensus subset (Analyze page uses full 10-model stack).
+42	    BRIEFING_MODELS = [
+43	        "arima",
+44	        "xgboost",
+45	        "ridge",
+46	        "catboost",
+47	        "prophet",
+48	    ]
+49	
+50	    def __init__(
+51	        self,
+52	        universe: str = "sp100",
+53	        min_ai_score: Optional[float] = None,
+54	        max_positions: int = 3,
+55	    ):
+56	        self.universe = universe
+57	        self.min_ai_score = float(min_ai_score or 5.5)
+58	        self.max_positions = max_positions
+59	        self._last_report: Optional[Dict[str, Any]] = None
+60	        self._briefing_prefs: Dict[str, Any] = {}
+61	
+62	    def _load_briefing_prefs(self) -> Dict[str, Any]:
+63	        try:
+64	            from config.user_store import load_user_preferences
+65	            from utils.session_utils import get_stable_user_id
+66	
+67	            return load_user_preferences(get_stable_user_id()) or {}
+68	        except Exception:
+69	            return {}
+70	
+71	    def _opportunity_passes_direction_pref(self, opp: Dict[str, Any]) -> bool:
+72	        prefs = getattr(self, "_briefing_prefs", {}) or {}
+73	        od = prefs.get(
+74	            "opportunity_direction",
+75	            "Bullish only (BUY signals)",
+76	        )
+77	        fc = opp.get("forecast") or {}
+78	        entry = float(opp.get("entry") or 0)
+79	        target = float(opp.get("target") or fc.get("consensus_price") or 0)
+80	        MIN_MOVE_PCT = 0.005
+81	        if target > 0 and entry > 0:
+82	            move_pct = abs(target - entry) / entry
+83	            if move_pct < MIN_MOVE_PCT:
+84	                return False
+85	        exp_pct = float(fc.get("expected_move_pct", 0) or 0) / 100.0
+86	        if entry > 0 and target > 0:
+87	            forecast_return = (target - entry) / entry
+88	        else:
+89	            forecast_return = exp_pct
+90	
+91	        sym = str(opp.get("symbol") or "?")
+92	
+93	        if "Both directions" in od:
+94	            return True
+95	        if "Bearish only" in od:
+96	            is_bear = forecast_return < -0.005 or (
+97	                target > 0 and entry > 0 and target < entry * 0.998
+98	            )
+99	            if not is_bear:
+100	                logger.info(
+101	                    "Skipping %s: not bearish enough for bearish-only pref "
+102	                    "(return=%.2f%%)",
+103	                    sym,
+104	                    forecast_return * 100.0,
+105	                )
+106	            return is_bear
+107	
+108	        is_bull = forecast_return > 0.005 or (
+109	            target > 0 and entry > 0 and target > entry * 1.002
+110	        )
+111	        if not is_bull:
+112	            logger.info(
+113	                "Skipping %s: bearish forecast (return=%.2f%%)",
+114	                sym,
+115	                forecast_return * 100.0,
+116	            )
+117	        return is_bull
+118	
+119	    def generate(
+120	        self,
+121	        progress_callback: Optional[Callable[[int, int], None]] = None,
+122	    ) -> Dict[str, Any]:
+123	        """
+124	        Generate full morning briefing.
+125	        Returns dict with markdown report and structured data.
+126	
+127	        progress_callback: optional callable(done, total) during universe scan.
+128	        """
+129	        logger.info("Morning briefing: starting generation")
+130	        report = {
+131	            "timestamp": datetime.now().isoformat(),
+132	            "market_regime": {},
+133	            "top_opportunities": [],
+134	            "watchlist_alerts": [],
+135	            "risk_summary": {},
+136	            "markdown": "",
+137	            "error": None,
+138	        }
+139	
+140	        try:
+141	            # Step 1: Market regime
+142	            report["market_regime"] = self._get_market_regime()
+143	
+144	            # Step 2: Scan universe
+145	            candidates = self._scan_universe(
+146	                progress_callback=progress_callback
+147	            )
+148	            self._briefing_prefs = self._load_briefing_prefs()
+149	            pref_sectors = self._briefing_prefs.get("preferred_sectors") or []
+150	            if pref_sectors and candidates:
+151	                try:
+152	                    from trading.data.price_cache import get_info
+153	
+154	                    filtered_c: List[Dict[str, Any]] = []
+155	                    for c in candidates:
+156	                        sym = c.get("symbol")
+157	                        if not sym:
+158	                            continue
+159	                        try:
+160	                            info = get_info(str(sym)) or {}
+161	                            sec_raw = (info.get("sector") or "").strip()
+162	                        except Exception:
+163	                            sec_raw = ""
+164	                        sec_l = sec_raw.lower()
+165	                        if not sec_l:
+166	                            continue
+167	                        if any(
+168	                            str(s).strip().lower() in sec_l
+169	                            for s in pref_sectors
+170	                        ):
+171	                            nc = dict(c)
+172	                            nc["sector"] = sec_raw
+173	                            filtered_c.append(nc)
+174	                    if filtered_c:
+175	                        candidates = filtered_c
+176	                        logger.info(
+177	                            "Sector filter applied: %d candidates in %s",
+178	                            len(candidates),
+179	                            pref_sectors,
+180	                        )
+181	                except Exception as _sf:
+182	                    logger.debug("Sector filter skipped: %s", _sf)
+183	
+184	            logger.info(
+185	                "Morning briefing: found %d candidates above %.1f score",
+186	                len(candidates),
+187	                self.min_ai_score,
+188	            )
+189	
+190	            # Step 3: Deep analysis â€” try extra names until slots filled
+191	            opportunities = []
+192	            shared_router = None
+193	            try:
+194	                from trading.models.forecast_router import (
+195	                    ForecastRouter,
+196	                    get_router_singleton,
+197	                )
+198	
+199	                shared_router = get_router_singleton()
+200	            except Exception as e:
+201	                logger.warning("Morning briefing: ForecastRouter init failed: %s", e)
+202	
+203	            _max_try = min(len(candidates), max(self.max_positions * 6, 24))
+204	            _pool = candidates[:_max_try]
+205	            _n_pool = len(_pool)
+206	            for i, candidate in enumerate(_pool):
+207	                if len(opportunities) >= self.max_positions:
+208	                    break
+209	                sym = candidate.get("symbol") or "?"
+210	                t0 = time.perf_counter()
+211	                logger.info(
+212	                    "Morning briefing: analyzing %s (%d/%d)",
+213	                    sym,
+214	                    i + 1,
+215	                    _n_pool,
+216	                )
+217	                try:
+218	                    opp = self._analyze_opportunity(
+219	                        candidate,
+220	                        router=shared_router,
+221	                        briefing=True,
+222	                    )
+223	                    if opp and self._opportunity_passes_direction_pref(opp):
+224	                        opportunities.append(opp)
+225	                except Exception as e:
+226	                    logger.debug(
+227	                        "Opportunity analysis failed for %s: %s",
+228	                        sym,
+229	                        e,
+230	                    )
+231	                elapsed = time.perf_counter() - t0
+232	                logger.info(
+233	                    "Morning briefing: %s complete (%.1fs)",
+234	                    sym,
+235	                    elapsed,
+236	                )
+237	
+238	            if len(opportunities) >= 2:
+239	                try:
+240	                    from trading.data.price_cache import get_history
+241	                    from trading.optimization.portfolio_optimizer import (
+242	                        get_portfolio_optimizer,
+243	                    )
+244	
+245	                    _opt = get_portfolio_optimizer()
+246	                    _syms = [
+247	                        str(o.get("symbol", "")).upper()
+248	                        for o in opportunities
+249	                    ]
+250	                    _returns_dict: Dict[str, pd.Series] = {}
+251	                    for sym in _syms:
+252	                        try:
+253	                            h = get_history(
+254	                                sym, period="126d", interval="1d"
+255	                            )
+256	                            if h is not None and len(h) >= 30:
+257	                                col = {
+258	                                    c.lower(): c for c in h.columns
+259	                                }.get("close", h.columns[0])
+260	                                _returns_dict[sym] = (
+261	                                    h[col].pct_change().dropna()
+262	                                )
+263	                        except Exception:
+264	                            continue
+265	                    if len(_returns_dict) >= 2:
+266	                        _returns_df = pd.DataFrame(_returns_dict).dropna(
+267	                            how="any"
+268	                        )
+269	                        if len(_returns_df) >= 30:
+270	                            _result = _opt.mean_variance_optimization(
+271	                                _returns_df, target_return=None
+272	                            )
+273	                            if (
+274	                                isinstance(_result, dict)
+275	                                and "weights" in _result
+276	                                and "error" not in _result
+277	                            ):
+278	                                _weights = _result["weights"]
+279	                                for opp in opportunities:
+280	                                    sym = opp["symbol"]
+281	                                    w = float(
+282	                                        _weights.get(
+283	                                            sym, 1.0 / len(_syms)
+284	                                        )
+285	                                    )
+286	                                    opp["suggested_weight"] = round(w, 3)
+287	                                    opp["weight_pct"] = f"{w * 100:.0f}%"
+288	                                report["portfolio"] = {
+289	                                    "method": "max_sharpe",
+290	                                    "expected_sharpe": _result.get(
+291	                                        "sharpe_ratio"
+292	                                    ),
+293	                                    "weights": _weights,
+294	                                    "note": (
+295	                                        "Mean-variance optimized weights "
+296	                                        "(6-month history)"
+297	                                    ),
+298	                                }
+299	                                logger.info(
+300	                                    "Portfolio optimized: %s", _weights
+301	                                )
+302	                except Exception as e:
+303	                    logger.debug("Portfolio opt failed: %s", e)
+304	
+305	            report["top_opportunities"] = opportunities
+306	
+307	            # Step 4: Watchlist alerts
+308	            report["watchlist_alerts"] = self._get_watchlist_alerts()
+309	
+310	            # Step 5: Generate markdown
+311	            report["markdown"] = self._format_markdown(report)
+312	
+313	            self._last_report = report
+314	            logger.info("Morning briefing: complete")
+315	
+316	        except Exception as e:
+317	            logger.warning("Morning briefing generation failed: %s", e)
+318	            report["error"] = str(e)
+319	            report["markdown"] = (
+320	                f"âš ï¸ Briefing generation encountered an error: {e}\n\n"
+321	                "Please check the Scanner page for manual analysis."
+322	            )
+323	
+324	        return report
+325	
+326	    def _get_market_regime(self) -> Dict[str, Any]:
+327	        """Get current market regime from SPY/QQQ/VIX."""
+328	        regime = {
+329	            "spy_trend": "UNKNOWN",
+330	            "vix_level": None,
+331	            "regime": "NEUTRAL",
+332	            "description": "",
+333	        }
+334	        try:
+335	            import numpy as np
+336	            from trading.data.price_cache import get_history, get_macro_history
+337	
+338	            spy = get_history("SPY", period="3mo")
+339	            vix_hist = get_macro_history("^VIX", period="5d")
+340	
+341	            if not spy.empty:
+342	                _col_map = {c.lower(): c for c in spy.columns}
+343	                close_col = _col_map.get("close", spy.columns[0])
+344	                closes = spy[close_col].values
+345	                sma50 = np.mean(closes[-50:]) if len(closes) >= 50 else closes.mean()
+346	                current = float(closes[-1])
+347	                regime["spy_trend"] = "BULLISH" if current > sma50 else "BEARISH"
+348	                regime["spy_50d_pct"] = round(
+349	                    (current - sma50) / sma50 * 100, 2
+350	                )
+351	
+352	            if not vix_hist.empty:
+353	                _col_map = {c.lower(): c for c in vix_hist.columns}
+354	                close_col = _col_map.get("close", vix_hist.columns[0])
+355	                vix_level = float(vix_hist[close_col].iloc[-1])
+356	                regime["vix_level"] = round(vix_level, 2)
+357	
+358	                if vix_level > 30:
+359	                    regime["volatility"] = "HIGH"
+360	                elif vix_level > 20:
+361	                    regime["volatility"] = "ELEVATED"
+362	                else:
+363	                    regime["volatility"] = "NORMAL"
+364	
+365	            # Determine overall regime (None = unknown VIX â†’ neutral 20 for thresholds; keep real 0.0)
+366	            is_bullish = regime["spy_trend"] == "BULLISH"
+367	            vix_val = regime["vix_level"]
+368	            if vix_val is None:
+369	                vix_n = 20.0
+370	            else:
+371	                vix_n = float(vix_val)
+372	            if is_bullish and vix_n < 20:
+373	                regime["regime"] = "RISK_ON"
+374	                regime["description"] = "Market is in risk-on mode â€” momentum strategies favored"
+375	            elif not is_bullish and vix_n > 25:
+376	                regime["regime"] = "RISK_OFF"
+377	                regime["description"] = "Market is in risk-off mode â€” defensive positioning recommended"
+378	            else:
+379	                regime["regime"] = "NEUTRAL"
+380	                regime["description"] = "Mixed signals â€” selective positioning recommended"
+381	
+382	        except Exception as e:
+383	            logger.debug("Market regime fetch failed: %s", e)
+384	            regime["error"] = str(e)
+385	
+386	        return regime
+387	
+388	    def _scan_universe(
+389	        self,
+390	        progress_callback: Optional[Callable[[int, int], None]] = None,
+391	    ) -> List[Dict[str, Any]]:
+392	        """Run scanner on universe and return top candidates (symbol + ai_score)."""
+393	        try:
+394	            from trading.analysis.market_scanner import _get_universe, scan_market
+395	
+396	            u = (self.universe or "default").lower()
+397	            uni = list(_get_universe(u))
+398	            try:
+399	                from config.user_store import load_user_preferences
+400	                from utils.session_utils import get_stable_user_id
+401	
+402	                _uid = get_stable_user_id()
+403	                _p = load_user_preferences(_uid) or {}
+404	                if _p.get("min_ai_score") is not None:
+405	                    self.min_ai_score = float(_p["min_ai_score"])
+406	                pref_uni = str(_p.get("briefing_universe") or "")
+407	                if "NASDAQ100" in pref_uni:
+408	                    uni = list(_get_universe("nasdaq100"))
+409	                elif "SP500" in pref_uni:
+410	                    uni = list(_get_universe("sp500"))[:50]
+411	                elif "SP100" in pref_uni:
+412	                    uni = list(_get_universe("sp100"))
+413	                elif "Top 25" in pref_uni:
+414	                    uni = list(_get_universe("sp100"))[:25]
+415	                if _p.get("watchlist_only"):
+416	                    try:
+417	                        from trading.data.watchlist import WatchlistManager
+418	
+419	                        _wl = WatchlistManager().get_all() or []
+420	                        _syms = [
+421	                            str(r.get("symbol", "")).strip().upper()
+422	                            for r in _wl
+423	                            if r.get("symbol")
+424	                        ]
+425	                        if _syms:
+426	                            uni = _syms
+427	                            logger.info(
+428	                                "Morning briefing: using watchlist (%d tickers)",
+429	                                len(uni),
+430	                            )
+431	                    except Exception as _wl_e:
+432	                        logger.debug("Watchlist-only universe skipped: %s", _wl_e)
+433	            except Exception:
+434	                pass
+435	            if u in ("sp50", "large", "mega"):
+436	                uni = uni[:50]
+437	            elif u in ("sp30", "core"):
+438	                uni = uni[:30]
+439	            uni = uni[: self.BRIEFING_UNIVERSE_CAP]
+440	
+441	            logger.info(
+442	                "Morning briefing: scanning %d tickers...",
+443	                len(uni),
+444	            )
+445	            # tz_localize(None) is naive-only; batch tz strip is in market_scanner.scan_market
+446	
+447	            raw = scan_market(
+448	                filters=[],
+449	                universe=uni,
+450	                max_results=min(
+451	                    200,
+452	                    max(len(uni), self.max_positions * 16),
+453	                ),
+454	                progress_callback=progress_callback,
+455	            )
+456	            if raw.get("error"):
+457	                logger.warning("Universe scan error: %s", raw.get("error"))
+458	                return []
+459	            rows = raw.get("results") or []
+460	            candidates = [
+461	                r
+462	                for r in rows
+463	                if float(r.get("ai_score", 0) or 0) >= float(self.min_ai_score)
+464	            ]
+465	            candidates.sort(
+466	                key=lambda x: float(x.get("ai_score", 0) or 0),
+467	                reverse=True,
+468	            )
+469	            return candidates[: self.max_positions * 2]
+470	
+471	        except Exception as e:
+472	            logger.warning("Universe scan failed: %s", e)
+473	            return []
+474	
+475	    def _analyze_opportunity(
+476	        self,
+477	        candidate: Dict[str, Any],
+478	        router: Any = None,
+479	        briefing: bool = True,
+480	    ) -> Optional[Dict[str, Any]]:
+481	        """Deep analysis on a single candidate.
+482	
+483	        When ``briefing`` is True, skip Monte Carlo and strategy comparison
+484	        (heavy paths reserved for Analyze deep dive).
+485	        """
+486	        symbol = candidate.get("symbol")
+487	        if not symbol:
+488	            return None
+489	
+490	        opp = {
+491	            "symbol": symbol,
+492	            "ai_score": candidate.get("ai_score"),
+493	            "current_price": None,
+494	            "forecast": {},
+495	            "entry": None,
+496	            "target": None,
+497	            "stop": None,
+498	            "conviction": "MEDIUM",
+499	            "thesis": "",
+500	            "risks": [],
+501	            "catalysts": [],
+502	        }
+503	
+504	        try:
+505	            from trading.data.price_cache import get_history
+506	
+507	            hist = get_history(str(symbol), period="6mo")
+508	
+509	            if hist.empty:
+510	                return None
+511	
+512	            _col_map = {c.lower(): c for c in hist.columns}
+513	            close_col = _col_map.get("close", hist.columns[0])
+514	            current_price = float(hist[close_col].iloc[-1])
+515	            opp["current_price"] = round(current_price, 2)
+516	
+517	            # Get consensus forecast
+518	            try:
+519	                from trading.models.forecast_router import (
+520	                    ForecastRouter,
+521	                    get_router_singleton,
+522	                )
+523	
+524	                _router = router if router is not None else get_router_singleton()
+525	                forecast = _router.get_consensus_forecast(
+526	                    data=hist,
+527	                    horizon=7,
+528	                    symbol=str(symbol),
+529	                    models=self.BRIEFING_MODELS,
+530	                    model_configs={"arima": {"fast_mode": True}},
+531	                )
+532	                if forecast and "error" not in forecast:
+533	                    consensus_price = forecast.get("consensus_price")
+534	                    if consensus_price:
+535	                        pct_move = (
+536	                            (consensus_price - current_price)
+537	                            / current_price * 100
+538	                        )
+539	                        opp["forecast"] = {
+540	                            "consensus_price": round(consensus_price, 2),
+541	                            "expected_move_pct": round(pct_move, 2),
+542	                            "direction": forecast.get("direction", "NEUTRAL"),
+543	                            "conviction": forecast.get("conviction", "LOW"),
+544	                            "models_used": forecast.get("models_used", []),
+545	                        }
+546	
+547	                        # Entry/target/stop
+548	                        opp["entry"] = round(current_price, 2)
+549	                        opp["target"] = round(consensus_price, 2)
+550	                        stop_pct = 0.03  # 3% stop
+551	                        if forecast.get("direction") == "BULLISH":
+552	                            opp["stop"] = round(
+553	                                current_price * (1 - stop_pct), 2
+554	                            )
+555	                        else:
+556	                            opp["stop"] = round(
+557	                                current_price * (1 + stop_pct), 2
+558	                            )
+559	
+560	                        opp["conviction"] = forecast.get("conviction", "MEDIUM")
+561	                    for _w in forecast.get("walk_forward_warnings") or []:
+562	                        opp.setdefault("risks", []).append(_w)
+563	                    _wfc = forecast.get("walk_forward_confidence")
+564	                    if _wfc:
+565	                        opp.setdefault("catalysts", []).append(
+566	                            f"Walk-forward confidence: {_wfc}"
+567	                        )
+568	            except Exception as e:
+569	                logger.debug("Forecast failed for %s: %s", symbol, e)
+570	
+571	            if briefing:
+572	                try:
+573	                    from trading.backtesting.monte_carlo import (
+574	                        MonteCarloConfig,
+575	                        MonteCarloSimulator,
+576	                    )
+577	
+578	                    import numpy as np
+579	
+580	                    _cm = {c.lower(): c for c in hist.columns}
+581	                    _cc = _cm.get("close", hist.columns[0])
+582	                    _rets = hist[_cc].astype(float).pct_change().dropna()
+583	                    if len(_rets) >= 30:
+584	                        _cfg = MonteCarloConfig(n_simulations=50)
+585	                        _mc = MonteCarloSimulator(_cfg)
+586	                        _paths = _mc.simulate_portfolio_paths(
+587	                            _rets, n_simulations=50
+588	                        )
+589	                        if _paths is not None and len(_paths) > 1:
+590	                            _first = _paths.iloc[0].values.astype(float)
+591	                            _last = _paths.iloc[-1].values.astype(float)
+592	                            _term = (_last / np.maximum(_first, 1e-12)) - 1.0
+593	                            _p10 = float(np.percentile(_term, 10))
+594	                            if _p10 < -0.05:
+595	                                opp["risk_note"] = (
+596	                                    f"âš ï¸ Downside risk: 10th pct = {_p10:.1%}"
+597	                                )
+598	                except Exception:
+599	                    pass
+600	
+601	            if not briefing:
+602	                try:
+603	                    from trading.backtesting.monte_carlo import (
+604	                        MonteCarloConfig,
+605	                        MonteCarloSimulator,
+606	                    )
+607	
+608	                    import numpy as np
+609	
+610	                    _cfg = MonteCarloConfig(n_simulations=100)
+611	                    _mc = MonteCarloSimulator(_cfg)
+612	                    _cm = {c.lower(): c for c in hist.columns}
+613	                    _cc = _cm.get("close", hist.columns[0])
+614	                    _rets = hist[_cc].astype(float).pct_change().dropna()
+615	                    if len(_rets) >= 30:
+616	                        _paths = _mc.simulate_portfolio_paths(
+617	                            _rets, n_simulations=100
+618	                        )
+619	                        if _paths is not None and len(_paths) > 1:
+620	                            _first = _paths.iloc[0].values.astype(float)
+621	                            _last = _paths.iloc[-1].values.astype(float)
+622	                            _term = (_last / np.maximum(_first, 1e-12)) - 1.0
+623	                            _p10 = float(np.percentile(_term, 10))
+624	                            _fmove = float(
+625	                                (opp.get("forecast") or {}).get(
+626	                                    "expected_move_pct", 0
+627	                                )
+628	                                or 0
+629	                            )
+630	                            if _p10 < -0.08:
+631	                                opp["risk_note"] = (
+632	                                    f"High downside risk: 10th pct = "
+633	                                    f"{_p10:.1%} (vs ~{_fmove:+.1f}% "
+634	                                    f"consensus move)"
+635	                                )
+636	                except Exception as _mce:
+637	                    logger.debug("Monte Carlo skipped: %s", _mce)
+638	
+639	                try:
+640	                    from trading.strategies.strategy_comparison import (
+641	                        get_strategy_comparison,
+642	                    )
+643	
+644	                    _cmp = get_strategy_comparison()
+645	                    _best_name, _ = _cmp.get_best_strategy(
+646	                        hist, metric="win_rate"
+647	                    )
+648	                    if _best_name:
+649	                        _mat = _cmp.generate_comparison_matrix(hist)
+650	                        _wr = None
+651	                        if _mat is not None and not _mat.empty:
+652	                            _row = _mat.loc[_mat["Strategy"] == _best_name]
+653	                            if not _row.empty:
+654	                                _wr = float(
+655	                                    _row.iloc[0].get("win_rate") or 0.0
+656	                                )
+657	                        if _wr is not None:
+658	                            opp["strategy_note"] = (
+659	                                f"Best strategy: {_best_name} "
+660	                                f"({_wr:.0%} win rate)"
+661	                            )
+662	                        else:
+663	                            opp["strategy_note"] = (
+664	                                f"Best strategy: {_best_name}"
+665	                            )
+666	                except Exception as _sce:
+667	                    logger.debug("Strategy comparison skipped: %s", _sce)
+668	
+669	            # Add AI score signals as thesis
+670	            signals = candidate.get("signals", [])
+671	            if signals:
+672	                positive = [
+673	                    s.get("description", "")
+674	                    for s in signals
+675	                    if s.get("impact") == "positive"
+676	                ][:3]
+677	                negative = [
+678	                    s.get("description", "")
+679	                    for s in signals
+680	                    if s.get("impact") == "negative"
+681	                ][:2]
+682	                opp["thesis"] = "; ".join(positive) if positive else ""
+683	                for _neg in negative:
+684	                    if _neg:
+685	                        opp.setdefault("risks", []).append(_neg)
+686	
+687	            # Earnings catalyst
+688	            try:
+689	                from trading.data.earnings_calendar import get_upcoming_earnings
+690	                earnings = get_upcoming_earnings(symbol)
+691	                days_until = earnings.get("days_until")
+692	                if days_until is not None and days_until <= 14:
+693	                    opp["catalysts"].append(
+694	                        f"âš ï¸ Earnings in {days_until} days"
+695	                    )
+696	                elif days_until is not None and days_until <= 30:
+697	                    opp["catalysts"].append(
+698	                        f"ðŸ“… Earnings in {days_until} days"
+699	                    )
+700	            except Exception:
+701	                pass
+702	
+703	        except Exception as e:
+704	            logger.debug("Deep analysis failed for %s: %s", symbol, e)
+705	
+706	        return opp
+707	
+708	    def _get_watchlist_alerts(self) -> List[Dict[str, Any]]:
+709	        """Check watchlist for notable moves or signals."""
+710	        alerts = []
+711	        try:
+712	            from trading.data.watchlist import WatchlistManager
+713	
+714	            _rows = WatchlistManager().get_all() or []
+715	            watchlist = [
+716	                str(r.get("symbol", "")).strip().upper()
+717	                for r in _rows
+718	                if r.get("symbol")
+719	            ]
+720	            if not watchlist:
+721	                return []
+722	
+723	            import numpy as np
+724	            from trading.data.price_cache import get_history
+725	
+726	            for symbol in watchlist[:10]:
+727	                try:
+728	                    hist = get_history(str(symbol), period="5d")
+729	                    if hist.empty:
+730	                        continue
+731	                    _col_map = {c.lower(): c for c in hist.columns}
+732	                    close_col = _col_map.get("close", hist.columns[0])
+733	                    closes = hist[close_col].values
+734	                    if len(closes) < 2:
+735	                        continue
+736	
+737	                    daily_change = float(
+738	                        (closes[-1] / closes[-2] - 1) * 100
+739	                    )
+740	
+741	                    if abs(daily_change) > 3:
+742	                        alerts.append({
+743	                            "symbol": symbol,
+744	                            "change_pct": round(daily_change, 2),
+745	                            "alert_type": (
+746	                                "SURGE" if daily_change > 0 else "DROP"
+747	                            ),
+748	                            "message": (
+749	                                f"{symbol} moved {daily_change:+.1f}% today"
+750	                            ),
+751	                        })
+752	                except Exception:
+753	                    continue
+754	
+755	        except Exception as e:
+756	            logger.debug("Watchlist alerts failed: %s", e)
+757	
+758	        return sorted(
+759	            alerts,
+760	            key=lambda x: abs(x["change_pct"]),
+761	            reverse=True
+762	        )[:5]
+763	
+764	    def _format_markdown(self, report: Dict[str, Any]) -> str:
+765	        """Format report as readable markdown."""
+766	        lines = []
+767	        now = datetime.now()
+768	        lines.append(
+769	            f"# ðŸŒ… Morning Briefing â€” {now.strftime('%A, %B %d, %Y')}"
+770	        )
+771	        lines.append(
+772	            f"*Generated at {now.strftime('%I:%M %p')}*\n"
+773	        )
+774	
+775	        # Market regime
+776	        regime = report.get("market_regime", {})
+777	        if regime:
+778	            regime_emoji = {
+779	                "RISK_ON": "ðŸŸ¢",
+780	                "RISK_OFF": "ðŸ”´",
+781	                "NEUTRAL": "ðŸŸ¡",
+782	            }.get(regime.get("regime", "NEUTRAL"), "âšª")
+783	
+784	            lines.append("## Market Regime")
+785	            lines.append(
+786	                f"{regime_emoji} **{regime.get('regime', 'NEUTRAL')}** "
+787	                f"â€” {regime.get('description', '')}"
+788	            )
+789	            if regime.get("vix_level") is not None:
+790	                lines.append(f"VIX: **{float(regime['vix_level']):.1f}**")
+791	            if regime.get("spy_50d_pct"):
+792	                lines.append(
+793	                    f"SPY vs 50-day MA: **{regime['spy_50d_pct']:+.1f}%**"
+794	                )
+795	            lines.append("")
+796	
+797	        # Top opportunities
+798	        opportunities = report.get("top_opportunities", [])
+799	        if opportunities:
+800	            lines.append(f"## Top {len(opportunities)} Opportunities")
+801	            for i, opp in enumerate(opportunities, 1):
+802	                symbol = opp["symbol"]
+803	                score = opp.get("ai_score", "N/A")
+804	                _cp = opp.get("current_price")
+805	                price_disp = f"${_cp:.2f}" if _cp is not None else "N/A"
+806	
+807	                lines.append(
+808	                    f"\n### {i}. {symbol} â€” "
+809	                    f"AI Score: {score} | {price_disp}"
+810	                )
+811	
+812	                forecast = opp.get("forecast", {})
+813	                if forecast:
+814	                    direction = forecast.get("direction", "")
+815	                    dir_emoji = (
+816	                        "ðŸŸ¢" if direction == "BULLISH"
+817	                        else "ðŸ”´" if direction == "BEARISH"
+818	                        else "ðŸŸ¡"
+819	                    )
+820	                    lines.append(
+821	                        f"**Forecast:** {dir_emoji} {direction} "
+822	                        f"| Target: ${forecast.get('consensus_price', 'N/A')} "
+823	                        f"({forecast.get('expected_move_pct', 0):+.1f}%)"
+824	                    )
+825	
+826	                if opp.get("entry"):
+827	                    lines.append(
+828	                        f"**Trade:** Entry ${opp['entry']} | "
+829	                        f"Target ${opp.get('target', 'N/A')} | "
+830	                        f"Stop ${opp.get('stop', 'N/A')}"
+831	                    )
+832	
+833	                if opp.get("thesis"):
+834	                    lines.append(f"**Thesis:** {opp['thesis']}")
+835	
+836	                if opp.get("catalysts"):
+837	                    lines.append(
+838	                        f"**Catalysts:** {', '.join(opp['catalysts'])}"
+839	                    )
+840	
+841	                if opp.get("risks"):
+842	                    lines.append(
+843	                        f"**Risks:** {'; '.join(opp['risks'][:2])}"
+844	                    )
+845	
+846	                if opp.get("risk_note"):
+847	                    lines.append(f"**Risk note:** {opp['risk_note']}")
+848	
+849	                if opp.get("strategy_note"):
+850	                    lines.append(f"**{opp['strategy_note']}**")
+851	
+852	        else:
+853	            lines.append(
+854	                "## No High-Conviction Opportunities Today\n"
+855	                f"No stocks cleared the {self.min_ai_score} AI Score "
+856	                "threshold. Consider lowering threshold or "
+857	                "waiting for better setups."
+858	            )
+859	
+860	        # Watchlist alerts
+861	        alerts = report.get("watchlist_alerts", [])
+862	        if alerts:
+863	            lines.append("\n## Watchlist Alerts")
+864	            for alert in alerts:
+865	                emoji = "â¬†ï¸" if alert["change_pct"] > 0 else "â¬‡ï¸"
+866	                lines.append(
+867	                    f"- {emoji} **{alert['symbol']}**: "
+868	                    f"{alert['message']}"
+869	                )
+870	
+871	        lines.append(
+872	            f"\n---\n*Briefing scans up to {self.BRIEFING_UNIVERSE_CAP} "
+873	            f"tickers from {self.universe.upper()} for speed; use Scanner "
+874	            f"for the full universe. Always verify signals before trading.*"
+875	        )
+876	
+877	        return "\n".join(lines)
+878	
+879	    def render_streamlit(self) -> None:
+880	        """Render morning briefing in Streamlit."""
+881	        try:
+882	            import streamlit as st
+883	
+884	            col1, col2 = st.columns([3, 1])
+885	            with col1:
+886	                st.subheader("ðŸŒ… Morning Briefing")
+887	            with col2:
+888	                if st.button(
+889	                    "ðŸ”„ Regenerate",
+890	                    key="briefing_regenerate"
+891	                ):
+892	                    st.session_state.pop("morning_briefing_cache", None)
+893	                    st.session_state.pop("morning_briefing_ts", None)
+894	                    st.rerun()
+895	
+896	            # Cache for 30 minutes
+897	            cache_key = "morning_briefing_cache"
+898	            cache_ts_key = "morning_briefing_ts"
+899	
+900	            import time
+901	            now = time.time()
+902	            cached = st.session_state.get(cache_key)
+903	            cached_ts = st.session_state.get(cache_ts_key, 0)
+904	
+905	            if cached and (now - cached_ts) < 1800:
+906	                report = cached
+907	            else:
+908	                progress = st.progress(
+909	                    0,
+910	                    text=(
+911	                        f"Parallel AI scores (up to {self.BRIEFING_UNIVERSE_CAP} "
+912	                        "tickers), then 5-model consensus per top pickâ€¦"
+913	                    ),
+914	                )
+915	
+916	                def _progress_cb(done: int, total: int) -> None:
+917	                    if total <= 0:
+918	                        return
+919	                    frac = min(1.0, float(done) / float(total))
+920	                    progress.progress(
+921	                        frac,
+922	                        text=f"AI-scoring universeâ€¦ {done}/{total}",
+923	                    )
+924	
+925	                try:
+926	                    report = self.generate(progress_callback=_progress_cb)
+927	                finally:
+928	                    progress.empty()
+929	                st.session_state[cache_key] = report
+930	                st.session_state[cache_ts_key] = now
+931	
+932	            if report.get("error"):
+933	                st.warning(f"Briefing error: {report['error']}")
+934	
+935	            # Render markdown
+936	            markdown = report.get("markdown", "")
+937	            if markdown:
+938	                st.markdown(markdown)
+939	
+940	            # Structured opportunities table
+941	            opps = report.get("top_opportunities", [])
+942	            if opps:
+943	                st.markdown("---")
+944	                st.markdown("**Quick Reference Table**")
+945	                rows = []
+946	                for opp in opps:
+947	                    forecast = opp.get("forecast", {})
+948	                    rows.append({
+949	                        "Symbol": opp["symbol"],
+950	                        "AI Score": opp.get("ai_score", "N/A"),
+951	                        "Price": (
+952	                            f"${float(opp['current_price']):.2f}"
+953	                            if opp.get("current_price") is not None
+954	                            else "N/A"
+955	                        ),
+956	                        "Direction": forecast.get("direction", "N/A"),
+957	                        "Target": f"${opp.get('target', 0):.2f}"
+958	                        if opp.get("target") else "N/A",
+959	                        "Stop": f"${opp.get('stop', 0):.2f}"
+960	                        if opp.get("stop") else "N/A",
+961	                        "Expected Move": (
+962	                            f"{forecast.get('expected_move_pct', 0):+.1f}%"
+963	                            if forecast else "N/A"
+964	                        ),
+965	                        "Risk note": opp.get("risk_note") or "",
+966	                        "Strategy": opp.get("strategy_note") or "",
+967	                    })
+968	
+969	                import pandas as pd
+970	                df = pd.DataFrame(rows)
+971	                st.dataframe(df, width='stretch')
+972	
+973	        except Exception as e:
+974	            try:
+975	                import streamlit as st
+976	                st.caption(f"Morning briefing unavailable: {e}")
+977	            except Exception:
+978	                pass

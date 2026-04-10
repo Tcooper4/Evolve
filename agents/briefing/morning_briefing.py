@@ -126,6 +126,11 @@ class MorningBriefing:
 
         progress_callback: optional callable(done, total) during universe scan.
         """
+        self._briefing_prefs = self._load_briefing_prefs()
+        _p = self._briefing_prefs
+        if _p.get("min_ai_score") is not None:
+            self.min_ai_score = float(_p["min_ai_score"])
+
         logger.info("Morning briefing: starting generation")
         report = {
             "timestamp": datetime.now().isoformat(),
@@ -145,23 +150,32 @@ class MorningBriefing:
             candidates = self._scan_universe(
                 progress_callback=progress_callback
             )
-            self._briefing_prefs = self._load_briefing_prefs()
             pref_sectors = self._briefing_prefs.get("preferred_sectors") or []
             if pref_sectors and candidates:
                 try:
-                    from trading.data.price_cache import get_info
+                    import yfinance as yf
+
+                    _syms = [
+                        str(c.get("symbol"))
+                        for c in candidates
+                        if c.get("symbol")
+                    ]
+                    _tickers = yf.Tickers(" ".join(_syms))
+                    _sector_map: Dict[str, str] = {}
+                    for sym in _syms:
+                        try:
+                            _sector_map[sym] = (
+                                _tickers.tickers[sym]
+                                .info.get("sector", "")
+                                or ""
+                            )
+                        except Exception:
+                            _sector_map[sym] = ""
 
                     filtered_c: List[Dict[str, Any]] = []
                     for c in candidates:
-                        sym = c.get("symbol")
-                        if not sym:
-                            continue
-                        try:
-                            info = get_info(str(sym)) or {}
-                            sec_raw = (info.get("sector") or "").strip()
-                        except Exception:
-                            sec_raw = ""
-                        sec_l = sec_raw.lower()
+                        sym = str(c.get("symbol", ""))
+                        sec_l = (_sector_map.get(sym, "") or "").lower()
                         if not sec_l:
                             continue
                         if any(
@@ -169,7 +183,7 @@ class MorningBriefing:
                             for s in pref_sectors
                         ):
                             nc = dict(c)
-                            nc["sector"] = sec_raw
+                            nc["sector"] = _sector_map[sym]
                             filtered_c.append(nc)
                     if filtered_c:
                         candidates = filtered_c
@@ -396,13 +410,7 @@ class MorningBriefing:
             u = (self.universe or "default").lower()
             uni = list(_get_universe(u))
             try:
-                from config.user_store import load_user_preferences
-                from utils.session_utils import get_stable_user_id
-
-                _uid = get_stable_user_id()
-                _p = load_user_preferences(_uid) or {}
-                if _p.get("min_ai_score") is not None:
-                    self.min_ai_score = float(_p["min_ai_score"])
+                _p = getattr(self, "_briefing_prefs", {}) or {}
                 pref_uni = str(_p.get("briefing_universe") or "")
                 if "NASDAQ100" in pref_uni:
                     uni = list(_get_universe("nasdaq100"))
@@ -444,12 +452,36 @@ class MorningBriefing:
             )
             # tz_localize(None) is naive-only; batch tz strip is in market_scanner.scan_market
 
+            _cap = min(
+                200,
+                max(len(uni), self.max_positions * 16),
+            )
+            _min_q = max(
+                4.5,
+                float(self.min_ai_score) - 1.5,
+            )
+            _pre = scan_market(
+                filters=["quick_technical"],
+                universe=uni,
+                max_results=_cap,
+                min_quick_score=_min_q,
+                progress_callback=None,
+            )
+            _pre_tickers = [
+                r["symbol"]
+                for r in (_pre.get("results") or [])
+                if r.get("symbol")
+            ]
+            if not _pre_tickers:
+                # Fallback: use full universe if pre-filter returns nothing
+                _pre_tickers = uni
+
             raw = scan_market(
                 filters=[],
-                universe=uni,
+                universe=_pre_tickers,
                 max_results=min(
                     200,
-                    max(len(uni), self.max_positions * 16),
+                    max(len(_pre_tickers), self.max_positions * 16),
                 ),
                 progress_callback=progress_callback,
             )
@@ -481,7 +513,7 @@ class MorningBriefing:
         """Deep analysis on a single candidate.
 
         When ``briefing`` is True, skip Monte Carlo and strategy comparison
-        (heavy paths reserved for Analyze deep dive).
+        (heavy paths run only when ``briefing`` is False — Analyze deep dive).
         """
         symbol = candidate.get("symbol")
         if not symbol:
@@ -567,36 +599,6 @@ class MorningBriefing:
                         )
             except Exception as e:
                 logger.debug("Forecast failed for %s: %s", symbol, e)
-
-            if briefing:
-                try:
-                    from trading.backtesting.monte_carlo import (
-                        MonteCarloConfig,
-                        MonteCarloSimulator,
-                    )
-
-                    import numpy as np
-
-                    _cm = {c.lower(): c for c in hist.columns}
-                    _cc = _cm.get("close", hist.columns[0])
-                    _rets = hist[_cc].astype(float).pct_change().dropna()
-                    if len(_rets) >= 30:
-                        _cfg = MonteCarloConfig(n_simulations=50)
-                        _mc = MonteCarloSimulator(_cfg)
-                        _paths = _mc.simulate_portfolio_paths(
-                            _rets, n_simulations=50
-                        )
-                        if _paths is not None and len(_paths) > 1:
-                            _first = _paths.iloc[0].values.astype(float)
-                            _last = _paths.iloc[-1].values.astype(float)
-                            _term = (_last / np.maximum(_first, 1e-12)) - 1.0
-                            _p10 = float(np.percentile(_term, 10))
-                            if _p10 < -0.05:
-                                opp["risk_note"] = (
-                                    f"⚠️ Downside risk: 10th pct = {_p10:.1%}"
-                                )
-                except Exception:
-                    pass
 
             if not briefing:
                 try:
