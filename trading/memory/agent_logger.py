@@ -186,55 +186,62 @@ class AgentLogger:
                 columns = [row[1] for row in cursor.fetchall()]
 
                 if not columns:
-                    # Table doesn't exist, create it
-                    conn.execute(
+                    try:
+                        conn.execute(
+                            """
+                            CREATE TABLE IF NOT EXISTS agent_logs (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                timestamp TEXT NOT NULL,
+                                agent_name TEXT NOT NULL,
+                                agent_type TEXT NOT NULL,
+                                action TEXT NOT NULL,
+                                level TEXT NOT NULL,
+                                message TEXT NOT NULL,
+                                data TEXT,
+                                context TEXT,
+                                session_id TEXT NOT NULL,
+                                user_id TEXT,
+                                performance_metrics TEXT,
+                                error_details TEXT,
+                                task_id TEXT,
+                                correlation_id TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
                         """
-                        CREATE TABLE agent_logs (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            timestamp TEXT NOT NULL,
-                            agent_name TEXT NOT NULL,
-                            agent_type TEXT NOT NULL,
-                            action TEXT NOT NULL,
-                            level TEXT NOT NULL,
-                            message TEXT NOT NULL,
-                            data TEXT,
-                            context TEXT,
-                            session_id TEXT NOT NULL,
-                            user_id TEXT,
-                            performance_metrics TEXT,
-                            error_details TEXT,
-                            task_id TEXT,
-                            correlation_id TEXT,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
-                    """
-                    )
+                        conn.commit()
+                    except Exception as _e:
+                        logger.debug("agent_logs table create: %s", _e)
                 elif "agent_type" not in columns:
                     # Table exists but missing agent_type column, recreate it
                     logger.info("Database schema outdated, recreating table...")
-                    conn.execute("DROP TABLE IF EXISTS agent_logs")
-                    conn.execute(
+                    try:
+                        conn.execute("DROP TABLE IF EXISTS agent_logs")
+                        conn.execute(
+                            """
+                            CREATE TABLE IF NOT EXISTS agent_logs (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                timestamp TEXT NOT NULL,
+                                agent_name TEXT NOT NULL,
+                                agent_type TEXT NOT NULL,
+                                action TEXT NOT NULL,
+                                level TEXT NOT NULL,
+                                message TEXT NOT NULL,
+                                data TEXT,
+                                context TEXT,
+                                session_id TEXT NOT NULL,
+                                user_id TEXT,
+                                performance_metrics TEXT,
+                                error_details TEXT,
+                                task_id TEXT,
+                                correlation_id TEXT,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
                         """
-                        CREATE TABLE agent_logs (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            timestamp TEXT NOT NULL,
-                            agent_name TEXT NOT NULL,
-                            agent_type TEXT NOT NULL,
-                            action TEXT NOT NULL,
-                            level TEXT NOT NULL,
-                            message TEXT NOT NULL,
-                            data TEXT,
-                            context TEXT,
-                            session_id TEXT NOT NULL,
-                            user_id TEXT,
-                            performance_metrics TEXT,
-                            error_details TEXT,
-                            task_id TEXT,
-                            correlation_id TEXT,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         )
-                    """
-                    )
+                        conn.commit()
+                    except Exception as _e:
+                        logger.debug("agent_logs table recreate: %s", _e)
 
                 # Create indexes for better performance
                 conn.execute(

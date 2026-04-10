@@ -196,7 +196,7 @@ class MorningBriefing:
                     logger.debug("Sector filter skipped: %s", _sf)
 
             logger.info(
-                "Morning briefing: found %d candidates above %.1f score",
+                "Morning briefing: found %d candidates above %.1f Quick Score",
                 len(candidates),
                 self.min_ai_score,
             )
@@ -465,35 +465,20 @@ class MorningBriefing:
                 universe=uni,
                 max_results=_cap,
                 min_quick_score=_min_q,
-                progress_callback=None,
-            )
-            _pre_tickers = [
-                r["symbol"]
-                for r in (_pre.get("results") or [])
-                if r.get("symbol")
-            ]
-            if not _pre_tickers:
-                # Fallback: use full universe if pre-filter returns nothing
-                _pre_tickers = uni
-
-            raw = scan_market(
-                filters=[],
-                universe=_pre_tickers,
-                max_results=min(
-                    200,
-                    max(len(_pre_tickers), self.max_positions * 16),
-                ),
                 progress_callback=progress_callback,
             )
-            if raw.get("error"):
-                logger.warning("Universe scan error: %s", raw.get("error"))
+            if _pre.get("error"):
+                logger.warning("Universe scan error: %s", _pre.get("error"))
                 return []
+            raw = _pre
             rows = raw.get("results") or []
-            candidates = [
-                r
-                for r in rows
-                if float(r.get("ai_score", 0) or 0) >= float(self.min_ai_score)
-            ]
+            candidates = []
+            for r in rows:
+                _qs = float(r.get("quick_score", 0) or 0)
+                if _qs >= float(self.min_ai_score):
+                    nc = dict(r)
+                    nc["ai_score"] = _qs
+                    candidates.append(nc)
             candidates.sort(
                 key=lambda x: float(x.get("ai_score", 0) or 0),
                 reverse=True,
@@ -808,7 +793,7 @@ class MorningBriefing:
 
                 lines.append(
                     f"\n### {i}. {symbol} — "
-                    f"AI Score: {score} | {price_disp}"
+                    f"Quick Score: {score} | {price_disp}"
                 )
 
                 forecast = opp.get("forecast", {})
@@ -854,7 +839,7 @@ class MorningBriefing:
         else:
             lines.append(
                 "## No High-Conviction Opportunities Today\n"
-                f"No stocks cleared the {self.min_ai_score} AI Score "
+                f"No stocks cleared the {self.min_ai_score} Quick Score "
                 "threshold. Consider lowering threshold or "
                 "waiting for better setups."
             )
@@ -871,9 +856,9 @@ class MorningBriefing:
                 )
 
         lines.append(
-            f"\n---\n*Briefing scans up to {self.BRIEFING_UNIVERSE_CAP} "
-            f"tickers from {self.universe.upper()} for speed; use Scanner "
-            f"for the full universe. Always verify signals before trading.*"
+            "\n---\n*Briefing uses **Quick Score** (technical estimate) for "
+            "speed. For full 16-signal AI Score, open any ticker in Analyze. "
+            "Always verify signals before trading.*"
         )
 
         return "\n".join(lines)
@@ -910,7 +895,7 @@ class MorningBriefing:
                 progress = st.progress(
                     0,
                     text=(
-                        f"Parallel AI scores (up to {self.BRIEFING_UNIVERSE_CAP} "
+                        f"Quick Score scan (up to {self.BRIEFING_UNIVERSE_CAP} "
                         "tickers), then 5-model consensus per top pick…"
                     ),
                 )
@@ -921,7 +906,7 @@ class MorningBriefing:
                     frac = min(1.0, float(done) / float(total))
                     progress.progress(
                         frac,
-                        text=f"AI-scoring universe… {done}/{total}",
+                        text=f"Scanning universe… {done}/{total}",
                     )
 
                 try:

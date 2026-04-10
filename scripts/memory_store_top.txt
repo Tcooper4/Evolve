@@ -1,0 +1,130 @@
+﻿1	"""
+2	Centralized persistent MemoryStore (SQLite) for the Evolve agent layer.
+3	
+4	AGENT_MEMORY_LAYER:
+5	- Provides shared context across all agents (not request-scoped only).
+6	- Uses SQLAlchemy + SQLite with NullPool (P2.1) to avoid concurrent write pool issues.
+7	- Designed to be safe on shutdown (P4.2 / P3P4_FIXES.md pattern via atexit hooks in main/app).
+8	
+9	Memory types supported:
+10	- short_term: current session context (cleared by session or explicitly)
+11	- long_term: trading history, backtests, outcomes, model performance
+12	- preference: user preferences (risk tolerance, favorite strategies, style)
+13	"""
+14	
+15	from __future__ import annotations
+16	
+17	import json
+18	import logging
+19	import os
+20	import uuid
+21	from dataclasses import dataclass
+22	from datetime import datetime
+23	from enum import Enum
+24	from pathlib import Path
+25	from typing import Any, Dict, List, Optional
+26	
+27	from sqlalchemy import Column, DateTime, Index, String, Text, create_engine, event
+28	from sqlalchemy.engine import Engine
+29	from sqlalchemy.orm import Session, declarative_base, sessionmaker
+30	from sqlalchemy.pool import NullPool
+31	
+32	logger = logging.getLogger(__name__)
+33	
+34	Base = declarative_base()
+35	
+36	
+37	class MemoryType(str, Enum):
+38	    SHORT_TERM = "short_term"
+39	    LONG_TERM = "long_term"
+40	    PREFERENCE = "preference"
+41	
+42	
+43	class MemoryEntry(Base):
+44	    __tablename__ = "memory_entries"
+45	
+46	    id = Column(String(36), primary_key=True)
+47	    memory_type = Column(String(32), nullable=False, index=True)
+48	    # namespace groups memory per agent/system area (e.g. "CommentaryAgent", "ExecutionAgent", "global")
+49	    namespace = Column(String(128), nullable=False, index=True, default="global")
+50	    # session_id scopes short-term memory to a single run/session
+51	    session_id = Column(String(64), nullable=True, index=True)
+52	    # key allows stable upserts (especially for preferences)
+53	    key = Column(String(256), nullable=True, index=True)
+54	    category = Column(String(64), nullable=True, index=True)
+55	    value_json = Column(Text, nullable=False)
+56	    metadata_json = Column(Text, nullable=True)
+57	    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+58	    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+59	
+60	
+61	Index("idx_memory_type_namespace", MemoryEntry.memory_type, MemoryEntry.namespace)
+62	
+63	
+64	def _default_db_path() -> Path:
+65	    # Keep separate from trading.db so we don't interfere with existing DB lifecycle.
+66	    path = os.getenv("EVOLVE_MEMORY_DB_PATH", "data/memory_store.db")
+67	    p = Path(path)
+68	    p.parent.mkdir(parents=True, exist_ok=True)
+69	    return p
+70	
+71	
+72	def _create_memory_engine(db_path: Path) -> Engine:
+73	    database_url = f"sqlite:///{db_path.as_posix()}"
+74	    connect_args = {"check_same_thread": False}
+75	    # P2 fix: SQLite uses NullPool; QueuePool can cause unexpected behavior with concurrent writes.
+76	    engine = create_engine(
+77	        database_url,
+78	        connect_args=connect_args,
+79	        poolclass=NullPool,
+80	        pool_pre_ping=True,
+81	        echo=False,
+82	    )
+83	
+84	    @event.listens_for(engine, "connect")
+85	    def set_sqlite_pragma(dbapi_conn, _connection_record):
+86	        cursor = dbapi_conn.cursor()
+87	        cursor.execute("PRAGMA foreign_keys=ON")
+88	        cursor.close()
+89	
+90	    return engine
+91	
+92	
+93	@dataclass
+94	class MemoryRecord:
+95	    id: str
+96	    memory_type: str
+97	    namespace: str
+98	    session_id: Optional[str]
+99	    key: Optional[str]
+100	    category: Optional[str]
+101	    value: Any
+102	    metadata: Dict[str, Any]
+103	    created_at: str
+104	    updated_at: str
+105	
+106	
+107	class MemoryStore:
+108	    """Central shared context store for all agents."""
+109	
+110	    def __init__(self, db_path: Optional[Path] = None, session_id: Optional[str] = None):
+111	        self.db_path = db_path or _default_db_path()
+112	        self.engine = _create_memory_engine(self.db_path)
+113	        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+114	
+115	        # Create tables on first init
+116	        Base.metadata.create_all(bind=self.engine)
+117	
+118	        self.session_id = session_id or os.getenv("EVOLVE_SESSION_ID") or datetime.utcnow().strftime(
+119	            "%Y%m%d_%H%M%S"
+120	        )
+121	        logger.info(f"MemoryStore initialized at {self.db_path} (session_id={self.session_id})")
+122	
+123	    def close(self) -> None:
+124	        """Dispose engine; safe to call multiple times."""
+125	        try:
+126	            self.engine.dispose()
+127	        except Exception as e:
+128	            logger.warning(f"MemoryStore dispose failed: {e}")
+129	
+130	    def _serialize(self, value: Any) -> str:

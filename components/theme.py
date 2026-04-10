@@ -290,30 +290,13 @@ def market_status_html() -> str:
 def render_top_bar() -> None:
     """Render the persistent index ticker bar at the top of each page."""
     try:
-        import streamlit.components.v1 as components
-
         from trading.data.price_cache import get_quote
 
-        _sidebar_toggle_html = """
-<div style="display:flex;align-items:center;height:100%;">
-<button type="button" title="Toggle sidebar"
-style="background:#0f1525;color:#00d4ff;border:1px solid #1e2d45;border-radius:4px;
-padding:6px 12px;cursor:pointer;font-size:16px;line-height:1;"
-onclick="(function(){var d=window.parent.document;var x=d.querySelector(
-'[data-testid=&quot;collapsedControl&quot;]');if(x){x.click();return;}var s=d.querySelector(
-'section[data-testid=&quot;stSidebar&quot;]');if(s){var b=s.querySelector(
-'button[kind=&quot;headerNoPadding&quot;]')||s.querySelector(
-'button[kind=&quot;header&quot;]')||s.querySelector('button');if(b){b.click();return;}}
-var h=d.querySelector('[data-testid=&quot;stHeader&quot;] button');if(h){h.click();}})();">
-☰</button>
-</div>
-"""
         _col_toggle, _col_bar = st.columns([1, 16])
         with _col_toggle:
-            # components.v1.html runs in an iframe — onclick uses window.parent.document
-            # to reach Streamlit's sidebar control. st.html is not iframed, so the same JS
-            # does not reliably toggle the sidebar (see theme / S69 migration notes).
-            components.html(_sidebar_toggle_html, height=44, scrolling=False)
+            # Custom sidebar toggle removed: Streamlit Cloud provides native collapse.
+            # Keep column for layout alignment with ticker bar.
+            pass
 
         tickers_to_fetch = ["SPY", "QQQ", "IWM", "^VIX"]
         ticker_data = {}

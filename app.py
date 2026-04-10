@@ -64,22 +64,33 @@ except Exception:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-logger.info("Evolve Trading System starting.")
-
 # Warnings
 warnings.filterwarnings("ignore")
 logging.getLogger("streamlit.runtime.scriptrunner_utils.script_run_context").setLevel(logging.ERROR)
 logging.getLogger("streamlit.runtime.state.session_state_proxy").setLevel(logging.ERROR)
 
-# Environment
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-    logger.info("Environment variables loaded from .env")
-except ImportError:
-    pass
-except Exception as e:
-    logger.error("Error loading .env: %s", e)
+# Environment + startup logs (once per session — avoid log spam on every rerun)
+if not st.session_state.get("_app_initialized"):
+    logger.info("Evolve Trading System starting.")
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+        logger.info("Environment variables loaded from .env")
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.error("Error loading .env: %s", e)
+    st.session_state["_app_initialized"] = True
+else:
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.error("Error loading .env: %s", e)
 
 # Page config
 st.set_page_config(

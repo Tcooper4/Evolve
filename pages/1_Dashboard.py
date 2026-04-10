@@ -666,7 +666,7 @@ def _render_briefing():
             from agents.briefing.morning_briefing import MorningBriefing
 
             st.info(
-                "Generating briefing: parallel AI scores on up to 50 tickers, "
+                "Generating briefing: Quick Score on up to 50 tickers, "
                 "then 5 fast models per top pick (~20–60s typical, 3 picks). "
                 "News and watchlist above refresh independently.",
                 icon="⏳",
@@ -675,14 +675,14 @@ def _render_briefing():
                 universe=_universe,
                 min_ai_score=_min_score,
             )
-            progress = st.progress(0, text="AI-scoring universe (parallel)…")
+            progress = st.progress(0, text="Scanning universe (Quick Score)…")
 
             def _brief_progress(done: int, total: int) -> None:
                 if total <= 0:
                     return
                 progress.progress(
                     min(1.0, float(done) / float(total)),
-                    text=f"AI-scoring universe… {done}/{total}",
+                    text=f"Scanning universe… {done}/{total}",
                 )
 
             try:
@@ -793,6 +793,10 @@ def _render_briefing():
             key="gen_briefing_btn",
             type="primary",
         ):
+            st.session_state["_briefing_requested"] = True
+            st.rerun()
+        if st.session_state.get("_briefing_requested"):
+            st.session_state.pop("_briefing_requested", None)
             _run_briefing()
         return
 
