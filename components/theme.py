@@ -290,6 +290,8 @@ def market_status_html() -> str:
 def render_top_bar() -> None:
     """Render the persistent index ticker bar at the top of each page."""
     try:
+        import streamlit.components.v1 as components
+
         from trading.data.price_cache import get_quote
 
         _sidebar_toggle_html = """
@@ -308,10 +310,10 @@ var h=d.querySelector('[data-testid=&quot;stHeader&quot;] button');if(h){h.click
 """
         _col_toggle, _col_bar = st.columns([1, 16])
         with _col_toggle:
-            st.html(
-                f'<div style="height:44px">{_sidebar_toggle_html}</div>',
-                unsafe_allow_javascript=True,
-            )
+            # components.v1.html runs in an iframe — onclick uses window.parent.document
+            # to reach Streamlit's sidebar control. st.html is not iframed, so the same JS
+            # does not reliably toggle the sidebar (see theme / S69 migration notes).
+            components.html(_sidebar_toggle_html, height=44, scrolling=False)
 
         tickers_to_fetch = ["SPY", "QQQ", "IWM", "^VIX"]
         ticker_data = {}
