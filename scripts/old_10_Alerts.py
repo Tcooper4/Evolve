@@ -169,7 +169,7 @@ with tab1:
             })
         
         alerts_df = pd.DataFrame(alerts_data)
-        st.dataframe(alerts_df, use_container_width=True, height=400)
+        st.dataframe(alerts_df, width='stretch', height=400)
         
         # Alert Actions
         st.markdown("---")
@@ -202,7 +202,7 @@ with tab1:
             
             with col2:
                 # Test Alert
-                if st.button("🧪 Test Alert", use_container_width=True, key=f"test_{selected_alert}"):
+                if st.button("🧪 Test Alert", width='stretch', key=f"test_{selected_alert}"):
                     try:
                         # Simulate alert trigger
                         alert_data["last_triggered"] = datetime.now().isoformat()
@@ -227,19 +227,19 @@ with tab1:
             
             with col3:
                 # Edit Alert
-                if st.button("✏️ Edit", use_container_width=True, key=f"edit_{selected_alert}"):
+                if st.button("✏️ Edit", width='stretch', key=f"edit_{selected_alert}"):
                     st.session_state.editing_alert = selected_alert
                     st.info(f"Edit functionality for '{selected_alert}' - navigate to Tab 2 to edit")
             
             with col4:
                 # View Details
-                if st.button("👁️ View Details", use_container_width=True, key=f"view_{selected_alert}"):
+                if st.button("👁️ View Details", width='stretch', key=f"view_{selected_alert}"):
                     st.session_state.viewing_alert = selected_alert
                     st.rerun()
             
             with col5:
                 # Delete Alert
-                if st.button("🗑️ Delete", use_container_width=True, key=f"delete_{selected_alert}"):
+                if st.button("🗑️ Delete", width='stretch', key=f"delete_{selected_alert}"):
                     if selected_alert in st.session_state.active_alerts:
                         del st.session_state.active_alerts[selected_alert]
                         st.success(f"✅ Alert '{selected_alert}' deleted!")
@@ -286,7 +286,7 @@ with tab1:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("✅ Enable All", use_container_width=True):
+            if st.button("✅ Enable All", width='stretch'):
                 for name in filtered_alerts.keys():
                     if name in st.session_state.active_alerts:
                         st.session_state.active_alerts[name]["enabled"] = True
@@ -294,7 +294,7 @@ with tab1:
                 st.rerun()
         
         with col2:
-            if st.button("⏸️ Pause All", use_container_width=True):
+            if st.button("⏸️ Pause All", width='stretch'):
                 for name in filtered_alerts.keys():
                     if name in st.session_state.active_alerts:
                         st.session_state.active_alerts[name]["enabled"] = False
@@ -302,7 +302,7 @@ with tab1:
                 st.rerun()
         
         with col3:
-            if st.button("🗑️ Delete All Filtered", use_container_width=True):
+            if st.button("🗑️ Delete All Filtered", width='stretch'):
                 deleted_count = 0
                 for name in filtered_alerts.keys():
                     if name in st.session_state.active_alerts:
@@ -744,16 +744,16 @@ with tab2:
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        test_button = st.button("🧪 Test Alert", use_container_width=True, help="Test the alert configuration")
+        test_button = st.button("🧪 Test Alert", width='stretch', help="Test the alert configuration")
     
     with col2:
         if editing_alert_name:
-            create_button = st.button("💾 Update Alert", type="primary", use_container_width=True)
+            create_button = st.button("💾 Update Alert", type="primary", width='stretch')
         else:
-            create_button = st.button("✅ Create Alert", type="primary", use_container_width=True)
+            create_button = st.button("✅ Create Alert", type="primary", width='stretch')
     
     with col3:
-        if st.button("🔄 Reset", use_container_width=True):
+        if st.button("🔄 Reset", width='stretch'):
             st.rerun()
     
     # Test Alert
@@ -994,7 +994,7 @@ with tab3:
                                         st.code(f"{config.get('strategy')} - {config.get('signal_type')}")
                             
                             # Use template button
-                            if st.button(f"📝 Use Template", key=f"use_{template_name}", use_container_width=True):
+                            if st.button(f"📝 Use Template", key=f"use_{template_name}", width='stretch'):
                                 st.session_state.use_template = template_name
                                 st.session_state.template_data = template
                                 st.info(f"Template '{template_name}' selected. Navigate to Tab 2 to configure and create the alert.")
@@ -1027,7 +1027,7 @@ with tab3:
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    if st.button("💾 Save as Template", use_container_width=True):
+                    if st.button("💾 Save as Template", width='stretch'):
                         if new_template_name:
                             if new_template_name in st.session_state.alert_templates:
                                 st.error(f"Template '{new_template_name}' already exists. Please choose a different name.")
@@ -1052,7 +1052,7 @@ with tab3:
                             st.error("Please enter a template name")
                 
                 with col2:
-                    if st.button("🔄 Reset", use_container_width=True):
+                    if st.button("🔄 Reset", width='stretch'):
                         st.rerun()
         else:
             st.info("No existing alerts to convert to templates. Create alerts in Tab 2 first.")
@@ -1072,14 +1072,14 @@ with tab3:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("🗑️ Delete Template", use_container_width=True):
+                if st.button("🗑️ Delete Template", width='stretch'):
                     if template_to_manage in st.session_state.alert_templates:
                         del st.session_state.alert_templates[template_to_manage]
                         st.success(f"✅ Template '{template_to_manage}' deleted!")
                         st.rerun()
             
             with col2:
-                if st.button("📋 View Template Details", use_container_width=True):
+                if st.button("📋 View Template Details", width='stretch'):
                     template = st.session_state.alert_templates[template_to_manage]
                     
                     st.markdown(f"### {template_to_manage}")
@@ -1252,7 +1252,7 @@ with tab4:
         # Display table
         st.dataframe(
             history_df,
-            use_container_width=True,
+            width='stretch',
             height=400,
             column_config={
                 "Timestamp": st.column_config.DatetimeColumn("Timestamp", format="YYYY-MM-DD HH:mm:ss"),
@@ -1274,7 +1274,7 @@ with tab4:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("📥 Export to CSV", use_container_width=True):
+            if st.button("📥 Export to CSV", width='stretch'):
                 try:
                     csv = history_df.to_csv(index=False)
                     st.download_button(
@@ -1287,7 +1287,7 @@ with tab4:
                     st.error(f"Error exporting to CSV: {str(e)}")
         
         with col2:
-            if st.button("📊 Export to Excel", use_container_width=True):
+            if st.button("📊 Export to Excel", width='stretch'):
                 try:
                     # Create Excel file
                     from io import BytesIO
@@ -1307,7 +1307,7 @@ with tab4:
                     st.info("Note: openpyxl package required for Excel export")
         
         with col3:
-            if st.button("🗑️ Clear History", use_container_width=True):
+            if st.button("🗑️ Clear History", width='stretch'):
                 if st.button("⚠️ Confirm Clear", key="confirm_clear"):
                     st.session_state.alert_history = []
                     st.success("✅ Alert history cleared!")
@@ -1349,7 +1349,7 @@ with tab4:
                     height=300,
                     showlegend=False
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             
             # Alert type distribution
             col1, col2 = st.columns(2)
@@ -1370,7 +1370,7 @@ with tab4:
                         title="Triggers by Alert Type",
                         height=300
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
             
             with col2:
                 # Top triggered alerts
@@ -1393,7 +1393,7 @@ with tab4:
                         yaxis_title="Alert Name",
                         height=300
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
             
             # Notification success rate
             st.markdown("---")
@@ -1555,7 +1555,7 @@ with tab5:
                 )
         
         # Save settings
-        if st.button("💾 Save Notification Settings", type="primary", use_container_width=True):
+        if st.button("💾 Save Notification Settings", type="primary", width='stretch'):
             settings = {
                 'email_enabled': email_enabled,
                 'email_address': email_address if email_enabled else None,
@@ -1727,7 +1727,7 @@ with tab5:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("🧪 Test Email", use_container_width=True):
+                if st.button("🧪 Test Email", width='stretch'):
                     if settings["email"]["smtp_server"] and settings["email"]["from_address"]:
                         st.success("✅ Test email sent! (Simulated)")
                         st.info("In production, this would send a test email to verify configuration.")
@@ -1735,7 +1735,7 @@ with tab5:
                         st.error("Please configure SMTP server and from address first")
             
             with col2:
-                if st.button("💾 Save Email Settings", use_container_width=True):
+                if st.button("💾 Save Email Settings", width='stretch'):
                     st.session_state.notification_settings["email"] = settings["email"]
 
 with tab_watchlist:
@@ -1750,7 +1750,7 @@ with tab_watchlist:
             st.info("No watchlist alerts have been triggered yet.")
         else:
             df_hist = pd.DataFrame(history)
-            st.dataframe(df_hist, use_container_width=True, hide_index=True)
+            st.dataframe(df_hist, width='stretch', hide_index=True)
     except Exception as e:
         st.error(f"Watchlist Alerts unavailable: {e}")
         st.success("✅ Email settings saved!")
@@ -1800,7 +1800,7 @@ with tab_watchlist:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("🧪 Test SMS", use_container_width=True):
+                if st.button("🧪 Test SMS", width='stretch'):
                     if settings["sms"]["twilio_account_sid"] and settings["sms"]["recipient_phone"]:
                         st.success("✅ Test SMS sent! (Simulated)")
                         st.info("In production, this would send a test SMS via Twilio.")
@@ -1808,7 +1808,7 @@ with tab_watchlist:
                         st.error("Please configure Twilio credentials and recipient phone number first")
             
             with col2:
-                if st.button("💾 Save SMS Settings", use_container_width=True):
+                if st.button("💾 Save SMS Settings", width='stretch'):
                     st.session_state.notification_settings["sms"] = settings["sms"]
                     st.success("✅ SMS settings saved!")
     
@@ -1839,7 +1839,7 @@ with tab_watchlist:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("🧪 Test Telegram", use_container_width=True):
+                if st.button("🧪 Test Telegram", width='stretch'):
                     if settings["telegram"]["bot_token"] and settings["telegram"]["chat_id"]:
                         st.success("✅ Test Telegram message sent! (Simulated)")
                         st.info("In production, this would send a test message via Telegram bot.")
@@ -1847,7 +1847,7 @@ with tab_watchlist:
                         st.error("Please configure bot token and chat ID first")
             
             with col2:
-                if st.button("💾 Save Telegram Settings", use_container_width=True):
+                if st.button("💾 Save Telegram Settings", width='stretch'):
                     st.session_state.notification_settings["telegram"] = settings["telegram"]
                     st.success("✅ Telegram settings saved!")
     
@@ -1879,7 +1879,7 @@ with tab_watchlist:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("🧪 Test Slack", use_container_width=True):
+                if st.button("🧪 Test Slack", width='stretch'):
                     if settings["slack"]["webhook_url"]:
                         st.success("✅ Test Slack notification sent! (Simulated)")
                         st.info("In production, this would send a test message to Slack.")
@@ -1887,7 +1887,7 @@ with tab_watchlist:
                         st.error("Please configure webhook URL first")
             
             with col2:
-                if st.button("💾 Save Slack Settings", use_container_width=True):
+                if st.button("💾 Save Slack Settings", width='stretch'):
                     st.session_state.notification_settings["slack"] = settings["slack"]
                     st.success("✅ Slack settings saved!")
     
@@ -1920,7 +1920,7 @@ with tab_watchlist:
             col1, col2 = st.columns(2)
             
             with col1:
-                if st.button("🧪 Test Webhook", use_container_width=True):
+                if st.button("🧪 Test Webhook", width='stretch'):
                     if settings["webhook"]["webhook_urls"]:
                         st.success("✅ Test webhook sent! (Simulated)")
                         st.info("In production, this would POST to the configured webhook URLs.")
@@ -1928,7 +1928,7 @@ with tab_watchlist:
                         st.error("Please configure at least one webhook URL first")
             
             with col2:
-                if st.button("💾 Save Webhook Settings", use_container_width=True):
+                if st.button("💾 Save Webhook Settings", width='stretch'):
                     st.session_state.notification_settings["webhook"] = settings["webhook"]
                     st.success("✅ Webhook settings saved!")
     
@@ -1971,7 +1971,7 @@ with tab_watchlist:
             help="Only send notifications for alerts at or above this priority"
         )
     
-    if st.button("💾 Save Global Rules", use_container_width=True):
+    if st.button("💾 Save Global Rules", width='stretch'):
         st.session_state.notification_settings["global_rules"] = settings["global_rules"]
         st.success("✅ Global notification rules saved!")
     

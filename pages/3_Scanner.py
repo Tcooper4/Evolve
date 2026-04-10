@@ -14,6 +14,7 @@ import streamlit as st
 
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
 from trading.data.price_cache import get_history, get_news, batch_quotes
+from trading.data.ticker_resolver import resolve_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -508,7 +509,11 @@ with tab_scan:
 
     universe = None
     if custom_universe.strip():
-        universe = [t.strip().upper() for t in custom_universe.split(",") if t.strip()]
+        universe = [
+            resolve_ticker(t.strip().upper(), validate=False)
+            for t in custom_universe.split(",")
+            if t.strip()
+        ]
     else:
         label_map = {
             "S&P 100 (~100, fastest)": "S&P 100",

@@ -73,6 +73,9 @@ data/users.db
 data/users.db-shm
 data/users.db-wal
 data/*.db
+# SQLite WAL/SHM sidecars (ephemeral; any DB name, e.g. signal_scores)
+*.db-shm
+*.db-wal
 
 # Models (only ignore specific model files)
 models/private/

@@ -119,7 +119,7 @@ if str(project_root) not in sys.path:
                             yaxis_title='Reward'
                         )
 
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, width='stretch')
 
                         # Store agent in session state
                         st.session_state.rl_agent = agent
@@ -156,7 +156,7 @@ if str(project_root) not in sys.path:
                                         yaxis_title='Portfolio Value'
                                     )
 
-                                    st.plotly_chart(fig_equity, use_container_width=True)
+                                    st.plotly_chart(fig_equity, width='stretch')
 
                                 st.session_state.rl_backtest_results = test_results
                             except Exception as e:

@@ -953,7 +953,42 @@ class LSTMForecaster(BaseModel):
             bool: True if model was loaded successfully
         """
         try:
-            cache_path = os.path.join(self.cache_dir, f"{cache_key}.joblib")
+            os.makedirs(self.cache_dir, exist_ok=True)
+            cache_path_pt = os.path.join(
+                self.cache_dir, f"{cache_key}.pt"
+            )
+            if os.path.exists(cache_path_pt):
+                try:
+                    loaded = torch.load(
+                        cache_path_pt,
+                        map_location=self.device,
+                        weights_only=False,
+                    )
+                except TypeError:
+                    loaded = torch.load(
+                        cache_path_pt,
+                        map_location=self.device,
+                    )
+                if isinstance(loaded, dict) and "model_state_dict" in loaded:
+                    self.model.load_state_dict(
+                        loaded["model_state_dict"]
+                    )
+                    self.model.to(self.device)
+                    self.compiled_model = self.model
+                    if loaded.get("X_scaler") is not None:
+                        self.X_scaler = loaded["X_scaler"]
+                    if loaded.get("y_scaler") is not None:
+                        self.y_scaler = loaded["y_scaler"]
+                    self.logger.info(
+                        "Loaded cached model from %s",
+                        cache_path_pt,
+                    )
+                    return True
+
+            # Legacy joblib (full nn.Module — can fail to pickle)
+            cache_path = os.path.join(
+                self.cache_dir, f"{cache_key}.joblib"
+            )
             if os.path.exists(cache_path):
                 loaded = joblib.load(cache_path)
                 if isinstance(loaded, dict):
@@ -980,18 +1015,24 @@ class LSTMForecaster(BaseModel):
     def _save_cached_model(self, cache_key: str) -> None:
         """Save compiled model to cache.
 
+        Persists state_dict via torch.save (pickle-safe); avoids joblib on
+        nn.Module graphs that fail with \"not the same object\" errors.
+
         Args:
             cache_key (str): Cache key for the model
         """
         try:
-            cache_path = os.path.join(self.cache_dir, f"{cache_key}.joblib")
+            os.makedirs(self.cache_dir, exist_ok=True)
+            cache_path_pt = os.path.join(
+                self.cache_dir, f"{cache_key}.pt"
+            )
             cache_data = {
-                "model": self.compiled_model,
+                "model_state_dict": self.compiled_model.state_dict(),
                 "X_scaler": self.X_scaler,
                 "y_scaler": self.y_scaler,
             }
-            joblib.dump(cache_data, cache_path)
-            self.logger.info(f"Saved model to cache: {cache_path}")
+            torch.save(cache_data, cache_path_pt)
+            self.logger.info(f"Saved model to cache: {cache_path_pt}")
         except Exception as e:
             self.logger.warning(f"Failed to save model to cache: {e}")
 

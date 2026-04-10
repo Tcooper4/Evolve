@@ -594,7 +594,7 @@ with tab1:
                 textinfo='label+percent'
             )])
             fig_sector.update_layout(title="Sector Allocation", height=400)
-            st.plotly_chart(fig_sector, use_container_width=True)
+            st.plotly_chart(fig_sector, width='stretch')
         else:
             st.info("No sector allocation data available")
     
@@ -608,7 +608,7 @@ with tab1:
                 textinfo='label+percent'
             )])
             fig_asset.update_layout(title="Asset Class Allocation", height=400)
-            st.plotly_chart(fig_asset, use_container_width=True)
+            st.plotly_chart(fig_asset, width='stretch')
         else:
             st.info("No asset class allocation data available")
 
@@ -738,7 +738,7 @@ with tab1:
                             xaxis_title="",
                             yaxis_title=""
                         )
-                        st.plotly_chart(fig_corr, use_container_width=True)
+                        st.plotly_chart(fig_corr, width='stretch')
                     else:
                         st.info("Insufficient data for correlation analysis")
                 else:
@@ -769,7 +769,7 @@ with tab1:
                             title="Sample Correlation Matrix (SPY, QQQ, AAPL, MSFT, NVDA)",
                             height=500,
                         )
-                        st.plotly_chart(fig_demo, use_container_width=True)
+                        st.plotly_chart(fig_demo, width='stretch')
                     else:
                         st.info("Correlation demo unavailable: no price data.")
                 except Exception as e:
@@ -857,7 +857,7 @@ with tab1:
         positions_df = positions_df[positions_df["symbol"].isin(selected_symbol)]
 
     # Display position table
-    st.dataframe(positions_df, use_container_width=True)
+    st.dataframe(positions_df, width='stretch')
     
     st.markdown("---")
     
@@ -910,7 +910,7 @@ with tab1:
                     # Display consolidated positions
                     if 'positions' in consolidated and len(consolidated['positions']) > 0:
                         consolidated_df = pd.DataFrame(consolidated['positions'])
-                        st.dataframe(consolidated_df, use_container_width=True)
+                        st.dataframe(consolidated_df, width='stretch')
                         
                         # Show consolidation details
                         if 'consolidation_details' in consolidated:
@@ -957,7 +957,7 @@ with tab1:
     with viz_tab1:
         fig = plot_equity_curve(portfolio.state.closed_positions)
         if fig is not None:
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         else:
             _empty_state("No trading history yet. Make your first trade or run a backtest to see portfolio performance here.", "📊")
 
@@ -965,14 +965,14 @@ with tab1:
         window = st.slider("Rolling Window", 5, 100, 20)
         fig = plot_rolling_metrics(portfolio.state.closed_positions, window=window)
         if fig is not None:
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         else:
             _empty_state("No trading history yet. Make your first trade or run a backtest to see portfolio performance here.", "📊")
 
     with viz_tab3:
         fig = plot_strategy_performance(portfolio.state.closed_positions)
         if fig is not None:
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
         else:
             _empty_state("No trading history yet. Make your first trade or run a backtest to see portfolio performance here.", "📊")
 
@@ -1221,7 +1221,7 @@ with tab2:
                             yaxis_title="P&L ($)",
                             height=300
                         )
-                        st.plotly_chart(fig_pos, use_container_width=True)
+                        st.plotly_chart(fig_pos, width='stretch')
                     else:
                         st.info("Historical price data not available for charting")
                 except Exception as e:
@@ -1249,7 +1249,7 @@ with tab2:
                     ]
                 }
                 history_df = pd.DataFrame(history_data)
-                st.dataframe(history_df, use_container_width=True, hide_index=True)
+                st.dataframe(history_df, width='stretch', hide_index=True)
                 
                 st.markdown("---")
                 
@@ -1307,7 +1307,7 @@ with tab2:
                     
                     with col_action1:
                         # Quick close button
-                        if st.button(f"🛑 Close Position", key=f"close_{position_key}", use_container_width=True):
+                        if st.button(f"🛑 Close Position", key=f"close_{position_key}", width='stretch'):
                             st.session_state[f"confirm_close_{position_key}"] = True
                             st.rerun()
                         
@@ -1316,7 +1316,7 @@ with tab2:
                             st.warning(f"⚠️ Are you sure you want to close {position.symbol}?")
                             col_confirm1, col_confirm2 = st.columns(2)
                             with col_confirm1:
-                                if st.button("✅ Confirm Close", key=f"confirm_yes_{position_key}", use_container_width=True):
+                                if st.button("✅ Confirm Close", key=f"confirm_yes_{position_key}", width='stretch'):
                                     try:
                                         # Close position
                                         portfolio.close_position(position, current_price)
@@ -1326,7 +1326,7 @@ with tab2:
                                     except Exception as e:
                                         st.error(f"Error closing position: {str(e)}")
                             with col_confirm2:
-                                if st.button("❌ Cancel", key=f"confirm_no_{position_key}", use_container_width=True):
+                                if st.button("❌ Cancel", key=f"confirm_no_{position_key}", width='stretch'):
                                     st.session_state[f"confirm_close_{position_key}"] = False
                                     st.rerun()
                     
@@ -1342,7 +1342,7 @@ with tab2:
                         )
                         partial_size = position.size * (partial_close_pct / 100)
 
-                        if st.button(f"📉 Close {partial_close_pct}%", key=f"partial_btn_{position_key}", use_container_width=True):
+                        if st.button(f"📉 Close {partial_close_pct}%", key=f"partial_btn_{position_key}", width='stretch'):
                             _close_qty = position.size * (partial_close_pct / 100)
                             try:
                                 portfolio.partial_close_position(position, current_price, _close_qty)
@@ -1383,7 +1383,7 @@ with tab2:
                             step=0.01,
                             key=f"tp_{position_key}"
                         )
-                        if st.button("💾 Update", key=f"update_risk_{position_key}", use_container_width=True):
+                        if st.button("💾 Update", key=f"update_risk_{position_key}", width='stretch'):
                             try:
                                 if hasattr(position, "stop_loss"):
                                     position.stop_loss = new_stop_loss
@@ -1472,7 +1472,7 @@ with tab3:
                 yaxis_title="Portfolio Value ($)",
                 height=400
             )
-            st.plotly_chart(fig_portfolio, use_container_width=True)
+            st.plotly_chart(fig_portfolio, width='stretch')
             
             # Returns by Period
             st.subheader("📅 Returns by Period")
@@ -1519,7 +1519,7 @@ with tab3:
                         yaxis_title="Frequency",
                         height=300
                     )
-                    st.plotly_chart(fig_daily, use_container_width=True)
+                    st.plotly_chart(fig_daily, width='stretch')
                 
                 with col_ret_chart2:
                     if not monthly_returns.empty:
@@ -1536,7 +1536,7 @@ with tab3:
                             yaxis_title="Return (%)",
                             height=300
                         )
-                        st.plotly_chart(fig_monthly, use_container_width=True)
+                        st.plotly_chart(fig_monthly, width='stretch')
             
             st.markdown("---")
             
@@ -1605,7 +1605,7 @@ with tab3:
                             yaxis_title="Normalized Value",
                             height=400
                         )
-                        st.plotly_chart(fig_bench, use_container_width=True)
+                        st.plotly_chart(fig_bench, width='stretch')
                         
                         # Calculate outperformance (guard division by zero)
                         pa0, pa1 = (portfolio_aligned.iloc[0], portfolio_aligned.iloc[-1]) if len(portfolio_aligned) > 0 else (1.0, 1.0)
@@ -1667,8 +1667,8 @@ with tab3:
                             yaxis_title="Total P&L ($)",
                             height=300
                         )
-                        st.plotly_chart(fig_strategy, use_container_width=True)
-                        st.dataframe(strategy_df, use_container_width=True, hide_index=True)
+                        st.plotly_chart(fig_strategy, width='stretch')
+                        st.dataframe(strategy_df, width='stretch', hide_index=True)
                 
                 with col_attr2:
                     st.markdown("**By Symbol**")
@@ -1691,8 +1691,8 @@ with tab3:
                             yaxis_title="Total P&L ($)",
                             height=300
                         )
-                        st.plotly_chart(fig_symbol, use_container_width=True)
-                        st.dataframe(symbol_df, use_container_width=True, hide_index=True)
+                        st.plotly_chart(fig_symbol, width='stretch')
+                        st.dataframe(symbol_df, width='stretch', hide_index=True)
             
             st.markdown("---")
             
@@ -1771,7 +1771,7 @@ with tab3:
                     yaxis2=dict(title="Volatility (%)", overlaying='y', side='right'),
                     height=400
                 )
-                st.plotly_chart(fig_rolling, use_container_width=True)
+                st.plotly_chart(fig_rolling, width='stretch')
                 
                 # Rolling return chart
                 fig_rolling_return = go.Figure()
@@ -1789,7 +1789,7 @@ with tab3:
                     yaxis_title="Return (%)",
                     height=300
                 )
-                st.plotly_chart(fig_rolling_return, use_container_width=True)
+                st.plotly_chart(fig_rolling_return, width='stretch')
     else:
         st.info("No closed positions yet. Performance analytics will appear here after you have trading history.")
 
@@ -1907,7 +1907,7 @@ with tab4:
         st.markdown("---")
         
         # Run Optimization
-        if st.button("🚀 Run Optimization", type="primary", use_container_width=True):
+        if st.button("🚀 Run Optimization", type="primary", width='stretch'):
             try:
                 with st.spinner("Calculating optimal allocation..."):
                     # Get historical returns for optimization
@@ -2040,7 +2040,7 @@ with tab4:
                             yaxis_title="Weight (%)",
                             height=300
                         )
-                        st.plotly_chart(fig_current, use_container_width=True)
+                        st.plotly_chart(fig_current, width='stretch')
                     else:
                         st.info("No current allocation data")
                 
@@ -2062,7 +2062,7 @@ with tab4:
                         yaxis_title="Weight (%)",
                         height=300
                     )
-                    st.plotly_chart(fig_optimal, use_container_width=True)
+                    st.plotly_chart(fig_optimal, width='stretch')
                 
                 # Rebalancing Recommendations
                 st.subheader("🔄 Rebalancing Recommendations")
@@ -2085,7 +2085,7 @@ with tab4:
                 
                 if rebalance_actions:
                     rebalance_df = pd.DataFrame(rebalance_actions)
-                    st.dataframe(rebalance_df, use_container_width=True, hide_index=True)
+                    st.dataframe(rebalance_df, width='stretch', hide_index=True)
                 else:
                     st.success("✅ Portfolio is already well-balanced!")
                 
@@ -2188,7 +2188,7 @@ with tab4:
                                 yaxis_title="Expected Return (%)",
                                 height=400
                             )
-                            st.plotly_chart(fig_frontier, use_container_width=True)
+                            st.plotly_chart(fig_frontier, width='stretch')
                         else:
                             st.info("Could not generate efficient frontier. Try adjusting parameters.")
             except Exception as e:
@@ -2326,7 +2326,7 @@ with tab5:
                     lambda x: f"${x:,.2f}" if isinstance(x, (int, float)) else str(x)
                 )
             
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            st.dataframe(display_df, width='stretch', hide_index=True)
         else:
             st.info("No closed positions to track as tax lots yet.")
     else:
@@ -2386,7 +2386,7 @@ with tab5:
                     yaxis_title="Gain/Loss ($)",
                     height=300
                 )
-                st.plotly_chart(fig_realized, use_container_width=True)
+                st.plotly_chart(fig_realized, width='stretch')
             else:
                 st.info("No realized gains/losses data")
         else:
@@ -2431,7 +2431,7 @@ with tab5:
                     yaxis_title="Unrealized P&L ($)",
                     height=300
                 )
-                st.plotly_chart(fig_unrealized, use_container_width=True)
+                st.plotly_chart(fig_unrealized, width='stretch')
             else:
                 st.info("No unrealized gains/losses data")
         else:
@@ -2494,7 +2494,7 @@ with tab5:
                 
                 st.dataframe(
                     dividend_df[["symbol", "date", "amount", "type"]],
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
             else:
@@ -2536,7 +2536,7 @@ with tab5:
                     yaxis_title="Yield (%)",
                     height=300
                 )
-                st.plotly_chart(fig_dividends, use_container_width=True)
+                st.plotly_chart(fig_dividends, width='stretch')
             else:
                 st.info("No dividend projections available")
     
@@ -2568,7 +2568,7 @@ with tab5:
                 })
             
             harvesting_df = pd.DataFrame(harvesting_opportunities)
-            st.dataframe(harvesting_df, use_container_width=True, hide_index=True)
+            st.dataframe(harvesting_df, width='stretch', hide_index=True)
             
             st.info("💡 Tax Loss Harvesting: Sell positions with losses to offset gains, then repurchase after 30 days to avoid wash sale rules.")
         else:
@@ -2606,7 +2606,7 @@ with tab5:
             st.markdown("**Wash Sale Rules:** Selling a security at a loss and repurchasing the same or substantially identical security within 30 days may disallow the loss deduction.")
             
             wash_sale_df = pd.DataFrame(wash_sale_warnings)
-            st.dataframe(wash_sale_df, use_container_width=True, hide_index=True)
+            st.dataframe(wash_sale_df, width='stretch', hide_index=True)
         else:
             st.success("✅ No wash sale violations detected")
     else:
@@ -2639,7 +2639,7 @@ with tab5:
         include_wash_sales = st.checkbox("Include Wash Sale Adjustments", value=True, key="export_wash_sales")
         include_summary = st.checkbox("Include Summary Totals", value=True, key="export_summary")
     
-    if st.button("📥 Generate Tax Report", type="primary", use_container_width=True):
+    if st.button("📥 Generate Tax Report", type="primary", width='stretch'):
         try:
             # Filter positions by tax year
             year_positions = [

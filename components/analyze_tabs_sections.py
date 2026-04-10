@@ -53,24 +53,38 @@ def render_tabbed_analyze_sections(
         backend=backend,
     )
 
+    # Single-select sections (not st.tabs): Streamlit runs *every* tab body on each
+    # rerun, which triggered Quick Forecast (get_history + AI Score) even when the
+    # user was on Risk/Market/etc.
     st.markdown("---")
-    tab_forecast, tab_risk, tab_market, tab_technical, tab_research = st.tabs(
-        [
-            "Forecast",
-            "Risk",
-            "Market",
-            "Technical",
-            "Research",
-        ]
+    _section_opts = [
+        "Forecast",
+        "Risk",
+        "Market",
+        "Technical",
+        "Research",
+    ]
+    if "analyze_active_section" not in st.session_state:
+        st.session_state["analyze_active_section"] = _section_opts[0]
+    _cur = st.session_state.get("analyze_active_section")
+    if _cur not in _section_opts:
+        st.session_state["analyze_active_section"] = _section_opts[0]
+    section = st.radio(
+        "Analyze section",
+        _section_opts,
+        horizontal=True,
+        key="analyze_active_section",
+        label_visibility="collapsed",
     )
+    st.markdown("---")
 
-    with tab_forecast:
+    if section == "Forecast":
         render_quick_forecast(**kw)
         st.markdown("---")
         with st.expander("Model selection details"):
             render_ai_model_selection(**kw)
 
-    with tab_risk:
+    elif section == "Risk":
         c_mc, c_opt = st.columns([3, 2])
         with c_mc:
             render_monte_carlo(**kw)
@@ -79,12 +93,12 @@ def render_tabbed_analyze_sections(
         st.markdown("---")
         render_scanner_signals(**kw)
 
-    with tab_market:
+    elif section == "Market":
         render_market_analysis(**kw)
         st.markdown("---")
         render_earnings(**kw)
 
-    with tab_technical:
+    elif section == "Technical":
         render_diagnostics(**kw)
         st.markdown("---")
         st.caption(
@@ -99,7 +113,7 @@ def render_tabbed_analyze_sections(
             st.session_state["deep_dive_ticker"] = ticker
             st.switch_page("pages/1_Dashboard.py")
 
-    with tab_research:
+    elif section == "Research":
         render_multi_asset_gnn(**kw)
         st.markdown("---")
         render_causal(**kw)

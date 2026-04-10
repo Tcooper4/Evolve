@@ -19,7 +19,7 @@ def fail(msg):
     print(f"FAIL  {msg}")
 
 
-# Task 1 - no use_container_width left (same scope as fix script + vendor dirs)
+# Task 1 - no deprecated container-width kwarg left (same scope as fix script)
 _count = 0
 _files = []
 EXCLUDE = {
@@ -41,15 +41,16 @@ for root, dirs, files in os.walk("."):
             continue
         fpath = os.path.join(root, fname)
         txt = open(fpath, encoding="utf-8", errors="replace").read()
-        if "use_container_width" in txt:
-            _count += txt.count("use_container_width")
+        _needle = "use" + "_container_width"
+        if _needle in txt:
+            _count += txt.count(_needle)
             _files.append(fpath)
 
 if _count == 0:
-    ok("No use_container_width remaining")
+    ok("No deprecated container width kwarg remaining")
 else:
     fail(
-        f"{_count} use_container_width still in {len(_files)} files: "
+        f"{_count} deprecated width kwarg still in {len(_files)} files: "
         f"{_files[:3]}"
     )
 

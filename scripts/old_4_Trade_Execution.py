@@ -219,7 +219,7 @@ try:
         st.session_state.execution_mode = "paper" if trading_mode == "Paper Trading" else "live"
 
     with col_mode2:
-        if st.button("🔄 Refresh Orders", use_container_width=True):
+        if st.button("🔄 Refresh Orders", width='stretch'):
             st.rerun()
 
     with col_mode3:
@@ -389,7 +389,7 @@ try:
                 st.metric("Suggested Quantity", suggested_quantity)
                 st.metric("Order Value", f"${suggested_value:,.2f}")
             
-                if st.button("📋 Use Suggested Quantity", use_container_width=True):
+                if st.button("📋 Use Suggested Quantity", width='stretch'):
                     st.session_state["_suggested_quantity"] = suggested_quantity
                     st.rerun()
 
@@ -484,7 +484,7 @@ try:
             }
         
             summary_df = pd.DataFrame(summary_data)
-            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+            st.dataframe(summary_df, width='stretch', hide_index=True)
         
             # Submit button with confirmation
             st.markdown("---")
@@ -502,7 +502,7 @@ try:
                 submit_button = st.button(
                     f"🚀 Submit {side} Order",
                     type="primary",
-                    use_container_width=True,
+                    width='stretch',
                     disabled=not confirm_trade,
                     key="submit_quick_trade"
                 )
@@ -743,7 +743,7 @@ try:
                 # Display relevant columns
                 display_cols = ["order_id", "symbol", "side", "order_type", "quantity", "status", "timestamp"]
                 available_cols = [col for col in display_cols if col in orders_df.columns]
-                st.dataframe(orders_df[available_cols], use_container_width=True, hide_index=True)
+                st.dataframe(orders_df[available_cols], width='stretch', hide_index=True)
 
     st.markdown("---")
 
@@ -917,7 +917,7 @@ try:
                                     height=400
                                 )
                             
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                         
                             # Store order in history
                             order_info = {
@@ -1002,7 +1002,7 @@ try:
         
             time_in_force_bracket = st.selectbox("Time in Force", ["Day", "GTC"], key="bracket_tif")
     
-        if st.button("📦 Submit Bracket Order", type="primary", use_container_width=True, key="submit_bracket"):
+        if st.button("📦 Submit Bracket Order", type="primary", width='stretch', key="submit_bracket"):
             if bracket_symbol and bracket_quantity > 0:
                 try:
                     # Calculate TP/SL prices if using percentages
@@ -1095,7 +1095,7 @@ try:
                                              help="Price at which trailing stop becomes active", key="trailing_activation")
             time_in_force_trailing = st.selectbox("Time in Force", ["Day", "GTC"], key="trailing_tif")
     
-        if st.button("📈 Submit Trailing Stop Order", type="primary", use_container_width=True, key="submit_trailing"):
+        if st.button("📈 Submit Trailing Stop Order", type="primary", width='stretch', key="submit_trailing"):
             if trailing_symbol and trailing_quantity > 0:
                 st.success(f"✅ Trailing stop order submitted: {trailing_side} {trailing_quantity} {trailing_symbol}")
                 st.info(f"Trailing: {trailing_amount}%" if trailing_amount else f"Trailing: ${trailing_fixed}")
@@ -1169,7 +1169,7 @@ try:
                 default_price = _current_price(action_symbol) or 150.0
                 action_price = st.number_input("Limit Price ($)", min_value=0.01, value=float(default_price), step=0.01, key="action_price")
     
-        if st.button("🔀 Submit Conditional Order", type="primary", use_container_width=True, key="submit_conditional"):
+        if st.button("🔀 Submit Conditional Order", type="primary", width='stretch', key="submit_conditional"):
             if condition_symbol and action_symbol and action_quantity > 0:
                 st.success(f"✅ Conditional order created: IF {condition_symbol} {condition_operator} {condition_value} THEN {action_side} {action_quantity} {action_symbol}")
             
@@ -1235,7 +1235,7 @@ try:
             oco_type2 = st.selectbox("Order Type", ["Limit", "Stop"], key="oco_type2")
             oco_price2 = st.number_input("Price ($)", min_value=0.01, value=145.0, step=0.01, key="oco_price2")
     
-        if st.button("🔄 Submit OCO Order", type="primary", use_container_width=True, key="submit_oco"):
+        if st.button("🔄 Submit OCO Order", type="primary", width='stretch', key="submit_oco"):
             if oco_symbol and oco_quantity1 > 0 and oco_quantity2 > 0:
                 st.success(f"✅ OCO order created: Two orders for {oco_symbol} - one will cancel the other when executed")
             
@@ -1305,7 +1305,7 @@ try:
                 "price": leg_price
             })
     
-        if st.button("🦵 Submit Multi-Leg Order", type="primary", use_container_width=True, key="submit_multileg"):
+        if st.button("🦵 Submit Multi-Leg Order", type="primary", width='stretch', key="submit_multileg"):
             if all(leg["symbol"] and leg["quantity"] > 0 for leg in legs):
                 st.success(f"✅ Multi-leg order created with {len(legs)} legs")
             
@@ -1381,7 +1381,7 @@ try:
     col_emergency1, col_emergency2, col_emergency3 = st.columns([1, 1, 2])
     with col_emergency1:
         if st.session_state.emergency_stop:
-            if st.button("🟢 Resume Trading", type="primary", use_container_width=True):
+            if st.button("🟢 Resume Trading", type="primary", width='stretch'):
                 st.session_state.emergency_stop = False
                 st.session_state.auto_execution_logs.append({
                     "timestamp": datetime.now().isoformat(),
@@ -1390,7 +1390,7 @@ try:
                 })
                 st.rerun()
         else:
-            if st.button("🔴 EMERGENCY STOP", type="primary", use_container_width=True):
+            if st.button("🔴 EMERGENCY STOP", type="primary", width='stretch'):
                 st.session_state.emergency_stop = True
                 # Stop all active executions
                 for strategy_name in list(st.session_state.auto_execution_active.keys()):
@@ -1523,7 +1523,7 @@ try:
                     )
                 
                     # Save configuration
-                    if st.button("💾 Save Configuration", use_container_width=True, key=f"save_config_{selected_strategy}"):
+                    if st.button("💾 Save Configuration", width='stretch', key=f"save_config_{selected_strategy}"):
                         st.session_state.auto_execution_configs[selected_strategy] = config
                         st.success(f"Configuration saved for {selected_strategy}")
                         st.rerun()
@@ -1555,7 +1555,7 @@ try:
                 ]
             }
             summary_df = pd.DataFrame(summary_data)
-            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+            st.dataframe(summary_df, width='stretch', hide_index=True)
         
             # Start/Stop controls
             st.markdown("---")
@@ -1574,7 +1574,7 @@ try:
                 if st.button(
                     "▶️ Start Strategy",
                     type="primary",
-                    use_container_width=True,
+                    width='stretch',
                     disabled=start_disabled,
                     key=f"start_{selected_strategy}"
                 ):
@@ -1592,7 +1592,7 @@ try:
                 if st.button(
                     "⏹️ Stop Strategy",
                     type="secondary",
-                    use_container_width=True,
+                    width='stretch',
                     disabled=stop_disabled,
                     key=f"stop_{selected_strategy}"
                 ):
@@ -1737,7 +1737,7 @@ try:
             key="log_level_filter"
         )
     with col_log2:
-        if st.button("🗑️ Clear Log", use_container_width=True):
+        if st.button("🗑️ Clear Log", width='stretch'):
             st.session_state.auto_execution_logs = []
             st.rerun()
 
@@ -1800,7 +1800,7 @@ try:
             key="auto_refresh_orders"
         )
     with col_refresh2:
-        if st.button("🔄 Refresh Now", use_container_width=True):
+        if st.button("🔄 Refresh Now", width='stretch'):
             st.rerun()
     with col_refresh3:
         refresh_interval = st.selectbox(
@@ -1893,7 +1893,7 @@ try:
             st.session_state.selected_orders_for_cancel = [orders_df.iloc[i]['order_id'] for i in selected_indices]
     
         with col_table2:
-            if st.button("🗑️ Cancel Selected", type="primary", use_container_width=True, disabled=len(selected_indices) == 0):
+            if st.button("🗑️ Cancel Selected", type="primary", width='stretch', disabled=len(selected_indices) == 0):
                 cancelled_count = 0
                 for order_id in st.session_state.selected_orders_for_cancel:
                     try:
@@ -1942,7 +1942,7 @@ try:
     
         st.dataframe(
             display_orders_df[['order_id', 'symbol', 'side', 'order_type', 'quantity', 'price', 'status', 'timestamp']],
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
     
@@ -1989,7 +1989,7 @@ try:
                     new_price = None
                     st.info("Market orders cannot have price modified")
             
-                if st.button("💾 Update Order", type="primary", use_container_width=True):
+                if st.button("💾 Update Order", type="primary", width='stretch'):
                     if st.session_state.execution_agent:
                         try:
                             # Modify order through execution agent
@@ -2040,13 +2040,13 @@ try:
             col_batch1, col_batch2, col_batch3 = st.columns(3)
         
             with col_batch1:
-                if st.button("🗑️ Cancel All Selected", use_container_width=True):
+                if st.button("🗑️ Cancel All Selected", width='stretch'):
                     # Same logic as above
                     st.info(f"Cancelling {len(selected_indices)} orders...")
                     st.rerun()
         
             with col_batch2:
-                if st.button("📊 Export Selected", use_container_width=True):
+                if st.button("📊 Export Selected", width='stretch'):
                     selected_orders_export = orders_df.iloc[selected_indices]
                     csv = selected_orders_export.to_csv(index=False)
                     st.download_button(
@@ -2127,12 +2127,12 @@ try:
     
         st.dataframe(
             history_df[available_cols],
-            use_container_width=True,
+            width='stretch',
             hide_index=True
         )
     
         # Export button
-        if st.button("📥 Export History to CSV", use_container_width=True):
+        if st.button("📥 Export History to CSV", width='stretch'):
             csv = history_df.to_csv(index=False)
             st.download_button(
                 label="📥 Download",
@@ -2193,7 +2193,7 @@ try:
         
             st.success(f"**{time_str}** - {notif.get('message', 'Order filled')}")
     
-        if st.button("🗑️ Clear Notifications", use_container_width=True):
+        if st.button("🗑️ Clear Notifications", width='stretch'):
             st.session_state.fill_notifications = []
             st.rerun()
     else:
@@ -2244,7 +2244,7 @@ try:
                     yaxis_title="Count",
                     height=300
                 )
-                st.plotly_chart(fig_status, use_container_width=True)
+                st.plotly_chart(fig_status, width='stretch')
     else:
         st.info("No orders to track yet. Submit some orders to see status tracking.")
 
@@ -2406,7 +2406,7 @@ try:
                     yaxis_title="Frequency",
                     height=300
                 )
-                st.plotly_chart(fig_slippage, use_container_width=True)
+                st.plotly_chart(fig_slippage, width='stretch')
     
         with col_slip2:
             # Slippage by order type
@@ -2435,7 +2435,7 @@ try:
                         yaxis_title="Avg Slippage (%)",
                         height=300
                     )
-                    st.plotly_chart(fig_slippage_type, use_container_width=True)
+                    st.plotly_chart(fig_slippage_type, width='stretch')
     
         # Slippage statistics table
         if analytics_data:
@@ -2452,7 +2452,7 @@ try:
                 ]
             }
             slippage_df = pd.DataFrame(slippage_stats)
-            st.dataframe(slippage_df, use_container_width=True, hide_index=True)
+            st.dataframe(slippage_df, width='stretch', hide_index=True)
     
         st.markdown("---")
     
@@ -2498,7 +2498,7 @@ try:
                         yaxis_title="Fill Rate (%)",
                         height=300
                     )
-                    st.plotly_chart(fig_fill_rate, use_container_width=True)
+                    st.plotly_chart(fig_fill_rate, width='stretch')
     
         with col_fill2:
             # Fill rate by symbol
@@ -2528,7 +2528,7 @@ try:
                         yaxis_title="Fill Rate (%)",
                         height=300
                     )
-                    st.plotly_chart(fig_fill_symbol, use_container_width=True)
+                    st.plotly_chart(fig_fill_symbol, width='stretch')
     
         st.markdown("---")
     
@@ -2555,7 +2555,7 @@ try:
                     yaxis_title="Frequency",
                     height=300
                 )
-                st.plotly_chart(fig_improvement, use_container_width=True)
+                st.plotly_chart(fig_improvement, width='stretch')
     
         with col_improve2:
             # Price improvement by side
@@ -2580,7 +2580,7 @@ try:
                         yaxis_title="Avg Improvement ($)",
                         height=300
                     )
-                    st.plotly_chart(fig_improve_side, use_container_width=True)
+                    st.plotly_chart(fig_improve_side, width='stretch')
     
         # Price improvement summary
         if analytics_data:
@@ -2598,7 +2598,7 @@ try:
                 ]
             }
             improve_df = pd.DataFrame(improve_stats)
-            st.dataframe(improve_df, use_container_width=True, hide_index=True)
+            st.dataframe(improve_df, width='stretch', hide_index=True)
     
         st.markdown("---")
     
@@ -2625,7 +2625,7 @@ try:
                     yaxis_title="Frequency",
                     height=300
                 )
-                st.plotly_chart(fig_exec_time, use_container_width=True)
+                st.plotly_chart(fig_exec_time, width='stretch')
     
         with col_time2:
             # Execution time by order type
@@ -2655,7 +2655,7 @@ try:
                         yaxis_title="Avg Time (s)",
                         height=300
                     )
-                    st.plotly_chart(fig_time_type, use_container_width=True)
+                    st.plotly_chart(fig_time_type, width='stretch')
     
         # Execution time statistics
         if exec_times:
@@ -2672,7 +2672,7 @@ try:
                 ]
             }
             time_df = pd.DataFrame(time_stats)
-            st.dataframe(time_df, use_container_width=True, hide_index=True)
+            st.dataframe(time_df, width='stretch', hide_index=True)
     
         st.markdown("---")
     
@@ -2736,7 +2736,7 @@ try:
                         yaxis_title="Price ($)",
                         height=400
                     )
-                    st.plotly_chart(fig_comparison, use_container_width=True)
+                    st.plotly_chart(fig_comparison, width='stretch')
                 except Exception as e:
                     st.warning(f"Could not create comparison chart: {str(e)}")
         
@@ -2755,7 +2755,7 @@ try:
                     ]
                 }
                 comparison_df = pd.DataFrame(comparison_stats)
-                st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+                st.dataframe(comparison_df, width='stretch', hide_index=True)
     
         st.markdown("---")
     
@@ -2784,10 +2784,10 @@ try:
             if 'execution_time' in display_df.columns:
                 display_df['execution_time'] = display_df['execution_time'].apply(lambda x: f"{x:.3f}s" if isinstance(x, (int, float)) else str(x))
         
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            st.dataframe(display_df, width='stretch', hide_index=True)
         
             # Export button
-            if st.button("📥 Export Analytics to CSV", use_container_width=True):
+            if st.button("📥 Export Analytics to CSV", width='stretch'):
                 csv = analytics_df.to_csv(index=False)
                 st.download_button(
                     label="📥 Download",

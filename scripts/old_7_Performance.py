@@ -374,7 +374,7 @@ try:
                 # Rename columns for display
                 display_df.columns = ['Strategy Name', 'Total Return', 'Sharpe Ratio', 'Win Rate', 'Number of Trades', 'Status']
             
-                st.dataframe(display_df, use_container_width=True, hide_index=True)
+                st.dataframe(display_df, width='stretch', hide_index=True)
             
                 # Best/Worst Performers
                 col_best, col_worst = st.columns(2)
@@ -442,7 +442,7 @@ try:
                         annotation_text="Break-even"
                     )
                 
-                    st.plotly_chart(fig_trend, use_container_width=True)
+                    st.plotly_chart(fig_trend, width='stretch')
                 except ImportError:
                     # Fallback to basic chart
                     fig_trend = go.Figure()
@@ -471,7 +471,7 @@ try:
                         hovermode='x unified'
                     )
                 
-                    st.plotly_chart(fig_trend, use_container_width=True)
+                    st.plotly_chart(fig_trend, width='stretch')
             else:
                 st.warning("Insufficient data for performance trend")
         
@@ -622,7 +622,7 @@ try:
             
                 display_trades.columns = ['Entry Date', 'Symbol', 'Strategy', 'Direction', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Period']
             
-                st.dataframe(display_trades, use_container_width=True, hide_index=True)
+                st.dataframe(display_trades, width='stretch', hide_index=True)
             
                 # Top trades chart
                 fig_top = go.Figure()
@@ -640,7 +640,7 @@ try:
                     yaxis_title="P&L ($)",
                     height=300
                 )
-                st.plotly_chart(fig_top, use_container_width=True)
+                st.plotly_chart(fig_top, width='stretch')
             else:
                 st.info("Run a backtest on the Strategy Testing page to see trade history here.")
 
@@ -764,7 +764,7 @@ try:
                     # Display with expandable rows for details
                     st.dataframe(
                         display_trades,
-                        use_container_width=True,
+                        width='stretch',
                         hide_index=True,
                         height=400
                     )
@@ -912,7 +912,7 @@ try:
                             height=500
                         )
                 
-                        st.plotly_chart(fig_calendar, use_container_width=True)
+                        st.plotly_chart(fig_calendar, width='stretch')
                 
                         # Calendar summary
                         st.markdown("**Calendar Summary**")
@@ -1203,7 +1203,7 @@ try:
                 })
         
             health_table_df = pd.DataFrame(health_table_data)
-            st.dataframe(health_table_df, use_container_width=True, hide_index=True)
+            st.dataframe(health_table_df, width='stretch', hide_index=True)
         
             st.markdown("---")
         
@@ -1253,7 +1253,7 @@ try:
                         }
                     ))
                     fig_health.update_layout(height=300)
-                    st.plotly_chart(fig_health, use_container_width=True)
+                    st.plotly_chart(fig_health, width='stretch')
             
                 with col_detail2:
                     st.markdown("**Component Scores**")
@@ -1762,7 +1762,7 @@ try:
                 yaxis_title="Portfolio Return",
                 height=400
             )
-            st.plotly_chart(fig_ab, use_container_width=True)
+            st.plotly_chart(fig_ab, width='stretch')
     
             st.markdown("---")
     
@@ -1793,7 +1793,7 @@ try:
                             'Return': f"{strategy_perf_dict[strategy]['total_return']:.2%}"
                         })
                     df_strat = pd.DataFrame(strategy_data)
-                    st.dataframe(df_strat, use_container_width=True, hide_index=True)
+                    st.dataframe(df_strat, width='stretch', hide_index=True)
             
                 with col_strat2:
                     fig_strat = go.Figure(data=[
@@ -1809,7 +1809,7 @@ try:
                         yaxis_title="Contribution (%)",
                         height=300
                     )
-                    st.plotly_chart(fig_strat, use_container_width=True)
+                    st.plotly_chart(fig_strat, width='stretch')
         
             # Asset Contribution
             if not trade_history.empty:
@@ -1827,7 +1827,7 @@ try:
                             'P&L': f"${trade_history[trade_history['symbol'] == asset]['pnl'].sum():.2f}"
                         })
                     df_asset = pd.DataFrame(asset_data)
-                    st.dataframe(df_asset, use_container_width=True, hide_index=True)
+                    st.dataframe(df_asset, width='stretch', hide_index=True)
             
                 with col_asset2:
                     top_assets = dict(sorted(asset_contributions.items(), key=lambda x: abs(x[1]), reverse=True)[:10])
@@ -1844,7 +1844,7 @@ try:
                         yaxis_title="Contribution (%)",
                         height=300
                     )
-                    st.plotly_chart(fig_asset, use_container_width=True)
+                    st.plotly_chart(fig_asset, width='stretch')
         
             # Sector Contribution
             if positions:
@@ -1862,7 +1862,7 @@ try:
                             'Contribution': f"{contrib * total_return:.2%}"
                         })
                     df_sector = pd.DataFrame(sector_data)
-                    st.dataframe(df_sector, use_container_width=True, hide_index=True)
+                    st.dataframe(df_sector, width='stretch', hide_index=True)
             
                 with col_sect2:
                     fig_sector = go.Figure(data=[
@@ -1876,7 +1876,7 @@ try:
                         title="Sector Allocation",
                         height=300
                     )
-                    st.plotly_chart(fig_sector, use_container_width=True)
+                    st.plotly_chart(fig_sector, width='stretch')
     
             st.markdown("---")
     
@@ -1917,7 +1917,7 @@ try:
                             'Weight': f"{abs(contrib) / abs(sum(factor_attribution.values())):.1%}" if sum(factor_attribution.values()) != 0 else "0%"
                         })
                     df_factor = pd.DataFrame(factor_data)
-                    st.dataframe(df_factor, use_container_width=True, hide_index=True)
+                    st.dataframe(df_factor, width='stretch', hide_index=True)
                 with col_fact2:
                     fig_factor = go.Figure(data=[
                         go.Bar(
@@ -1932,7 +1932,7 @@ try:
                         yaxis_title="Contribution (%)",
                         height=300
                     )
-                    st.plotly_chart(fig_factor, use_container_width=True)
+                    st.plotly_chart(fig_factor, width='stretch')
         
             st.markdown("---")
     
@@ -1963,7 +1963,7 @@ try:
                         yaxis_title="Return (%)",
                         height=400
                     )
-                    st.plotly_chart(fig_time, use_container_width=True)
+                    st.plotly_chart(fig_time, width='stretch')
                 
                     # Time-based summary
                     col_time1, col_time2, col_time3 = st.columns(3)
@@ -2012,7 +2012,7 @@ try:
             height=500
             )
     
-            st.plotly_chart(fig_waterfall, use_container_width=True)
+            st.plotly_chart(fig_waterfall, width='stretch')
     
             st.markdown("---")
     
@@ -2048,7 +2048,7 @@ try:
                     height=400,
                     hovermode='x unified'
                 )
-                st.plotly_chart(fig_bench, use_container_width=True)
+                st.plotly_chart(fig_bench, width='stretch')
         
             with col_bench2:
                 # Performance comparison table
@@ -2071,7 +2071,7 @@ try:
                 }
             
                 df_compare = pd.DataFrame(comparison_data)
-                st.dataframe(df_compare, use_container_width=True, hide_index=True)
+                st.dataframe(df_compare, width='stretch', hide_index=True)
             
                 # Excess return
                 excess = sample_returns.sum() - benchmark_returns.sum()
@@ -2310,7 +2310,7 @@ try:
                     fig_rolling.add_hline(y=1.0, line_dash="dash", line_color="green", annotation_text="Good Sharpe", row=1, col=1)
                     fig_rolling.add_hline(y=0.0, line_dash="dash", line_color="red", annotation_text="Poor Sharpe", row=1, col=1)
                 
-                    st.plotly_chart(fig_rolling, use_container_width=True)
+                    st.plotly_chart(fig_rolling, width='stretch')
                 except ImportError:
                     # Fallback to basic chart
                     fig_rolling = make_subplots(
@@ -2356,7 +2356,7 @@ try:
                     fig_rolling.update_yaxes(title_text="Sharpe Ratio", row=1, col=1)
                     fig_rolling.update_yaxes(title_text="Drawdown (%)", row=2, col=1)
             
-                    st.plotly_chart(fig_rolling, use_container_width=True)
+                    st.plotly_chart(fig_rolling, width='stretch')
             else:
                 st.warning(f"Need at least {rolling_window} days of data for rolling metrics")
     
@@ -2381,7 +2381,7 @@ try:
                     display_dd['end_date'] = display_dd['end_date'].dt.strftime('%Y-%m-%d')
                     display_dd['max_drawdown'] = display_dd['max_drawdown'].apply(lambda x: f"{x:.2%}")
                     display_dd.columns = ['Start Date', 'End Date', 'Duration (days)', 'Max Drawdown', 'Recovery Days']
-                    st.dataframe(display_dd, use_container_width=True, hide_index=True)
+                    st.dataframe(display_dd, width='stretch', hide_index=True)
                 
                     # Use advanced drawdown chart
                     try:
@@ -2391,7 +2391,7 @@ try:
                             equity_curve=equity_curve,
                             title="Drawdown Analysis"
                         )
-                        st.plotly_chart(fig_dd_chart, use_container_width=True)
+                        st.plotly_chart(fig_dd_chart, width='stretch')
                     except ImportError:
                         # Fallback to basic timeline visualization
                         fig_dd_timeline = go.Figure()
@@ -2412,7 +2412,7 @@ try:
                             yaxis_title="Drawdown (%)",
                             height=300
                         )
-                        st.plotly_chart(fig_dd_timeline, use_container_width=True)
+                        st.plotly_chart(fig_dd_timeline, width='stretch')
                 else:
                     st.info("No significant drawdown periods detected")
                 
@@ -2424,7 +2424,7 @@ try:
                             equity_curve=equity_curve,
                             title="Drawdown Analysis"
                         )
-                        st.plotly_chart(fig_dd_chart, use_container_width=True)
+                        st.plotly_chart(fig_dd_chart, width='stretch')
                     except ImportError:
                         pass
     
@@ -2461,7 +2461,7 @@ try:
                         )
                         fig_pnl.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="Break-even")
                         fig_pnl.update_layout(height=300)
-                        st.plotly_chart(fig_pnl, use_container_width=True)
+                        st.plotly_chart(fig_pnl, width='stretch')
                     except (ImportError, KeyError):
                         # Fallback to basic chart
                         fig_pnl = go.Figure()
@@ -2479,7 +2479,7 @@ try:
                             yaxis_title="Frequency",
                             height=300
                         )
-                        st.plotly_chart(fig_pnl, use_container_width=True)
+                        st.plotly_chart(fig_pnl, width='stretch')
                 
                     # P&L statistics
                     st.caption(f"Mean: ${trade_history['pnl'].mean():.2f} | Median: ${trade_history['pnl'].median():.2f}")
@@ -2505,7 +2505,7 @@ try:
                         title="Win/Loss Distribution",
                         height=300
                     )
-                    st.plotly_chart(fig_wl, use_container_width=True)
+                    st.plotly_chart(fig_wl, width='stretch')
                 
                     st.caption(f"Win Rate: {(trade_history['pnl'] > 0).mean():.1%}")
         
@@ -2525,7 +2525,7 @@ try:
                         yaxis_title="Frequency",
                         height=300
                     )
-                    st.plotly_chart(fig_hold, use_container_width=True)
+                    st.plotly_chart(fig_hold, width='stretch')
                 
                     st.caption(f"Mean: {trade_history['holding_period'].mean():.1f} days")
                     st.caption(f"Median: {trade_history['holding_period'].median():.1f} days")
@@ -2559,7 +2559,7 @@ try:
                         })
                 
                     df_regime = pd.DataFrame(regime_data)
-                    st.dataframe(df_regime, use_container_width=True, hide_index=True)
+                    st.dataframe(df_regime, width='stretch', hide_index=True)
         
                 with col_regime2:
                     # Regime performance comparison chart
@@ -2586,7 +2586,7 @@ try:
                     fig_regime.update_yaxes(title_text="Return (%)", row=1, col=1)
                     fig_regime.update_yaxes(title_text="Sharpe Ratio", row=1, col=2)
                 
-                    st.plotly_chart(fig_regime, use_container_width=True)
+                    st.plotly_chart(fig_regime, width='stretch')
         
                 # Regime timeline
                 if not regimes.empty:
@@ -2611,7 +2611,7 @@ try:
                         yaxis_title="Regime",
                         height=300
                     )
-                    st.plotly_chart(fig_regime_timeline, use_container_width=True)
+                    st.plotly_chart(fig_regime_timeline, width='stretch')
             else:
                 st.warning("Unable to calculate regime-based performance")
     
@@ -2643,7 +2643,7 @@ try:
                                 title="Strategy Correlation Matrix"
                             )
                             fig_corr.update_layout(height=400)
-                            st.plotly_chart(fig_corr, use_container_width=True)
+                            st.plotly_chart(fig_corr, width='stretch')
                         except ImportError:
                             # Fallback to basic chart
                             fig_corr = px.imshow(
@@ -2658,7 +2658,7 @@ try:
                                 zmax=1
                             )
                             fig_corr.update_layout(height=400)
-                            st.plotly_chart(fig_corr, use_container_width=True)
+                            st.plotly_chart(fig_corr, width='stretch')
             
                     with col_corr2:
                         st.markdown("**Correlation Statistics**")
@@ -2691,7 +2691,7 @@ try:
                                 yaxis_title="Frequency",
                                 height=250
                             )
-                            st.plotly_chart(fig_corr_dist, use_container_width=True)
+                            st.plotly_chart(fig_corr_dist, width='stretch')
                         else:
                             st.info("Insufficient data for correlation analysis")
             else:
@@ -2736,24 +2736,24 @@ try:
                         
                             # Display dashboard components
                             if 'equity_chart' in dashboard:
-                                st.plotly_chart(dashboard['equity_chart'], use_container_width=True)
+                                st.plotly_chart(dashboard['equity_chart'], width='stretch')
                         
                             col_viz1, col_viz2 = st.columns(2)
                         
                             with col_viz1:
                                 if 'returns_dist' in dashboard:
-                                    st.plotly_chart(dashboard['returns_dist'], use_container_width=True)
+                                    st.plotly_chart(dashboard['returns_dist'], width='stretch')
                         
                             with col_viz2:
                                 if 'rolling_sharpe' in dashboard:
-                                    st.plotly_chart(dashboard['rolling_sharpe'], use_container_width=True)
+                                    st.plotly_chart(dashboard['rolling_sharpe'], width='stretch')
                         
                             if 'monthly_returns_heatmap' in dashboard:
-                                st.plotly_chart(dashboard['monthly_returns_heatmap'], use_container_width=True)
+                                st.plotly_chart(dashboard['monthly_returns_heatmap'], width='stretch')
                         
                             # Display additional charts if available
                             if 'drawdown_chart' in dashboard:
-                                st.plotly_chart(dashboard['drawdown_chart'], use_container_width=True)
+                                st.plotly_chart(dashboard['drawdown_chart'], width='stretch')
                         
                         except Exception as e:
                             st.error(f"Error generating dashboard: {e}")
@@ -2773,14 +2773,14 @@ try:
                     equity_curve=equity_curve,
                     title="Drawdown Analysis"
                 )
-                st.plotly_chart(fig_dd, use_container_width=True)
+                st.plotly_chart(fig_dd, width='stretch')
             
                 st.markdown("**Returns Distribution**")
                 fig_returns = create_returns_distribution(
                     returns=sample_returns,
                     title="Returns Distribution"
                 )
-                st.plotly_chart(fig_returns, use_container_width=True)
+                st.plotly_chart(fig_returns, width='stretch')
             except ImportError:
                 pass
     
@@ -2891,7 +2891,7 @@ try:
                                         height=400
                                     )
                                 
-                                    st.plotly_chart(fig, use_container_width=True)
+                                    st.plotly_chart(fig, width='stretch')
                         
                                 # Individual execution details
                                 st.subheader("📋 Execution Details")
@@ -2992,7 +2992,7 @@ try:
                                                                 height=300
                                                             )
                                                         
-                                                            st.plotly_chart(fig_replay, use_container_width=True)
+                                                            st.plotly_chart(fig_replay, width='stretch')
                                                     else:
                                                         st.info("No frame-by-frame replay data available for this execution")
                                             else:

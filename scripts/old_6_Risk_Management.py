@@ -464,7 +464,7 @@ with tab1:
         with col_gauge:
             st.subheader("Risk Gauge")
             fig_gauge = create_risk_gauge(risk_level, risk_color)
-            st.plotly_chart(fig_gauge, use_container_width=True)
+            st.plotly_chart(fig_gauge, width='stretch')
         
         with col_metrics:
             st.subheader("Key Risk Metrics")
@@ -579,7 +579,7 @@ with tab1:
                     zmax=1
                 )
                 fig_heatmap.update_layout(height=400)
-                st.plotly_chart(fig_heatmap, use_container_width=True)
+                st.plotly_chart(fig_heatmap, width='stretch')
             else:
                 st.info("No positions available for heat map")
         
@@ -602,7 +602,7 @@ with tab1:
                     })
                 
                 df_positions = pd.DataFrame(position_risks)
-                st.dataframe(df_positions, use_container_width=True, hide_index=True)
+                st.dataframe(df_positions, width='stretch', hide_index=True)
             else:
                 st.info("No positions available for position-level risk breakdown.")
 
@@ -702,7 +702,7 @@ with tab1:
             fig_trend.update_yaxes(title_text="Volatility (%)", row=2, col=1)
             fig_trend.update_yaxes(title_text="Drawdown (%)", row=3, col=1)
             
-            st.plotly_chart(fig_trend, use_container_width=True)
+            st.plotly_chart(fig_trend, width='stretch')
         else:
             st.info("Collecting historical risk data...")
 
@@ -982,7 +982,7 @@ with tab2:
                 showlegend=False
             )
             
-            st.plotly_chart(fig_var, use_container_width=True)
+            st.plotly_chart(fig_var, width='stretch')
         
         with col_chart2:
             st.markdown("**VaR Comparison**")
@@ -1006,7 +1006,7 @@ with tab2:
                 })
             
             df_var_comp = pd.DataFrame(var_comparison)
-            st.dataframe(df_var_comp, use_container_width=True, hide_index=True)
+            st.dataframe(df_var_comp, width='stretch', hide_index=True)
         
         st.markdown("---")
         
@@ -1015,7 +1015,7 @@ with tab2:
         if positions:
             component_var_df = calculate_component_var(returns, positions, confidence_level, portfolio_value)
             if not component_var_df.empty:
-                st.dataframe(component_var_df, use_container_width=True, hide_index=True)
+                st.dataframe(component_var_df, width='stretch', hide_index=True)
                 
                 # Visualize component VaR
                 fig_component = go.Figure()
@@ -1031,7 +1031,7 @@ with tab2:
                     yaxis_title="Component VaR ($)",
                     height=300
                 )
-                st.plotly_chart(fig_component, use_container_width=True)
+                st.plotly_chart(fig_component, width='stretch')
             else:
                 st.info("Unable to calculate component VaR")
         else:
@@ -1136,7 +1136,7 @@ with tab2:
                     hovermode='x unified'
                 )
                 
-                st.plotly_chart(fig_backtest, use_container_width=True)
+                st.plotly_chart(fig_backtest, width='stretch')
             else:
                 st.warning("Unable to perform backtesting")
         else:
@@ -1244,7 +1244,7 @@ with tab3:
         st.markdown("---")
         
         # Run simulation button
-        run_simulation = st.button("🚀 Run Monte Carlo Simulation", type="primary", use_container_width=True)
+        run_simulation = st.button("🚀 Run Monte Carlo Simulation", type="primary", width='stretch')
         
         if run_simulation or st.session_state.monte_carlo_results is not None:
             if run_simulation:
@@ -1397,7 +1397,7 @@ with tab3:
                         })
                     
                     df_percentiles = pd.DataFrame(percentile_data)
-                    st.dataframe(df_percentiles, use_container_width=True, hide_index=True)
+                    st.dataframe(df_percentiles, width='stretch', hide_index=True)
                 
                 with col_perc2:
                     st.markdown("**Probability Metrics**")
@@ -1478,7 +1478,7 @@ with tab3:
                     hovermode='x unified'
                 )
                 
-                st.plotly_chart(fig_paths, use_container_width=True)
+                st.plotly_chart(fig_paths, width='stretch')
                 
                 st.markdown("---")
                 
@@ -1512,7 +1512,7 @@ with tab3:
                         yaxis_title="Frequency",
                         height=400
                     )
-                    st.plotly_chart(fig_returns, use_container_width=True)
+                    st.plotly_chart(fig_returns, width='stretch')
                 
                 with col_dist2:
                     st.subheader("📉 Maximum Drawdown Distribution")
@@ -1540,7 +1540,7 @@ with tab3:
                         yaxis_title="Frequency",
                         height=400
                     )
-                    st.plotly_chart(fig_dd, use_container_width=True)
+                    st.plotly_chart(fig_dd, width='stretch')
                 
                 st.markdown("---")
                 
@@ -1749,7 +1749,7 @@ with tab4:
                     st.markdown(f"- Historical Recovery: {selected_scenario['recovery_days']} days")
                 
                 # Run stress test
-                if st.button("🚀 Run Stress Test", type="primary", use_container_width=True):
+                if st.button("🚀 Run Stress Test", type="primary", width='stretch'):
                     with st.spinner("Running stress test..."):
                         shocked_returns, position_impacts = apply_stress_scenario(
                             returns, selected_scenario, positions
@@ -1831,7 +1831,7 @@ with tab4:
                 'recovery_days': 180
             }
             
-            if st.button("🚀 Run Factor Stress Test", type="primary", use_container_width=True):
+            if st.button("🚀 Run Factor Stress Test", type="primary", width='stretch'):
                 with st.spinner("Running factor stress test..."):
                     shocked_returns, position_impacts = apply_stress_scenario(
                         returns, custom_scenario, positions
@@ -1915,7 +1915,7 @@ with tab4:
                             key=f"shock_{symbol}"
                         )
             
-            if st.button("🚀 Run Custom Stress Test", type="primary", use_container_width=True):
+            if st.button("🚀 Run Custom Stress Test", type="primary", width='stretch'):
                 if not scenario_name:
                     st.error("Please provide a scenario name")
                 else:
@@ -2012,7 +2012,7 @@ with tab4:
                     })
                 
                 df_positions = pd.DataFrame(position_data)
-                st.dataframe(df_positions, use_container_width=True, hide_index=True)
+                st.dataframe(df_positions, width='stretch', hide_index=True)
                 
                 # Visualize position impacts
                 fig_positions = go.Figure()
@@ -2028,7 +2028,7 @@ with tab4:
                     yaxis_title="Impact (%)",
                     height=300
                 )
-                st.plotly_chart(fig_positions, use_container_width=True)
+                st.plotly_chart(fig_positions, width='stretch')
             
             st.markdown("---")
             
@@ -2053,7 +2053,7 @@ with tab4:
                     })
                 
                 df_comparison = pd.DataFrame(comparison_data)
-                st.dataframe(df_comparison, use_container_width=True, hide_index=True)
+                st.dataframe(df_comparison, width='stretch', hide_index=True)
                 
                 # Comparison chart
                 fig_comparison = go.Figure()
@@ -2069,10 +2069,10 @@ with tab4:
                     yaxis_title="Impact (%)",
                     height=400
                 )
-                st.plotly_chart(fig_comparison, use_container_width=True)
+                st.plotly_chart(fig_comparison, width='stretch')
             
             # Clear results button
-            if st.button("🗑️ Clear Results", use_container_width=True):
+            if st.button("🗑️ Clear Results", width='stretch'):
                 st.session_state['stress_test_result'] = None
                 st.rerun()
 
@@ -2376,7 +2376,7 @@ with tab5:
                     zmax=1
                 )
                 fig_corr.update_layout(height=500)
-                st.plotly_chart(fig_corr, use_container_width=True)
+                st.plotly_chart(fig_corr, width='stretch')
             
             with col_corr2:
                 st.markdown("**Correlation Statistics**")
@@ -2420,7 +2420,7 @@ with tab5:
                 height=300,
                 barmode='stack'
             )
-            st.plotly_chart(fig_factor, use_container_width=True)
+            st.plotly_chart(fig_factor, width='stretch')
         
         with col_tail:
             st.subheader("📉 Tail Risk Metrics")
@@ -2466,7 +2466,7 @@ with tab5:
                 yaxis_title="Frequency",
                 height=300
             )
-            st.plotly_chart(fig_tail, use_container_width=True)
+            st.plotly_chart(fig_tail, width='stretch')
         
         st.markdown("---")
         
@@ -2489,7 +2489,7 @@ with tab5:
                     })
                 
                 df_liquidity = pd.DataFrame(liquidity_data)
-                st.dataframe(df_liquidity, use_container_width=True, hide_index=True)
+                st.dataframe(df_liquidity, width='stretch', hide_index=True)
                 
                 # Liquidity risk chart
                 fig_liq = go.Figure()
@@ -2505,7 +2505,7 @@ with tab5:
                     yaxis_title="Days",
                     height=300
                 )
-                st.plotly_chart(fig_liq, use_container_width=True)
+                st.plotly_chart(fig_liq, width='stretch')
             else:
                 st.info("No positions available for liquidity analysis")
         
@@ -2544,7 +2544,7 @@ with tab5:
                     title="Position Concentration",
                     height=300
                 )
-                st.plotly_chart(fig_conc, use_container_width=True)
+                st.plotly_chart(fig_conc, width='stretch')
             else:
                 st.info("No positions available for concentration analysis")
         
@@ -2567,7 +2567,7 @@ with tab5:
                 })
             
             df_greeks = pd.DataFrame(greek_data)
-            st.dataframe(df_greeks, use_container_width=True, hide_index=True)
+            st.dataframe(df_greeks, width='stretch', hide_index=True)
 
             st.caption("Equity: delta=1 per share, other Greeks 0. Options: real Greeks when chain data available.")
         else:
@@ -2668,7 +2668,7 @@ with tab5:
                 fig_rolling.update_xaxes(title_text="Date", row=3, col=1)
                 fig_rolling.update_xaxes(title_text="Date", row=3, col=2)
                 
-                st.plotly_chart(fig_rolling, use_container_width=True)
+                st.plotly_chart(fig_rolling, width='stretch')
             else:
                 st.warning("Unable to calculate rolling metrics")
         else:
@@ -2735,7 +2735,7 @@ with tab5:
                                         names=[d.get('name', 'Unknown') for d in risk_drivers[:5]],
                                         title='Risk Decomposition - Top 5 Drivers'
                                     )
-                                    st.plotly_chart(fig, use_container_width=True)
+                                    st.plotly_chart(fig, width='stretch')
                                 
                                 # Detailed driver analysis
                                 with st.expander("📊 Detailed Risk Driver Analysis", expanded=False):
@@ -2753,7 +2753,7 @@ with tab5:
                                             display_df.columns = [col.replace('_', ' ').title() for col in display_df.columns]
                                             display_df['Risk Contribution'] = display_df['Risk Contribution'].apply(lambda x: f"{x:.2%}")
                                             display_df['Var Impact'] = display_df['Var Impact'].apply(lambda x: f"{x:.2%}")
-                                            st.dataframe(display_df, use_container_width=True, hide_index=True)
+                                            st.dataframe(display_df, width='stretch', hide_index=True)
                             else:
                                 st.warning("No risk drivers identified. Check portfolio data availability.")
                         except Exception as e:

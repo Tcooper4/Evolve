@@ -13,7 +13,7 @@ if str(project_root) not in sys.path:
 import streamlit as st
 
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
-from trading.data.ticker_resolver import normalize_ticker
+from trading.data.ticker_resolver import resolve_ticker
 
 try:
     from agents.llm.active_llm_calls import call_active_llm_chat
@@ -344,7 +344,7 @@ with col_news:
 
     st.subheader("News")
     news_ticker = st.text_input("Ticker", value=st.session_state.get("chat_news_ticker", "SPY"), key="chat_news_ticker_input_6", placeholder="SPY, AAPL").strip().upper() or "SPY"
-    news_ticker = normalize_ticker(news_ticker)
+    news_ticker = resolve_ticker(news_ticker, validate=False)
     if st.button("Get News", key="chat_get_news_6"):
         _fetch_and_store_news(news_ticker)
         st.rerun()

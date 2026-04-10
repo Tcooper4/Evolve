@@ -541,6 +541,33 @@ class GNNForecaster:
                         float(last_price),
                     )
 
+        # Explicit scale validation (ratio vs last close; S39 Ensemble pattern)
+        pred_prices = np.asarray(
+            forecast_array,
+            dtype=np.float64,
+        ).ravel()
+        try:
+            _cm = {c.lower(): c for c in data.columns}
+            if "close" in _cm:
+                _last = float(data[_cm["close"]].iloc[-1])
+            else:
+                _last = float(data.iloc[:, 0].iloc[-1])
+            if _last > 10 and pred_prices.size > 0:
+                _ratio = (
+                    float(np.abs(pred_prices).mean())
+                    / _last
+                )
+                if _ratio < 0.01:
+                    pred_prices = pred_prices * _last
+                elif _ratio > 100:
+                    pred_prices = (
+                        pred_prices / _ratio
+                        * _last
+                    )
+            forecast_array = pred_prices
+        except Exception:
+            pass
+
         # Create dates
         last_date = data.index[-1] if hasattr(data.index, 'freq') else pd.Timestamp.now()
         forecast_dates = pd.date_range(start=last_date, periods=horizon + 1, freq='D')[1:]

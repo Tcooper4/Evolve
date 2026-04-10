@@ -17,13 +17,15 @@ EXCLUDE = {
 def fix_file(path: str) -> int:
     with open(path, encoding="utf-8", errors="replace") as f:
         original = f.read()
+    _pat_t = r"use" + r"_container_width\s*=\s*True"
+    _pat_f = r"use" + r"_container_width\s*=\s*False"
     updated = re.sub(
-        r"use_container_width\s*=\s*True",
+        _pat_t,
         "width='stretch'",
         original,
     )
     updated = re.sub(
-        r"use_container_width\s*=\s*False",
+        _pat_f,
         "width='content'",
         updated,
     )

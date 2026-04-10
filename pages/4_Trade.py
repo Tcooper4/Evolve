@@ -16,7 +16,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
-from trading.data.ticker_resolver import normalize_ticker
+from trading.data.ticker_resolver import resolve_ticker
 from utils.dataframe_utils import normalize_for_display
 
 try:
@@ -140,7 +140,7 @@ with tab_paper:
     pc1, pc2, pc3 = st.columns(3)
     with pc1:
         p_sym = st.text_input("Symbol", "AAPL", key="paper_sym").strip().upper()
-        p_sym = normalize_ticker(p_sym)
+        p_sym = resolve_ticker(p_sym, validate=False)
     with pc2:
         p_side = st.selectbox("Side", ["Buy", "Sell"], key="paper_side")
     with pc3:
@@ -812,7 +812,7 @@ with tab_risk:
         "SPY",
         key="risk_kelly_symbol",
     ).strip().upper()
-    rk_sym = normalize_ticker(rk_sym)
+    rk_sym = resolve_ticker(rk_sym, validate=False)
     rk_pv = st.number_input(
         "Notional for VaR ($)",
         min_value=1000.0,
@@ -946,7 +946,10 @@ with tab_risk:
     risk_col1, risk_col2 = st.columns(2)
     with risk_col1:
         risk_symbol = st.text_input("Symbol", "AAPL", key="risk_symbol")
-        risk_symbol = normalize_ticker(risk_symbol.strip().upper())
+        risk_symbol = resolve_ticker(
+            risk_symbol.strip().upper(),
+            validate=False,
+        )
     with risk_col2:
         risk_portfolio_value = st.number_input(
             "Portfolio Value ($)",

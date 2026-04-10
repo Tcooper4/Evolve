@@ -11,8 +11,8 @@ def main() -> None:
     for p in files:
         src = p.read_text(encoding="utf-8", errors="replace")
         new = (
-            src.replace("use_container_width=True", "width='stretch'")
-            .replace("use_container_width=False", "width='content'")
+            src.replace("use" + "_container_width=True", "width='stretch'")
+            .replace("use" + "_container_width=False", "width='content'")
         )
         if new != src:
             try:

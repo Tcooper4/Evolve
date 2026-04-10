@@ -29,7 +29,7 @@ from utils.risk_metrics import compute_performance_metrics
 from trading.backtesting.backtester import Backtester
 from trading.backtesting.trade_models import TradeType
 from trading.strategies.registry import get_strategy_registry
-from trading.data.ticker_resolver import normalize_ticker
+from trading.data.ticker_resolver import resolve_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,10 @@ with tab_wf:
             "AAPL",
             key="wf_symbol",
         )
-        wf_symbol = normalize_ticker(wf_symbol.strip().upper())
+        wf_symbol = resolve_ticker(
+            wf_symbol.strip().upper(),
+            validate=False,
+        )
     with wf_col2:
         wf_model = st.selectbox(
             "Model",
@@ -255,7 +258,7 @@ with tab_wf:
                         ] = summary
 
         except Exception as e:
-            st.caption(f"Walk-forward validation unavailable: {e}")
+            st.caption(f"Walk-forward analysis unavailable: {e}")
 
 with tab_compare:
     from components.tabs.tab_backtester import render as render_backtester
@@ -273,6 +276,7 @@ with tab_compare:
         value=st.session_state.get("analyze_ticker", "AAPL"),
         key="backtest_compare_ticker",
     ).strip().upper()
+    _cmp_sym = resolve_ticker(_cmp_sym, validate=False)
     _cmp_hist = get_history(_cmp_sym, period="1y") if _cmp_sym else pd.DataFrame()
     _kw = dict(
         ticker=_cmp_sym or "AAPL",
@@ -324,7 +328,7 @@ with tab_backtest:
                 "AAPL",
                 key="bt_symbol",
             ).strip().upper()
-            bt_symbol = normalize_ticker(bt_symbol)
+            bt_symbol = resolve_ticker(bt_symbol, validate=False)
         with b3:
             bt_capital = st.number_input(
                 "Initial capital ($)",
@@ -524,7 +528,7 @@ with tab_backtest:
             value="AAPL",
             key="enhanced_bt_symbol",
         ).strip().upper()
-        _e_sym = normalize_ticker(_e_sym)
+        _e_sym = resolve_ticker(_e_sym, validate=False)
         if st.button("Run enhanced backtest", key="enhanced_bt_btn", type="primary"):
             with st.spinner("Running multi-model comparison..."):
                 import yfinance as yf

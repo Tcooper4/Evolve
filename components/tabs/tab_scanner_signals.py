@@ -59,7 +59,9 @@ def render(
             if st.session_state.get("analyze_forecast_data") is None or not st.session_state.get(
                 "analyze_symbol"
             ):
-                st.info("Load data in the Quick Forecast tab to see insider activity.")
+                st.info(
+                    "Open the **Forecast** section above to load price data first."
+                )
             else:
                 symbol = st.session_state.get("analyze_symbol")
                 insider = get_insider_flow(symbol)

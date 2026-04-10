@@ -577,15 +577,9 @@ st.caption(
 def _render_briefing():
     _bkey = "home_briefing_report"
     _btkey = "home_briefing_ts"
-    _now = time.time()
-    _cached = st.session_state.get(_bkey)
-    _cached_ts = st.session_state.get(_btkey, 0)
-    _fresh = (
-        _cached is not None
-        and (_now - _cached_ts) < 1800
-    )
+    _bpkey = "home_briefing_prefs"
 
-    def _run_briefing() -> None:
+    def _load_briefing_prefs_home() -> dict:
         try:
             from config.user_store import load_user_preferences
             from utils.session_utils import get_stable_user_id
@@ -593,12 +587,42 @@ def _render_briefing():
             _uid = st.session_state.get(
                 "evolve_session_id"
             ) or get_stable_user_id()
-            _prefs = (
-                load_user_preferences(_uid)
-                or {}
-            )
+            return load_user_preferences(_uid) or {}
         except Exception:
-            _prefs = {}
+            return {}
+
+    def _briefing_pref_fingerprint(_prefs: dict) -> str:
+        """Invalidate home cache when Settings-saved prefs affecting the scan change."""
+        sectors = _prefs.get("preferred_sectors") or []
+        if isinstance(sectors, list):
+            sectors = tuple(sorted(str(s) for s in sectors))
+        else:
+            sectors = ()
+        return "|".join(
+            [
+                str(_prefs.get("briefing_universe", "")),
+                str(float(_prefs.get("min_ai_score", 5.5))),
+                str(bool(_prefs.get("watchlist_only", False))),
+                str(sectors),
+                str(_prefs.get("opportunity_direction", "")),
+                str(_prefs.get("scoring_style", "")),
+            ]
+        )
+
+    _now = time.time()
+    _prefs_now = _load_briefing_prefs_home()
+    _pref_hash = _briefing_pref_fingerprint(_prefs_now)
+    _cached = st.session_state.get(_bkey)
+    _cached_ts = st.session_state.get(_btkey, 0)
+    _cached_prefs = st.session_state.get(_bpkey, "")
+    _fresh = (
+        _cached is not None
+        and (_now - _cached_ts) < 1800
+        and _cached_prefs == _pref_hash
+    )
+
+    def _run_briefing() -> None:
+        _prefs = _load_briefing_prefs_home()
 
         _universe_pref = _prefs.get(
             "briefing_universe",
@@ -642,6 +666,7 @@ def _render_briefing():
                 progress.empty()
             st.session_state[_bkey] = report
             st.session_state[_btkey] = time.time()
+            st.session_state[_bpkey] = _briefing_pref_fingerprint(_prefs)
             st.rerun()
         except Exception as e:
             st.caption(f"unavailable: {e}")
@@ -724,10 +749,20 @@ def _render_briefing():
             )
 
     if not _fresh:
-        st.info(
-            "Morning briefing not yet "
-            "generated for this session."
-        )
+        if (
+            _cached is not None
+            and (_now - _cached_ts) < 1800
+            and _cached_prefs != _pref_hash
+        ):
+            st.info(
+                "Your briefing preferences were updated — "
+                "generate a fresh briefing to apply them."
+            )
+        else:
+            st.info(
+                "Morning briefing not yet "
+                "generated for this session."
+            )
         if st.button(
             "🌅 Generate Morning Briefing",
             key="gen_briefing_btn",
@@ -743,6 +778,7 @@ def _render_briefing():
     ):
         st.session_state.pop(_bkey, None)
         st.session_state.pop(_btkey, None)
+        st.session_state.pop(_bpkey, None)
         st.rerun()
 
 

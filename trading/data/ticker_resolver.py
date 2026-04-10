@@ -17,10 +17,13 @@ logger = logging.getLogger(__name__)
 # catch
 _ALIASES = {
     "SPX": "^GSPC",
+    "SP500": "^GSPC",
+    "GSPC": "^GSPC",
     "SPXW": "^GSPC",
     "XSP": "^XSP",
     "DJI": "^DJI",
     "DJIA": "^DJI",
+    "DOW": "^DJI",
     "NDX": "^NDX",
     "COMP": "^IXIC",
     "NASDAQ": "^IXIC",

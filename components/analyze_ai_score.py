@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """AI Score panel and recommendation-style summary."""
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import streamlit as st
@@ -18,6 +19,17 @@ def render_ai_score(ticker: str, hist, *, trader_mode: str = "Short-term") -> No
         if score_result.get("error"):
             st.caption(str(score_result.get("error")))
             return
+        _ml_model_p = (
+            Path(__file__).resolve().parents[1]
+            / ".cache"
+            / "ml_score"
+            / "ml_score_model.joblib"
+        )
+        if not _ml_model_p.is_file():
+            st.caption(
+                "⚠️ ML Score signal inactive — train the model in "
+                "Settings → AI & Signals."
+            )
         st.markdown("### AI Score")
         _oc = float(score_result.get("overall_score", 0) or 0)
         _grade = score_result.get("grade", "—")

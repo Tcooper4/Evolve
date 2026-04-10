@@ -73,9 +73,22 @@ def render(
             )
             return
 
+        # Reuse Analyze page daily history when it matches (avoids duplicate fetch on
+        # Forecast open). Intraday chart periods still need a dedicated daily pull.
+        hist_fc = None
+        _top = str(st.session_state.get("analyze_ticker") or ticker or "").strip().upper()
         try:
-            with st.spinner(f"Loading {symbol} data (daily, 1y)..."):
-                hist_fc = get_history(symbol, period="1y", interval="1d")
+            if (
+                hist is not None
+                and not getattr(hist, "empty", True)
+                and len(hist) >= 30
+                and _interval == "1d"
+                and _top == symbol
+            ):
+                hist_fc = hist.copy()
+            else:
+                with st.spinner(f"Loading {symbol} data (daily, 1y)..."):
+                    hist_fc = get_history(symbol, period="1y", interval="1d")
         except Exception as _load_e:
             logger.warning("Quick forecast: get_history failed: %s", _load_e)
             hist_fc = None
@@ -89,7 +102,8 @@ def render(
         st.session_state["analyze_forecast_data"] = hist_fc.copy()
         st.session_state["analyze_symbol"] = symbol
         st.success(
-            f"✅ Loaded {len(hist_fc)} days of daily data for {symbol} (1y)"
+            f"✅ Ready: {len(hist_fc)} daily rows for {symbol} "
+            "(from chart range or 1y load)"
         )
 
         # Earnings proximity warning (forecasts may be less reliable near earnings)
@@ -119,37 +133,6 @@ def render(
             if "Close" not in data.columns:
                 data = data.copy()
                 data["Close"] = data.iloc[:, 0]
-
-            # Show data quality metrics (optional: src.utils.data_validation)
-            try:
-                try:
-                    from trading.data.data_validator import DataValidator
-                except ImportError:
-                    DataValidator = None
-                if DataValidator is not None:
-                    validator = DataValidator()
-                    quality_metrics = validator.get_quality_metrics(data)
-                    with st.expander("📊 Data Quality Metrics", expanded=False):
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Completeness", f"{quality_metrics['completeness']:.1%}")
-                        with col2:
-                            st.metric("Missing Values", quality_metrics['missing_count'])
-                        with col3:
-                            st.metric("Outliers Detected", quality_metrics['outliers'])
-                        with col4:
-                            quality_score = quality_metrics['overall_quality']
-                            st.metric("Quality Score", f"{quality_score:.0f}/100")
-                        if quality_metrics['issues']:
-                            st.warning("⚠️ Data Quality Issues:")
-                            for issue in quality_metrics['issues']:
-                                st.write(f"• {issue}")
-                else:
-                    st.caption("Data validation unavailable")
-            except ImportError:
-                pass
-            except Exception as e:
-                logger.debug("Data quality metrics unavailable: %s", e)
 
             st.markdown("---")
             st.subheader("📊 Data Preview")
@@ -262,6 +245,20 @@ def render(
                             ns_label, ns_color = "NEG", "#ef5350"
                         else:
                             ns_label, ns_color = "NEU", "#4a6080"
+
+                        from pathlib import Path as _Path_ml
+
+                        _ml_model_p = (
+                            _Path_ml(__file__).resolve().parents[2]
+                            / ".cache"
+                            / "ml_score"
+                            / "ml_score_model.joblib"
+                        )
+                        if not _ml_model_p.is_file():
+                            st.caption(
+                                "⚠️ ML Score signal inactive — train the "
+                                "model in Settings → AI & Signals."
+                            )
 
                         st.markdown("### 🤖 AI Score")
                         top_cols = st.columns([2, 2, 2, 2])

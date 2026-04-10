@@ -13,7 +13,7 @@ from components.analyze_news import render_news_overlay_strip
 from components.analyze_tabs_sections import render_tabbed_analyze_sections
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
 from trading.data.price_cache import get_history
-from trading.data.ticker_resolver import normalize_ticker
+from trading.data.ticker_resolver import resolve_ticker
 from ui.page_assistant import render_page_assistant
 
 try:
@@ -104,7 +104,7 @@ if not ticker or not ticker.strip():
     ticker = "AAPL"
 else:
     ticker = ticker.strip().upper()
-ticker = normalize_ticker(ticker)
+ticker = resolve_ticker(ticker, validate=False)
 
 period_map = {
     "1D": "1d",

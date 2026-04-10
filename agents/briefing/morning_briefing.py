@@ -890,6 +890,7 @@ class MorningBriefing:
                     key="briefing_regenerate"
                 ):
                     st.session_state.pop("morning_briefing_cache", None)
+                    st.session_state.pop("morning_briefing_ts", None)
                     st.rerun()
 
             # Cache for 30 minutes

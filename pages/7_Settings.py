@@ -18,6 +18,7 @@ if str(project_root) not in sys.path:
 import streamlit as st
 
 from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
+from trading.data.ticker_resolver import resolve_ticker
 
 try:
     from trading.utils.notification_system import NotificationSystem
@@ -337,6 +338,7 @@ with tab_alerts:
                 value="AAPL",
                 key="settings_alert_symbol",
             ).strip().upper()
+            _sym = resolve_ticker(_sym, validate=False)
             _cond_ui = st.selectbox(
                 "Condition",
                 [
@@ -851,27 +853,37 @@ with tab_admin:
                     )
 
                 with st.spinner(
-                    f"Training on {_n} stocks… this may take 5–10 minutes."
+                    "Training ML Score model on historical data… "
+                    f"(~3–10 min for {_n} stocks)"
                 ):
-                    trainer = MLScoreTrainer()
-                    result = trainer.train(
-                        universe=_train_uni if _train_uni else None,
-                        progress_callback=_ml_progress,
-                    )
+                    try:
+                        trainer = MLScoreTrainer()
+                        result = trainer.train(
+                            universe=_train_uni if _train_uni else None,
+                            progress_callback=_ml_progress,
+                        )
+                    except Exception as _te:
+                        result = {"error": str(_te)}
                 _prog_ml.progress(1.0, text="Done")
                 if result.get("error"):
                     st.error(f"Training failed: {result['error']}")
                 else:
+                    import time as _time_ml
+
+                    st.session_state["ml_score_trained_at"] = _time_ml.time()
                     _da = float(
                         result.get("val_directional_accuracy") or 0
                     )
                     _r2 = result.get("val_r2")
+                    _nf = result.get("n_features", "?")
                     st.success(
-                        f"Trained on {result.get('n_samples')} samples."
+                        f"ML Score model trained. Features: {_nf}, "
+                        f"R²: {_r2}"
                     )
                     st.caption(
+                        f"Samples: {result.get('n_samples')} · "
                         f"Validation — directional accuracy: "
-                        f"{_da*100:.1f}% · R²: {_r2} · "
+                        f"{_da*100:.1f}% · "
                         f"n_samples: {result.get('n_samples')}"
                     )
         except Exception as e:

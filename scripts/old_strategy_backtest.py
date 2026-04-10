@@ -247,7 +247,7 @@ with col1:
                                 elif 'timestamp' in signals_df.columns:
                                     signals_df['timestamp'] = pd.to_datetime(signals_df['timestamp']).dt.strftime('%Y-%m-%d')
                                 
-                                st.dataframe(signals_df, use_container_width=True)
+                                st.dataframe(signals_df, width='stretch')
                         
                         # Store in session state for use in backtest
                         if signals is not None:
@@ -524,13 +524,13 @@ with col2:
                     yaxis_title="Portfolio Value ($)",
                     height=400
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             
             # Trade list
             if 'trades' in results and len(results['trades']) > 0:
                 st.markdown("**Trade History:**")
                 trades_df = pd.DataFrame(results['trades'])
-                st.dataframe(trades_df, use_container_width=True)
+                st.dataframe(trades_df, width='stretch')
                 
                 csv = trades_df.to_csv(index=False)
                 st.download_button(
@@ -696,11 +696,11 @@ with col2:
                                                 height=400
                                             )
                                             
-                                            st.plotly_chart(fig, use_container_width=True)
+                                            st.plotly_chart(fig, width='stretch')
                                             
                                             # Detailed results table
                                             with st.expander("📋 Detailed Results", expanded=False):
-                                                st.dataframe(iterations_df, use_container_width=True)
+                                                st.dataframe(iterations_df, width='stretch')
                                         
                                         # Interpretation
                                         st.subheader("💡 Interpretation")

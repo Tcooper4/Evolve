@@ -746,25 +746,41 @@ def render(
                         f"Strategy visualizer unavailable: {_sve}"
                     )
 
-                try:
-                    from trading.options.options_forecaster import (
-                        OptionsForecaster,
-                    )
+                _calls_df = _calls
+                _puts_df = _puts
+                _surf_ok = (
+                    not _calls_df.empty
+                    and not _puts_df.empty
+                    and "impliedVolatility" in _calls_df.columns
+                    and _calls_df["impliedVolatility"].notna().sum() > 3
+                )
+                if _surf_ok:
+                    try:
+                        from trading.options.options_forecaster import (
+                            OptionsForecaster,
+                        )
 
-                    _of = OptionsForecaster()
-                    _surf = _of.build_volatility_surface(ticker)
-                    _ivm = float(
-                        np.mean(_surf.implied_volatilities)
-                        if len(_surf.implied_volatilities)
-                        else 0.0
-                    )
-                    st.markdown("**Implied volatility surface**")
+                        _of = OptionsForecaster()
+                        _surf = _of.build_volatility_surface(ticker)
+                        _ivm = float(
+                            np.mean(_surf.implied_volatilities)
+                            if len(_surf.implied_volatilities)
+                            else 0.0
+                        )
+                        st.markdown("**Implied volatility surface**")
+                        st.caption(
+                            f"Sampled {len(_surf.strikes)} strikes · "
+                            f"mean IV ≈ {_ivm * 100:.1f}%"
+                        )
+                    except Exception as _ive:
+                        st.caption(
+                            f"Volatility surface build failed: {_ive}"
+                        )
+                else:
                     st.caption(
-                        f"Sampled {len(_surf.strikes)} strikes · "
-                        f"mean IV ≈ {_ivm * 100:.1f}%"
+                        "Volatility surface unavailable — no options "
+                        "data for this ticker."
                     )
-                except Exception as _ive:
-                    st.caption(f"Options forecasting unavailable: {_ive}")
             else:
                 st.info("No options data available for " + ticker)
         except Exception as _oe:

@@ -548,7 +548,7 @@ with tab1:
                         height=300
                     )
                     
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                 except Exception as e:
                     st.info("Performance history data not available in expected format")
             else:
@@ -672,7 +672,7 @@ with tab1:
                                     history = automation.get_workflow_history(workflow.get('id'), limit=10)
                                     if history:
                                         history_df = pd.DataFrame(history)
-                                        st.dataframe(history_df, use_container_width=True)
+                                        st.dataframe(history_df, width='stretch')
                                     else:
                                         st.info("No execution history available")
                                 else:
@@ -1049,7 +1049,7 @@ with tab1:
     ]
     
     endpoints_df = pd.DataFrame(endpoints)
-    st.dataframe(endpoints_df, use_container_width=True, hide_index=True)
+    st.dataframe(endpoints_df, width='stretch', hide_index=True)
     
     # API example usage
     st.subheader("💻 Example Usage")
@@ -1438,7 +1438,7 @@ curl -X POST http://localhost:8000/forecast \\
         col_send, col_clear = st.columns([3, 1])
         
         with col_send:
-            if st.button("Send", type="primary", key="send_ai_message", use_container_width=True) and user_input:
+            if st.button("Send", type="primary", key="send_ai_message", width='stretch') and user_input:
                 # Add to history
                 st.session_state.chat_history.append({
                     'role': 'user',
@@ -1467,7 +1467,7 @@ curl -X POST http://localhost:8000/forecast \\
                 st.rerun()
         
         with col_clear:
-            if st.button("Clear", key="clear_ai_input", use_container_width=True):
+            if st.button("Clear", key="clear_ai_input", width='stretch'):
                 st.session_state.ai_assistant_input = ""
                 st.rerun()
         
@@ -1487,7 +1487,7 @@ curl -X POST http://localhost:8000/forecast \\
         
         with col_q1:
             for i, question in enumerate(quick_questions[:2]):
-                if st.button(question, key=f"quick_{i}", use_container_width=True):
+                if st.button(question, key=f"quick_{i}", width='stretch'):
                     st.session_state.chat_history.append({
                         'role': 'user',
                         'content': question
@@ -1515,7 +1515,7 @@ curl -X POST http://localhost:8000/forecast \\
         
         with col_q2:
             for i, question in enumerate(quick_questions[2:], start=2):
-                if st.button(question, key=f"quick_{i}", use_container_width=True):
+                if st.button(question, key=f"quick_{i}", width='stretch'):
                     st.session_state.chat_history.append({
                         'role': 'user',
                         'content': question

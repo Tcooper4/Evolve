@@ -167,7 +167,7 @@ with tab1:
     st.markdown("---")
     
     # Generate Report Button
-    generate_button = st.button("🚀 Generate Report", type="primary", use_container_width=True)
+    generate_button = st.button("🚀 Generate Report", type="primary", width='stretch')
     
     if generate_button:
         try:
@@ -399,13 +399,13 @@ To generate a report, run a backtest first:
                                 hovermode='x unified',
                                 height=400
                             )
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                     
                     if summary_metrics:
                         perf_df = pd.DataFrame(
                             [{"Metric": k, "Value": v} for k, v in summary_metrics.items()]
                         )
-                        st.dataframe(perf_df, use_container_width=True, hide_index=True)
+                        st.dataframe(perf_df, width='stretch', hide_index=True)
                     else:
                         st.info("Run a backtest to populate performance metrics.")
                     
@@ -417,7 +417,7 @@ To generate a report, run a backtest first:
                         if isinstance(risk_metrics, dict) and risk_metrics:
                             st.dataframe(
                                 pd.DataFrame([risk_metrics]),
-                                use_container_width=True,
+                                width='stretch',
                                 hide_index=True,
                             )
                         else:
@@ -431,7 +431,7 @@ To generate a report, run a backtest first:
                         if backtest_results and backtest_results.get("trades") and len(backtest_results["trades"]) > 0:
                             trade_df = pd.DataFrame(backtest_results["trades"])
                             if not trade_df.empty:
-                                st.dataframe(trade_df, use_container_width=True, height=300)
+                                st.dataframe(trade_df, width='stretch', height=300)
                             else:
                                 st.info("No trade history in backtest results.")
                         else:
@@ -443,7 +443,7 @@ To generate a report, run a backtest first:
                         st.markdown("### Performance Attribution")
                         attribution = (backtest_results or {}).get("attribution")
                         if isinstance(attribution, (list, dict)) and attribution:
-                            st.dataframe(pd.DataFrame(attribution), use_container_width=True, hide_index=True)
+                            st.dataframe(pd.DataFrame(attribution), width='stretch', hide_index=True)
                         else:
                             st.info("Attribution data not available for this backtest.")
                     
@@ -487,7 +487,7 @@ To generate a report, run a backtest first:
                     
                     with export_col1:
                         # PDF Export
-                        if st.button("📄 Export PDF", use_container_width=True):
+                        if st.button("📄 Export PDF", width='stretch'):
                             try:
                                 # Generate PDF report
                                 from reportlab.lib.pagesizes import letter
@@ -555,7 +555,7 @@ To generate a report, run a backtest first:
                 
                     with export_col2:
                         # Excel Export
-                        if st.button("📊 Export Excel", use_container_width=True):
+                        if st.button("📊 Export Excel", width='stretch'):
                             try:
                                 # Create Excel file
                                 from io import BytesIO
@@ -585,7 +585,7 @@ To generate a report, run a backtest first:
                 
                     with export_col3:
                         # HTML Export
-                        if st.button("🌐 Export HTML", use_container_width=True):
+                        if st.button("🌐 Export HTML", width='stretch'):
                             try:
                                 html_content = f"""
                                 <!DOCTYPE html>
@@ -642,7 +642,7 @@ To generate a report, run a backtest first:
                             height=100,
                             key="reports_email_body",
                         )
-                        if st.button("📧 Send Report", key="send_report_email", use_container_width=True):
+                        if st.button("📧 Send Report", key="send_report_email", width='stretch'):
                             try:
                                 from system.infra.agents.notifications.notification_service import (
                                     NotificationService,
@@ -816,10 +816,10 @@ with tab2:
     col1, col2 = st.columns(2)
     
     with col1:
-        preview_button = st.button("👁️ Preview Report", use_container_width=True, key="preview_report_btn")
+        preview_button = st.button("👁️ Preview Report", width='stretch', key="preview_report_btn")
     
     with col2:
-        generate_button = st.button("🚀 Generate Report", type="primary", use_container_width=True, key="generate_report_btn")
+        generate_button = st.button("🚀 Generate Report", type="primary", width='stretch', key="generate_report_btn")
     
     if preview_button or generate_button:
         try:
@@ -900,7 +900,7 @@ with tab2:
                                             "Win Rate": win_rate_str,
                                             "Total Trades": _n_trades,
                                         }]),
-                                        use_container_width=True,
+                                        width='stretch',
                                         hide_index=True,
                                     )
                                 else:
@@ -910,7 +910,7 @@ with tab2:
                                 st.markdown("**Risk-Adjusted Ratios:**")
                                 st.dataframe(
                                     pd.DataFrame([{"Sharpe": sharpe_str}]),
-                                    use_container_width=True,
+                                    width='stretch',
                                     hide_index=True,
                                 )
                         
@@ -923,7 +923,7 @@ with tab2:
                                 try:
                                     holdings_df = pd.DataFrame(trades)
                                     if not holdings_df.empty and "symbol" in holdings_df.columns.str.lower():
-                                        st.dataframe(holdings_df, use_container_width=True, hide_index=True)
+                                        st.dataframe(holdings_df, width='stretch', hide_index=True)
                                     else:
                                         st.info("No report data available — run a backtest first.")
                                 except Exception:
@@ -945,7 +945,7 @@ with tab2:
                                 elif "date" in trade_df.columns or "Date" in trade_df.columns:
                                     date_col = "date" if "date" in trade_df.columns else "Date"
                                     trade_df = trade_df.sort_values(date_col, ascending=False)
-                                st.dataframe(trade_df, use_container_width=True, height=300)
+                                st.dataframe(trade_df, width='stretch', height=300)
                             else:
                                 st.info("No report data available — run a backtest on the Strategy Testing page first.")
                         
@@ -975,7 +975,7 @@ with tab2:
                                     "Scenario": ["2008 Crisis", "2020 COVID", "Flash Crash"],
                                     "Impact": ["-15.2%", "-12.8%", "-8.5%"]
                                 })
-                                st.dataframe(stress_df, use_container_width=True, hide_index=True)
+                                st.dataframe(stress_df, width='stretch', hide_index=True)
                         
                         elif section == "Equity Curve Chart":
                             _empty_state("No report data yet. Complete a backtest or trading session to generate reports.", "📋")
@@ -994,7 +994,7 @@ with tab2:
                                     hole=0.3
                                 )])
                                 fig.update_layout(title="Portfolio Allocation", height=400)
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                             
                             elif config.get("chart_type") == "Bar":
                                 fig = go.Figure()
@@ -1009,7 +1009,7 @@ with tab2:
                                     yaxis_title="Allocation (%)",
                                     height=400
                                 )
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                             
                             else:  # Treemap
                                 fig = go.Figure(go.Treemap(
@@ -1018,7 +1018,7 @@ with tab2:
                                     values=allocations
                                 ))
                                 fig.update_layout(title="Portfolio Allocation", height=400)
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.plotly_chart(fig, width='stretch')
                         
                         elif section == "Drawdown Chart":
                             _empty_state("No report data yet. Complete a backtest or trading session to generate reports.", "📋")
@@ -1029,7 +1029,7 @@ with tab2:
                                 "Source": ["Stock Selection", "Market Timing", "Sector Allocation", "Currency", "Other"],
                                 "Contribution": ["8.2%", "2.1%", "1.5%", "0.4%", "0.3%"]
                             })
-                            st.dataframe(attr_df, use_container_width=True, hide_index=True)
+                            st.dataframe(attr_df, width='stretch', hide_index=True)
                         
                         elif section == "Custom Text Section":
                             config = section_configs.get(section, {})
@@ -1046,7 +1046,7 @@ with tab2:
                         st.success(f"✅ Report '{report_name}' generated successfully!")
                         
                         # Save template option
-                        if st.button("💾 Save as Template", use_container_width=True):
+                        if st.button("💾 Save as Template", width='stretch'):
                             template_name = st.text_input("Template Name", value=f"Template_{datetime.now().strftime('%Y%m%d')}")
                             if template_name:
                                 st.session_state.report_templates[template_name] = report_data
@@ -1150,7 +1150,7 @@ with tab3:
             send_test = st.checkbox("Send Test Report First", value=False)
         
         # Create Schedule Button
-        if st.button("✅ Create Schedule", type="primary", use_container_width=True):
+        if st.button("✅ Create Schedule", type="primary", width='stretch'):
             if not schedule_name:
                 st.error("Please enter a schedule name")
             elif not recipients:
@@ -1256,7 +1256,7 @@ with tab3:
             })
         
         schedules_df = pd.DataFrame(schedules_data)
-        st.dataframe(schedules_df, use_container_width=True, height=300)
+        st.dataframe(schedules_df, width='stretch', height=300)
         
         # Schedule Actions
         st.markdown("---")
@@ -1289,7 +1289,7 @@ with tab3:
             
             with col2:
                 # Send Test Report
-                if st.button("📧 Send Test", use_container_width=True, key=f"test_{selected_schedule}"):
+                if st.button("📧 Send Test", width='stretch', key=f"test_{selected_schedule}"):
                     recipients = schedule_config.get("recipients", [])
                     if recipients:
                         st.info(f"📧 Test report would be sent to: {', '.join(recipients)}")
@@ -1299,13 +1299,13 @@ with tab3:
             
             with col3:
                 # Edit Schedule
-                if st.button("✏️ Edit", use_container_width=True, key=f"edit_{selected_schedule}"):
+                if st.button("✏️ Edit", width='stretch', key=f"edit_{selected_schedule}"):
                     st.info(f"Edit functionality for '{selected_schedule}' - would open edit form")
                     # In a full implementation, this would allow editing the schedule
             
             with col4:
                 # Delete Schedule
-                if st.button("🗑️ Delete", use_container_width=True, key=f"delete_{selected_schedule}"):
+                if st.button("🗑️ Delete", width='stretch', key=f"delete_{selected_schedule}"):
                     if selected_schedule in st.session_state.scheduled_reports:
                         del st.session_state.scheduled_reports[selected_schedule]
                         st.success(f"✅ Schedule '{selected_schedule}' deleted!")
@@ -1357,7 +1357,7 @@ with tab3:
             if selected_schedule in st.session_state.schedule_history:
                 history = st.session_state.schedule_history[selected_schedule]
                 history_df = pd.DataFrame(history)
-                st.dataframe(history_df, use_container_width=True)
+                st.dataframe(history_df, width='stretch')
             else:
                 st.info("No execution history available yet.")
     else:
@@ -1465,7 +1465,7 @@ with tab4:
             })
         
         reports_df = pd.DataFrame(reports_data)
-        st.dataframe(reports_df, use_container_width=True, height=400)
+        st.dataframe(reports_df, width='stretch', height=400)
         
         # Report Actions
         st.markdown("---")
@@ -1484,12 +1484,12 @@ with tab4:
             col1, col2, col3, col4, col5 = st.columns(5)
             
             with col1:
-                if st.button("👁️ View", use_container_width=True, key=f"view_{selected_report}"):
+                if st.button("👁️ View", width='stretch', key=f"view_{selected_report}"):
                     st.session_state.selected_report_to_view = selected_report
                     st.rerun()
             
             with col2:
-                if st.button("📥 Download", use_container_width=True, key=f"download_{selected_report}"):
+                if st.button("📥 Download", width='stretch', key=f"download_{selected_report}"):
                     # Generate download file
                     import json
                     report_json = json.dumps(report_data, indent=2, default=str)
@@ -1502,7 +1502,7 @@ with tab4:
                     )
             
             with col3:
-                if st.button("🔗 Share", use_container_width=True, key=f"share_{selected_report}"):
+                if st.button("🔗 Share", width='stretch', key=f"share_{selected_report}"):
                     # Generate shareable link
                     import hashlib
                     import json
@@ -1535,13 +1535,13 @@ with tab4:
                         st.write("Link copied to clipboard! (Note: Actual clipboard access requires JavaScript)")
             
             with col4:
-                if st.button("🔄 Re-generate", use_container_width=True, key=f"regenerate_{selected_report}"):
+                if st.button("🔄 Re-generate", width='stretch', key=f"regenerate_{selected_report}"):
                     st.info(f"Re-generating '{selected_report}' with updated data...")
                     # In real implementation, this would regenerate the report
                     st.success("✅ Report re-generated successfully!")
             
             with col5:
-                if st.button("🗑️ Delete", use_container_width=True, key=f"delete_{selected_report}"):
+                if st.button("🗑️ Delete", width='stretch', key=f"delete_{selected_report}"):
                     if selected_report in st.session_state.generated_reports:
                         del st.session_state.generated_reports[selected_report]
                         st.success(f"✅ Report '{selected_report}' deleted!")
@@ -1617,7 +1617,7 @@ with tab4:
                 help="Select multiple reports to download"
             )
             
-            if selected_reports_batch and st.button("📥 Download Selected", use_container_width=True):
+            if selected_reports_batch and st.button("📥 Download Selected", width='stretch'):
                 st.info(f"Batch download of {len(selected_reports_batch)} report(s) would be initiated here.")
                 # In real implementation, this would create a zip file
         
@@ -1631,7 +1631,7 @@ with tab4:
                 help="Select reports older than this many days to delete"
             )
             
-            if st.button("🗑️ Delete Old Reports", use_container_width=True):
+            if st.button("🗑️ Delete Old Reports", width='stretch'):
                 cutoff_date = datetime.now() - timedelta(days=days_old)
                 deleted_count = 0
                 
