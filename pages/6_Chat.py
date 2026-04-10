@@ -342,12 +342,38 @@ with col_news:
                     "chat_news_results"
                 ] = []
 
+    def _on_get_news_click() -> None:
+        """Read ticker from session after text_input commits (fixes stale value on click)."""
+        try:
+            _raw = st.session_state.get(
+                "chat_news_ticker_input_6",
+                st.session_state.get("chat_news_ticker", "SPY"),
+            ) or "SPY"
+            _sym = resolve_ticker(
+                str(_raw).strip().upper() or "SPY",
+                validate=False,
+            )
+            _fetch_and_store_news(_sym)
+            st.session_state["chat_news_ticker_input_6"] = _sym
+        except Exception as e:
+            logger.warning("Get News click failed: %s", e)
+            st.session_state["chat_news_results"] = []
+
     st.subheader("News")
-    news_ticker = st.text_input("Ticker", value=st.session_state.get("chat_news_ticker", "SPY"), key="chat_news_ticker_input_6", placeholder="SPY, AAPL").strip().upper() or "SPY"
-    news_ticker = resolve_ticker(news_ticker, validate=False)
-    if st.button("Get News", key="chat_get_news_6"):
-        _fetch_and_store_news(news_ticker)
-        st.rerun()
+    if "chat_news_ticker_input_6" not in st.session_state:
+        st.session_state["chat_news_ticker_input_6"] = (
+            st.session_state.get("chat_news_ticker", "SPY") or "SPY"
+        )
+    st.text_input(
+        "Ticker",
+        key="chat_news_ticker_input_6",
+        placeholder="SPY, AAPL",
+    )
+    st.button(
+        "Get News",
+        key="chat_get_news_6",
+        on_click=_on_get_news_click,
+    )
     items = st.session_state.get("chat_news_results") or []
     if not items:
         st.caption("News temporarily unavailable")

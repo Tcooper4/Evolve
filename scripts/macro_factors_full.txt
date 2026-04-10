@@ -1,0 +1,498 @@
+﻿1	"""
+2	Macro Factors
+3	==============
+4	INTEGRATION NOTES:
+5	- Drop into: trading/analysis/macro_factors.py
+6	- Wire into: trading/analysis/ai_score.py fundamental section
+7	- Call pattern:
+8	    from trading.analysis.macro_factors import MacroFactors
+9	    macro = MacroFactors()
+10	    factors = macro.get_factors()
+11	    score_adj = macro.get_ai_score_adjustment(sector)
+12	
+13	Dependencies: yfinance (already installed), fredapi (optional)
+14	"""
+15	
+16	import logging
+17	from datetime import datetime, timedelta
+18	from typing import Any, Dict, Optional
+19	
+20	import numpy as np
+21	import pandas as pd
+22	
+23	logger = logging.getLogger(__name__)
+24	
+25	# Cache duration in seconds
+26	CACHE_TTL = 3600  # 1 hour
+27	
+28	
+29	class MacroFactors:
+30	    """
+31	    Fetches and interprets macro economic factors.
+32	
+33	    Factors tracked:
+34	    - Fed Funds Rate (from yfinance ^IRX proxy or FRED)
+35	    - Yield curve slope (10Y - 2Y spread)
+36	    - Credit spreads (HYG/IEI ratio as proxy)
+37	    - Dollar strength (DXY)
+38	    - Market volatility regime (VIX)
+39	    - Inflation regime (TIP/IEF ratio)
+40	    """
+41	
+42	    def __init__(self):
+43	        self._cache: Dict[str, Any] = {}
+44	        self._cache_ts: float = 0
+45	
+46	    def get_current_context(self) -> Dict[str, Any]:
+47	        """
+48	        Flat snapshot for dashboards (VIX, 10Y, DXY, regime label).
+49	        """
+50	        try:
+51	            f = self.get_factors()
+52	            if not f:
+53	                return {}
+54	            vix_b = f.get("vix") or {}
+55	            yc = f.get("yield_curve") or {}
+56	            dxy_b = f.get("dollar") or {}
+57	            regime = f.get("overall_regime") or {}
+58	            label = regime.get("label") or "UNKNOWN"
+59	            desc = regime.get("description") or ""
+60	            regime_label = f"Regime: {label}"
+61	            if desc:
+62	                regime_label = f"{regime_label} â€” {desc}"
+63	            return {
+64	                "vix": float(vix_b.get("current") or 0),
+65	                "yield_10y": float(yc.get("rate_10y") or 0),
+66	                "dxy": float(dxy_b.get("current") or 0),
+67	                "regime_label": regime_label,
+68	            }
+69	        except Exception as e:
+70	            logger.debug("get_current_context failed: %s", e)
+71	            return {}
+72	
+73	    def get_factors(self, force_refresh: bool = False) -> Dict[str, Any]:
+74	        """
+75	        Get all macro factors with caching.
+76	        Returns dict with factor values and interpretations.
+77	        """
+78	        import time
+79	        now = time.time()
+80	
+81	        if (not force_refresh
+82	                and self._cache
+83	                and (now - self._cache_ts) < CACHE_TTL):
+84	            return self._cache
+85	
+86	        factors = {
+87	            "timestamp": datetime.now().isoformat(),
+88	            "yield_curve": self._get_yield_curve(),
+89	            "vix": self._get_vix(),
+90	            "credit_spreads": self._get_credit_spreads(),
+91	            "dollar": self._get_dollar_strength(),
+92	            "inflation": self._get_inflation_regime(),
+93	            "overall_regime": {},
+94	        }
+95	
+96	        factors["overall_regime"] = self._interpret_regime(factors)
+97	
+98	        self._cache = factors
+99	        self._cache_ts = now
+100	        return factors
+101	
+102	    def get_ai_score_adjustment(
+103	        self,
+104	        sector: str = "",
+105	    ) -> Dict[str, Any]:
+106	        """
+107	        Get AI Score adjustment based on macro factors.
+108	        Returns score_adj (-2 to +2) and signals list.
+109	        """
+110	        factors = self.get_factors()
+111	        regime = factors.get("overall_regime", {})
+112	        signals = []
+113	        score_adj = 0.0
+114	
+115	        # Yield curve
+116	        yc = factors.get("yield_curve", {})
+117	        spread = yc.get("spread_10y2y")
+118	        if spread is not None:
+119	            if spread < -0.5:
+120	                score_adj -= 1.0
+121	                signals.append({
+122	                    "name": "Yield Curve",
+123	                    "value": f"{spread:+.2f}%",
+124	                    "impact": "negative",
+125	                    "description": (
+126	                        f"âš ï¸ Inverted yield curve ({spread:+.2f}%) "
+127	                        "â€” recession risk elevated"
+128	                    ),
+129	                })
+130	            elif spread > 1.0:
+131	                score_adj += 0.5
+132	                signals.append({
+133	                    "name": "Yield Curve",
+134	                    "value": f"{spread:+.2f}%",
+135	                    "impact": "positive",
+136	                    "description": (
+137	                        f"Healthy yield curve spread ({spread:+.2f}%)"
+138	                    ),
+139	                })
+140	
+141	        # VIX
+142	        vix = factors.get("vix", {})
+143	        vix_level = vix.get("current")
+144	        if vix_level is not None:
+145	            if vix_level > 30:
+146	                score_adj -= 1.0
+147	                signals.append({
+148	                    "name": "VIX",
+149	                    "value": f"{vix_level:.1f}",
+150	                    "impact": "negative",
+151	                    "description": (
+152	                        f"âš ï¸ High volatility (VIX {vix_level:.1f}) "
+153	                        "â€” risk-off environment"
+154	                    ),
+155	                })
+156	            elif vix_level < 15:
+157	                score_adj += 0.5
+158	                signals.append({
+159	                    "name": "VIX",
+160	                    "value": f"{vix_level:.1f}",
+161	                    "impact": "positive",
+162	                    "description": (
+163	                        f"Low volatility (VIX {vix_level:.1f}) "
+164	                        "â€” risk-on environment"
+165	                    ),
+166	                })
+167	
+168	        # Sector-specific adjustments
+169	        if sector:
+170	            sector_adj = self._sector_macro_adjustment(sector, factors)
+171	            score_adj += sector_adj.get("adjustment", 0)
+172	            signals.extend(sector_adj.get("signals", []))
+173	
+174	        return {
+175	            "score_adjustment": round(
+176	                float(np.clip(score_adj, -2.0, 2.0)), 2
+177	            ),
+178	            "signals": signals,
+179	            "regime": regime.get("label", "NEUTRAL"),
+180	        }
+181	
+182	    def _get_yield_curve(self) -> Dict[str, Any]:
+183	        """Get yield curve data (10Y-2Y spread)."""
+184	        result = {}
+185	        try:
+186	            from trading.data.price_cache import get_macro_history
+187	            # TNX = 10Y Treasury, IRX = 13-week T-bill
+188	            tnx = get_macro_history("^TNX", period="5d")
+189	            tyx = get_macro_history("^TYX", period="5d")  # 30Y
+190	            fvx = get_macro_history("^FVX", period="5d")  # 5Y
+191	
+192	            rates = {}
+193	            for name, ticker_data in [
+194	                ("10y", tnx), ("30y", tyx), ("5y", fvx)
+195	            ]:
+196	                if not ticker_data.empty:
+197	                    _col_map = {
+198	                        c.lower(): c for c in ticker_data.columns
+199	                    }
+200	                    close_col = _col_map.get("close", ticker_data.columns[0])
+201	                    rates[name] = float(
+202	                        ticker_data[close_col].iloc[-1]
+203	                    )
+204	
+205	            if "10y" in rates:
+206	                result["rate_10y"] = round(rates["10y"], 3)
+207	            if "5y" in rates:
+208	                result["rate_5y"] = round(rates["5y"], 3)
+209	                if "10y" in rates:
+210	                    result["spread_10y5y"] = round(
+211	                        rates["10y"] - rates["5y"], 3
+212	                    )
+213	
+214	            # Approximate 2Y from short-end
+215	            irx = get_macro_history("^IRX", period="5d")
+216	            if not irx.empty:
+217	                _col_map = {c.lower(): c for c in irx.columns}
+218	                close_col = _col_map.get("close", irx.columns[0])
+219	                rate_2y = float(irx[close_col].iloc[-1])
+220	                result["rate_2y"] = round(rate_2y, 3)
+221	                if "10y" in rates:
+222	                    spread = rates["10y"] - rate_2y
+223	                    result["spread_10y2y"] = round(spread, 3)
+224	                    result["inverted"] = spread < 0
+225	                    result["interpretation"] = (
+226	                        f"Yield curve {'inverted' if spread < 0 else 'normal'} "
+227	                        f"({spread:+.2f}%)"
+228	                    )
+229	
+230	        except Exception as e:
+231	            logger.debug("Yield curve fetch failed: %s", e)
+232	            result["error"] = str(e)
+233	
+234	        return result
+235	
+236	    def _get_vix(self) -> Dict[str, Any]:
+237	        """Get VIX level and regime."""
+238	        result = {}
+239	        try:
+240	            from trading.data.price_cache import get_macro_history
+241	            vix = get_macro_history("^VIX", period="1mo")
+242	            if not vix.empty:
+243	                _col_map = {c.lower(): c for c in vix.columns}
+244	                close_col = _col_map.get("close", vix.columns[0])
+245	                current = float(vix[close_col].iloc[-1])
+246	                ma20 = float(vix[close_col].rolling(20).mean().iloc[-1])
+247	
+248	                result = {
+249	                    "current": round(current, 2),
+250	                    "ma20": round(ma20, 2),
+251	                    "vs_ma": round(current - ma20, 2),
+252	                    "regime": (
+253	                        "HIGH" if current > 30
+254	                        else "ELEVATED" if current > 20
+255	                        else "NORMAL" if current > 15
+256	                        else "LOW"
+257	                    ),
+258	                    "trending_up": current > ma20,
+259	                }
+260	        except Exception as e:
+261	            logger.debug("VIX fetch failed: %s", e)
+262	            result["error"] = str(e)
+263	
+264	        return result
+265	
+266	    def _get_credit_spreads(self) -> Dict[str, Any]:
+267	        """Get credit spread proxy using HYG/IEI."""
+268	        result = {}
+269	        try:
+270	            from trading.data.price_cache import get_macro_history
+271	            hyg = get_macro_history("HYG", period="1mo")
+272	            iei = get_macro_history("IEI", period="1mo")
+273	
+274	            if not hyg.empty and not iei.empty:
+275	                _col_map_h = {c.lower(): c for c in hyg.columns}
+276	                _col_map_i = {c.lower(): c for c in iei.columns}
+277	                hyg_close = hyg[_col_map_h.get("close", hyg.columns[0])]
+278	                iei_close = iei[_col_map_i.get("close", iei.columns[0])]
+279	
+280	                # Ratio as credit spread proxy
+281	                ratio = (hyg_close / iei_close).dropna()
+282	                current = float(ratio.iloc[-1])
+283	                ma20 = float(ratio.rolling(20).mean().iloc[-1])
+284	
+285	                result = {
+286	                    "hyg_iei_ratio": round(current, 4),
+287	                    "ratio_vs_ma20": round(current - ma20, 4),
+288	                    "credit_stress": current < ma20 * 0.98,
+289	                    "interpretation": (
+290	                        "Credit stress detected â€” risk-off signal"
+291	                        if current < ma20 * 0.98
+292	                        else "Credit markets stable"
+293	                    ),
+294	                }
+295	        except Exception as e:
+296	            logger.debug("Credit spreads fetch failed: %s", e)
+297	            result["error"] = str(e)
+298	
+299	        return result
+300	
+301	    def _get_dollar_strength(self) -> Dict[str, Any]:
+302	        """Get DXY dollar strength."""
+303	        result = {}
+304	        try:
+305	            from trading.data.price_cache import get_macro_history
+306	            dxy = get_macro_history("DX-Y.NYB", period="1mo")
+307	            if dxy.empty:
+308	                dxy = get_macro_history("UUP", period="1mo")
+309	
+310	            if not dxy.empty:
+311	                _col_map = {c.lower(): c for c in dxy.columns}
+312	                close_col = _col_map.get("close", dxy.columns[0])
+313	                closes = dxy[close_col].values
+314	                current = float(closes[-1])
+315	                ma20 = float(np.mean(closes[-20:])) if len(closes) >= 20 else current
+316	                change_mo = float((closes[-1] / closes[0] - 1) * 100)
+317	
+318	                result = {
+319	                    "current": round(current, 2),
+320	                    "vs_ma20_pct": round((current - ma20) / ma20 * 100, 2),
+321	                    "monthly_change_pct": round(change_mo, 2),
+322	                    "strengthening": current > ma20,
+323	                    "interpretation": (
+324	                        "Strong dollar â€” headwind for multinationals/commodities"
+325	                        if current > ma20 * 1.02
+326	                        else "Weak dollar â€” tailwind for emerging markets/commodities"
+327	                        if current < ma20 * 0.98
+328	                        else "Dollar neutral"
+329	                    ),
+330	                }
+331	        except Exception as e:
+332	            logger.debug("Dollar strength fetch failed: %s", e)
+333	            result["error"] = str(e)
+334	
+335	        return result
+336	
+337	    def _get_inflation_regime(self) -> Dict[str, Any]:
+338	        """Get inflation regime proxy using TIP/IEF."""
+339	        result = {}
+340	        try:
+341	            from trading.data.price_cache import get_macro_history
+342	            tip = get_macro_history("TIP", period="1mo")
+343	            ief = get_macro_history("IEF", period="1mo")
+344	
+345	            if not tip.empty and not ief.empty:
+346	                _col_map_t = {c.lower(): c for c in tip.columns}
+347	                _col_map_i = {c.lower(): c for c in ief.columns}
+348	                tip_close = tip[_col_map_t.get("close", tip.columns[0])]
+349	                ief_close = ief[_col_map_i.get("close", ief.columns[0])]
+350	
+351	                ratio = (tip_close / ief_close).dropna()
+352	                current = float(ratio.iloc[-1])
+353	                ma20 = float(ratio.rolling(20).mean().iloc[-1])
+354	                change = float(
+355	                    (ratio.iloc[-1] / ratio.iloc[0] - 1) * 100
+356	                )
+357	
+358	                result = {
+359	                    "tip_ief_ratio": round(current, 4),
+360	                    "monthly_change_pct": round(change, 2),
+361	                    "inflation_rising": current > ma20,
+362	                    "interpretation": (
+363	                        "Inflation expectations rising â€” "
+364	                        "headwind for growth stocks"
+365	                        if current > ma20
+366	                        else "Inflation expectations falling â€” "
+367	                        "supportive for growth stocks"
+368	                    ),
+369	                }
+370	        except Exception as e:
+371	            logger.debug("Inflation regime fetch failed: %s", e)
+372	            result["error"] = str(e)
+373	
+374	        return result
+375	
+376	    def _interpret_regime(
+377	        self, factors: Dict[str, Any]
+378	    ) -> Dict[str, Any]:
+379	        """Determine overall macro regime."""
+380	        bullish_factors = 0
+381	        bearish_factors = 0
+382	
+383	        vix = factors.get("vix", {})
+384	        if vix.get("regime") == "LOW":
+385	            bullish_factors += 1
+386	        elif vix.get("regime") == "HIGH":
+387	            bearish_factors += 2
+388	
+389	        yc = factors.get("yield_curve", {})
+390	        if yc.get("inverted"):
+391	            bearish_factors += 1
+392	        elif yc.get("spread_10y2y", 0) > 0.5:
+393	            bullish_factors += 1
+394	
+395	        credit = factors.get("credit_spreads", {})
+396	        if credit.get("credit_stress"):
+397	            bearish_factors += 1
+398	
+399	        dollar = factors.get("dollar", {})
+400	        if dollar.get("strengthening"):
+401	            bearish_factors += 0.5  # mild headwind
+402	
+403	        inflation = factors.get("inflation", {})
+404	        if inflation.get("inflation_rising"):
+405	            bearish_factors += 0.5
+406	
+407	        net = bullish_factors - bearish_factors
+408	        if net > 1:
+409	            label = "RISK_ON"
+410	            description = "Macro environment is supportive"
+411	            score_bias = 0.5
+412	        elif net < -1:
+413	            label = "RISK_OFF"
+414	            description = "Macro headwinds present â€” be selective"
+415	            score_bias = -0.5
+416	        else:
+417	            label = "NEUTRAL"
+418	            description = "Mixed macro signals"
+419	            score_bias = 0.0
+420	
+421	        return {
+422	            "label": label,
+423	            "description": description,
+424	            "score_bias": score_bias,
+425	            "bullish_count": bullish_factors,
+426	            "bearish_count": bearish_factors,
+427	        }
+428	
+429	    def _sector_macro_adjustment(
+430	        self,
+431	        sector: str,
+432	        factors: Dict[str, Any],
+433	    ) -> Dict[str, Any]:
+434	        """Sector-specific macro adjustments."""
+435	        signals = []
+436	        adjustment = 0.0
+437	
+438	        yc = factors.get("yield_curve", {})
+439	        spread = yc.get("spread_10y2y", 0)
+440	        vix = factors.get("vix", {}).get("current", 20)
+441	        dollar = factors.get("dollar", {})
+442	        inflation = factors.get("inflation", {})
+443	
+444	        sector_lower = sector.lower()
+445	
+446	        # Financials benefit from steeper yield curve
+447	        if "financial" in sector_lower:
+448	            if spread > 1.0:
+449	                adjustment += 0.5
+450	                signals.append({
+451	                    "name": "Macro â€” Yield Curve",
+452	                    "impact": "positive",
+453	                    "description": "Steep yield curve supports bank margins",
+454	                })
+455	            elif spread < 0:
+456	                adjustment -= 0.5
+457	                signals.append({
+458	                    "name": "Macro â€” Yield Curve",
+459	                    "impact": "negative",
+460	                    "description": "Inverted curve compresses bank margins",
+461	                })
+462	
+463	        # Utilities hurt by rising rates
+464	        if "utilities" in sector_lower:
+465	            rate_10y = yc.get("rate_10y", 3.5)
+466	            if rate_10y > 4.5:
+467	                adjustment -= 0.5
+468	                signals.append({
+469	                    "name": "Macro â€” Interest Rates",
+470	                    "impact": "negative",
+471	                    "description": (
+472	                        f"High 10Y rate ({rate_10y:.1f}%) "
+473	                        "pressures utility valuations"
+474	                    ),
+475	                })
+476	
+477	        # Energy benefits from dollar weakness
+478	        if "energy" in sector_lower:
+479	            if not dollar.get("strengthening", True):
+480	                adjustment += 0.3
+481	                signals.append({
+482	                    "name": "Macro â€” Dollar",
+483	                    "impact": "positive",
+484	                    "description": "Weak dollar supports commodity prices",
+485	                })
+486	
+487	        # Tech hurt by rising inflation/rates
+488	        if "technology" in sector_lower:
+489	            if inflation.get("inflation_rising"):
+490	                adjustment -= 0.3
+491	                signals.append({
+492	                    "name": "Macro â€” Inflation",
+493	                    "impact": "negative",
+494	                    "description": "Rising inflation expectations "
+495	                    "compress growth stock valuations",
+496	                })
+497	
+498	        return {"adjustment": adjustment, "signals": signals}

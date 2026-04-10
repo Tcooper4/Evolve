@@ -1,0 +1,260 @@
+﻿1	"""
+2	Earnings quality signals.
+3	
+4	1. Earnings revision momentum:
+5	   Detects whether EPS estimates are
+6	   being revised up or down vs the
+7	   earnings surprise trend.
+8	   Academic basis: Hawkins, Chamberlin
+9	   & Daniel (1984) â€” analyst revision
+10	   momentum persists 60-90 days.
+11	
+12	2. Accruals anomaly:
+13	   High accounting accruals (earnings
+14	   driven by non-cash items) predict
+15	   underperformance.
+16	   Academic basis: Sloan (1996).
+17	   Formula: Accruals = (Net Income -
+18	   Operating Cash Flow) / Total Assets
+19	"""
+20	
+21	import logging
+22	import time
+23	from typing import Any, Dict
+24	
+25	logger = logging.getLogger(__name__)
+26	
+27	_EQ_CACHE: Dict[str, Any] = {}
+28	_EQ_TS: Dict[str, float] = {}
+29	_EQ_TTL = 14400  # 4 hours
+30	
+31	
+32	def get_earnings_quality(symbol: str) -> Dict[str, Any]:
+33	    """
+34	    Returns:
+35	        symbol: str
+36	        revision_signal: UP / DOWN / NEUTRAL
+37	        revision_score: float â€” magnitude
+38	            of revision trend 0-10
+39	        accruals_ratio: float â€” net income
+40	            minus operating cash flow
+41	            divided by total assets
+42	        accruals_signal: HIGH / NORMAL / LOW
+43	        beat_rate: float â€” % of recent
+44	            quarters where EPS beat
+45	        beat_streak: int â€” consecutive
+46	            beats (positive) or misses
+47	            (negative)
+48	        composite_score: float 0-10
+49	            (higher = better quality)
+50	        signal: QUALITY / NEUTRAL / CONCERN
+51	        success: bool
+52	    """
+53	    sym = (symbol or "").strip().upper()
+54	    if not sym:
+55	        return _neutral_eq(sym)
+56	
+57	    _now = time.time()
+58	    if sym in _EQ_CACHE and _now - _EQ_TS.get(sym, 0) < _EQ_TTL:
+59	        return dict(_EQ_CACHE[sym])
+60	
+61	    try:
+62	        import numpy as np
+63	        import yfinance as yf
+64	
+65	        t = yf.Ticker(sym)
+66	
+67	        revision_signal = "NEUTRAL"
+68	        revision_score = 5.0
+69	        beat_rate = 0.5
+70	        beat_streak = 0
+71	
+72	        try:
+73	            _hist = getattr(t, "earnings_history", None)
+74	            if _hist is not None and not getattr(_hist, "empty", True):
+75	                if len(_hist) >= 3:
+76	                    try:
+77	                        _hist = _hist.sort_index(ascending=False)
+78	                    except Exception:
+79	                        _hist = _hist.iloc[::-1]
+80	
+81	                    _beats = []
+82	                    _surprises = []
+83	                    for _, row in _hist.iterrows():
+84	                        _act = row.get("epsActual")
+85	                        _est = row.get("epsEstimate")
+86	                        if (
+87	                            _act is not None
+88	                            and _est is not None
+89	                            and float(_est) != 0
+90	                        ):
+91	                            _beat = float(_act) > float(_est)
+92	                            _beats.append(_beat)
+93	                            _surp = (
+94	                                (float(_act) - float(_est))
+95	                                / abs(float(_est))
+96	                                * 100
+97	                            )
+98	                            _surprises.append(_surp)
+99	
+100	                    if _beats:
+101	                        beat_rate = sum(_beats) / len(_beats)
+102	                        _streak = 0
+103	                        for _b in _beats:
+104	                            if _b:
+105	                                _streak += 1
+106	                            else:
+107	                                break
+108	                        if _streak == 0:
+109	                            for _b in _beats:
+110	                                if not _b:
+111	                                    _streak -= 1
+112	                                else:
+113	                                    break
+114	                        beat_streak = _streak
+115	
+116	                    if len(_surprises) >= 3:
+117	                        _recent = float(np.mean(_surprises[:2]))
+118	                        _older = float(np.mean(_surprises[2:]))
+119	                        _trend = _recent - _older
+120	                        if _trend > 5:
+121	                            revision_signal = "UP"
+122	                            revision_score = min(
+123	                                8.5,
+124	                                6.0 + _trend / 10,
+125	                            )
+126	                        elif _trend < -5:
+127	                            revision_signal = "DOWN"
+128	                            revision_score = max(
+129	                                1.5,
+130	                                4.0 + _trend / 10,
+131	                            )
+132	        except Exception as _re:
+133	            logger.debug(
+134	                "Earnings history failed %s: %s",
+135	                sym,
+136	                _re,
+137	            )
+138	
+139	        accruals_ratio = 0.0
+140	        accruals_signal = "NORMAL"
+141	
+142	        try:
+143	            _cf = t.cashflow
+144	            _inc = t.income_stmt
+145	            _bal = t.balance_sheet
+146	
+147	            if (
+148	                _cf is not None
+149	                and not _cf.empty
+150	                and _inc is not None
+151	                and not _inc.empty
+152	                and _bal is not None
+153	                and not _bal.empty
+154	            ):
+155	                _ocf = None
+156	                for _k in [
+157	                    "Operating Cash Flow",
+158	                    "Total Cash From Operating Activities",
+159	                    "Cash From Operations",
+160	                ]:
+161	                    if _k in _cf.index:
+162	                        _ocf = float(_cf.loc[_k].iloc[0])
+163	                        break
+164	
+165	                _ni = None
+166	                for _k in [
+167	                    "Net Income",
+168	                    "Net Income Common Stockholders",
+169	                ]:
+170	                    if _k in _inc.index:
+171	                        _ni = float(_inc.loc[_k].iloc[0])
+172	                        break
+173	
+174	                _ta = None
+175	                for _k in [
+176	                    "Total Assets",
+177	                ]:
+178	                    if _k in _bal.index:
+179	                        _ta = float(_bal.loc[_k].iloc[0])
+180	                        break
+181	
+182	                if (
+183	                    _ocf is not None
+184	                    and _ni is not None
+185	                    and _ta is not None
+186	                    and abs(_ta) > 0
+187	                ):
+188	                    accruals_ratio = (_ni - _ocf) / _ta
+189	                    if accruals_ratio > 0.08:
+190	                        accruals_signal = "HIGH"
+191	                    elif accruals_ratio < -0.05:
+192	                        accruals_signal = "LOW"
+193	        except Exception as _ae:
+194	            logger.debug(
+195	                "Accruals calc failed %s: %s",
+196	                sym,
+197	                _ae,
+198	            )
+199	
+200	        _score = 5.0
+201	        _score += (beat_rate - 0.5) * 4
+202	        if beat_streak >= 3:
+203	            _score += 1.0
+204	        elif beat_streak <= -2:
+205	            _score -= 1.5
+206	        if revision_signal == "UP":
+207	            _score += 1.0
+208	        elif revision_signal == "DOWN":
+209	            _score -= 1.5
+210	        if accruals_signal == "HIGH":
+211	            _score -= 1.0
+212	        elif accruals_signal == "LOW":
+213	            _score += 0.5
+214	        _score = max(0.0, min(10.0, _score))
+215	
+216	        if _score >= 7.0:
+217	            _signal = "QUALITY"
+218	        elif _score <= 4.0:
+219	            _signal = "CONCERN"
+220	        else:
+221	            _signal = "NEUTRAL"
+222	
+223	        result = {
+224	            "symbol": sym,
+225	            "revision_signal": revision_signal,
+226	            "revision_score": round(revision_score, 2),
+227	            "accruals_ratio": round(accruals_ratio, 4),
+228	            "accruals_signal": accruals_signal,
+229	            "beat_rate": round(beat_rate, 3),
+230	            "beat_streak": beat_streak,
+231	            "composite_score": round(_score, 2),
+232	            "signal": _signal,
+233	            "success": True,
+234	        }
+235	        _EQ_CACHE[sym] = result
+236	        _EQ_TS[sym] = _now
+237	        return result
+238	
+239	    except Exception as e:
+240	        logger.debug(
+241	            "Earnings quality failed %s: %s",
+242	            sym,
+243	            e,
+244	        )
+245	        return _neutral_eq(sym)
+246	
+247	
+248	def _neutral_eq(sym: str) -> Dict[str, Any]:
+249	    return {
+250	        "symbol": sym,
+251	        "revision_signal": "NEUTRAL",
+252	        "revision_score": 5.0,
+253	        "accruals_ratio": 0.0,
+254	        "accruals_signal": "NORMAL",
+255	        "beat_rate": 0.5,
+256	        "beat_streak": 0,
+257	        "composite_score": 5.0,
+258	        "signal": "NEUTRAL",
+259	        "success": False,
+260	    }
