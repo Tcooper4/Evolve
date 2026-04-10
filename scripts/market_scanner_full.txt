@@ -1,0 +1,339 @@
+﻿1	"""
+2	Market scanner â€” screens a stock universe by technical filters
+3	and ranks results by AI Score.
+4	
+5	Designed to run on demand (not continuously) to avoid rate limits.
+6	Uses yfinance batch download for efficiency.
+7	"""
+8	import json
+9	import logging
+10	import time
+11	from concurrent.futures import ThreadPoolExecutor, as_completed
+12	from pathlib import Path
+13	from typing import Any, Dict, List, Optional, Tuple
+14	
+15	import numpy as np
+16	import pandas as pd
+17	import yfinance as yf
+18	
+19	logger = logging.getLogger(__name__)
+20	
+21	# Default universe â€” large/mid cap liquid names
+22	DEFAULT_UNIVERSE = [
+23	    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "AVGO", "JPM", "V",
+24	    "XOM", "UNH", "LLY", "JNJ", "WMT", "MA", "PG", "HD", "MRK", "CVX",
+25	    "ABBV", "ORCL", "BAC", "COST", "PEP", "KO", "CSCO", "CRM", "MCD", "NKE",
+26	    "TMO", "ABT", "ACN", "LIN", "DHR", "TXN", "INTC", "QCOM", "AMD", "NFLX",
+27	    "ADBE", "NOW", "INTU", "ISRG", "AMGN", "PLD", "CB", "SPGI", "GS", "BLK",
+28	    "SPY", "QQQ", "IWM", "GLD", "SLV", "TLT", "HYG", "EEM",
+29	]
+30	
+31	UNIVERSE_FILES = {
+32	    "sp100": "data/universes/sp100.json",
+33	    "sp500": "data/universes/sp500.json",
+34	    "nasdaq100": "data/universes/nasdaq100.json",
+35	    "russell1000": "data/universes/russell1000.json",
+36	    "russell3000": "data/universes/russell3000.json",
+37	}
+38	
+39	
+40	def _get_universe(label: str) -> List[str]:
+41	    """
+42	    Resolve a universe label to a ticker list.
+43	    Known JSON universes load from data/universes/; otherwise DEFAULT_UNIVERSE.
+44	    """
+45	    key = (label or "default").lower().strip()
+46	    if key in UNIVERSE_FILES:
+47	        path = Path(UNIVERSE_FILES[key])
+48	        if path.exists():
+49	            try:
+50	                with open(path, encoding="utf-8", errors="replace") as f:
+51	                    data = json.load(f)
+52	                if isinstance(data, list):
+53	                    out = [str(x).strip().upper() for x in data if x]
+54	                    if out:
+55	                        return out
+56	            except Exception as e:
+57	                logger.warning("Universe load failed for %s: %s", key, e)
+58	    return list(DEFAULT_UNIVERSE)
+59	
+60	SCAN_FILTERS = {
+61	    "momentum": "Price > SMA20 AND 20d return > 2%",
+62	    "oversold": "RSI < 35 AND Price > SMA50 (dip buyers)",
+63	    "breakout": "Price within 2% of 52w high AND volume > 1.5x avg",
+64	    "high_short": "Short squeeze score > 50",
+65	    "insider_buying": "Insider buying signal in last 90d",
+66	    "top_ai_score": "AI Score >= 7.0",
+67	}
+68	
+69	_SCAN_AI_MAX_WORKERS = 8
+70	
+71	
+72	def _score_ticker_ai(
+73	    symbol: str, hist: pd.DataFrame
+74	) -> tuple:
+75	    """Worker: AI score for one symbol (hist pre-sliced, thread-owned copy)."""
+76	    try:
+77	        from trading.analysis.ai_score import compute_ai_score
+78	
+79	        ai = compute_ai_score(symbol, hist)
+80	        return symbol, ai
+81	    except Exception as e:
+82	        logger.debug("Scanner AI score failed for %s: %s", symbol, e)
+83	        return symbol, None
+84	
+85	
+86	def scan_market(
+87	    filters: List[str] = None,
+88	    universe: List[str] = None,
+89	    max_results: int = 20,
+90	    progress_callback=None,
+91	) -> Dict[str, Any]:
+92	    """
+93	    Run market scan.
+94	
+95	    Args:
+96	        filters: list of filter keys from SCAN_FILTERS, or None for all
+97	        universe: list of tickers, or None for DEFAULT_UNIVERSE
+98	        max_results: cap on returned rows
+99	        progress_callback: callable(completed, total, phase=...) for UI;
+100	            phase is "filter" (per ticker) or "ai" (scoring); optional kwarg.
+101	
+102	    Returns:
+103	        dict with:
+104	            results: list of dicts (one per passing stock, sorted by ai_score)
+105	            filters_applied: list of filter names
+106	            scanned: int â€” total tickers checked
+107	            passed: int â€” tickers passing filters
+108	            scan_time_s: float
+109	            error: str | None
+110	    """
+111	    t0 = time.time()
+112	
+113	    if universe is None:
+114	        universe = DEFAULT_UNIVERSE
+115	    if filters is None:
+116	        filters = ["top_ai_score"]
+117	
+118	    # Batch download price data (much faster than per-ticker)
+119	    try:
+120	        raw = yf.download(
+121	            universe,
+122	            period="1y",
+123	            interval="1d",
+124	            group_by="ticker",
+125	            auto_adjust=True,
+126	            progress=False,
+127	            threads=True,
+128	        )
+129	        # Normalize timezone to prevent tz-naive/tz-aware join errors
+130	        if isinstance(raw, pd.DataFrame) and len(raw.index) > 0:
+131	            if hasattr(raw.index, "tz") and raw.index.tz is not None:
+132	                raw = raw.copy()
+133	                raw.index = raw.index.tz_convert(None)
+134	        # tz_localize(None) is naive-only; tz_convert(None) strips tz-aware indexes
+135	    except Exception as e:
+136	        return {
+137	            "results": [],
+138	            "filters_applied": filters,
+139	            "scanned": 0,
+140	            "passed": 0,
+141	            "scan_time_s": 0,
+142	            "error": f"Download failed: {e}",
+143	        }
+144	
+145	    # Normalize: single-ticker download returns plain columns; multi returns MultiIndex
+146	    if len(universe) == 1:
+147	        raw = pd.DataFrame(raw)
+148	        if raw.columns.nlevels > 1:
+149	            raw = raw.copy()
+150	            raw.columns = raw.columns.get_level_values(0)
+151	
+152	    results = []
+153	    total = len(universe)
+154	    pending: List[Tuple[str, pd.DataFrame, Dict[str, Any]]] = []
+155	    # UI progress: phase="filter" (per ticker), then phase="ai" (pool scoring).
+156	
+157	    def _emit_progress(done: int, tot: int, phase: str) -> None:
+158	        if not progress_callback:
+159	            return
+160	        try:
+161	            progress_callback(done, tot, phase=phase)
+162	        except TypeError:
+163	            try:
+164	                progress_callback(done, tot)
+165	            except Exception:
+166	                pass
+167	        except Exception:
+168	            pass
+169	
+170	    for _scan_i, symbol in enumerate(universe):
+171	        try:
+172	            _emit_progress(_scan_i + 1, total, "filter")
+173	            # Extract per-ticker data from batch download
+174	            if len(universe) == 1:
+175	                hist = raw.copy()
+176	            else:
+177	                if hasattr(raw.columns, "get_level_values") and raw.columns.nlevels >= 2:
+178	                    if symbol not in raw.columns.get_level_values(0):
+179	                        continue
+180	                    hist = raw[symbol].copy()
+181	                    if isinstance(hist, pd.Series):
+182	                        continue
+183	                    hist = hist.dropna(how="all")
+184	                else:
+185	                    continue
+186	
+187	            if hist.empty or len(hist) < 20:
+188	                continue
+189	
+190	            # Normalize column names to Capitalized
+191	            hist = hist.copy()
+192	            cols = {c: c if c == c.capitalize() else c.capitalize() for c in hist.columns}
+193	            for k, v in list(cols.items()):
+194	                if k != v and v not in hist.columns:
+195	                    hist = hist.rename(columns={k: v})
+196	            if "Close" not in hist.columns and "close" in hist.columns:
+197	                hist = hist.rename(columns={"close": "Close"})
+198	            if "Volume" not in hist.columns and "volume" in hist.columns:
+199	                hist = hist.rename(columns={"volume": "Volume"})
+200	
+201	            close = hist["Close"].values.astype(float)
+202	            volume = hist["Volume"].values.astype(float) if "Volume" in hist.columns else None
+203	            last_price = float(close[-1])
+204	
+205	            # Compute indicators needed for filters
+206	            sma20 = float(np.mean(close[-20:])) if len(close) >= 20 else None
+207	            sma50 = float(np.mean(close[-50:])) if len(close) >= 50 else None
+208	            rsi = _rsi(close, 14)
+209	            ret_20d = float((close[-1] / close[-20] - 1) * 100) if len(close) >= 20 else 0.0
+210	            high_52w = float(np.max(close[-252:])) if len(close) >= 252 else float(np.max(close))
+211	            pct_from_high = float((last_price / high_52w - 1) * 100)
+212	
+213	            avg_vol = float(np.mean(volume[-20:])) if volume is not None and len(volume) >= 20 else None
+214	            vol_ratio = float(volume[-1] / avg_vol) if avg_vol and avg_vol > 0 else 1.0
+215	
+216	            # Apply filters
+217	            passes = True
+218	            for f in filters:
+219	                if f == "momentum":
+220	                    if not (sma20 and last_price > sma20 and ret_20d > 2):
+221	                        passes = False
+222	                        break
+223	                elif f == "oversold":
+224	                    if not (rsi is not None and rsi < 35 and sma50 and last_price > sma50):
+225	                        passes = False
+226	                        break
+227	                elif f == "breakout":
+228	                    if not (pct_from_high > -2 and vol_ratio > 1.5):
+229	                        passes = False
+230	                        break
+231	                elif f == "high_short":
+232	                    try:
+233	                        from trading.data.short_interest import get_short_interest
+234	                        si = get_short_interest(symbol)
+235	                        if si.get("short_squeeze_score", 0) <= 50:
+236	                            passes = False
+237	                            break
+238	                    except Exception:
+239	                        passes = False
+240	                        break
+241	                elif f == "insider_buying":
+242	                    try:
+243	                        from trading.data.insider_flow import get_insider_flow
+244	                        ins = get_insider_flow(symbol)
+245	                        if ins.get("signal") != "INSIDER_BUYING":
+246	                            passes = False
+247	                            break
+248	                    except Exception:
+249	                        passes = False
+250	                        break
+251	                elif f == "top_ai_score":
+252	                    pass  # scored below after filter pass
+253	
+254	            if not passes:
+255	                continue
+256	
+257	            partial = {
+258	                "symbol": symbol,
+259	                "price": round(last_price, 2),
+260	                "change_20d": round(ret_20d, 2),
+261	                "rsi": round(rsi, 1) if rsi is not None else None,
+262	                "vs_sma20": round((last_price / sma20 - 1) * 100, 2) if sma20 else None,
+263	                "pct_from_52w_high": round(pct_from_high, 2),
+264	                "volume_ratio": round(vol_ratio, 2),
+265	            }
+266	            pending.append((symbol, hist.copy(), partial))
+267	
+268	        except Exception as e:
+269	            logger.debug("Scanner: %s failed: %s", symbol, e)
+270	            continue
+271	
+272	    ai_by_symbol: Dict[str, Any] = {}
+273	    n_pend = len(pending)
+274	    _emit_progress(0, max(1, n_pend), "ai")
+275	    if pending:
+276	        done_ai = 0
+277	        with ThreadPoolExecutor(max_workers=_SCAN_AI_MAX_WORKERS) as executor:
+278	            future_map = {
+279	                executor.submit(_score_ticker_ai, sym, h): sym
+280	                for sym, h, _partial in pending
+281	            }
+282	            for fut in as_completed(future_map):
+283	                sym, ai = fut.result()
+284	                ai_by_symbol[sym] = ai
+285	                done_ai += 1
+286	                _emit_progress(done_ai, n_pend, "ai")
+287	    else:
+288	        _emit_progress(1, 1, "ai")
+289	
+290	    for symbol, _hist, partial in pending:
+291	        ai = ai_by_symbol.get(symbol)
+292	        if ai:
+293	            ai_score = ai.get("overall_score", 5.0)
+294	            ai_grade = ai.get("grade", "C")
+295	            signals = ai.get("signals") or []
+296	        else:
+297	            ai_score = 5.0
+298	            ai_grade = "C"
+299	            signals = []
+300	
+301	        if "top_ai_score" in filters and ai_score < 7.0:
+302	            continue
+303	
+304	        row = {
+305	            **partial,
+306	            "ai_score": ai_score,
+307	            "ai_grade": ai_grade,
+308	            "signals": signals,
+309	        }
+310	        results.append(row)
+311	
+312	    # Sort by AI Score descending
+313	    results.sort(key=lambda x: x["ai_score"], reverse=True)
+314	
+315	    return {
+316	        "results": results[:max_results],
+317	        "filters_applied": filters,
+318	        "scanned": total,
+319	        "passed": len(results),
+320	        "scan_time_s": round(time.time() - t0, 1),
+321	        "error": None,
+322	    }
+323	
+324	
+325	def _rsi(prices: np.ndarray, period: int = 14) -> Optional[float]:
+326	    if len(prices) < period + 1:
+327	        return None
+328	    d = np.diff(prices)
+329	    g = np.where(d > 0, d, 0.0)
+330	    l_ = np.where(d < 0, -d, 0.0)
+331	    ag = np.mean(g[-period:])
+332	    al = np.mean(l_[-period:])
+333	    if al == 0:
+334	        return 100.0
+335	    return 100.0 - (100.0 / (1.0 + ag / al))
+336	
+337	
+338	def get_available_filters() -> Dict[str, str]:
+339	    return SCAN_FILTERS.copy()

@@ -232,16 +232,35 @@ class GNNForecaster:
             num_layers = int(_cfg.get("num_layers", num_layers))
             seq_length = int(_cfg.get("seq_length", seq_length))
             learning_rate = float(_cfg.get("learning_rate", learning_rate))
+            correlation_threshold = float(
+                _cfg.get("correlation_threshold", correlation_threshold)
+            )
 
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch is required for GNN models")
-        
-        self.num_assets = num_assets
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.seq_length = seq_length
-        self.learning_rate = learning_rate
-        self.correlation_threshold = correlation_threshold
+
+        # Scalar coercion (Streamlit sliders / widgets may pass {"value": n})
+        def _i(v: Any, default: int) -> int:
+            if isinstance(v, dict):
+                return int(v.get("value", v.get("default", default)))
+            return int(v)
+
+        def _f(v: Any, default: float) -> float:
+            if isinstance(v, dict):
+                return float(v.get("value", v.get("default", default)))
+            return float(v)
+
+        self.num_assets = _i(num_assets, 10)
+        self.hidden_size = _i(hidden_size, 64)
+        self.num_layers = _i(num_layers, 2)
+        self.seq_length = _i(seq_length, 30)
+        self.learning_rate = _f(learning_rate, 0.001)
+        if isinstance(correlation_threshold, dict):
+            self.correlation_threshold = float(
+                correlation_threshold.get("value", 0.5)
+            )
+        else:
+            self.correlation_threshold = float(correlation_threshold)
         
         self.model = None
         self.scaler = StandardScaler()
@@ -335,6 +354,11 @@ class GNNForecaster:
             raise ValueError(f"GNNForecaster.fit expected pandas DataFrame, got {type(data).__name__}")
         if data.empty:
             raise ValueError("GNNForecaster.fit received empty data frame")
+
+        epochs = int(epochs.get("value", 50) if isinstance(epochs, dict) else epochs)
+        batch_size = int(batch_size.get("value", 32) if isinstance(batch_size, dict) else batch_size)
+        epochs = max(1, epochs)
+        batch_size = max(1, batch_size)
 
         # Determine actual number of assets (columns)
         actual_assets = data.shape[1] if hasattr(data, "shape") and data.ndim == 2 else 1
@@ -466,7 +490,7 @@ class GNNForecaster:
         if not isinstance(data, pd.DataFrame):
             raise ValueError(f"GNNForecaster.forecast expected pandas DataFrame, got {type(data).__name__}")
         try:
-            horizon = int(horizon)
+            horizon = int(horizon.get("value", 7) if isinstance(horizon, dict) else horizon)
         except Exception as e:
             raise ValueError(f"GNNForecaster.forecast expected integer horizon, got {horizon!r}: {e}")
         if horizon <= 0:

@@ -1,0 +1,717 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""
+3	Market Scanner page â€” screen stocks by technical and AI-driven filters.
+4	Reorganized from 13_Scanner with theme, price_cache, News Score, and fragment refresh.
+5	"""
+6	import json
+7	import logging
+8	import os
+9	from datetime import datetime, timedelta
+10	
+11	import pandas as pd
+12	import plotly.express as px
+13	import streamlit as st
+14	
+15	from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
+16	from trading.data.price_cache import get_history, get_news, batch_quotes
+17	from trading.data.ticker_resolver import resolve_ticker
+18	
+19	logger = logging.getLogger(__name__)
+20	
+21	try:
+22	    from utils.dataframe_utils import normalize_for_display
+23	except ImportError:
+24	    normalize_for_display = lambda df: df
+25	
+26	try:
+27	    st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
+28	except Exception:
+29	    pass
+30	inject_theme()
+31	render_top_bar()
+32	
+33	_scanner_uid = ""
+34	_scanner_prefs = {}
+35	try:
+36	    from utils.session_utils import get_stable_user_id
+37	    from config.user_store import load_user_preferences
+38	
+39	    _scanner_uid = st.session_state.get("evolve_session_id") or get_stable_user_id()
+40	    _scanner_prefs = load_user_preferences(_scanner_uid) or {}
+41	except Exception:
+42	    pass
+43	
+44	if "scanner_prefs_hydrated" not in st.session_state:
+45	    st.session_state["scanner_min_ai_score"] = float(
+46	        _scanner_prefs.get("min_ai_score", 6.5)
+47	    )
+48	    _pu = str(_scanner_prefs.get("briefing_universe", ""))
+49	    _def_scan_uni = "S&P 100 (~100, fastest)"
+50	    if "NASDAQ100" in _pu or "NASDAQ" in _pu:
+51	        _def_scan_uni = "S&P 500 + Nasdaq 100 (~600, moderate)"
+52	    elif "SP500" in _pu:
+53	        _def_scan_uni = "S&P 500 (~500, fast)"
+54	    elif "Top 25" in _pu or "SP100" in _pu:
+55	        _def_scan_uni = "S&P 100 (~100, fastest)"
+56	    st.session_state["scanner_universe_choice"] = _def_scan_uni
+57	    st.session_state["scanner_prefs_hydrated"] = True
+58	
+59	try:
+60	    from trading.analysis.market_scanner import scan_market, get_available_filters, DEFAULT_UNIVERSE
+61	    scanner_available = True
+62	except Exception as e:
+63	    st.error(f"Scanner unavailable: {e}")
+64	    scanner_available = False
+65	
+66	UNIVERSE_FALLBACK = [
+67	    "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO",
+68	    "JPM", "UNH", "V", "XOM", "LLY", "MA", "JNJ", "PG", "HD", "MRK",
+69	    "COST", "ABBV", "BAC", "WMT", "KO", "PEP", "CVX", "CRM", "AMD",
+70	]
+71	
+72	RUSSELL_1000_FALLBACK = [
+73	    "AAPL","MSFT","NVDA","AMZN","META","GOOGL","GOOG","BRK-B","LLY","AVGO",
+74	    "TSLA","WMT","JPM","V","XOM","UNH","ORCL","MA","COST","HD",
+75	    "PG","JNJ","ABBV","NFLX","BAC","CRM","CVX","MRK","AMD","PEP",
+76	    "TMO","ADBE","ACN","LIN","MCD","CSCO","ABT","GE","TXN","DHR",
+77	    "PM","CAT","ISRG","INTU","AMGN","VZ","NOW","MS","GS","RTX",
+78	]
+79	
+80	if not scanner_available:
+81	    st.stop()
+82	
+83	
+84	def _load_universe(name: str, fallback: list) -> list:
+85	    _dir = os.path.dirname(os.path.abspath(__file__))
+86	    json_path = os.path.join(_dir, "..", "data", "universes", f"{name}.json")
+87	    try:
+88	        with open(json_path, encoding="utf-8", errors="replace") as f:
+89	            tickers = json.load(f)
+90	        if tickers:
+91	            return tickers
+92	    except Exception as _e:
+93	        logger.warning("Scanner: universe load failed (json) for %s: %s", name, _e)
+94	        st.caption(f"âš ï¸ Universe load failed: {_e}")
+95	    try:
+96	        if name == "sp500":
+97	            url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+98	            tables = pd.read_html(url)
+99	            if tables:
+100	                table = tables[0]
+101	                tickers = (
+102	                    table[[c for c in table.columns if str(c).lower() in ("symbol", "ticker")][0]]
+103	                    .astype(str)
+104	                    .str.replace(".", "-", regex=False)
+105	                    .str.upper()
+106	                    .tolist()
+107	                )
+108	                if tickers:
+109	                    return tickers
+110	        elif name in ("russell1000", "russell3000"):
+111	            url = "https://en.wikipedia.org/wiki/Russell_3000_Index"
+112	            tables = pd.read_html(url)
+113	            tickers_list = []
+114	            for t in tables:
+115	                cols = [c.lower() for c in t.columns.astype(str)]
+116	                if any("ticker" in c or "symbol" in c for c in cols):
+117	                    for col in t.columns:
+118	                        if "ticker" in str(col).lower() or "symbol" in str(col).lower():
+119	                            series = t[col].astype(str).str.replace(".", "-", regex=False).str.upper()
+120	                            tickers_list.extend(series.tolist())
+121	                    break
+122	            tickers_list = [t for t in tickers_list if t and t != "nan"]
+123	            if tickers_list:
+124	                return tickers_list[:1000] if name == "russell1000" else tickers_list
+125	        elif name == "sp500_nasdaq100":
+126	            sp500 = _load_universe("sp500", fallback)
+127	            nasdaq100 = _load_universe("nasdaq100", fallback)
+128	            if sp500 or nasdaq100:
+129	                return sorted(set(sp500 or []).union(nasdaq100 or []))
+130	    except Exception as _e:
+131	        logger.warning(
+132	            "Scanner: universe load failed (web) for %s: %s",
+133	            name,
+134	            _e,
+135	        )
+136	        st.caption(f"âš ï¸ Universe load failed: {_e}")
+137	    return fallback
+138	
+139	
+140	def _get_short_float(ticker: str) -> str:
+141	    try:
+142	        import yfinance as yf
+143	
+144	        info = yf.Ticker(ticker).info
+145	        pct = info.get("shortPercentOfFloat", None)
+146	        if pct is None:
+147	            return "N/A"
+148	        return f"{pct * 100:.1f}%"
+149	    except Exception:
+150	        return "N/A"
+151	
+152	
+153	@st.cache_data(ttl=300)
+154	def _load_scanner_universe(universe_label: str) -> list:
+155	    universe_label = (universe_label or "").strip()
+156	    if universe_label.startswith("S&P 100"):
+157	        name = "sp100"
+158	    elif universe_label.startswith("S&P 500 (~500"):
+159	        name = "sp500"
+160	    elif universe_label.startswith("S&P 500 + Nasdaq 100"):
+161	        name = "sp500_nasdaq100"
+162	    elif "Russell 3000" in universe_label:
+163	        name = "russell3000"
+164	    elif "Russell 1000" in universe_label:
+165	        name = "russell1000"
+166	    else:
+167	        return DEFAULT_UNIVERSE or []
+168	    return _load_universe(name, UNIVERSE_FALLBACK)
+169	
+170	
+171	def _news_score(ticker: str) -> tuple:
+172	    """Return (label, color) for News Score: HOT/POS/NEU/NEG."""
+173	    pos_kw = ["surge", "beat", "rise", "gain", "growth", "up", "bull", "upgrade", "strong"]
+174	    neg_kw = ["fall", "drop", "miss", "cut", "down", "bear", "downgrade", "weak", "loss"]
+175	    try:
+176	        items = get_news(ticker)
+177	        now = datetime.utcnow()
+178	        score = 0
+179	        for item in items:
+180	            title = (item.get("title") or item.get("headline") or "").lower()
+181	            pub = item.get("published") or item.get("providerPublishTime")
+182	            if pub:
+183	                try:
+184	                    if isinstance(pub, (int, float)):
+185	                        dt = datetime.utcfromtimestamp(pub / 1000 if pub > 1e12 else pub)
+186	                    else:
+187	                        dt = datetime.fromisoformat(str(pub).replace("Z", "+00:00"))
+188	                    if (now - dt.replace(tzinfo=None) if getattr(dt, "tzinfo", None) else now - dt).days > 1:
+189	                        continue
+190	                except Exception:
+191	                    pass
+192	            score += sum(1 for w in pos_kw if w in title) - sum(1 for w in neg_kw if w in title)
+193	        if score >= 3:
+194	            return "HOT", "#ff9800"
+195	        if score >= 1:
+196	            return "POS", "#26a69a"
+197	        if score <= -1:
+198	            return "NEG", "#ef5350"
+199	        return "NEU", "#4a6080"
+200	    except Exception:
+201	        return "NEU", "#4a6080"
+202	
+203	
+204	def _scanner_table():
+205	    scan_result = st.session_state.get("scanner_results")
+206	    if not scan_result or scan_result.get("error"):
+207	        st.info("Configure filters above and click **Run Scan** to screen the market.")
+208	        st.markdown("#### Available Filters")
+209	        for k, v in get_available_filters().items():
+210	            st.markdown(f"- **{k}**: {v}")
+211	        return
+212	
+213	    results = scan_result.get("results") or []
+214	    st.success(
+215	        f"âœ… Scanned {scan_result.get('scanned', 0)} stocks â€” "
+216	        f"{scan_result.get('passed', 0)} passed filters",
+217	    )
+218	    _uni_lbl = st.session_state.get("scanner_universe_choice", "selected universe")
+219	    _fa = scan_result.get("filters_applied") or []
+220	    _fa_s = ", ".join(_fa) if _fa else "none"
+221	    st.caption(
+222	        f"{scan_result.get('passed', 0)} of {scan_result.get('scanned', 0)} stocks "
+223	        f"passed filters ({_uni_lbl}). Filters applied: {_fa_s}."
+224	    )
+225	    if not results:
+226	        st.info("No stocks passed the selected filters. Try relaxing criteria.")
+227	        return
+228	
+229	    try:
+230	        from trading.data.price_cache import get_history
+231	        from trading.strategies.pairs_trading_engine import PairsTradingEngine
+232	
+233	        _top = [
+234	            str(r.get("symbol"))
+235	            for r in results[:10]
+236	            if r.get("symbol")
+237	        ]
+238	        if len(_top) >= 2:
+239	            _engine = PairsTradingEngine()
+240	            _pd: dict = {}
+241	            for _s in _top:
+242	                _h = get_history(_s, period="1y")
+243	                if _h is not None and not _h.empty:
+244	                    _cm = {c.lower(): c for c in _h.columns}
+245	                    _cc = _cm.get("close", _h.columns[0])
+246	                    _pd[_s] = pd.DataFrame(
+247	                        {"close": _h[_cc].astype(float)}
+248	                    )
+249	            _pairs = _engine.find_cointegrated_pairs(_pd, _top)
+250	            if _pairs:
+251	                _a, _b, _r0 = _pairs[0]
+252	                _pv = getattr(_r0, "p_value", float("nan"))
+253	                st.info(
+254	                    f"Pairs signal: {_a}/{_b} cointegrated "
+255	                    f"(p={_pv:.3f})"
+256	                )
+257	    except Exception:
+258	        pass
+259	
+260	    for r in results:
+261	        label, color = _news_score(r.get("symbol", ""))
+262	        r["news_score"] = label
+263	        r["_news_color"] = color
+264	        sym = r.get("symbol")
+265	        if sym and "short_float" not in r:
+266	            r["short_float"] = _get_short_float(sym)
+267	
+268	    df = pd.DataFrame(results)
+269	
+270	    if "scanner_signal_filter" not in st.session_state:
+271	        st.session_state.scanner_signal_filter = "All"
+272	    filter_opts = ["All", "Score A+", "Breakout", "Oversold", "News Surge"]
+273	    st.markdown(
+274	        '<div style="background: var(--secondary-bg, var(--secondary-background-color, '
+275	        "#1e1e1e)); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;\">",
+276	        unsafe_allow_html=True,
+277	    )
+278	    cols = st.columns(len(filter_opts))
+279	    for i, opt in enumerate(filter_opts):
+280	        with cols[i]:
+281	            if st.button(opt, key=f"scanner_filter_{opt}", width="stretch"):
+282	                st.session_state.scanner_signal_filter = opt
+283	                st.rerun()
+284	    st.markdown("</div>", unsafe_allow_html=True)
+285	    current_filter = st.session_state.scanner_signal_filter
+286	
+287	    if current_filter == "Score A+":
+288	        if "ai_grade" in df.columns:
+289	            df = df[df["ai_grade"] == "A"]
+290	    elif current_filter == "Breakout":
+291	        if "vs_sma20" in df.columns:
+292	            df = df[
+293	                pd.to_numeric(
+294	                    df["vs_sma20"],
+295	                    errors="coerce"
+296	                ).fillna(0) > 2
+297	            ]
+298	    elif current_filter == "Oversold":
+299	        if "rsi" in df.columns:
+300	            df = df[
+301	                pd.to_numeric(
+302	                    df["rsi"],
+303	                    errors="coerce"
+304	                ).fillna(50) < 30
+305	            ]
+306	    elif current_filter == "News Surge":
+307	        if "news_score" in df.columns:
+308	            df = df[
+309	                df["news_score"] == "HOT"
+310	            ]
+311	
+312	    df_display = df.rename(
+313	        columns={
+314	            "symbol": "Symbol",
+315	            "price": "Price",
+316	            "change_20d": "20d Chg%",
+317	            "rsi": "RSI",
+318	            "vs_sma20": "vs SMA20%",
+319	            "pct_from_52w_high": "vs 52w High%",
+320	            "volume_ratio": "Vol Ratio",
+321	            "ai_score": "AI Score",
+322	            "ai_grade": "Grade",
+323	            "news_score": "News",
+324	            "short_float": "Short Float",
+325	        }
+326	    )
+327	    if "News" not in df_display.columns and "news_score" in df.columns:
+328	        df_display["News"] = df["news_score"]
+329	
+330	    # Drop internal display columns
+331	    _drop = ["_news_color", "news_color"]
+332	    df_display = df_display.drop(
+333	        columns=[
+334	            c for c in _drop
+335	            if c in df_display.columns
+336	        ]
+337	    )
+338	
+339	    # Normalize signals column for Arrow
+340	    # compatibility â€” convert lists to
+341	    # comma-separated strings
+342	    if "signals" in df_display.columns:
+343	        def _fmt_signals(val):
+344	            if isinstance(val, list):
+345	                names = [
+346	                    s.get("name", str(s))
+347	                    if isinstance(s, dict)
+348	                    else str(s)
+349	                    for s in val
+350	                ]
+351	                return ", ".join(names) if names else "â€”"
+352	            if val is None or (
+353	                isinstance(val, float)
+354	                and val != val
+355	            ):
+356	                return "â€”"
+357	            return str(val) if val else "â€”"
+358	
+359	        df_display["signals"] = (
+360	            df_display["signals"].apply(
+361	                _fmt_signals)
+362	        )
+363	
+364	    def _color_score(val):
+365	        try:
+366	            v = float(val)
+367	            if v >= 8:
+368	                return "background-color: #1a4a2a; color: #26a69a"
+369	            if v >= 6.5:
+370	                return "background-color: #1a2a3a; color: #64b5f6"
+371	            if v >= 5:
+372	                return "background-color: #3a2a0a; color: #ff9800"
+373	            return "background-color: #3a1a1a; color: #ef5350"
+374	        except Exception:
+375	            return ""
+376	
+377	    def _color_news_cell(val):
+378	        styles = {
+379	            "HOT": "background-color: #2a1a0a; color: #ff9800",
+380	            "POS": "background-color: #1a4a2a; color: #26a69a",
+381	            "NEG": "background-color: #3a1a1a; color: #ef5350",
+382	            "NEU": "background-color: #1a1a2a; color: #4a6080",
+383	        }
+384	        return styles.get(str(val).strip(), styles["NEU"])
+385	
+386	    styler = df_display.style
+387	    if "AI Score" in df_display.columns:
+388	        try:
+389	            styler = styler.map(_color_score, subset=["AI Score"])
+390	        except Exception:
+391	            styler = styler.applymap(_color_score, subset=["AI Score"])
+392	    if "News" in df_display.columns:
+393	        try:
+394	            styler = styler.map(_color_news_cell, subset=["News"])
+395	        except Exception:
+396	            styler = styler.applymap(_color_news_cell, subset=["News"])
+397	    st.dataframe(styler, width="stretch", height=400, key="scanner_results_df")
+398	
+399	    if len(df_display) >= 3 and "AI Score" in df_display.columns:
+400	        st.markdown("#### AI Score Distribution")
+401	        fig = px.bar(
+402	            df_display.sort_values("AI Score", ascending=False),
+403	            x="Symbol",
+404	            y="AI Score",
+405	            color="AI Score",
+406	            color_continuous_scale="RdYlGn",
+407	            range_color=[1, 10],
+408	            text="Grade",
+409	            height=300,
+410	        )
+411	        fig.update_layout(template="plotly_dark", showlegend=False)
+412	        fig.update_traces(textposition="outside")
+413	        st.plotly_chart(fig, width="stretch", key="scanner_dist_chart")
+414	
+415	    st.markdown("#### Signal breakdown")
+416	    st.caption(
+417	        "Select any symbol from the results above to see what's driving its score."
+418	    )
+419	    sym_opts = [r.get("symbol") for r in results if r.get("symbol")]
+420	    if sym_opts:
+421	        selected = st.selectbox(
+422	            "Symbol",
+423	            options=sym_opts,
+424	            key="scanner_signal_sym",
+425	            label_visibility="collapsed",
+426	        )
+427	        if selected:
+428	            try:
+429	                from trading.analysis.ai_score import compute_ai_score
+430	                from trading.data.price_cache import get_history as _gh
+431	
+432	                _hist = _gh(selected, period="6mo")
+433	                _ai = compute_ai_score(selected, _hist)
+434	                if _ai.get("error") is None:
+435	                    st.markdown(f"**{selected}** â€” {_ai['summary']}")
+436	                    _sigs = pd.DataFrame(_ai.get("signals", []))
+437	                    if not _sigs.empty and "name" in _sigs.columns:
+438	                        st.dataframe(
+439	                            normalize_for_display(
+440	                                _sigs[["name", "value", "impact", "description"]]
+441	                            ),
+442	                            width="stretch",
+443	                            key="scanner_drill_sigs",
+444	                        )
+445	            except Exception as _e:
+446	                st.caption(f"Feature unavailable: {_e}")
+447	
+448	
+449	col_title, col_universe, col_score, col_stream = st.columns([3, 2, 2, 2])
+450	with col_title:
+451	    st.markdown("### Scanner")
+452	with col_universe:
+453	    universe_choice = st.selectbox(
+454	        "Stock Universe",
+455	        [
+456	            "S&P 100 (~100, fastest)",
+457	            "S&P 500 (~500, fast)",
+458	            "S&P 500 + Nasdaq 100 (~600, moderate)",
+459	            "Russell 1000 (~1000, slow)",
+460	            "Russell 3000 (~3000, very slow)",
+461	        ],
+462	        key="scanner_universe_choice",
+463	        label_visibility="collapsed",
+464	    )
+465	with col_score:
+466	    min_score = st.slider(
+467	        "Min AI Score",
+468	        min_value=0.0,
+469	        max_value=10.0,
+470	        step=0.5,
+471	        key="scanner_min_ai_score",
+472	        label_visibility="collapsed",
+473	    )
+474	with col_stream:
+475	    st.toggle(
+476	        "Live mode",
+477	        key="scanner_streaming_mode",
+478	        help="Auto-refresh every 60 seconds",
+479	    )
+480	
+481	st.caption("Screen stocks by technical conditions and AI Score ranking")
+482	
+483	tab_scan, tab_pairs = st.tabs([
+484	    "Scanner",
+485	    "Pairs trading",
+486	])
+487	
+488	available_filters = get_available_filters()
+489	
+490	with tab_scan:
+491	    col_left, col_right = st.columns([2, 1])
+492	    with col_left:
+493	        selected_filters = st.multiselect(
+494	            "Scan Filters",
+495	            options=list(available_filters.keys()),
+496	            default=["top_ai_score"],
+497	            format_func=lambda k: f"{k}: {available_filters[k]}",
+498	            help="Select one or more filters. Stocks must pass ALL selected filters.",
+499	            key="scanner_filters",
+500	        )
+501	    with col_right:
+502	        max_results = st.slider("Max results", 5, 50, 20, key="scanner_max_results")
+503	        custom_universe = st.text_input(
+504	            "Custom universe (optional)",
+505	            placeholder="AAPL,MSFT,NVDA,TSLA",
+506	            help="Comma-separated tickers. Leave blank to use selected stock universe.",
+507	            key="scanner_custom_universe",
+508	        )
+509	
+510	    universe = None
+511	    if custom_universe.strip():
+512	        universe = [
+513	            resolve_ticker(t.strip().upper(), validate=False)
+514	            for t in custom_universe.split(",")
+515	            if t.strip()
+516	        ]
+517	    else:
+518	        label_map = {
+519	            "S&P 100 (~100, fastest)": "S&P 100",
+520	            "S&P 500 (~500, fast)": "S&P 500 (~500, fast)",
+521	            "S&P 500 + Nasdaq 100 (~600, moderate)": "S&P 500 + Nasdaq 100 (~600, moderate)",
+522	            "Russell 1000 (~1000, slow)": "Russell 1000 (~1000, slow)",
+523	            "Russell 3000 (~3000, very slow)": "Russell 3000 (~3000, very slow)",
+524	        }
+525	        loader_label = label_map.get(universe_choice, "S&P 100")
+526	        universe = _load_scanner_universe(loader_label)
+527	        if "Russell 1000" in universe_choice or "Russell 3000" in universe_choice:
+528	            st.warning("âš ï¸ Scanning 1000+ stocks may take 2-3 minutes.")
+529	
+530	    if st.session_state.get("scanner_streaming_mode"):
+531	        try:
+532	            from data.streaming_pipeline import create_streaming_pipeline
+533	
+534	            _u = universe if universe else ["SPY"]
+535	            create_streaming_pipeline(_u[:20], timeframes=["1d"], providers=["yfinance"])
+536	            st.caption(
+537	                "Streaming pipeline ready â€” quotes refresh with the scanner fragment."
+538	            )
+539	        except Exception as _se:
+540	            st.caption(
+541	                f"Streaming unavailable: {_se}. Using standard mode."
+542	            )
+543	
+544	    if not selected_filters:
+545	        st.warning("Select at least one filter to run a scan.")
+546	        st.stop()
+547	
+548	    if st.button("Run Scan", type="primary", key="scanner_run_btn"):
+549	        progress_bar = st.progress(0.0, text="Scanning...")
+550	
+551	        def _progress(done, total, phase="filter"):
+552	            pct = (done / total
+553	                   if total > 0 else 0)
+554	            if phase == "filter":
+555	                # Scale filter phase to first 80% of bar
+556	                scaled = pct * 0.8
+557	                progress_bar.progress(
+558	                    scaled,
+559	                    text=(
+560	                        f"Filtering universe... "
+561	                        f"{done}/{total} stocks"
+562	                    ),
+563	                )
+564	            else:
+565	                # AI scoring phase: 80-100%
+566	                scaled = 0.8 + pct * 0.2
+567	                progress_bar.progress(
+568	                    min(scaled, 1.0),
+569	                    text=(
+570	                        f"AI scoring... "
+571	                        f"{done}/{total} "
+572	                        f"passed filters"
+573	                    ),
+574	                )
+575	
+576	        with st.spinner("Running scan..."):
+577	            _filters_for_scan = [f for f in selected_filters if f != "top_ai_score"]
+578	            scan_result = scan_market(
+579	                filters=_filters_for_scan,
+580	                universe=universe,
+581	                max_results=max_results,
+582	                progress_callback=_progress,
+583	            )
+584	        progress_bar.empty()
+585	        if scan_result.get("error"):
+586	            st.error(f"Scan error: {scan_result['error']}")
+587	        else:
+588	            if "top_ai_score" in selected_filters:
+589	                _results = scan_result.get("results") or []
+590	                _results = [
+591	                    r for r in _results
+592	                    if float(r.get("ai_score", 0) or 0) >= float(min_score)
+593	                ]
+594	                scan_result["results"] = _results
+595	                scan_result["passed"] = len(_results)
+596	            st.session_state.scanner_results = scan_result
+597	            st.rerun()
+598	
+599	    if "scanner_results" not in st.session_state:
+600	        st.session_state.scanner_results = None
+601	
+602	    _st_version = tuple(int(x) for x in st.__version__.split(".")[:2])
+603	    _FRAGMENT_OK = _st_version >= (1, 37)
+604	    if _FRAGMENT_OK:
+605	        @st.fragment(run_every=60)
+606	        def _scanner_results():
+607	            _scanner_table()
+608	
+609	        _scanner_results()
+610	    else:
+611	        _scanner_table()
+612	
+613	    _sr = st.session_state.get("scanner_results") or {}
+614	    if _sr and not _sr.get("error") and (_sr.get("results") or []):
+615	        _brief_map = {
+616	            "S&P 100 (~100, fastest)": "SP100 (balanced, ~60s)",
+617	            "S&P 500 (~500, fast)": "SP500 (broadest, ~3min)",
+618	            "S&P 500 + Nasdaq 100 (~600, moderate)": (
+619	                "NASDAQ100 (tech-heavy)"
+620	            ),
+621	            "Russell 1000 (~1000, slow)": "SP500 (broadest, ~3min)",
+622	            "Russell 3000 (~3000, very slow)": "SP500 (broadest, ~3min)",
+623	        }
+624	        if st.button(
+625	            "Save current filters as briefing defaults",
+626	            key="save_scanner_as_defaults",
+627	        ):
+628	            try:
+629	                from config.user_store import (
+630	                    load_user_preferences as _lp,
+631	                    save_user_preferences as _sv,
+632	                )
+633	                from utils.session_utils import get_stable_user_id as _gsid
+634	
+635	                _uid_sv = st.session_state.get("evolve_session_id") or _gsid()
+636	                _sp = _lp(_uid_sv) or {}
+637	                _sv(
+638	                    _uid_sv,
+639	                    {
+640	                        **_sp,
+641	                        "min_ai_score": float(min_score),
+642	                        "briefing_universe": _brief_map.get(
+643	                            universe_choice,
+644	                            "SP100 (balanced, ~60s)",
+645	                        ),
+646	                    },
+647	                )
+648	                st.success(
+649	                    "Saved as briefing defaults. "
+650	                    "Home briefing will use these settings on the next run."
+651	                )
+652	            except Exception as e:
+653	                st.caption(f"Could not save: {e}")
+654	
+655	with tab_pairs:
+656	    st.markdown("#### Pairs trading")
+657	    st.caption("Run a cointegration scan on symbols from your last scan results.")
+658	    scan_result = st.session_state.get("scanner_results") or {}
+659	    results = scan_result.get("results") or []
+660	    if not results:
+661	        st.info("Run a scan in the Scanner tab first to populate candidate symbols.")
+662	    else:
+663	        try:
+664	            from trading.strategies.pairs_trading_engine import PairsTradingEngine
+665	            from trading.data.price_cache import get_history
+666	
+667	            _pe = PairsTradingEngine()
+668	            if st.button(
+669	                "Find cointegrated pairs",
+670	                key="pairs_scan_btn",
+671	                type="primary",
+672	            ):
+673	                with st.spinner("Running cointegration testsâ€¦"):
+674	                    _syms = [
+675	                        str(r.get("symbol"))
+676	                        for r in results
+677	                        if r.get("symbol")
+678	                    ][:12]
+679	                    _pd: dict = {}
+680	                    for _s in _syms:
+681	                        _h = get_history(_s, period="1y")
+682	                        if _h is not None and not _h.empty:
+683	                            _cm = {c.lower(): c for c in _h.columns}
+684	                            _cc = _cm.get("close", _h.columns[0])
+685	                            _pd[_s] = pd.DataFrame({"close": _h[_cc].astype(float)})
+686	                    _pairs = _pe.find_cointegrated_pairs(_pd, _syms)
+687	                    if _pairs:
+688	                        st.dataframe(
+689	                            normalize_for_display(
+690	                                pd.DataFrame(
+691	                                    [
+692	                                        {
+693	                                            "A": a,
+694	                                            "B": b,
+695	                                            "p_value": getattr(r, "p_value", None),
+696	                                            "hedge_ratio": getattr(
+697	                                                r, "hedge_ratio", None
+698	                                            ),
+699	                                        }
+700	                                        for a, b, r in _pairs[:20]
+701	                                    ]
+702	                                )
+703	                            ),
+704	                            width="stretch",
+705	                        )
+706	                    else:
+707	                        st.caption("No cointegrated pairs found in this sample.")
+708	        except Exception as _pe:
+709	            st.caption(f"Pairs trading unavailable: {_pe}")
+710	
+711	
+712	# Page Assistant
+713	try:
+714	    from ui.page_assistant import render_page_assistant
+715	    render_page_assistant("Scanner")
+716	except Exception:
+717	    pass

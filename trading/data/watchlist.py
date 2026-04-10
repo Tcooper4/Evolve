@@ -24,8 +24,7 @@ def _get_connection() -> sqlite3.Connection:
 
 
 def _init_db() -> None:
-    conn = _get_connection()
-    try:
+    with _get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
             """
@@ -54,8 +53,6 @@ def _init_db() -> None:
             """
         )
         conn.commit()
-    finally:
-        conn.close()
 
 
 _init_db()
@@ -106,8 +103,7 @@ class WatchlistManager:
             note=note or "",
             last_triggered=None,
         )
-        conn = self._conn()
-        try:
+        with self._conn() as conn:
             cur = conn.cursor()
             cur.execute(
                 """
@@ -134,20 +130,15 @@ class WatchlistManager:
                 ),
             )
             conn.commit()
-        finally:
-            conn.close()
 
     def remove_ticker(self, symbol: str) -> None:
         symbol = (symbol or "").strip().upper()
         if not symbol:
             return
-        conn = self._conn()
-        try:
+        with self._conn() as conn:
             cur = conn.cursor()
             cur.execute("DELETE FROM watchlist WHERE symbol = ?", (symbol,))
             conn.commit()
-        finally:
-            conn.close()
 
     def update_alert(self, symbol: str, **kwargs: Any) -> None:
         symbol = (symbol or "").strip().upper()
@@ -167,23 +158,17 @@ class WatchlistManager:
         sets = ", ".join(f"{k} = ?" for k in to_set.keys())
         values = list(to_set.values())
         values.append(symbol)
-        conn = self._conn()
-        try:
+        with self._conn() as conn:
             cur = conn.cursor()
             cur.execute(f"UPDATE watchlist SET {sets} WHERE symbol = ?", values)
             conn.commit()
-        finally:
-            conn.close()
 
     def get_all(self) -> List[Dict[str, Any]]:
-        conn = self._conn()
-        try:
+        with self._conn() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM watchlist ORDER BY symbol ASC")
             rows = cur.fetchall()
             return [dict(row) for row in rows]
-        finally:
-            conn.close()
 
     def _log_alert(
         self,
@@ -192,8 +177,7 @@ class WatchlistManager:
         trigger_value: Optional[float],
         current_value: Optional[float],
     ) -> None:
-        conn = self._conn()
-        try:
+        with self._conn() as conn:
             cur = conn.cursor()
             cur.execute(
                 """
@@ -210,8 +194,6 @@ class WatchlistManager:
                 ),
             )
             conn.commit()
-        finally:
-            conn.close()
 
     def check_alerts(
         self, current: Dict[str, Dict[str, Optional[float]]]
@@ -298,8 +280,7 @@ class WatchlistManager:
 
     def get_alert_history(self, symbol: Optional[str] = None) -> List[Dict[str, Any]]:
         """Return recent alert history, optionally filtered by symbol."""
-        conn = self._conn()
-        try:
+        with self._conn() as conn:
             cur = conn.cursor()
             if symbol:
                 cur.execute(
@@ -312,6 +293,4 @@ class WatchlistManager:
                 )
             rows = cur.fetchall()
             return [dict(row) for row in rows]
-        finally:
-            conn.close()
 

@@ -1,0 +1,370 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""Multi-Asset (GNN) tab (legacy `with tab6:`)."""
+3	import logging
+4	from datetime import datetime, timedelta
+5	
+6	import numpy as np
+7	import pandas as pd
+8	import plotly.express as px
+9	import plotly.graph_objects as go
+10	import streamlit as st
+11	import streamlit.components.v1 as _components
+12	from plotly.subplots import make_subplots
+13	
+14	from components.analyze_common import (
+15	    _extract_forecast_values,
+16	    _generate_recommendation,
+17	    _is_english,
+18	    _news_sentiment_score,
+19	)
+20	from trading.data.earnings_calendar import get_upcoming_earnings
+21	from trading.data.insider_flow import get_insider_flow
+22	from trading.data.price_cache import get_history, get_info, get_news, get_quote
+23	
+24	try:
+25	    from utils.dataframe_utils import normalize_for_display
+26	except ImportError:
+27	    def normalize_for_display(df):
+28	        return df
+29	
+30	logger = logging.getLogger(__name__)
+31	
+32	
+33	def render(
+34	    ticker: str,
+35	    hist,
+36	    period: str,
+37	    period_label: str,
+38	    trader_mode: str,
+39	    _interval: str,
+40	    _tf_label: str,
+41	    *,
+42	    backend: dict,
+43	) -> None:
+44	    """Streamlit tab body (legacy Analyze)."""
+45	    DataLoader = backend["DataLoader"]
+46	    DataLoadRequest = backend["DataLoadRequest"]
+47	    YFinanceProvider = backend["YFinanceProvider"]
+48	    LSTMForecaster = backend["LSTMForecaster"]
+49	    XGBoostModel = backend["XGBoostModel"]
+50	    ProphetModel = backend["ProphetModel"]
+51	    ARIMAModel = backend["ARIMAModel"]
+52	    FeatureEngineering = backend["FeatureEngineering"]
+53	    DataPreprocessor = backend["DataPreprocessor"]
+54	    ModelSelectorAgent = backend["ModelSelectorAgent"]
+55	    MarketAnalyzer = backend["MarketAnalyzer"]
+56	    try:
+57	        try:
+58	            st.header("ðŸ”— Multi-Asset Forecasting with Graph Neural Networks")
+59	            st.markdown("""
+60	            GNN models relationships between correlated assets. Perfect for:
+61	            - **Portfolio-level forecasting** - Predict entire portfolio together
+62	            - **Sector analysis** - Model how sector stocks move together
+63	            - **Market contagion** - Understand how shocks spread
+64	            - **Relationship-based predictions** - Use asset correlations for better forecasts
+65	            """)
+66	
+67	            st.info("ðŸ’¡ GNN requires 3-20 correlated assets. It won't work with single tickers.")
+68	
+69	            # Multi-ticker input
+70	            st.subheader("ðŸ“Š Step 1: Select Multiple Assets")
+71	
+72	            col1, col2 = st.columns([2, 1])
+73	
+74	            with col1:
+75	                tickers_input = st.text_area(
+76	                    "Enter ticker symbols (one per line)",
+77	                    value="AAPL\nMSFT\nGOOGL\nAMZN\nMETA",
+78	                    height=150,
+79	                    help="Enter 3-20 correlated stocks. Tech stocks, bank stocks, etc."
+80	                )
+81	
+82	                tickers = [t.strip().upper() for t in tickers_input.split('\n') if t.strip()]
+83	
+84	                if len(tickers) < 3:
+85	                    st.error("âŒ GNN requires at least 3 assets")
+86	                elif len(tickers) > 20:
+87	                    st.warning("âš ï¸ Too many assets (max 20). Performance may be slow.")
+88	                else:
+89	                    st.success(f"âœ… {len(tickers)} assets selected")
+90	
+91	            with col2:
+92	                st.write("**Settings:**")
+93	
+94	                correlation_threshold = st.slider(
+95	                    "Correlation Threshold",
+96	                    min_value=0.0,
+97	                    max_value=1.0,
+98	                    value=0.5,
+99	                    step=0.05,
+100	                    help="Assets with correlation > this will be connected in graph"
+101	                )
+102	
+103	                gnn_horizon = st.slider(
+104	                    "Forecast Days",
+105	                    min_value=1,
+106	                    max_value=30,
+107	                    value=7
+108	                )
+109	
+110	                gnn_epochs = st.slider(
+111	                    "Training Epochs",
+112	                    min_value=20,
+113	                    max_value=100,
+114	                    value=50,
+115	                    help="More epochs = better accuracy but slower"
+116	                )
+117	
+118	            # Load multi-asset data
+119	            if st.button("ðŸ“¥ Load Multi-Asset Data", type="primary", width='stretch'):
+120	                if len(tickers) < 3:
+121	                    st.error("Please select at least 3 assets")
+122	                elif len(tickers) > 20:
+123	                    st.error("Please limit to 20 assets for performance")
+124	                else:
+125	                    try:
+126	                        with st.spinner(f"Loading data for {len(tickers)} assets..."):
+127	                            from trading.data.data_loader import DataLoader, DataLoadRequest
+128	                            from datetime import datetime, timedelta
+129	
+130	                            loader = DataLoader()
+131	
+132	                            # Load data for each ticker
+133	                            multi_asset_data = {}
+134	                            failed_tickers = []
+135	
+136	                            progress_bar = st.progress(0)
+137	
+138	                            for i, ticker in enumerate(tickers):
+139	                                try:
+140	                                    request = DataLoadRequest(
+141	                                        ticker=ticker,
+142	                                        start_date=(datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
+143	                                        end_date=datetime.now().strftime("%Y-%m-%d"),
+144	                                        interval="1d"
+145	                                    )
+146	                                    response = loader.load_market_data(request)
+147	
+148	                                    if response.success and response.data is not None:
+149	                                        # Get close prices
+150	                                        data = response.data
+151	                                        if 'close' in data.columns:
+152	                                            multi_asset_data[ticker] = data['close']
+153	                                        elif 'Close' in data.columns:
+154	                                            multi_asset_data[ticker] = data['Close']
+155	                                    else:
+156	                                        failed_tickers.append(ticker)
+157	                                except Exception as e:
+158	                                    logger.error(f"Error loading {ticker}: {e}")
+159	                                    failed_tickers.append(ticker)
+160	
+161	                                progress_bar.progress((i + 1) / len(tickers))
+162	
+163	                            progress_bar.empty()
+164	
+165	                            if len(multi_asset_data) < 3:
+166	                                st.error(f"Could not load enough assets. Failed: {', '.join(failed_tickers)}")
+167	                            else:
+168	                                # Combine into DataFrame
+169	                                multi_df = pd.DataFrame(multi_asset_data)
+170	
+171	                                # Align dates (drop rows with any NaN)
+172	                                multi_df = multi_df.dropna()
+173	
+174	                                if len(multi_df) < 100:
+175	                                    st.error("Insufficient overlapping data. Try different tickers or longer date range.")
+176	                                else:
+177	                                    st.session_state.gnn_data = multi_df
+178	                                    st.session_state.gnn_tickers = list(multi_df.columns)
+179	
+180	                                    st.success(f"âœ… Loaded {len(multi_df)} days of data for {len(multi_df.columns)} assets")
+181	
+182	                                    if failed_tickers:
+183	                                        st.warning(f"âš ï¸ Could not load: {', '.join(failed_tickers)}")
+184	
+185	                    except Exception as e:
+186	                        st.error(f"Error loading data: {e}")
+187	                        import traceback
+188	                        st.code(traceback.format_exc())
+189	
+190	            # Display correlation matrix and train GNN
+191	            if 'gnn_data' in st.session_state and st.session_state.gnn_data is not None:
+192	                st.markdown("---")
+193	                st.subheader("ðŸ“Š Step 2: View Asset Correlations")
+194	
+195	                multi_df = st.session_state.gnn_data
+196	
+197	                # Calculate correlation matrix
+198	                corr_matrix = multi_df.corr()
+199	
+200	                # Plot heatmap
+201	                fig_corr = px.imshow(
+202	                    corr_matrix,
+203	                    labels=dict(color="Correlation"),
+204	                    x=corr_matrix.columns,
+205	                    y=corr_matrix.columns,
+206	                    color_continuous_scale='RdBu_r',
+207	                    zmin=-1,
+208	                    zmax=1,
+209	                    title=f"Asset Correlation Matrix ({len(multi_df.columns)} assets)"
+210	                )
+211	
+212	                fig_corr.update_layout(height=500)
+213	                st.plotly_chart(fig_corr)
+214	
+215	                # Show graph connections
+216	                num_connections = (corr_matrix.abs() > correlation_threshold).sum().sum() - len(multi_df.columns)
+217	                st.info(f"ðŸ”— Graph will have {num_connections // 2} edges (connections) based on {correlation_threshold:.0%} threshold")
+218	
+219	                # Generate forecast
+220	                st.markdown("---")
+221	                st.subheader("ðŸš€ Step 3: Generate GNN Forecast")
+222	
+223	                target_asset = st.selectbox(
+224	                    "Select primary asset to forecast",
+225	                    options=st.session_state.gnn_tickers,
+226	                    help="GNN will forecast this asset using all connected assets"
+227	                )
+228	
+229	                if st.button("ðŸ”® Train GNN & Generate Forecast", type="primary", width='stretch'):
+230	                    try:
+231	                        # Type guards: ensure scalars (sliders can sometimes be dict in edge cases)
+232	                        _gnn_epochs = gnn_epochs
+233	                        _gnn_horizon = gnn_horizon
+234	                        _correlation_threshold = correlation_threshold
+235	                        if isinstance(_gnn_epochs, dict):
+236	                            _gnn_epochs = int(_gnn_epochs.get("value", _gnn_epochs.get("epochs", 50)))
+237	                        else:
+238	                            _gnn_epochs = int(_gnn_epochs)
+239	                        if isinstance(_gnn_horizon, dict):
+240	                            _gnn_horizon = int(_gnn_horizon.get("value", _gnn_horizon.get("horizon", 7)))
+241	                        else:
+242	                            _gnn_horizon = int(_gnn_horizon)
+243	                        if isinstance(_correlation_threshold, dict):
+244	                            _correlation_threshold = float(_correlation_threshold.get("value", _correlation_threshold.get("threshold", 0.5)))
+245	                        else:
+246	                            _correlation_threshold = float(_correlation_threshold)
+247	                        with st.spinner(f"Training Graph Neural Network on {len(multi_df.columns)} assets..."):
+248	                            from trading.models.advanced.gnn.gnn_model import GNNForecaster
+249	
+250	                            # Progress indicator
+251	                            progress_text = st.empty()
+252	
+253	                            # Initialize GNN
+254	                            progress_text.text("Initializing GNN model...")
+255	                            gnn = GNNForecaster(
+256	                                num_assets=len(multi_df.columns),
+257	                                hidden_size=64,
+258	                                num_layers=2,
+259	                                seq_length=30,
+260	                                correlation_threshold=_correlation_threshold
+261	                            )
+262	
+263	                            # Train
+264	                            progress_text.text(f"Training for {_gnn_epochs} epochs...")
+265	                            gnn.fit(multi_df, epochs=_gnn_epochs, batch_size=32)
+266	
+267	                            # Generate forecast
+268	                            progress_text.text("Generating forecast...")
+269	                            forecast_result = gnn.forecast(
+270	                                multi_df,
+271	                                horizon=_gnn_horizon,
+272	                                target_asset=target_asset
+273	                            )
+274	
+275	                            progress_text.empty()
+276	                            st.success("âœ… GNN forecast generated!")
+277	
+278	                            # Display forecast chart
+279	                            st.subheader(f"ðŸ“ˆ {target_asset} Forecast")
+280	
+281	                            fig = go.Figure()
+282	
+283	                            # Historical data
+284	                            fig.add_trace(go.Scatter(
+285	                                x=multi_df.index,
+286	                                y=multi_df[target_asset],
+287	                                name='Historical',
+288	                                line=dict(color='blue', width=2)
+289	                            ))
+290	
+291	                            # Forecast
+292	                            fig.add_trace(go.Scatter(
+293	                                x=forecast_result['dates'],
+294	                                y=forecast_result['forecast'],
+295	                                name='GNN Forecast',
+296	                                line=dict(color='red', width=2, dash='dash')
+297	                            ))
+298	
+299	                            fig.update_layout(
+300	                                title=f"GNN Multi-Asset Forecast for {target_asset}",
+301	                                xaxis_title="Date",
+302	                                yaxis_title="Price ($)",
+303	                                hovermode='x unified',
+304	                                height=500
+305	                            )
+306	
+307	                            st.plotly_chart(fig)
+308	
+309	                            # Metrics
+310	                            col1, col2, col3, col4 = st.columns(4)
+311	
+312	                            with col1:
+313	                                st.metric("Forecast Horizon", f"{_gnn_horizon} days")
+314	                            with col2:
+315	                                st.metric("Assets Used", len(multi_df.columns))
+316	                            with col3:
+317	                                avg_conf = forecast_result['confidence'].mean()
+318	                                st.metric("Avg Confidence", f"{avg_conf:.1%}")
+319	                            with col4:
+320	                                last_price = multi_df[target_asset].iloc[-1]
+321	                                forecast_return = ((forecast_result['forecast'][-1] / last_price) - 1) * 100
+322	                                st.metric("Forecast Return", f"{forecast_return:+.2f}%")
+323	
+324	                            # Show relationship matrix
+325	                            st.markdown("---")
+326	                            st.subheader("ðŸ”— Learned Asset Relationships")
+327	
+328	                            relationship_matrix = gnn.get_relationship_matrix()
+329	
+330	                            fig_rel = px.imshow(
+331	                                relationship_matrix,
+332	                                labels=dict(color="Connection Strength"),
+333	                                x=multi_df.columns,
+334	                                y=multi_df.columns,
+335	                                color_continuous_scale='Viridis',
+336	                                title="GNN Asset Relationship Graph (1 = connected, 0 = not connected)"
+337	                            )
+338	
+339	                            fig_rel.update_layout(height=500)
+340	                            st.plotly_chart(fig_rel)
+341	
+342	                            # Forecast table
+343	                            with st.expander("ðŸ“‹ View Forecast Data"):
+344	                                forecast_df = pd.DataFrame({
+345	                                    'Date': forecast_result['dates'],
+346	                                    'Forecast': forecast_result['forecast'],
+347	                                    'Confidence': forecast_result['confidence']
+348	                                })
+349	                                _lb = forecast_result.get("lower_bound") if isinstance(forecast_result, dict) else None
+350	                                _ub = forecast_result.get("upper_bound") if isinstance(forecast_result, dict) else None
+351	                                _n = len(forecast_df)
+352	                                forecast_df["Lower Bound"] = [
+353	                                    f"${v:.2f}" for v in _lb[:_n]
+354	                                ] if _lb and len(_lb) >= _n else ["â€”"] * _n
+355	                                forecast_df["Upper Bound"] = [
+356	                                    f"${v:.2f}" for v in _ub[:_n]
+357	                                ] if _ub and len(_ub) >= _n else ["â€”"] * _n
+358	                                st.dataframe(normalize_for_display(forecast_df))
+359	
+360	                    except ImportError:
+361	                        st.error("âŒ GNN model not available. Make sure it has been recreated using the prompts.")
+362	                    except Exception as e:
+363	                        import traceback
+364	                        st.error(f"GNN error: {e}")
+365	                        with st.expander("Traceback"):
+366	                            st.code(traceback.format_exc(), language="python")
+367	        except Exception as e:
+368	            st.caption(f"Tab unavailable: {e}")
+369	    except Exception as e:
+370	        st.caption(f"Tab unavailable: {e}")

@@ -30,6 +30,19 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _bound_col(arr, n: int):
+    """Format lower/upper bound column; safe for numpy arrays (no truthiness on ndarray)."""
+    try:
+        if arr is None:
+            return ["—"] * n
+        _a = np.asarray(arr, dtype=float)
+        if _a.size >= n:
+            return [f"${float(v):.2f}" for v in _a[:n]]
+    except Exception:
+        pass
+    return ["—"] * n
+
+
 def render(
     ticker: str,
     hist,
@@ -349,12 +362,8 @@ def render(
                                 _lb = forecast_result.get("lower_bound") if isinstance(forecast_result, dict) else None
                                 _ub = forecast_result.get("upper_bound") if isinstance(forecast_result, dict) else None
                                 _n = len(forecast_df)
-                                forecast_df["Lower Bound"] = [
-                                    f"${v:.2f}" for v in _lb[:_n]
-                                ] if _lb and len(_lb) >= _n else ["—"] * _n
-                                forecast_df["Upper Bound"] = [
-                                    f"${v:.2f}" for v in _ub[:_n]
-                                ] if _ub and len(_ub) >= _n else ["—"] * _n
+                                forecast_df["Lower Bound"] = _bound_col(_lb, _n)
+                                forecast_df["Upper Bound"] = _bound_col(_ub, _n)
                                 st.dataframe(normalize_for_display(forecast_df))
 
                     except ImportError:

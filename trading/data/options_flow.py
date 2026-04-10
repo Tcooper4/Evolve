@@ -48,11 +48,10 @@ def _get_options_cache(symbol: str, top_n: int) -> Optional[Dict[str, Any]]:
     cache_key = f"{sym}|{top_n}"
     try:
         with _options_cache_lock:
-            conn = sqlite3.connect(
+            with sqlite3.connect(
                 str(_options_db_path()),
                 check_same_thread=False,
-            )
-            try:
+            ) as conn:
                 conn.execute(
                     """
                     CREATE TABLE IF NOT EXISTS options_cache (
@@ -78,8 +77,6 @@ def _get_options_cache(symbol: str, top_n: int) -> Optional[Dict[str, Any]]:
                     conn.commit()
                     return None
                 return json.loads(raw)
-            finally:
-                conn.close()
     except Exception as e:
         logger.debug("options cache read failed: %s", e)
         return None
@@ -92,11 +89,10 @@ def _set_options_cache(symbol: str, top_n: int, data: Dict[str, Any]) -> None:
     cache_key = f"{sym}|{top_n}"
     try:
         with _options_cache_lock:
-            conn = sqlite3.connect(
+            with sqlite3.connect(
                 str(_options_db_path()),
                 check_same_thread=False,
-            )
-            try:
+            ) as conn:
                 conn.execute(
                     """
                     CREATE TABLE IF NOT EXISTS options_cache (
@@ -117,8 +113,6 @@ def _set_options_cache(symbol: str, top_n: int, data: Dict[str, Any]) -> None:
                     (cache_key, json.dumps(data), time.time()),
                 )
                 conn.commit()
-            finally:
-                conn.close()
     except Exception as e:
         logger.debug("options cache write failed: %s", e)
 

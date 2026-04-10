@@ -185,7 +185,6 @@ def save_user_api_keys(session_id: str, keys: dict) -> None:
         return
     try:
         cipher = _get_cipher()
-        conn = _get_conn()
         # Encrypt each key value
         encrypted: dict = {}
         for k, v in (keys or {}).items():
@@ -196,14 +195,14 @@ def save_user_api_keys(session_id: str, keys: dict) -> None:
                 encrypted[k] = ""
         existing = load_user_api_keys(session_id) or {}
         existing.update(encrypted)
-        conn.execute(
-            """INSERT OR REPLACE INTO
-               user_api_keys(session_id, keys)
-               VALUES (?, ?)""",
-            (session_id, json.dumps(existing)),
-        )
-        conn.commit()
-        conn.close()
+        with _get_conn() as conn:
+            conn.execute(
+                """INSERT OR REPLACE INTO
+                   user_api_keys(session_id, keys)
+                   VALUES (?, ?)""",
+                (session_id, json.dumps(existing)),
+            )
+            conn.commit()
     except Exception as e:
         logger.warning(
             "user_store: save_user_api_keys failed: %s", e

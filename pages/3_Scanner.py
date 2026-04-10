@@ -150,6 +150,37 @@ def _get_short_float(ticker: str) -> str:
         return "N/A"
 
 
+def _batch_short_floats(symbols: list) -> dict:
+    """Fetch short float % for multiple tickers in one yfinance call."""
+    out: dict = {}
+    if not symbols:
+        return out
+    try:
+        import yfinance as yf
+
+        _t = yf.Tickers(" ".join(symbols))
+        for sym in symbols:
+            try:
+                _tk = getattr(_t, "tickers", {}).get(sym)
+                if _tk is None and hasattr(_t, "tickers"):
+                    _tk = _t.tickers.get(sym.upper())
+                if _tk is None:
+                    out[sym] = "N/A"
+                    continue
+                pct = _tk.info.get("shortPercentOfFloat")
+                out[sym] = (
+                    f"{pct * 100:.1f}%"
+                    if pct is not None
+                    else "N/A"
+                )
+            except Exception:
+                out[sym] = "N/A"
+    except Exception:
+        for sym in symbols:
+            out[sym] = "N/A"
+    return out
+
+
 @st.cache_data(ttl=300)
 def _load_scanner_universe(universe_label: str) -> list:
     universe_label = (universe_label or "").strip()
@@ -257,13 +288,22 @@ def _scanner_table():
     except Exception:
         pass
 
+    _syms_no_sf = [
+        r.get("symbol")
+        for r in results
+        if r.get("symbol") and "short_float" not in r
+    ]
+    if _syms_no_sf:
+        _sf_map = _batch_short_floats(_syms_no_sf)
+        for r in results:
+            _s = r.get("symbol")
+            if _s in _sf_map and "short_float" not in r:
+                r["short_float"] = _sf_map[_s]
+
     for r in results:
         label, color = _news_score(r.get("symbol", ""))
         r["news_score"] = label
         r["_news_color"] = color
-        sym = r.get("symbol")
-        if sym and "short_float" not in r:
-            r["short_float"] = _get_short_float(sym)
 
     df = pd.DataFrame(results)
 
@@ -527,20 +567,6 @@ with tab_scan:
         if "Russell 1000" in universe_choice or "Russell 3000" in universe_choice:
             st.warning("⚠️ Scanning 1000+ stocks may take 2-3 minutes.")
 
-    if st.session_state.get("scanner_streaming_mode"):
-        try:
-            from data.streaming_pipeline import create_streaming_pipeline
-
-            _u = universe if universe else ["SPY"]
-            create_streaming_pipeline(_u[:20], timeframes=["1d"], providers=["yfinance"])
-            st.caption(
-                "Streaming pipeline ready — quotes refresh with the scanner fragment."
-            )
-        except Exception as _se:
-            st.caption(
-                f"Streaming unavailable: {_se}. Using standard mode."
-            )
-
     if not selected_filters:
         st.warning("Select at least one filter to run a scan.")
         st.stop()
@@ -602,10 +628,14 @@ with tab_scan:
     _st_version = tuple(int(x) for x in st.__version__.split(".")[:2])
     _FRAGMENT_OK = _st_version >= (1, 37)
     if _FRAGMENT_OK:
-        @st.fragment(run_every=60)
-        def _scanner_results():
-            _scanner_table()
-
+        if st.session_state.get("scanner_streaming_mode"):
+            @st.fragment(run_every=60)
+            def _scanner_results():
+                _scanner_table()
+        else:
+            @st.fragment
+            def _scanner_results():
+                _scanner_table()
         _scanner_results()
     else:
         _scanner_table()

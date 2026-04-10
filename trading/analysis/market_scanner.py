@@ -323,13 +323,18 @@ def scan_market(
 
 
 def _rsi(prices: np.ndarray, period: int = 14) -> Optional[float]:
+    """Wilder RSI (smoothed averages) — aligns with standard charting tools."""
     if len(prices) < period + 1:
         return None
     d = np.diff(prices)
     g = np.where(d > 0, d, 0.0)
     l_ = np.where(d < 0, -d, 0.0)
-    ag = np.mean(g[-period:])
-    al = np.mean(l_[-period:])
+    # Wilder smoothing (true RSI)
+    ag = float(np.mean(g[:period]))
+    al = float(np.mean(l_[:period]))
+    for i in range(period, len(d)):
+        ag = (ag * (period - 1) + g[i]) / period
+        al = (al * (period - 1) + l_[i]) / period
     if al == 0:
         return 100.0
     return 100.0 - (100.0 / (1.0 + ag / al))

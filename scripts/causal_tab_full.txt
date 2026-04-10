@@ -1,0 +1,142 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""Analyze page tab body (extracted; logic unchanged)."""
+3	import logging
+4	from datetime import datetime, timedelta
+5	
+6	import numpy as np
+7	import pandas as pd
+8	import plotly.express as px
+9	import plotly.graph_objects as go
+10	import streamlit as st
+11	import streamlit.components.v1 as _components
+12	from plotly.subplots import make_subplots
+13	
+14	from components.analyze_common import (
+15	    _extract_forecast_values,
+16	    _generate_recommendation,
+17	    _is_english,
+18	    _news_sentiment_score,
+19	)
+20	from trading.data.earnings_calendar import get_upcoming_earnings
+21	from trading.data.insider_flow import get_insider_flow
+22	from trading.data.price_cache import get_history, get_info, get_news, get_quote
+23	
+24	try:
+25	    from utils.dataframe_utils import normalize_for_display
+26	except ImportError:
+27	    def normalize_for_display(df):
+28	        return df
+29	
+30	logger = logging.getLogger(__name__)
+31	
+32	
+33	def render(
+34	    ticker: str,
+35	    hist,
+36	    period: str,
+37	    period_label: str,
+38	    trader_mode: str,
+39	    _interval: str,
+40	    _tf_label: str,
+41	    *,
+42	    backend: dict,
+43	) -> None:
+44	    """Streamlit tab body (legacy Analyze)."""
+45	    DataLoader = backend["DataLoader"]
+46	    DataLoadRequest = backend["DataLoadRequest"]
+47	    YFinanceProvider = backend["YFinanceProvider"]
+48	    LSTMForecaster = backend["LSTMForecaster"]
+49	    XGBoostModel = backend["XGBoostModel"]
+50	    ProphetModel = backend["ProphetModel"]
+51	    ARIMAModel = backend["ARIMAModel"]
+52	    FeatureEngineering = backend["FeatureEngineering"]
+53	    DataPreprocessor = backend["DataPreprocessor"]
+54	    ModelSelectorAgent = backend["ModelSelectorAgent"]
+55	    MarketAnalyzer = backend["MarketAnalyzer"]
+56	    try:
+57	        st.markdown("---")
+58	        st.subheader("ðŸ”¬ Causal Analysis")
+59	        try:
+60	            import sys as _sys
+61	            from pathlib import Path as _Path
+62	
+63	            _aroot = _Path(__file__).resolve().parents[2]
+64	            _cap = _aroot / "_archive" / "causal"
+65	            _causal_ok = False
+66	            CausalModel = None
+67	            if _cap.is_dir():
+68	                _p = str(_cap)
+69	                if _p not in _sys.path:
+70	                    _sys.path.insert(0, _p)
+71	                try:
+72	                    from causal_model import CausalModel as _CM
+73	
+74	                    CausalModel = _CM
+75	                    _causal_ok = True
+76	                except Exception as _ce:
+77	                    logger.warning("Analyze: causal import failed: %s", _ce)
+78	            if not _causal_ok or CausalModel is None:
+79	                st.info(
+80	                    "Causal analysis module not yet available. "
+81	                    "Install dependencies (e.g. networkx) to enable."
+82	                )
+83	            else:
+84	                st.caption(
+85	                    "Exploratory causal graph from price/volume columns "
+86	                    "(archive module)."
+87	                )
+88	                try:
+89	                    _ss_data = st.session_state.get(
+90	                        "analyze_forecast_data")
+91	                    if (_ss_data is not None
+92	                            and hasattr(_ss_data, "empty")
+93	                            and not _ss_data.empty):
+94	                        _dh = _ss_data
+95	                    else:
+96	                        _dh = get_history(
+97	                            ticker, period="1y")
+98	                    if _dh is None or _dh.empty:
+99	                        st.caption("Load a symbol to build a causal graph.")
+100	                    else:
+101	                        _feat = _dh.select_dtypes(include=[np.number]).dropna(
+102	                            axis=0, how="any"
+103	                        )
+104	                        if _feat.shape[1] < 2:
+105	                            st.caption("Need at least two numeric series for causal view.")
+106	                        else:
+107	                            _cols = list(_feat.columns[:6])
+108	                            _sub = _feat[_cols].copy()
+109	                            _cmodel = CausalModel()
+110	                            _g = _cmodel.build_causal_graph(
+111	                                _sub,
+112	                                treatment_vars=_cols[:1],
+113	                                outcome_vars=_cols[1:2],
+114	                                confounders=_cols[2:] or None,
+115	                            )
+116	                            st.write(
+117	                                f"Nodes: **{_g.number_of_nodes()}**, "
+118	                                f"edges: **{_g.number_of_edges()}**"
+119	                            )
+120	                            if _g.number_of_edges():
+121	                                _edges = list(_g.edges(data=True))[:20]
+122	                                st.dataframe(
+123	                                    normalize_for_display(
+124	                                        pd.DataFrame(
+125	                                            [
+126	                                                {
+127	                                                    "from": a,
+128	                                                    "to": b,
+129	                                                    "weight": d.get("weight"),
+130	                                                }
+131	                                                for a, b, d in _edges
+132	                                            ]
+133	                                        )
+134	                                    ),
+135	                                    width="stretch",
+136	                                )
+137	                except Exception as _cae:
+138	                    st.caption(f"Causal analysis unavailable: {_cae}")
+139	        except Exception as _cae2:
+140	            st.caption(f"Causal section error: {_cae2}")
+141	    except Exception as e:
+142	        st.caption(f"Tab unavailable: {e}")
