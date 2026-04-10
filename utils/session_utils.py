@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 # Session UUID to track runs
 SESSION_ID = str(uuid.uuid4())
@@ -180,7 +179,7 @@ def get_stable_user_id() -> str:
     if not user_id:
         user_id = str(uuid.uuid4())
         # Set cookie via JS — 365 day expiry
-        components.html(
+        st.html(
             f"""
             <script>
             document.cookie =
@@ -190,7 +189,7 @@ def get_stable_user_id() -> str:
                 + "SameSite=Lax";
             </script>
             """,
-            height=0,
+            unsafe_allow_javascript=True,
         )
 
     st.session_state["evolve_stable_user_id"] = user_id

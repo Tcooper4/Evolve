@@ -290,8 +290,6 @@ def market_status_html() -> str:
 def render_top_bar() -> None:
     """Render the persistent index ticker bar at the top of each page."""
     try:
-        import streamlit.components.v1 as components
-
         from trading.data.price_cache import get_quote
 
         _sidebar_toggle_html = """
@@ -310,7 +308,10 @@ var h=d.querySelector('[data-testid=&quot;stHeader&quot;] button');if(h){h.click
 """
         _col_toggle, _col_bar = st.columns([1, 16])
         with _col_toggle:
-            components.html(_sidebar_toggle_html, height=44)
+            st.html(
+                f'<div style="height:44px">{_sidebar_toggle_html}</div>',
+                unsafe_allow_javascript=True,
+            )
 
         tickers_to_fetch = ["SPY", "QQQ", "IWM", "^VIX"]
         ticker_data = {}

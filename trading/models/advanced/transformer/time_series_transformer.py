@@ -675,7 +675,7 @@ class TransformerForecaster(BaseModel):
 
             # Make predictions
             with torch.no_grad():
-                predictions = self(X)
+                predictions = self.forward(X)
 
             # Convert to numpy and denormalize
             predictions = predictions.cpu().numpy()
@@ -803,6 +803,16 @@ class TransformerForecaster(BaseModel):
                 return self._use_fallback_forecast(data, horizon)
             else:
                 return self._generate_fallback_forecast(data, horizon)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        """Router / duck-typing compat: invoke like ``model(data, horizon=…)``."""
+
+        try:
+            return self.forecast(*args, **kwargs)
+        except Exception as e:
+            raise RuntimeError(
+                f"TransformerForecaster call failed: {e}"
+            ) from e
 
     def _use_fallback_forecast(
         self, data: pd.DataFrame, horizon: int

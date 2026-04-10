@@ -11,7 +11,6 @@ import time
 from typing import Optional
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from config.user_store import load_user_keys, load_user_preferences, save_user_keys, save_user_preferences
 
@@ -26,7 +25,7 @@ def _persist_session_id_to_local_storage(session_id: str) -> None:
     """Best-effort: write session_id to browser localStorage (may fail in Cloud iframe)."""
     if not session_id:
         return
-    components.html(
+    st.html(
         f"""
         <script>
         try {{
@@ -34,7 +33,7 @@ def _persist_session_id_to_local_storage(session_id: str) -> None:
         }} catch (e) {{}}
         </script>
         """,
-        height=0,
+        unsafe_allow_javascript=True,
     )
 
 
@@ -267,7 +266,7 @@ def check_onboarding() -> Optional[str]:
         _persist_session_id_to_local_storage(sid or "")
         return sid
 
-    components.html(
+    st.html(
         """
         <script>
         try {
@@ -278,7 +277,7 @@ def check_onboarding() -> Optional[str]:
         } catch (e) {}
         </script>
         """,
-        height=0,
+        unsafe_allow_javascript=True,
     )
 
     st.markdown("---")
