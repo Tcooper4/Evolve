@@ -628,6 +628,7 @@ def _render_briefing():
                 str(_prefs.get("briefing_universe", "")),
                 str(float(_prefs.get("min_ai_score", 5.5))),
                 str(bool(_prefs.get("watchlist_only", False))),
+                str(bool(_prefs.get("include_forecasts", False))),
                 str(sectors),
                 str(_prefs.get("opportunity_direction", "")),
                 str(_prefs.get("scoring_style", "")),
@@ -647,6 +648,8 @@ def _render_briefing():
     )
 
     def _run_briefing() -> None:
+        import traceback
+
         _prefs = _load_briefing_prefs_home()
 
         _universe_pref = _prefs.get(
@@ -661,16 +664,25 @@ def _render_briefing():
         }
         _universe = _universe_map.get(_universe_pref, "sp100")
         _min_score = float(_prefs.get("min_ai_score", 5.5))
+        _include_fc = bool(_prefs.get("include_forecasts", False))
 
         try:
             from agents.briefing.morning_briefing import MorningBriefing
 
-            st.info(
-                "Generating briefing: Quick Score on up to 50 tickers, "
-                "then 5 fast models per top pick (~20–60s typical, 3 picks). "
-                "News and watchlist above refresh independently.",
-                icon="⏳",
-            )
+            if _include_fc:
+                st.info(
+                    "Generating briefing: Quick Score scan, then 5-model "
+                    "consensus forecasts per top pick (expect several minutes). "
+                    "News and watchlist above refresh independently.",
+                    icon="⏳",
+                )
+            else:
+                st.info(
+                    "Generating briefing: Quick Score ranking only (~30s on Cloud). "
+                    "Enable “Include price forecasts” in Settings for targets. "
+                    "News and watchlist above refresh independently.",
+                    icon="⏳",
+                )
             _mb = MorningBriefing(
                 universe=_universe,
                 min_ai_score=_min_score,
@@ -685,16 +697,65 @@ def _render_briefing():
                     text=f"Scanning universe… {done}/{total}",
                 )
 
+            _fc_progress = None
+            if _include_fc:
+                _fc_progress = st.progress(
+                    0,
+                    text="Preparing forecasts…",
+                )
+
+            def _forecast_progress_cb(
+                done: int,
+                total: int,
+                symbol: str = "?",
+            ) -> None:
+                if _fc_progress is not None and total > 0:
+                    _fc_progress.progress(
+                        min(1.0, float(done + 1) / float(max(total, 1))),
+                        text=(
+                            f"Forecasting {symbol}… "
+                            f"{done + 1}/{total}"
+                        ),
+                    )
+
             try:
-                report = _mb.generate(progress_callback=_brief_progress)
+                report = _mb.generate(
+                    progress_callback=_brief_progress,
+                    forecast_progress_callback=(
+                        _forecast_progress_cb if _include_fc else None
+                    ),
+                )
             finally:
                 progress.empty()
+                if _fc_progress is not None:
+                    _fc_progress.empty()
+
+            if report is None or report.get("error"):
+                st.error(
+                    "⚠️ Briefing returned no results: "
+                    + str(
+                        (report or {}).get("error", "?")
+                        if report is not None
+                        else "None"
+                    )
+                    + "\n\nTry refreshing the page or check Settings."
+                )
+                return
+
             st.session_state[_bkey] = report
             st.session_state[_btkey] = time.time()
             st.session_state[_bpkey] = _briefing_pref_fingerprint(_prefs)
             st.rerun()
         except Exception as e:
-            st.caption(f"unavailable: {e}")
+            logger.error(
+                "Briefing generation failed: %s\n%s",
+                e,
+                traceback.format_exc(),
+            )
+            st.error(
+                f"⚠️ Briefing failed: {e}\n\n"
+                f"Try refreshing the page or check Settings."
+            )
 
     def _render_briefing_report(report: dict) -> None:
         reg = report.get("market_regime") or {}
@@ -746,7 +807,7 @@ def _render_briefing():
                 with col_a:
                     st.markdown(
                         f"**{sym}** · {co} · _{sec}_ — "
-                        f":{_score_color(sc)}[AI {sc:.1f}]"
+                        f":{_score_color(sc)}[Quick Score {sc:.1f}]"
                     )
                     th = opp.get("thesis") or ""
                     if th:

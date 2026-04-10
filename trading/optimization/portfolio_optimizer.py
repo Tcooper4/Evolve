@@ -697,29 +697,63 @@ class PortfolioOptimizer:
         risk_aversion: float,
     ) -> Dict[str, Any]:
         """Simplified mean-variance optimization without CVXPY."""
+        _cols = list(returns.columns) if returns is not None else []
+
+        def _equal_weights() -> Dict[str, Any]:
+            _n = max(1, len(_cols))
+            _w = {c: round(1.0 / _n, 6) for c in _cols}
+            return {
+                "weights": _w,
+                "portfolio_return": 0.0,
+                "portfolio_volatility": 0.0,
+                "sharpe_ratio": 0.0,
+                "optimization_status": "equal_weight",
+                "note": "Equal weights (optimization unavailable)",
+            }
+
+        if returns is None or returns.empty or len(_cols) < 2:
+            return {"error": "Insufficient data for optimization"}
+
         try:
             mu = returns.mean()
             Sigma = returns.cov()
+            if mu.shape[0] != len(_cols) or Sigma.shape[0] != len(_cols):
+                logger.error(
+                    "Simple MV shape mismatch: mu=%s cols=%d",
+                    getattr(mu, "shape", None),
+                    len(_cols),
+                )
+                return _equal_weights()
 
-            # Simple inverse volatility weighting as fallback
-            vol = returns.std()
-            weights = (1 / vol) / (1 / vol).sum()
+            # Inverse volatility — avoid div by zero / NaN (causes tuple/shape errors downstream)
+            vol = returns.std().replace(0, np.nan).fillna(1e-8)
+            inv_vol = 1.0 / vol.clip(lower=1e-12)
+            denom = float(inv_vol.sum())
+            if not np.isfinite(denom) or denom <= 0:
+                return _equal_weights()
+            weights = inv_vol / denom
+            weights = pd.Series(weights.values, index=_cols, dtype=float)
 
-            portfolio_return = mu @ weights
-            portfolio_vol = np.sqrt(weights @ Sigma @ weights)
-            sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+            portfolio_return = float(mu.to_numpy() @ weights.to_numpy())
+            _w_arr = weights.to_numpy(dtype=float)
+            portfolio_vol = float(np.sqrt(max(0.0, _w_arr @ Sigma.to_numpy() @ _w_arr)))
+            sharpe_ratio = (
+                (portfolio_return - self.risk_free_rate) / portfolio_vol
+                if portfolio_vol > 1e-10
+                else 0.0
+            )
 
             return {
-                "weights": dict(zip(returns.columns, weights)),
+                "weights": dict(zip(_cols, weights.tolist())),
                 "portfolio_return": portfolio_return,
                 "portfolio_volatility": portfolio_vol,
-                "sharpe_ratio": sharpe_ratio,
+                "sharpe_ratio": float(sharpe_ratio),
                 "optimization_status": "fallback_inverse_volatility",
             }
 
         except Exception as e:
-            logger.error(f"Error in simple mean-variance: {e}")
-            return {"error": str(e)}
+            logger.error("Error in simple mean-variance: %s", e)
+            return _equal_weights()
 
     def _simple_risk_parity(
         self, returns: pd.DataFrame, target_risk: Optional[float], risk_measure: str

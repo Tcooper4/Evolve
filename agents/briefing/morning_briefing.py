@@ -77,6 +77,9 @@ class MorningBriefing:
         fc = opp.get("forecast") or {}
         entry = float(opp.get("entry") or 0)
         target = float(opp.get("target") or fc.get("consensus_price") or 0)
+        # Briefing without consensus forecasts — no entry/target to test
+        if not fc and entry <= 0 and target <= 0:
+            return True
         MIN_MOVE_PCT = 0.005
         if target > 0 and entry > 0:
             move_pct = abs(target - entry) / entry
@@ -119,12 +122,15 @@ class MorningBriefing:
     def generate(
         self,
         progress_callback: Optional[Callable[[int, int], None]] = None,
+        forecast_progress_callback: Optional[Callable[..., None]] = None,
     ) -> Dict[str, Any]:
         """
         Generate full morning briefing.
         Returns dict with markdown report and structured data.
 
         progress_callback: optional callable(done, total) during universe scan.
+        forecast_progress_callback: optional callable(done, total, symbol)
+            during per-ticker forecast phase (when include_forecasts is on).
         """
         self._briefing_prefs = self._load_briefing_prefs()
         _p = self._briefing_prefs
@@ -214,6 +220,9 @@ class MorningBriefing:
             except Exception as e:
                 logger.warning("Morning briefing: ForecastRouter init failed: %s", e)
 
+            _include_forecasts = bool(
+                self._briefing_prefs.get("include_forecasts", False)
+            )
             _max_try = min(len(candidates), max(self.max_positions * 6, 24))
             _pool = candidates[:_max_try]
             _n_pool = len(_pool)
@@ -228,11 +237,25 @@ class MorningBriefing:
                     i + 1,
                     _n_pool,
                 )
+                if (
+                    _include_forecasts
+                    and forecast_progress_callback is not None
+                ):
+                    try:
+                        forecast_progress_callback(i, _n_pool, sym)
+                    except TypeError:
+                        try:
+                            forecast_progress_callback(i, _n_pool)
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
                 try:
                     opp = self._analyze_opportunity(
                         candidate,
                         router=shared_router,
                         briefing=True,
+                        skip_forecast=not _include_forecasts,
                     )
                     if opp and self._opportunity_passes_direction_pref(opp):
                         opportunities.append(opp)
@@ -249,7 +272,7 @@ class MorningBriefing:
                     elapsed,
                 )
 
-            if len(opportunities) >= 2:
+            if len(opportunities) >= 2 and _include_forecasts:
                 try:
                     from trading.data.price_cache import get_history
                     from trading.optimization.portfolio_optimizer import (
@@ -494,11 +517,14 @@ class MorningBriefing:
         candidate: Dict[str, Any],
         router: Any = None,
         briefing: bool = True,
+        skip_forecast: bool = False,
     ) -> Optional[Dict[str, Any]]:
         """Deep analysis on a single candidate.
 
         When ``briefing`` is True, skip Monte Carlo and strategy comparison
         (heavy paths run only when ``briefing`` is False — Analyze deep dive).
+        When ``skip_forecast`` is True, skip consensus forecast (Quick Score
+        briefing only — no entry/target/stop).
         """
         symbol = candidate.get("symbol")
         if not symbol:
@@ -531,59 +557,62 @@ class MorningBriefing:
             current_price = float(hist[close_col].iloc[-1])
             opp["current_price"] = round(current_price, 2)
 
-            # Get consensus forecast
-            try:
-                from trading.models.forecast_router import (
-                    ForecastRouter,
-                    get_router_singleton,
-                )
+            # Get consensus forecast (optional — off by default for Cloud speed)
+            if not skip_forecast:
+                try:
+                    from trading.models.forecast_router import (
+                        ForecastRouter,
+                        get_router_singleton,
+                    )
 
-                _router = router if router is not None else get_router_singleton()
-                forecast = _router.get_consensus_forecast(
-                    data=hist,
-                    horizon=7,
-                    symbol=str(symbol),
-                    models=self.BRIEFING_MODELS,
-                    model_configs={"arima": {"fast_mode": True}},
-                )
-                if forecast and "error" not in forecast:
-                    consensus_price = forecast.get("consensus_price")
-                    if consensus_price:
-                        pct_move = (
-                            (consensus_price - current_price)
-                            / current_price * 100
-                        )
-                        opp["forecast"] = {
-                            "consensus_price": round(consensus_price, 2),
-                            "expected_move_pct": round(pct_move, 2),
-                            "direction": forecast.get("direction", "NEUTRAL"),
-                            "conviction": forecast.get("conviction", "LOW"),
-                            "models_used": forecast.get("models_used", []),
-                        }
-
-                        # Entry/target/stop
-                        opp["entry"] = round(current_price, 2)
-                        opp["target"] = round(consensus_price, 2)
-                        stop_pct = 0.03  # 3% stop
-                        if forecast.get("direction") == "BULLISH":
-                            opp["stop"] = round(
-                                current_price * (1 - stop_pct), 2
+                    _router = router if router is not None else get_router_singleton()
+                    forecast = _router.get_consensus_forecast(
+                        data=hist,
+                        horizon=7,
+                        symbol=str(symbol),
+                        models=self.BRIEFING_MODELS,
+                        model_configs={"arima": {"fast_mode": True}},
+                    )
+                    if forecast and "error" not in forecast:
+                        consensus_price = forecast.get("consensus_price")
+                        if consensus_price:
+                            pct_move = (
+                                (consensus_price - current_price)
+                                / current_price * 100
                             )
-                        else:
-                            opp["stop"] = round(
-                                current_price * (1 + stop_pct), 2
-                            )
+                            opp["forecast"] = {
+                                "consensus_price": round(consensus_price, 2),
+                                "expected_move_pct": round(pct_move, 2),
+                                "direction": forecast.get("direction", "NEUTRAL"),
+                                "conviction": forecast.get("conviction", "LOW"),
+                                "models_used": forecast.get("models_used", []),
+                            }
 
-                        opp["conviction"] = forecast.get("conviction", "MEDIUM")
-                    for _w in forecast.get("walk_forward_warnings") or []:
-                        opp.setdefault("risks", []).append(_w)
-                    _wfc = forecast.get("walk_forward_confidence")
-                    if _wfc:
-                        opp.setdefault("catalysts", []).append(
-                            f"Walk-forward confidence: {_wfc}"
-                        )
-            except Exception as e:
-                logger.debug("Forecast failed for %s: %s", symbol, e)
+                            # Entry/target/stop
+                            opp["entry"] = round(current_price, 2)
+                            opp["target"] = round(consensus_price, 2)
+                            stop_pct = 0.03  # 3% stop
+                            if forecast.get("direction") == "BULLISH":
+                                opp["stop"] = round(
+                                    current_price * (1 - stop_pct), 2
+                                )
+                            else:
+                                opp["stop"] = round(
+                                    current_price * (1 + stop_pct), 2
+                                )
+
+                            opp["conviction"] = forecast.get(
+                                "conviction", "MEDIUM"
+                            )
+                        for _w in forecast.get("walk_forward_warnings") or []:
+                            opp.setdefault("risks", []).append(_w)
+                        _wfc = forecast.get("walk_forward_confidence")
+                        if _wfc:
+                            opp.setdefault("catalysts", []).append(
+                                f"Walk-forward confidence: {_wfc}"
+                            )
+                except Exception as e:
+                    logger.debug("Forecast failed for %s: %s", symbol, e)
 
             if not briefing:
                 try:
@@ -934,7 +963,7 @@ class MorningBriefing:
                     forecast = opp.get("forecast", {})
                     rows.append({
                         "Symbol": opp["symbol"],
-                        "AI Score": opp.get("ai_score", "N/A"),
+                        "Quick Score": opp.get("ai_score", "N/A"),
                         "Price": (
                             f"${float(opp['current_price']):.2f}"
                             if opp.get("current_price") is not None

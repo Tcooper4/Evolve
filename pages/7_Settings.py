@@ -589,6 +589,17 @@ with tab_research:
             "Add tickers under Watchlist to include them."
         )
 
+    include_forecasts = st.toggle(
+        "Include price forecasts",
+        value=bool(_prefs.get("include_forecasts", False)),
+        key="pref_include_forecasts",
+        help=(
+            "⚠️ Adds 2–3 minutes. Generates entry, target and stop prices per "
+            "top pick using 5-model consensus. Recommended for desktop use only. "
+            "When off, briefing completes in ~30 seconds (Quick Score ranking only)."
+        ),
+    )
+
     st.markdown("---")
     st.markdown("### 📊 Signal IC Status")
     st.caption(
@@ -649,6 +660,7 @@ with tab_research:
                     "opportunity_direction": opportunity_direction,
                     "preferred_sectors": preferred_sectors,
                     "watchlist_only": watchlist_only,
+                    "include_forecasts": include_forecasts,
                 },
             )
             st.success("Preferences saved. Refresh Home to apply.")

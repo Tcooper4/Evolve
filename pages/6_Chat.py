@@ -68,7 +68,7 @@ if _auto_mode:
                         forecast = opp.get("forecast", {})
                         rows.append({
                             "Symbol": opp["symbol"],
-                            "AI Score": opp.get("ai_score", "N/A"),
+                            "Quick Score": opp.get("ai_score", "N/A"),
                             "Price": (
                                 f"${float(opp['current_price']):.2f}"
                                 if opp.get("current_price") is not None
