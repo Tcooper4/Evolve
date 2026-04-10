@@ -21,9 +21,9 @@ catboost==1.2.10
 prophet==1.1.7
 pmdarima==2.0.3
 setuptools>=70.0,<81  # pmdarima needs pkg_resources (not in setuptools 82+)
-torch==2.5.1+cu121
-torchaudio==2.5.1+cu121
-torchvision==0.20.1+cu121
+torch==2.5.1
+torchaudio==2.5.1
+torchvision==0.20.1
 statsmodels==0.14.1
 scipy==1.15.3
 numba==0.61.2
