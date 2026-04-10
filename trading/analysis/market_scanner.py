@@ -1,14 +1,14 @@
 """
 Market scanner — screens a stock universe by technical filters
-and ranks results by AI Score.
+and ranks results by Quick Score (batch data only; no per-ticker LLM).
 
 Designed to run on demand (not continuously) to avoid rate limits.
-Uses yfinance batch download for efficiency.
+Uses yfinance batch download for efficiency. Full AI Score is available
+in Analyze → Signal breakdown when you select a symbol.
 """
 import json
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -63,30 +63,17 @@ SCAN_FILTERS = {
     "breakout": "Price within 2% of 52w high AND volume > 1.5x avg",
     "high_short": "Short squeeze score > 50",
     "insider_buying": "Insider buying signal in last 90d",
-    "top_ai_score": "AI Score >= 7.0",
+    "quick_technical": (
+        "Quick Score ⚡ ≥ threshold (technical estimate, instant)"
+    ),
 }
-
-_SCAN_AI_MAX_WORKERS = 8
-
-
-def _score_ticker_ai(
-    symbol: str, hist: pd.DataFrame
-) -> tuple:
-    """Worker: AI score for one symbol (hist pre-sliced, thread-owned copy)."""
-    try:
-        from trading.analysis.ai_score import compute_ai_score
-
-        ai = compute_ai_score(symbol, hist)
-        return symbol, ai
-    except Exception as e:
-        logger.debug("Scanner AI score failed for %s: %s", symbol, e)
-        return symbol, None
 
 
 def scan_market(
     filters: List[str] = None,
     universe: List[str] = None,
     max_results: int = 20,
+    min_quick_score: float = 6.0,
     progress_callback=None,
 ) -> Dict[str, Any]:
     """
@@ -101,7 +88,7 @@ def scan_market(
 
     Returns:
         dict with:
-            results: list of dicts (one per passing stock, sorted by ai_score)
+            results: list of dicts (one per passing stock, sorted by quick_score)
             filters_applied: list of filter names
             scanned: int — total tickers checked
             passed: int — tickers passing filters
@@ -113,7 +100,7 @@ def scan_market(
     if universe is None:
         universe = DEFAULT_UNIVERSE
     if filters is None:
-        filters = ["top_ai_score"]
+        filters = ["quick_technical"]
 
     # Batch download price data (much faster than per-ticker)
     try:
@@ -213,6 +200,17 @@ def scan_market(
             avg_vol = float(np.mean(volume[-20:])) if volume is not None and len(volume) >= 20 else None
             vol_ratio = float(volume[-1] / avg_vol) if avg_vol and avg_vol > 0 else 1.0
 
+            vs_sma20_pct = (
+                round((last_price / sma20 - 1) * 100, 2) if sma20 else None
+            )
+            qs_pre = _quick_score(
+                rsi,
+                ret_20d,
+                vs_sma20_pct,
+                vol_ratio,
+                pct_from_high,
+            )
+
             # Apply filters
             passes = True
             for f in filters:
@@ -248,8 +246,10 @@ def scan_market(
                     except Exception:
                         passes = False
                         break
-                elif f == "top_ai_score":
-                    pass  # scored below after filter pass
+                elif f == "quick_technical":
+                    if qs_pre < float(min_quick_score):
+                        passes = False
+                        break
 
             if not passes:
                 continue
@@ -259,9 +259,10 @@ def scan_market(
                 "price": round(last_price, 2),
                 "change_20d": round(ret_20d, 2),
                 "rsi": round(rsi, 1) if rsi is not None else None,
-                "vs_sma20": round((last_price / sma20 - 1) * 100, 2) if sma20 else None,
+                "vs_sma20": vs_sma20_pct,
                 "pct_from_52w_high": round(pct_from_high, 2),
                 "volume_ratio": round(vol_ratio, 2),
+                "quick_score": qs_pre,
             }
             pending.append((symbol, hist.copy(), partial))
 
@@ -269,48 +270,22 @@ def scan_market(
             logger.debug("Scanner: %s failed: %s", symbol, e)
             continue
 
-    ai_by_symbol: Dict[str, Any] = {}
+    # No bulk AI scoring — Quick Score only (fast). Full AI via Signal breakdown.
     n_pend = len(pending)
     _emit_progress(0, max(1, n_pend), "ai")
-    if pending:
-        done_ai = 0
-        with ThreadPoolExecutor(max_workers=_SCAN_AI_MAX_WORKERS) as executor:
-            future_map = {
-                executor.submit(_score_ticker_ai, sym, h): sym
-                for sym, h, _partial in pending
-            }
-            for fut in as_completed(future_map):
-                sym, ai = fut.result()
-                ai_by_symbol[sym] = ai
-                done_ai += 1
-                _emit_progress(done_ai, n_pend, "ai")
-    else:
-        _emit_progress(1, 1, "ai")
+    _emit_progress(n_pend, max(1, n_pend), "ai")
 
     for symbol, _hist, partial in pending:
-        ai = ai_by_symbol.get(symbol)
-        if ai:
-            ai_score = ai.get("overall_score", 5.0)
-            ai_grade = ai.get("grade", "C")
-            signals = ai.get("signals") or []
-        else:
-            ai_score = 5.0
-            ai_grade = "C"
-            signals = []
-
-        if "top_ai_score" in filters and ai_score < 7.0:
-            continue
-
         row = {
             **partial,
-            "ai_score": ai_score,
-            "ai_grade": ai_grade,
-            "signals": signals,
+            "ai_score": None,
+            "ai_grade": None,
+            "signals": [],
         }
         results.append(row)
 
-    # Sort by AI Score descending
-    results.sort(key=lambda x: x["ai_score"], reverse=True)
+    # Sort by Quick Score descending
+    results.sort(key=lambda x: x.get("quick_score") or 0.0, reverse=True)
 
     return {
         "results": results[:max_results],
@@ -338,6 +313,98 @@ def _rsi(prices: np.ndarray, period: int = 14) -> Optional[float]:
     if al == 0:
         return 100.0
     return 100.0 - (100.0 / (1.0 + ag / al))
+
+
+def _quick_score(
+    rsi: Optional[float],
+    ret_20d: float,
+    vs_sma20: Optional[float],
+    vol_ratio: float,
+    pct_from_high: float,
+) -> float:
+    """
+    Fast technical pre-score (0-10).
+    Computed from batch-downloaded data only — no extra API calls.
+    Used as a fast alternative to the full AI Score for large universe scans.
+
+    Components (equal weight):
+      RSI position    (0-10)
+      20d momentum    (0-10)
+      SMA20 position  (0-10)
+      Volume ratio    (0-10)
+      52w high prox   (0-10)
+    """
+    scores = []
+
+    # RSI: sweet spot 40-60 neutral,
+    # 30-40 oversold opportunity,
+    # below 30 very oversold
+    if rsi is not None:
+        if rsi < 30:
+            scores.append(8.0)
+        elif rsi < 40:
+            scores.append(7.0)
+        elif rsi < 60:
+            scores.append(6.0)
+        elif rsi < 70:
+            scores.append(5.0)
+        else:
+            scores.append(3.0)
+
+    # 20d momentum: positive = good
+    if ret_20d > 10:
+        scores.append(9.0)
+    elif ret_20d > 5:
+        scores.append(8.0)
+    elif ret_20d > 2:
+        scores.append(7.0)
+    elif ret_20d > 0:
+        scores.append(6.0)
+    elif ret_20d > -5:
+        scores.append(4.0)
+    else:
+        scores.append(2.0)
+
+    # Price vs SMA20: above = bullish
+    if vs_sma20 is not None:
+        if vs_sma20 > 5:
+            scores.append(8.0)
+        elif vs_sma20 > 2:
+            scores.append(7.0)
+        elif vs_sma20 > 0:
+            scores.append(6.0)
+        elif vs_sma20 > -2:
+            scores.append(5.0)
+        else:
+            scores.append(3.0)
+
+    # Volume ratio: higher = more interest/conviction
+    if vol_ratio > 2.0:
+        scores.append(9.0)
+    elif vol_ratio > 1.5:
+        scores.append(7.0)
+    elif vol_ratio > 1.0:
+        scores.append(6.0)
+    elif vol_ratio > 0.5:
+        scores.append(5.0)
+    else:
+        scores.append(3.0)
+
+    # 52w high proximity: near high = strength, far from high = weakness
+    if pct_from_high > -5:
+        scores.append(8.0)
+    elif pct_from_high > -10:
+        scores.append(7.0)
+    elif pct_from_high > -20:
+        scores.append(6.0)
+    elif pct_from_high > -35:
+        scores.append(4.0)
+    else:
+        scores.append(2.0)
+
+    if not scores:
+        return 5.0
+    return round(sum(scores) / len(scores), 1)
 
 
 def get_available_filters() -> Dict[str, str]:

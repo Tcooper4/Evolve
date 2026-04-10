@@ -325,7 +325,9 @@ def _scanner_table():
     current_filter = st.session_state.scanner_signal_filter
 
     if current_filter == "Score A+":
-        if "ai_grade" in df.columns:
+        if "quick_score" in df.columns:
+            df = df[df["quick_score"] >= 7.5]
+        elif "ai_grade" in df.columns:
             df = df[df["ai_grade"] == "A"]
     elif current_filter == "Breakout":
         if "vs_sma20" in df.columns:
@@ -358,6 +360,7 @@ def _scanner_table():
             "vs_sma20": "vs SMA20%",
             "pct_from_52w_high": "vs 52w High%",
             "volume_ratio": "Vol Ratio",
+            "quick_score": "Quick Score ⚡",
             "ai_score": "AI Score",
             "ai_grade": "Grade",
             "news_score": "News",
@@ -429,6 +432,17 @@ def _scanner_table():
             styler = styler.map(_color_score, subset=["AI Score"])
         except Exception:
             styler = styler.applymap(_color_score, subset=["AI Score"])
+    if "Quick Score ⚡" in df_display.columns:
+        try:
+            styler = styler.map(
+                _color_score,
+                subset=["Quick Score ⚡"],
+            )
+        except Exception:
+            styler = styler.applymap(
+                _color_score,
+                subset=["Quick Score ⚡"],
+            )
     if "News" in df_display.columns:
         try:
             styler = styler.map(_color_news_cell, subset=["News"])
@@ -436,18 +450,34 @@ def _scanner_table():
             styler = styler.applymap(_color_news_cell, subset=["News"])
     st.dataframe(styler, width="stretch", height=400, key="scanner_results_df")
 
-    if len(df_display) >= 3 and "AI Score" in df_display.columns:
-        st.markdown("#### AI Score Distribution")
-        fig = px.bar(
-            df_display.sort_values("AI Score", ascending=False),
+    st.caption(
+        "⚡ Quick Score is a fast technical estimate (RSI, momentum, volume, trend). "
+        "For the full 16-signal AI Score, select a ticker in Signal Breakdown below."
+    )
+
+    _score_col = (
+        "AI Score"
+        if "AI Score" in df_display.columns
+        else (
+            "Quick Score ⚡"
+            if "Quick Score ⚡" in df_display.columns
+            else None
+        )
+    )
+    if len(df_display) >= 3 and _score_col:
+        st.markdown(f"#### {_score_col} Distribution")
+        _sort_df = df_display.sort_values(_score_col, ascending=False)
+        _bar_kw = dict(
             x="Symbol",
-            y="AI Score",
-            color="AI Score",
+            y=_score_col,
+            color=_score_col,
             color_continuous_scale="RdYlGn",
             range_color=[1, 10],
-            text="Grade",
             height=300,
         )
+        if "Grade" in _sort_df.columns:
+            _bar_kw["text"] = "Grade"
+        fig = px.bar(_sort_df, **_bar_kw)
         fig.update_layout(template="plotly_dark", showlegend=False)
         fig.update_traces(textposition="outside")
         st.plotly_chart(fig, width="stretch", key="scanner_dist_chart")
@@ -504,12 +534,18 @@ with col_universe:
     )
 with col_score:
     min_score = st.slider(
-        "Min AI Score",
+        "Min Quick Score",
         min_value=0.0,
         max_value=10.0,
+        value=6.0,
         step=0.5,
         key="scanner_min_ai_score",
         label_visibility="collapsed",
+        help=(
+            "Minimum Quick Score ⚡ for quick_technical filter. "
+            "Quick Score is a fast technical estimate — use Signal Breakdown below "
+            "for full AI Score."
+        ),
     )
 with col_stream:
     st.toggle(
@@ -533,7 +569,7 @@ with tab_scan:
         selected_filters = st.multiselect(
             "Scan Filters",
             options=list(available_filters.keys()),
-            default=["top_ai_score"],
+            default=["quick_technical"],
             format_func=lambda k: f"{k}: {available_filters[k]}",
             help="Select one or more filters. Stocks must pass ALL selected filters.",
             key="scanner_filters",
@@ -588,37 +624,29 @@ with tab_scan:
                     ),
                 )
             else:
-                # AI scoring phase: 80-100%
+                # Finalize phase: 80-100%
                 scaled = 0.8 + pct * 0.2
                 progress_bar.progress(
                     min(scaled, 1.0),
                     text=(
-                        f"AI scoring... "
+                        f"Ranking... "
                         f"{done}/{total} "
                         f"passed filters"
                     ),
                 )
 
         with st.spinner("Running scan..."):
-            _filters_for_scan = [f for f in selected_filters if f != "top_ai_score"]
             scan_result = scan_market(
-                filters=_filters_for_scan,
+                filters=selected_filters,
                 universe=universe,
                 max_results=max_results,
+                min_quick_score=float(min_score),
                 progress_callback=_progress,
             )
         progress_bar.empty()
         if scan_result.get("error"):
             st.error(f"Scan error: {scan_result['error']}")
         else:
-            if "top_ai_score" in selected_filters:
-                _results = scan_result.get("results") or []
-                _results = [
-                    r for r in _results
-                    if float(r.get("ai_score", 0) or 0) >= float(min_score)
-                ]
-                scan_result["results"] = _results
-                scan_result["passed"] = len(_results)
             st.session_state.scanner_results = scan_result
             st.rerun()
 
