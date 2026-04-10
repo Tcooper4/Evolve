@@ -208,94 +208,63 @@ class ModelRegistry:
         
         try:
             from trading.models.neuralforecast_models import (
-                AutoformerModel,
-                InformerModel,
-                TFTModel,
                 NBEATSModel,
-                PatchTSTModel,
                 NHITSModel,
-                NEURALFORECAST_AVAILABLE
+                PatchTSTModel,
+                TFTModel,
+                neuralforecast_installed,
             )
-            
-            if NEURALFORECAST_AVAILABLE:
-                # Autoformer - Decomposition transformer
-                self.register('Autoformer', AutoformerModel, {
-                    'type': 'single_asset',
-                    'complexity': 'high',
-                    'description': 'Decomposition-based transformer (SOTA)',
-                    'use_case': 'general',
-                    'requires_gpu': False,  # Can use CPU
-                    'min_data_points': 100,
-                    'best_for': 'Long-term forecasting with trend/seasonality'
+
+            if neuralforecast_installed():
+                self.register("N-BEATS", NBEATSModel, {
+                    "type": "single_asset",
+                    "complexity": "high",
+                    "description": "Neural basis expansion (NeuralForecast)",
+                    "use_case": "general",
+                    "requires_gpu": False,
+                    "min_data_points": 100,
+                    "best_for": "Interpretable trend/seasonality",
                 })
-                logger.info("[OK] Registered: Autoformer (NeuralForecast)")
-                
-                # Informer - Efficient transformer
-                self.register('Informer', InformerModel, {
-                    'type': 'single_asset',
-                    'complexity': 'high',
-                    'description': 'Efficient transformer for long sequences',
-                    'use_case': 'general',
-                    'requires_gpu': False,
-                    'min_data_points': 100,
-                    'best_for': 'Very long-term forecasting (100+ days)'
+                self.register("N-HiTS", NHITSModel, {
+                    "type": "single_asset",
+                    "complexity": "medium",
+                    "description": "Neural hierarchical interpolation (NeuralForecast)",
+                    "use_case": "general",
+                    "requires_gpu": False,
+                    "min_data_points": 100,
+                    "best_for": "Fast training, good accuracy",
                 })
-                logger.info("[OK] Registered: Informer")
-                
-                # TFT - Temporal Fusion Transformer
-                self.register('TFT', TFTModel, {
-                    'type': 'single_asset',
-                    'complexity': 'high',
-                    'description': 'Temporal Fusion Transformer',
-                    'use_case': 'general',
-                    'requires_gpu': False,
-                    'min_data_points': 100,
-                    'best_for': 'Multi-horizon with interpretability'
+                self.register("PatchTST", PatchTSTModel, {
+                    "type": "single_asset",
+                    "complexity": "high",
+                    "description": "Patch-based transformer (NeuralForecast)",
+                    "use_case": "general",
+                    "requires_gpu": False,
+                    "min_data_points": 100,
+                    "best_for": "Long-horizon accuracy",
                 })
-                logger.info("[OK] Registered: TFT")
-                
-                # N-BEATS - Neural basis expansion
-                self.register('N-BEATS', NBEATSModel, {
-                    'type': 'single_asset',
-                    'complexity': 'high',
-                    'description': 'Neural basis expansion (interpretable)',
-                    'use_case': 'general',
-                    'requires_gpu': False,
-                    'min_data_points': 100,
-                    'best_for': 'Interpretable trend/seasonality'
+                self.register("TFT", TFTModel, {
+                    "type": "single_asset",
+                    "complexity": "high",
+                    "description": "Temporal Fusion Transformer (NeuralForecast)",
+                    "use_case": "general",
+                    "requires_gpu": False,
+                    "min_data_points": 100,
+                    "best_for": "Multi-horizon with covariates",
                 })
-                logger.info("[OK] Registered: N-BEATS")
-                
-                # PatchTST - Latest SOTA
-                self.register('PatchTST', PatchTSTModel, {
-                    'type': 'single_asset',
-                    'complexity': 'high',
-                    'description': 'Patch-based transformer (Latest SOTA)',
-                    'use_case': 'general',
-                    'requires_gpu': False,
-                    'min_data_points': 100,
-                    'best_for': 'Best overall performance, long-term'
-                })
-                logger.info("[OK] Registered: PatchTST (Latest SOTA)")
-                
-                # N-HiTS - Fast and accurate
-                self.register('N-HiTS', NHITSModel, {
-                    'type': 'single_asset',
-                    'complexity': 'medium',
-                    'description': 'Hierarchical interpolation (fast)',
-                    'use_case': 'general',
-                    'requires_gpu': False,
-                    'min_data_points': 100,
-                    'best_for': 'Fast training, good accuracy'
-                })
-                logger.info("[OK] Registered: N-HiTS")
-                
-                logger.info("[OK] All NeuralForecast models registered successfully")
+                logger.info(
+                    "NeuralForecast models registered: N-BEATS, N-HiTS, PatchTST, TFT"
+                )
             else:
-                logger.warning("Neural forecasting models disabled (pip install neuralforecast to enable)")
-                
-        except ImportError:
-            logger.warning("Neural forecasting models disabled (pip install neuralforecast to enable)")
+                logger.warning(
+                    "NeuralForecast not installed — bonus models N-BEATS, N-HiTS, "
+                    "PatchTST, TFT disabled"
+                )
+
+        except ImportError as e:
+            logger.warning(
+                "NeuralForecast registration skipped (import error): %s", e
+            )
         
         logger.info(f"[OK] Registered {len(self._models)} models")
     

@@ -695,21 +695,38 @@ with tab_admin:
         st.metric("Version", "v3.19.0")
 
         st.markdown("#### Optional packages")
+        try:
+            import importlib.metadata as _imd
+
+            _nf_ver = _imd.version("neuralforecast")
+            _nf_label = (
+                f"neuralforecast {_nf_ver} "
+                f"(N-BEATS, N-HiTS, PatchTST, TFT)"
+            )
+            _nf_ok = True
+        except Exception:
+            _nf_label = (
+                "neuralforecast (N-BEATS, N-HiTS, PatchTST, TFT)"
+            )
+            _nf_ok = False
         _opt = [
             ("shap", "shap"),
-            ("neuralforecast", "neuralforecast"),
+            (_nf_label, "__nf__"),
             ("faiss", "faiss"),
             ("cvxpy", "cvxpy"),
             ("pandas_ta", "pandas_ta"),
         ]
         _oc1, _oc2 = st.columns(2)
         for _i, (_label, _mod) in enumerate(_opt):
-            _ok = False
-            try:
-                __import__(_mod)
-                _ok = True
-            except Exception:
-                pass
+            if _mod == "__nf__":
+                _ok = _nf_ok
+            else:
+                _ok = False
+                try:
+                    __import__(_mod)
+                    _ok = True
+                except Exception:
+                    pass
             _target = _oc1 if _i % 2 == 0 else _oc2
             with _target:
                 st.write(

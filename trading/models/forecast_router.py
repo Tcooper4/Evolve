@@ -48,13 +48,7 @@ except ImportError:
     PROPHET_AVAILABLE = False
     ProphetModel = None
 
-# Try to import Autoformer from NeuralForecast
-try:
-    from trading.models.neuralforecast_models import AutoformerModel, NEURALFORECAST_AVAILABLE
-    AUTOFORMER_AVAILABLE = NEURALFORECAST_AVAILABLE
-except ImportError:
-    AUTOFORMER_AVAILABLE = False
-    AutoformerModel = None
+# Autoformer / Informer are not shipped; N-BEATS, N-HiTS, PatchTST, TFT load via model_registry.
 
 # Try to import Transformer model
 try:
@@ -371,10 +365,6 @@ class ForecastRouter:
             "xgb": XGBoostModel,  # Alias
         }
 
-        # Add Autoformer if available
-        if AUTOFORMER_AVAILABLE and AutoformerModel is not None:
-            default_models["autoformer"] = AutoformerModel
-
         # Add Transformer if available
         if TRANSFORMER_AVAILABLE:
             default_models["transformer"] = TransformerForecaster
@@ -419,6 +409,10 @@ class ForecastRouter:
             "ridge": "Ridge",
             "garch": "GARCH",
             "autoformer": "Autoformer",
+            "n-beats": "N-BEATS",
+            "n-hits": "N-HiTS",
+            "patchtst": "PatchTST",
+            "tft": "TFT",
         }
         display_names = {name_map.get(k, k.capitalize()) for k in self.model_registry.keys()}
         return sorted(display_names)
@@ -723,7 +717,19 @@ class ForecastRouter:
         if prepared_data is None or len(prepared_data) < 10:
             return None
         # Skip MAPE check for models whose predict() operates in normalized space
-        _skip_mape_models = {'ridge', 'catboost', 'tcn', 'hybrid', 'gnn'}
+        _skip_mape_models = {
+            "ridge",
+            "catboost",
+            "tcn",
+            "hybrid",
+            "gnn",
+            "nbeats",
+            "n-beats",
+            "nhits",
+            "n-hits",
+            "patchtst",
+            "tft",
+        }
         if selected_model in _skip_mape_models:
             return None
         close_col = "close" if "close" in prepared_data.columns else prepared_data.columns[0]
@@ -1094,7 +1100,19 @@ class ForecastRouter:
             # In-sample MAPE and poor-fit warning (suppress extreme/unstable values for UI)
             warnings_list = list(self._get_warnings(data, selected_model))
             in_sample_mape = self._in_sample_mape(model, prepared_data, selected_model)
-            _skip_mape_models = {'ridge', 'catboost', 'tcn', 'hybrid', 'gnn'}
+            _skip_mape_models = {
+                "ridge",
+                "catboost",
+                "tcn",
+                "hybrid",
+                "gnn",
+                "nbeats",
+                "n-beats",
+                "nhits",
+                "n-hits",
+                "patchtst",
+                "tft",
+            }
             if in_sample_mape is not None and np.isfinite(in_sample_mape) and selected_model not in _skip_mape_models:
                 if in_sample_mape > 50.0:
                     # Very high MAPE is often an artifact of normalization mismatch; log only.
