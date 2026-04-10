@@ -95,10 +95,22 @@ def render(
         st.subheader("Options & Short Data")
 
         try:
-            import yfinance as yf
+            _opt_loaded_key = "options_loaded_" + str(ticker).strip().upper()
+            if not st.session_state.get(_opt_loaded_key):
+                st.caption(
+                    "Loads short interest from fundamentals and the full "
+                    "options chain (network). Nothing runs until you click."
+                )
+                if st.button("Load options chain", key="load_options_btn"):
+                    st.session_state[_opt_loaded_key] = True
+                    st.rerun()
+                return
 
-            _t = yf.Ticker(ticker)
-            _info = _t.info
+            with st.spinner("Loading short data and options expiries…"):
+                import yfinance as yf
+
+                _t = yf.Ticker(ticker)
+                _info = _t.info
 
             # Short data
             _short_pct = _info.get("shortPercentOfFloat", 0) or 0
@@ -141,14 +153,7 @@ def render(
 
             st.markdown("---")
 
-            # Options chain
-            if "options_loaded_" + ticker not in st.session_state:
-                if st.button("Load options chain", key="load_options_btn"):
-                    st.session_state["options_loaded_" + ticker] = True
-                else:
-                    st.caption("Click to load live options data.")
-                    return
-
+            # Options chain (expiries + chain rows; heavy fetch below)
             _expiries = _t.options
             if _expiries:
                 _sel_exp = st.selectbox(

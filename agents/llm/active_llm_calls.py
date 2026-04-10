@@ -88,11 +88,13 @@ def _is_anthropic_401(e: Exception) -> bool:
 
 
 def _call_claude_simple(prompt: str, model: str, *, max_tokens: int = 2048) -> str:
-    from config.llm_config import get_anthropic_client
+    from config.llm_config import _NoKeyError, get_anthropic_client
     try:
         client = get_anthropic_client()
+    except _NoKeyError:
+        raise
     except Exception as e:
-        logger.exception("Claude client init failed: %s", e)
+        logger.warning("Claude client init failed: %s", e)
         raise
     try:
         msg = client.messages.create(
@@ -105,7 +107,10 @@ def _call_claude_simple(prompt: str, model: str, *, max_tokens: int = 2048) -> s
     except Exception as e:
         if _is_anthropic_401(e):
             logger.warning("Anthropic key invalid, falling back to OpenAI")
-            return _call_gpt4_simple(prompt, "gpt-4o", max_tokens=max_tokens)
+            try:
+                return _call_gpt4_simple(prompt, "gpt-4o", max_tokens=max_tokens)
+            except _NoKeyError:
+                return ""
         logger.exception("Claude API call failed: %s", e)
         raise
 
@@ -119,11 +124,13 @@ def _call_claude_chat(
     *,
     max_tokens: int = 2048,
 ) -> str:
-    from config.llm_config import get_anthropic_client
+    from config.llm_config import _NoKeyError as _NK, get_anthropic_client
     try:
         client = get_anthropic_client()
+    except _NK:
+        raise
     except Exception as e:
-        logger.exception("Claude client init failed: %s", e)
+        logger.warning("Claude client init failed: %s", e)
         raise
     full_system = f"{system_prompt}\n\n{context_block}"
     api_messages: List[Dict[str, Any]] = []
@@ -147,17 +154,29 @@ def _call_claude_chat(
     except Exception as e:
         if _is_anthropic_401(e):
             logger.warning("Anthropic key invalid, falling back to OpenAI")
-            return _call_gpt4_chat(system_prompt, context_block, conversation_messages, user_message, "gpt-4o", max_tokens=max_tokens)
+            try:
+                return _call_gpt4_chat(
+                    system_prompt,
+                    context_block,
+                    conversation_messages,
+                    user_message,
+                    "gpt-4o",
+                    max_tokens=max_tokens,
+                )
+            except _NK:
+                return ""
         logger.exception("Claude API chat failed: %s", e)
         raise
 
 
 def _call_gpt4_simple(prompt: str, model: str, *, max_tokens: int = 2048) -> str:
-    from config.llm_config import get_openai_client
+    from config.llm_config import _NoKeyError, get_openai_client
     try:
         client = get_openai_client()
+    except _NoKeyError:
+        raise
     except Exception as e:
-        logger.exception("OpenAI client init failed: %s", e)
+        logger.warning("OpenAI client init failed: %s", e)
         raise
     try:
         resp = client.chat.completions.create(
@@ -182,11 +201,13 @@ def _call_gpt4_chat(
     *,
     max_tokens: int = 2048,
 ) -> str:
-    from config.llm_config import get_openai_client
+    from config.llm_config import _NoKeyError, get_openai_client
     try:
         client = get_openai_client()
+    except _NoKeyError:
+        raise
     except Exception as e:
-        logger.exception("OpenAI client init failed: %s", e)
+        logger.warning("OpenAI client init failed: %s", e)
         raise
     full_system = f"{system_prompt}\n\n{context_block}"
     messages = [{"role": "system", "content": full_system}]
@@ -476,9 +497,11 @@ def _call_huggingface_local_chat(
 def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
     """
     Single prompt → response using the app's active LLM (from Admin preference).
-    Raises on failure; no silent fallback.
+    Returns "" when no API keys are configured (_NoKeyError path).
     Routes to all six providers: claude, gpt4, gemini, ollama, kimi, huggingface.
     """
+    from config.llm_config import _NoKeyError
+
     # Ensure latest keys from user store are available for this request
     try:
         from streamlit import session_state as st_session_state  # type: ignore
@@ -506,9 +529,15 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
     if env_provider in {"openai", "anthropic", "huggingface"}:
         logger.info("LLM_PROVIDER override active: %s", env_provider)
         if env_provider == "anthropic":
-            return _call_claude_simple(prompt, model, max_tokens=max_tokens)
+            try:
+                return _call_claude_simple(prompt, model, max_tokens=max_tokens)
+            except _NoKeyError:
+                return ""
         if env_provider == "openai":
-            return _call_gpt4_simple(prompt, model, max_tokens=max_tokens)
+            try:
+                return _call_gpt4_simple(prompt, model, max_tokens=max_tokens)
+            except _NoKeyError:
+                return ""
         if env_provider == "huggingface":
             hf_mode = options.get("huggingface_mode", "inference")
             if hf_mode == "local":
@@ -518,24 +547,35 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
     if provider == "claude":
         try:
             return _call_claude_simple(prompt, model, max_tokens=max_tokens)
+        except _NoKeyError:
+            try:
+                from config.llm_config import DEFAULT_MODELS
+
+                openai_model = DEFAULT_MODELS.get("gpt4", "gpt-4o")
+            except Exception:
+                openai_model = "gpt-4o"
+            try:
+                return _call_gpt4_simple(prompt, openai_model, max_tokens=max_tokens)
+            except _NoKeyError:
+                return ""
         except Exception as e:
-            _key_missing = "not set" in str(e).lower() or "add your key" in str(e).lower()
-            if _is_anthropic_401(e) or _key_missing:
-                logger.warning("Claude unavailable (%s), trying OpenAI fallback", type(e).__name__)
+            if _is_anthropic_401(e):
                 try:
                     from config.llm_config import DEFAULT_MODELS
+
                     openai_model = DEFAULT_MODELS.get("gpt4", "gpt-4o")
                 except Exception:
                     openai_model = "gpt-4o"
                 try:
                     return _call_gpt4_simple(prompt, openai_model, max_tokens=max_tokens)
-                except Exception as oe:
-                    if "not set" in str(oe).lower() or "add your key" in str(oe).lower():
-                        return "No API key configured. Add your key in Settings → API Keys."
-                    raise
+                except _NoKeyError:
+                    return ""
             raise
     if provider == "gpt4":
-        return _call_gpt4_simple(prompt, model, max_tokens=max_tokens)
+        try:
+            return _call_gpt4_simple(prompt, model, max_tokens=max_tokens)
+        except _NoKeyError:
+            return ""
     if provider == "gemini":
         return _call_gemini_simple(prompt, model, max_tokens=max_tokens)
     if provider == "ollama":
@@ -560,9 +600,11 @@ def call_active_llm_chat(
 ) -> str:
     """
     Chat (system + context + history + user message) using the app's active LLM.
-    Raises on failure; no silent fallback.
+    Returns "" when no API keys are configured (_NoKeyError path).
     Routes to all six providers: claude, gpt4, gemini, ollama, kimi, huggingface.
     """
+    from config.llm_config import _NoKeyError
+
     try:
         from streamlit import session_state as st_session_state  # type: ignore
         session_id = st_session_state.get("evolve_session_id", "") or st_session_state.get("session_id", "")
@@ -589,9 +631,29 @@ def call_active_llm_chat(
     if env_provider in {"openai", "anthropic", "huggingface"}:
         logger.info("LLM_PROVIDER override active: %s", env_provider)
         if env_provider == "anthropic":
-            return _call_claude_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+            try:
+                return _call_claude_chat(
+                    system_prompt,
+                    context_block,
+                    conversation_messages,
+                    user_message,
+                    model,
+                    max_tokens=max_tokens,
+                )
+            except _NoKeyError:
+                return ""
         if env_provider == "openai":
-            return _call_gpt4_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+            try:
+                return _call_gpt4_chat(
+                    system_prompt,
+                    context_block,
+                    conversation_messages,
+                    user_message,
+                    model,
+                    max_tokens=max_tokens,
+                )
+            except _NoKeyError:
+                return ""
         if env_provider == "huggingface":
             hf_mode = options.get("huggingface_mode", "inference")
             if hf_mode == "local":
@@ -600,28 +662,64 @@ def call_active_llm_chat(
 
     if provider == "claude":
         try:
-            return _call_claude_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
-        except Exception as e:
-            _key_missing = "not set" in str(e).lower() or "add your key" in str(e).lower()
-            if _is_anthropic_401(e) or _key_missing:
-                logger.warning(
-                    "Claude unavailable (%s), trying OpenAI fallback",
-                    type(e).__name__,
+            return _call_claude_chat(
+                system_prompt,
+                context_block,
+                conversation_messages,
+                user_message,
+                model,
+                max_tokens=max_tokens,
+            )
+        except _NoKeyError:
+            try:
+                from config.llm_config import DEFAULT_MODELS
+
+                openai_model = DEFAULT_MODELS.get("gpt4", "gpt-4o")
+            except Exception:
+                openai_model = "gpt-4o"
+            try:
+                return _call_gpt4_chat(
+                    system_prompt,
+                    context_block,
+                    conversation_messages,
+                    user_message,
+                    openai_model,
+                    max_tokens=max_tokens,
                 )
+            except _NoKeyError:
+                return ""
+        except Exception as e:
+            if _is_anthropic_401(e):
                 try:
                     from config.llm_config import DEFAULT_MODELS
+
                     openai_model = DEFAULT_MODELS.get("gpt4", "gpt-4o")
                 except Exception:
                     openai_model = "gpt-4o"
                 try:
-                    return _call_gpt4_chat(system_prompt, context_block, conversation_messages, user_message, openai_model, max_tokens=max_tokens)
-                except Exception as oe:
-                    if "not set" in str(oe).lower() or "add your key" in str(oe).lower():
-                        return "No API key configured. Add your key in Settings → API Keys."
-                    raise
+                    return _call_gpt4_chat(
+                        system_prompt,
+                        context_block,
+                        conversation_messages,
+                        user_message,
+                        openai_model,
+                        max_tokens=max_tokens,
+                    )
+                except _NoKeyError:
+                    return ""
             raise
     if provider == "gpt4":
-        return _call_gpt4_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
+        try:
+            return _call_gpt4_chat(
+                system_prompt,
+                context_block,
+                conversation_messages,
+                user_message,
+                model,
+                max_tokens=max_tokens,
+            )
+        except _NoKeyError:
+            return ""
     if provider == "gemini":
         return _call_gemini_chat(system_prompt, context_block, conversation_messages, user_message, model, max_tokens=max_tokens)
     if provider == "ollama":

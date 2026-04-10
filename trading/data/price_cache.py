@@ -8,6 +8,17 @@ import pandas as pd
 import streamlit as st
 import yfinance as yf
 
+# Best-effort Yahoo session refresh — reduces stale-crumb HTTP 401s on Cloud.
+try:
+    _yf_utils = getattr(yf, "utils", None)
+    if _yf_utils is not None and hasattr(_yf_utils, "get_json"):
+        _yf_utils.get_json(
+            "https://query2.finance.yahoo.com/v1/test/getcrumb",
+            proxy=None,
+        )
+except Exception:
+    pass
+
 
 @st.cache_data(ttl=15, show_spinner=False)
 def get_quote(ticker: str) -> dict:

@@ -63,7 +63,8 @@ def render(
             + ", ".join(QUICK_FORECAST_MODELS)
         )
 
-        # Ticker comes from Analyze page header (`analyze_ticker`); always use daily 1y for forecasting
+        # Ticker comes from Analyze page header (`analyze_ticker`). Forecasting uses
+        # a full daily year unless the chart already shows ≥1y of daily bars.
         symbol = str(
             st.session_state.get("analyze_ticker") or ticker or ""
         ).strip().upper()
@@ -73,18 +74,18 @@ def render(
             )
             return
 
-        # Reuse Analyze page daily history when it matches (avoids duplicate fetch on
-        # Forecast open). Intraday chart periods still need a dedicated daily pull.
+        # Reuse chart `hist` only when it is daily, spans a full year (or longer), and
+        # has enough rows — not 3M/6M windows (would underfeed the models).
         hist_fc = None
-        _top = str(st.session_state.get("analyze_ticker") or ticker or "").strip().upper()
+        _reuse_ok = (
+            hist is not None
+            and not getattr(hist, "empty", True)
+            and _interval == "1d"
+            and period in ("1y", "5y")
+            and len(hist) >= 200
+        )
         try:
-            if (
-                hist is not None
-                and not getattr(hist, "empty", True)
-                and len(hist) >= 30
-                and _interval == "1d"
-                and _top == symbol
-            ):
+            if _reuse_ok:
                 hist_fc = hist.copy()
             else:
                 with st.spinner(f"Loading {symbol} data (daily, 1y)..."):

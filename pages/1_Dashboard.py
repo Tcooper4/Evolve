@@ -281,27 +281,41 @@ try:
     ):
         summaries = []
         try:
+            from config.llm_config import llm_available, require_llm
+
             from agents.llm.active_llm_calls import call_active_llm_simple
 
-            for it in items[:5]:
-                title = (it.get("title") or "")[:200]
-                if not title:
-                    continue
-                why = ""
-                try:
-                    why = call_active_llm_simple(
-                        f"In one short sentence, why might this matter to traders: {title}",
-                        max_tokens=80,
-                    ).strip()
-                except Exception:
-                    why = ""
-                summaries.append(
+            if not llm_available():
+                require_llm("AI-enhanced headlines")
+                summaries = [
                     {
-                        "title": title,
-                        "why": why,
+                        "title": (it.get("title") or "")[:200],
+                        "why": "",
                         "url": it.get("url", "") or it.get("link", ""),
                     }
-                )
+                    for it in items[:5]
+                    if (it.get("title") or "").strip()
+                ]
+            else:
+                for it in items[:5]:
+                    title = (it.get("title") or "")[:200]
+                    if not title:
+                        continue
+                    why = ""
+                    try:
+                        why = call_active_llm_simple(
+                            f"In one short sentence, why might this matter to traders: {title}",
+                            max_tokens=80,
+                        ).strip()
+                    except Exception:
+                        why = ""
+                    summaries.append(
+                        {
+                            "title": title,
+                            "why": why,
+                            "url": it.get("url", "") or it.get("link", ""),
+                        }
+                    )
         except Exception as _ne:
             logger.warning("Home news: LLM summaries failed: %s", _ne)
             summaries = [
@@ -505,6 +519,11 @@ def _render_watchlist():
                     with _col_d1:
                         with st.spinner("Generating digest..."):
                             try:
+                                from config.llm_config import (
+                                    llm_available,
+                                    require_llm,
+                                )
+
                                 from agents.llm.active_llm_calls import (
                                     call_active_llm_simple,
                                 )
@@ -514,26 +533,32 @@ def _render_watchlist():
                                     key=lambda x: x["score"],
                                     reverse=True,
                                 )
-                                _top3 = _sorted[:3]
-                                _prompt = (
-                                    "You are a quant analyst. Write a "
-                                    "3-4 sentence plain-English digest "
-                                    "of this watchlist. Mention the "
-                                    "strongest and weakest setups, any "
-                                    "notable signals, and overall tone. "
-                                    "Be direct and specific. No "
-                                    "disclaimers.\n\n"
-                                    "Watchlist scores:\n"
-                                    f"{_sorted}\n\nTop signals:\n{_top3}"
-                                )
-                                _digest = call_active_llm_simple(
-                                    _prompt,
-                                    max_tokens=200,
-                                )
-                                if not _digest:
+                                if not llm_available():
+                                    require_llm("Watchlist digest")
                                     _digest = _build_fallback_digest(
                                         _sorted,
                                     )
+                                else:
+                                    _top3 = _sorted[:3]
+                                    _prompt = (
+                                        "You are a quant analyst. Write a "
+                                        "3-4 sentence plain-English digest "
+                                        "of this watchlist. Mention the "
+                                        "strongest and weakest setups, any "
+                                        "notable signals, and overall tone. "
+                                        "Be direct and specific. No "
+                                        "disclaimers.\n\n"
+                                        "Watchlist scores:\n"
+                                        f"{_sorted}\n\nTop signals:\n{_top3}"
+                                    )
+                                    _digest = call_active_llm_simple(
+                                        _prompt,
+                                        max_tokens=200,
+                                    )
+                                    if not _digest:
+                                        _digest = _build_fallback_digest(
+                                            _sorted,
+                                        )
                             except Exception:
                                 _digest = _build_fallback_digest(
                                     sorted(

@@ -12,6 +12,24 @@ from trading.data.price_cache import get_history, get_info, get_quote
 logger = logging.getLogger(__name__)
 
 
+def _intraday_rangebreaks_and_dtick(hist) -> tuple:
+    """US session gaps + tick step from actual bar spacing (yfinance interval)."""
+    rb = [
+        dict(bounds=["sat", "mon"]),
+        dict(bounds=[16, 9.5], pattern="hour"),
+    ]
+    dtick = None
+    if hist is not None and len(hist) >= 2:
+        try:
+            _td = hist.index[1] - hist.index[0]
+            _secs = float(abs(_td.total_seconds()))
+            if _secs >= 60.0:
+                dtick = _secs * 1000.0
+        except Exception:
+            pass
+    return rb, dtick
+
+
 def render_price_chart(
     ticker: str,
     hist,
@@ -230,6 +248,31 @@ def render_price_chart(
                 except Exception:
                     pass
 
+                _rb, _dtick = _intraday_rangebreaks_and_dtick(hist)
+                _x1 = dict(
+                    gridcolor="#1a2535",
+                    showgrid=True,
+                    zeroline=False,
+                    tickfont=dict(color="#4a6080", size=10),
+                    rangeslider=dict(visible=False),
+                    rangebreaks=(
+                        _rb if period in ("1d", "5d") else [dict(bounds=["sat", "mon"])]
+                    ),
+                )
+                if _dtick and period in ("1d", "5d"):
+                    _x1["dtick"] = _dtick
+                _x2 = dict(
+                    gridcolor="#1a2535",
+                    showgrid=True,
+                    zeroline=False,
+                    tickfont=dict(color="#4a6080", size=10),
+                    rangebreaks=(
+                        _rb if period in ("1d", "5d") else [dict(bounds=["sat", "mon"])]
+                    ),
+                )
+                if _dtick and period in ("1d", "5d"):
+                    _x2["dtick"] = _dtick
+
                 fig_chart.update_layout(
                     template="plotly_dark",
                     paper_bgcolor="#0a0e1a",
@@ -244,35 +287,8 @@ def render_price_chart(
                         font=dict(color="#e0e6f0", size=14),
                         x=0,
                     ),
-                    xaxis=dict(
-                        gridcolor="#1a2535",
-                        showgrid=True,
-                        zeroline=False,
-                        tickfont=dict(color="#4a6080", size=10),
-                        rangeslider=dict(visible=False),
-                        rangebreaks=(
-                            [
-                                dict(bounds=["sat", "mon"]),
-                                dict(bounds=[16, 9.5], pattern="hour"),
-                            ]
-                            if period in ("1d", "5d")
-                            else [dict(bounds=["sat", "mon"])]
-                        ),
-                    ),
-                    xaxis2=dict(
-                        gridcolor="#1a2535",
-                        showgrid=True,
-                        zeroline=False,
-                        tickfont=dict(color="#4a6080", size=10),
-                        rangebreaks=(
-                            [
-                                dict(bounds=["sat", "mon"]),
-                                dict(bounds=[16, 9.5], pattern="hour"),
-                            ]
-                            if period in ("1d", "5d")
-                            else [dict(bounds=["sat", "mon"])]
-                        ),
-                    ),
+                    xaxis=_x1,
+                    xaxis2=_x2,
                     yaxis=dict(
                         gridcolor="#1a2535",
                         showgrid=True,
@@ -562,6 +578,27 @@ def render_price_chart(
                     except Exception:
                         pass
 
+                    _rb_l, _dtick_l = _intraday_rangebreaks_and_dtick(_hist)
+                    _xa_l = dict(
+                        gridcolor="#1a2535",
+                        showgrid=True,
+                        zeroline=False,
+                        tickfont=dict(color="#4a6080", size=10),
+                        rangeslider=dict(visible=False),
+                        rangebreaks=_rb_l,
+                    )
+                    if _dtick_l:
+                        _xa_l["dtick"] = _dtick_l
+                    _xa2_l = dict(
+                        gridcolor="#1a2535",
+                        showgrid=True,
+                        zeroline=False,
+                        tickfont=dict(color="#4a6080", size=10),
+                        rangebreaks=_rb_l,
+                    )
+                    if _dtick_l:
+                        _xa2_l["dtick"] = _dtick_l
+
                     _fig.update_layout(
                         template="plotly_dark",
                         paper_bgcolor="#0a0e1a",
@@ -576,19 +613,8 @@ def render_price_chart(
                             font=dict(color="#e0e6f0", size=14),
                             x=0,
                         ),
-                        xaxis=dict(
-                            gridcolor="#1a2535",
-                            showgrid=True,
-                            zeroline=False,
-                            tickfont=dict(color="#4a6080", size=10),
-                            rangeslider=dict(visible=False),
-                        ),
-                        xaxis2=dict(
-                            gridcolor="#1a2535",
-                            showgrid=True,
-                            zeroline=False,
-                            tickfont=dict(color="#4a6080", size=10),
-                        ),
+                        xaxis=_xa_l,
+                        xaxis2=_xa2_l,
                         yaxis=dict(
                             gridcolor="#1a2535",
                             showgrid=True,

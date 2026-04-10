@@ -1,0 +1,209 @@
+
+=======================================================
+  1. GNN Multi-Asset / Supply Chain
+=======================================================
+gnn_model.py: EXISTS (601 lines)
+  contains: correlation
+  contains: graph
+  contains: adjacency
+  contains: edge
+  contains: GNNForecaster
+  contains: class GNN
+
+GNN in pages/components (0 matches):
+
+=======================================================
+  2. Geopolitical / Macro Event Risk
+=======================================================
+Catalyst/geopolitical code (10 matches):
+  .\scripts\pre_audit_s61.py:63  # 2. GEOPOLITICAL / MACRO EVENT RISK
+  .\scripts\pre_audit_s61.py:64  section("2. Geopolitical / Macro Event Risk")
+  .\scripts\pre_audit_s61.py:66  geo = grep(r"geopolit|catalyst.type|event.risk|macro.event|catalyst_type")
+  .\scripts\pre_audit_s61.py:67  w(f"Catalyst/geopolitical code ({len(geo)} matches):")
+  .\scripts\pre_audit_s61.py:75  for kw in ["FRED", "yield", "spread", "high_yield", "geopolit", "event", "VIX"]:
+  .\tests\test_prompt_template_formatter.py:155  "risk_factors": "Risk factors: 1) Volatility 2) Interest rates 3) Geopolitics",
+  .\tests\test_risk\test_risk_manager.py:156  "Geopolitical Risk",
+  .\trading\analysis\ai_score.py:1805  "name": "Macro Event",
+  .\trading\data\earnings_calendar.py:91  Returns upcoming macro events
+  .\trading\risk\risk_manager.py:629  "Geopolitical Risk": {"return_shock": -0.12, "volatility_multiplier": 1.8},
+
+macro_factors.py: EXISTS (498 lines)
+  contains: FRED
+  contains: yield
+  contains: spread
+  contains: VIX
+
+=======================================================
+  3. Options Term Structure / Skew
+=======================================================
+Skew/term structure (150 matches):
+  .\agents\llm\tool_executor.py:364  {k: result.get(k) for k in ("put_call_ratio", "max_pain", "net_flow", "unusual_a
+  .\components\tabs\tab_diagnostics.py:134  _skew = float(_scipy_stats.skew(_returns))
+  .\components\tabs\tab_diagnostics.py:138  st.metric("Skewness", f"{_skew:.3f}")
+  .\components\tabs\tab_options_chain.py:140  "Put/call ratio",
+  .\components\tabs\tab_options_chain.py:146  "Put/call ratio",
+  .\components\tabs\tab_options_chain.py:194  # Put/call ratio from volumes (persist in session_state)
+  .\components\tabs\tab_options_chain.py:302  f"P/C Ratio: {flow.get('put_call_ratio', 0):.2f} · "
+  .\components\tabs\tab_options_chain.py:771  np.mean(_surf.implied_volatilities)
+  .\components\tabs\tab_options_chain.py:772  if len(_surf.implied_volatilities)
+  .\scripts\old_3_Strategy_Testing.py:2489  "Skewness": f"{returns.skew():.2f}",
+  .\scripts\old_6_Risk_Management.py:2302  'skewness': window_returns.skew(),
+  .\scripts\old_6_Risk_Management.py:2344  skewness = returns.skew()
+
+options_forecaster.py: EXISTS (732 lines)
+  contains: skew
+  contains: expiry
+  contains: put_call
+  contains: surface
+
+=======================================================
+  4. Earnings Revision Breadth
+=======================================================
+Earnings revision code (7 matches):
+  .\scripts\pre_audit_s61.py:99  # 4. EARNINGS REVISION BREADTH
+  .\scripts\pre_audit_s61.py:100  section("4. Earnings Revision Breadth")
+  .\scripts\pre_audit_s61.py:102  ern = grep(r"revision.breadth|eps.revision|earnings.revision|upward.revision")
+  .\scripts\pre_audit_s61.py:103  w(f"Earnings revision code ({len(ern)} matches):")
+  .\trading\analysis\ai_score.py:1739  f" · EPS revisions: "
+  .\trading\analysis\ai_score.py:1758  f" · EPS revisions: "
+  .\trading\data\earnings_quality.py:4  1. Earnings revision momentum:
+
+Earnings-related files in trading/data/:
+  trading/data\earnings_calendar.py
+  trading/data\earnings_quality.py
+  trading/data\earnings_reaction.py
+
+=======================================================
+  5. GPU / PyTorch CUDA
+=======================================================
+torch: 2.1.2+cpu
+CUDA available: False
+CUDA version: None
+Device count: 0
+Device: N/A
+
+Device/CUDA references (19 matches):
+  .\agents\implementations\model_benchmarker.py:304  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  .\agents\implementations\model_benchmarker.py:305  model = model.to(device)
+  .\agents\implementations\model_benchmarker.py:308  X_train_tensor = torch.FloatTensor(X_train).to(device)
+  .\agents\implementations\model_benchmarker.py:309  y_train_tensor = torch.FloatTensor(y_train.reshape(-1, 1)).to(device)
+  .\agents\implementations\model_benchmarker.py:310  X_test_tensor = torch.FloatTensor(X_test).to(device)
+  .\agents\implementations\model_benchmarker.py:311  y_test_tensor = torch.FloatTensor(y_test).to(device)
+  .\trading\market\market_indicators.py:119  self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  .\trading\models\base_model.py:284  self.device = torch.device(self._get_device())
+
+=======================================================
+  6. Real-Time / Streaming Scanner
+=======================================================
+13_Scanner.py: NOT FOUND
+
+Streaming refs in pages/components (310 matches):
+
+=======================================================
+  7. NeuralForecast Bonus Models
+=======================================================
+NOT installed: No module named 'neuralforecast'
+
+NeuralForecast references (129 matches):
+  .\agents\llm\agent.py:270  "informer": "Informer Model",
+  .\agents\llm\agent.py:272  "autoformer": "Autoformer",
+  .\agents\llm\agent.py:284  "autoformer": "Autoformer",
+  .\agents\llm\agent.py:286  "informer": "Informer",
+  .\components\tabs\tab_backtester.py:90  'Autoformer': 'Autoformer (Advanced Transformer)',
+  .\components\tabs\tab_backtester.py:141  display_map = {"lstm": "LSTM", "xgboost": "XGBoost", "prophet": "Prophet", "arim
+  .\components\tabs\tab_backtester.py:202  elif model_type == "Autoformer":
+  .\components\tabs\tab_backtester.py:203  st.markdown("**Autoformer Parameters:**")
+  .\components\tabs\tab_backtester.py:438  elif model_type == "Autoformer":
+  .\pages\7_Settings.py:700  ("neuralforecast", "neuralforecast"),
+  .\scripts\pre_audit_s61.py:156  # 7. NEURALFORECAST
+  .\scripts\pre_audit_s61.py:157  section("7. NeuralForecast Bonus Models")
+
+=======================================================
+  8. RL Strategy Trainer
+=======================================================
+gymnasium : NOT installed
+stable_baselines3 : NOT installed
+gym : NOT installed
+
+RL trainer references (46 matches):
+  .\scripts\old_3_Strategy_Testing.py:3463  # Tab RL: Reinforcement Learning Training
+  .\scripts\old_3_Strategy_Testing.py:3465  st.header("🤖 Reinforcement Learning Strategy")
+  .\scripts\pre_audit_s61.py:175  "for pkg in ['gymnasium','stable_baselines3','gym']:\n"
+  .\scripts\pre_audit_s61.py:183  rl = grep(r"gymnasium|stable.baselines|rl_trainer|RLStrategy|PPO.*rl|reinforce")
+  .\tests\comprehensive_codebase_review.py:124  # Reinforcement Learning
+  .\tests\system_check.py:99  ("rl", "Reinforcement learning"),
+  .\tests\system_check.py:197  ("stable_baselines3", "Stable Baselines3 RL"),
+  .\tests\system_check.py:198  ("gymnasium", "Gymnasium RL environment"),
+  .\tests\test_fixes.py:101  print(f"  Gymnasium Available: {status.get('gymnasium_available', False)}")
+  .\tests\test_fixes.py:103  f"  Stable-baselines3 Available: {status.get('stable_baselines3_available', Fals
+
+=======================================================
+  9. Database Connections
+=======================================================
+sqlite3.connect / _get_conn calls (33 matches):
+  .\config\user_store.py:22  def _get_conn() -> sqlite3.Connection:
+  .\config\user_store.py:23  conn = sqlite3.connect(USER_DB_PATH)
+  .\config\user_store.py:55  with _get_conn() as conn:
+  .\config\user_store.py:62  with _get_conn() as conn:
+  .\config\user_store.py:72  with _get_conn() as conn:
+  .\config\user_store.py:93  with _get_conn() as conn:
+  .\config\user_store.py:108  with _get_conn() as conn:
+  .\config\user_store.py:188  conn = _get_conn()
+  .\config\user_store.py:221  with _get_conn() as conn:
+  .\pages\7_Settings.py:609  with sqlite3.connect(_DB_PATH) as _c:
+  .\scripts\old_11_Admin.py:105  sqlite3.connect(str(db_path)).close()
+  .\scripts\pre_audit_s61.py:193  w(f"sqlite3.connect / _get_conn calls ({len(db)} matches):")
+  .\trading\analysis\signal_score_store.py:33  def _get_conn() -> sqlite3.Connection:
+  .\trading\analysis\signal_score_store.py:35  conn = sqlite3.connect(
+  .\trading\analysis\signal_score_store.py:47  with _get_conn() as conn:
+  .\trading\analysis\signal_score_store.py:103  with _get_conn() as conn:
+  .\trading\analysis\signal_score_store.py:153  with _get_conn() as conn:
+  .\trading\analysis\signal_score_store.py:183  with _get_conn() as conn:
+  .\trading\analysis\signal_score_store.py:212  with _get_conn() as conn:
+  .\trading\analysis\signal_score_store.py:258  with _get_conn() as conn:
+  .\trading\data\options_flow.py:51  conn = sqlite3.connect(
+  .\trading\data\options_flow.py:95  conn = sqlite3.connect(
+  .\trading\data\watchlist.py:20  def _get_connection() -> sqlite3.Connection:
+  .\trading\data\watchlist.py:21  conn = sqlite3.connect(DB_PATH)
+  .\trading\data\watchlist.py:82  def _conn(self) -> sqlite3.Connection:
+  .\trading\data\watchlist.py:83  conn = sqlite3.connect(self.db_path)
+  .\trading\memory\agent_logger.py:183  with sqlite3.connect(self.db_path) as conn:
+  .\trading\memory\agent_logger.py:436  with sqlite3.connect(self.db_path) as conn:
+  .\trading\memory\agent_logger.py:498  with sqlite3.connect(self.db_path) as conn:
+  .\trading\memory\agent_logger.py:749  with sqlite3.connect(self.db_path) as conn:
+  .\trading\memory\persistent_memory.py:509  with sqlite3.connect(self.db_path) as conn:
+  .\trading\memory\persistent_memory.py:563  with sqlite3.connect(self.db_path) as conn:
+  .\trading\memory\persistent_memory.py:604  with sqlite3.connect(self.db_path) as conn:
+
+Explicit conn.close() calls (11 matches):
+  .\config\user_store.py:206  conn.close()
+  .\scripts\pre_audit_s61.py:198  w(f"\nExplicit conn.close() calls ({len(closes)} matches):")
+  .\trading\data\options_flow.py:82  conn.close()
+  .\trading\data\options_flow.py:121  conn.close()
+  .\trading\data\watchlist.py:58  conn.close()
+  .\trading\data\watchlist.py:138  conn.close()
+  .\trading\data\watchlist.py:150  conn.close()
+  .\trading\data\watchlist.py:176  conn.close()
+  .\trading\data\watchlist.py:186  conn.close()
+  .\trading\data\watchlist.py:214  conn.close()
+  .\trading\data\watchlist.py:316  conn.close()
+
+Context manager DB usage (21 matches):
+  .\config\user_store.py:55  with _get_conn() as conn:
+  .\config\user_store.py:62  with _get_conn() as conn:
+  .\config\user_store.py:72  with _get_conn() as conn:
+  .\config\user_store.py:93  with _get_conn() as conn:
+  .\config\user_store.py:108  with _get_conn() as conn:
+  .\config\user_store.py:221  with _get_conn() as conn:
+  .\pages\7_Settings.py:609  with sqlite3.connect(_DB_PATH) as _c:
+  .\scripts\pre_audit_s61.py:202  with_db = grep(r"with sqlite3\.connect|with _get_conn|with get_conn")
+  .\trading\analysis\signal_score_store.py:47  with _get_conn() as conn:
+  .\trading\analysis\signal_score_store.py:103  with _get_conn() as conn:
+
+DB files found:
+  .\data\memory_store.db  (65,536 bytes)
+  .\data\memory_store_test_monitoring.db  (36,864 bytes)
+  .\data\options_cache.db  (253,952 bytes)
+  .\data\signal_scores.db  (24,576 bytes)
+  .\data\users.db  (20,480 bytes)
+  .\data\watchlist.db  (20,480 bytes)

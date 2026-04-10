@@ -76,6 +76,8 @@ if "analyze_market_regime" not in st.session_state:
     st.session_state["analyze_market_regime"] = None
 if "analyze_symbol" not in st.session_state:
     st.session_state["analyze_symbol"] = None
+if "analyze_ticker" not in st.session_state:
+    st.session_state["analyze_ticker"] = ""
 if "analyze_forecast_horizon" not in st.session_state:
     st.session_state["analyze_forecast_horizon"] = 7
 
@@ -86,10 +88,10 @@ with c1:
 with c2:
     ticker = st.text_input(
         "Ticker",
-        value=st.session_state.get("analyze_ticker", "AAPL"),
+        value=st.session_state.get("analyze_ticker", ""),
         key="analyze_ticker",
         label_visibility="collapsed",
-        placeholder="Enter ticker...",
+        placeholder="e.g. AAPL, MSFT, TSLA",
     )
 with c3:
     trader_mode = st.radio(
@@ -100,11 +102,11 @@ with c3:
         label_visibility="collapsed",
     )
 
-if not ticker or not ticker.strip():
-    ticker = "AAPL"
-else:
-    ticker = ticker.strip().upper()
-ticker = resolve_ticker(ticker, validate=False)
+_sym = (ticker or "").strip()
+if not _sym:
+    st.info("🔍 Enter a ticker symbol above to load analysis.")
+    st.stop()
+ticker = resolve_ticker(_sym.upper(), validate=False)
 
 period_map = {
     "1D": "1d",

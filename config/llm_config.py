@@ -15,6 +15,60 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 logger = logging.getLogger(__name__)
 
+
+class _NoKeyError(Exception):
+    """No API key configured for this provider — normal when users have not added keys."""
+
+    def __init__(self, provider: str) -> None:
+        self.provider = provider
+        super().__init__(f"{provider} API key not configured")
+
+
+def llm_available() -> bool:
+    """True if at least one of Anthropic or OpenAI keys is available (session, env, or LLMConfig)."""
+    if os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        return True
+    if os.environ.get("OPENAI_API_KEY", "").strip():
+        return True
+    try:
+        cfg = get_llm_config()
+        if cfg.anthropic_api_key or cfg.openai_api_key:
+            return True
+    except Exception:
+        pass
+    try:
+        import streamlit as st
+
+        if (st.session_state.get("user_key_ANTHROPIC_API_KEY") or "").strip():
+            return True
+        if (st.session_state.get("user_key_OPENAI_API_KEY") or "").strip():
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def require_llm(feature_name: str = "This feature") -> bool:
+    """
+    Use at the top of auto-run LLM UI blocks. Shows a single Streamlit info when no key.
+    Returns True if an LLM can be called; False otherwise.
+    """
+    if llm_available():
+        return True
+    try:
+        import streamlit as st
+
+        if not st.session_state.get("_evolve_llm_setup_notice_shown"):
+            st.session_state["_evolve_llm_setup_notice_shown"] = True
+            st.info(
+                f"🔑 {feature_name} requires an API key. Enter yours in "
+                "**Settings → API Keys** or on the welcome screen."
+            )
+    except Exception:
+        pass
+    return False
+
+
 # Primary Claude model for Evolve agent layer (default when no preference set)
 CLAUDE_PRIMARY_MODEL = "claude-sonnet-4-20250514"
 
@@ -200,9 +254,7 @@ def get_openai_client():
     if not api_key:
         api_key = get_llm_config().openai_api_key
     if not api_key:
-        raise ValueError(
-            "OPENAI_API_KEY not set. Add your key in Settings → API Keys."
-        )
+        raise _NoKeyError("openai")
     return OpenAI(api_key=api_key)
 
 
@@ -220,7 +272,5 @@ def get_anthropic_client():
     if not api_key:
         api_key = get_llm_config().anthropic_api_key
     if not api_key:
-        raise ValueError(
-            "ANTHROPIC_API_KEY not set. Add your key in Settings → API Keys."
-        )
+        raise _NoKeyError("anthropic")
     return anthropic.Anthropic(api_key=api_key)
