@@ -77,9 +77,19 @@ class MorningBriefing:
         fc = opp.get("forecast") or {}
         entry = float(opp.get("entry") or 0)
         target = float(opp.get("target") or fc.get("consensus_price") or 0)
-        # Briefing without consensus forecasts — no entry/target to test
+        # No forecast / entry / target — use Quick Score as direction proxy
         if not fc and entry <= 0 and target <= 0:
-            return True
+            _qs = float(
+                opp.get("quick_score")
+                or opp.get("ai_score", 5.0)
+                or 5.0,
+            )
+            if "Both directions" in od:
+                return True
+            if "Bearish only" in od:
+                _sqs = float(opp.get("short_quick_score") or 0)
+                return _sqs >= 5.5
+            return _qs >= 5.5
         MIN_MOVE_PCT = 0.005
         if target > 0 and entry > 0:
             move_pct = abs(target - entry) / entry
@@ -470,13 +480,13 @@ class MorningBriefing:
 
             u = (self.universe or "sp100").lower()
             uni = list(_get_universe(u))
+            _p = getattr(self, "_briefing_prefs", {}) or {}
+            pref_uni = str(_p.get("briefing_universe") or "")
             try:
-                _p = getattr(self, "_briefing_prefs", {}) or {}
-                pref_uni = str(_p.get("briefing_universe") or "")
                 if "NASDAQ100" in pref_uni:
                     uni = list(_get_universe("nasdaq100"))
                 elif "SP500" in pref_uni:
-                    uni = list(_get_universe("sp500"))[:50]
+                    uni = list(_get_universe("sp500"))
                 elif "SP100" in pref_uni:
                     uni = list(_get_universe("sp100"))
                 elif "Top 25" in pref_uni:
@@ -498,7 +508,18 @@ class MorningBriefing:
             except Exception:
                 pass
 
-            uni = uni[: self.BRIEFING_UNIVERSE_CAP]
+            _uni_cap_map = {
+                "SP100": 50,
+                "SP500": 150,
+                "NASDAQ100": 100,
+                "Top 25": 25,
+            }
+            _uni_cap = 50
+            for _k, _v in _uni_cap_map.items():
+                if _k in pref_uni:
+                    _uni_cap = _v
+                    break
+            uni = uni[:_uni_cap]
             raw = scan_market(
                 filters=["high_short_score"],
                 universe=uni,
@@ -527,13 +548,13 @@ class MorningBriefing:
 
             u = (self.universe or "default").lower()
             uni = list(_get_universe(u))
+            _p = getattr(self, "_briefing_prefs", {}) or {}
+            pref_uni = str(_p.get("briefing_universe") or "")
             try:
-                _p = getattr(self, "_briefing_prefs", {}) or {}
-                pref_uni = str(_p.get("briefing_universe") or "")
                 if "NASDAQ100" in pref_uni:
                     uni = list(_get_universe("nasdaq100"))
                 elif "SP500" in pref_uni:
-                    uni = list(_get_universe("sp500"))[:50]
+                    uni = list(_get_universe("sp500"))
                 elif "SP100" in pref_uni:
                     uni = list(_get_universe("sp100"))
                 elif "Top 25" in pref_uni:
@@ -558,11 +579,23 @@ class MorningBriefing:
                         logger.debug("Watchlist-only universe skipped: %s", _wl_e)
             except Exception:
                 pass
+            _legacy_top = 50
             if u in ("sp50", "large", "mega"):
-                uni = uni[:50]
+                uni = uni[:_legacy_top]
             elif u in ("sp30", "core"):
                 uni = uni[:30]
-            uni = uni[: self.BRIEFING_UNIVERSE_CAP]
+            _uni_cap_map = {
+                "SP100": 50,
+                "SP500": 150,
+                "NASDAQ100": 100,
+                "Top 25": 25,
+            }
+            _uni_cap = 50
+            for _k, _v in _uni_cap_map.items():
+                if _k in pref_uni:
+                    _uni_cap = _v
+                    break
+            uni = uni[:_uni_cap]
 
             logger.info(
                 "Morning briefing: scanning %d tickers...",
@@ -628,6 +661,8 @@ class MorningBriefing:
         opp = {
             "symbol": symbol,
             "ai_score": candidate.get("ai_score"),
+            "quick_score": candidate.get("quick_score"),
+            "short_quick_score": candidate.get("short_quick_score"),
             "current_price": None,
             "forecast": {},
             "entry": None,
@@ -1047,8 +1082,8 @@ class MorningBriefing:
                 progress = st.progress(
                     0,
                     text=(
-                        f"Quick Score scan (up to {self.BRIEFING_UNIVERSE_CAP} "
-                        "tickers), then 5-model consensus per top pick…"
+                        "Quick Score universe scan, then 5-model consensus "
+                        "per top pick…"
                     ),
                 )
 

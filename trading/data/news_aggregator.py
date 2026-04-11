@@ -34,10 +34,23 @@ def _fetch_yfinance_news(symbol: str, max_items: int = 10) -> List[Dict]:
             except Exception:
                 published = datetime.utcnow().isoformat()
 
+            content = item.get("content") or {}
+            if not isinstance(content, dict):
+                content = {}
+            _url = (
+                item.get("url")
+                or item.get("link")
+                or item.get("href")
+                or content.get("url")
+                or content.get("link")
+                or content.get("href")
+                or content.get("clickThroughUrl")
+                or ""
+            )
             results.append(
                 {
                     "title": item.get("title", "") or "",
-                    "url": item.get("link", "") or "",
+                    "url": str(_url or "").strip(),
                     "source": item.get("publisher", "yfinance") or "yfinance",
                     "published": published,
                     "summary": item.get("summary", item.get("title", "")) or "",

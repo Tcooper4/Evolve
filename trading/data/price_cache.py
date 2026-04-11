@@ -61,9 +61,39 @@ def get_info(ticker: str) -> dict:
 
 @st.cache_data(ttl=900, show_spinner=False)
 def get_news(ticker: str) -> list:
-    """News headlines — 15 min TTL."""
+    """News headlines — 15 min TTL. Preserves url/link for UI deep links."""
     try:
-        return yf.Ticker(ticker).news or []
+        raw = yf.Ticker(ticker).news or []
+        out = []
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            content = item.get("content") or {}
+            if not isinstance(content, dict):
+                content = {}
+            url = (
+                item.get("url")
+                or item.get("link")
+                or item.get("href")
+                or content.get("url")
+                or content.get("link")
+                or content.get("href")
+                or content.get("clickThroughUrl")
+                or ""
+            )
+            title = (
+                item.get("title")
+                or item.get("headline")
+                or content.get("title")
+                or content.get("summary")
+                or ""
+            )
+            merged = dict(item)
+            merged["url"] = str(url or "").strip()
+            if title and not merged.get("title"):
+                merged["title"] = title
+            out.append(merged)
+        return out
     except Exception:
         return []
 

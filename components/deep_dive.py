@@ -326,12 +326,73 @@ def render_deep_dive(ticker: str) -> None:
                     logger.debug("Deep dive recommendation: %s", _rec_e)
         st.markdown("### Recommendation")
         if rec:
-            act = rec.get("action", "HOLD")
-            st.markdown(f"**{act}** · conviction **{rec.get('conviction', '—')}**")
-            st.caption(
-                f"Entry {rec.get('entry')} · Target {rec.get('target')} · "
-                f"Stop {rec.get('stop')} · Expected move **{rec.get('pct_move', '—')}%**"
+            act = str(rec.get("action", "HOLD"))
+            conv = str(rec.get("conviction", "MEDIUM"))
+            _act_color = (
+                "green"
+                if act == "BUY"
+                else "red"
+                if act in ("SELL", "SHORT")
+                else "orange"
             )
+            st.markdown(f":{_act_color}[## {act}]")
+            _sc = float((score or {}).get("overall_score") or 0)
+            _grade = str((score or {}).get("grade", "C"))
+            col_sc, col_cv, col_en = st.columns(3)
+            with col_sc:
+                st.metric(
+                    "AI Score",
+                    f"{_sc:.1f}/10",
+                    delta=f"Grade {_grade}",
+                    delta_color="off",
+                )
+            with col_cv:
+                st.metric("Conviction", conv)
+            with col_en:
+                _entry = rec.get("entry")
+                if _entry not in (None, "", 0, "0"):
+                    try:
+                        st.metric(
+                            "Entry",
+                            f"${float(_entry):.2f}",
+                        )
+                    except (TypeError, ValueError):
+                        st.metric("Entry", str(_entry))
+
+            _target = rec.get("target")
+            _stop = rec.get("stop")
+            _pct = rec.get("pct_move")
+            if _target or _stop or _pct not in (None, "", "—"):
+                col_t, col_s, col_p = st.columns(3)
+                with col_t:
+                    if _target not in (None, "", 0):
+                        try:
+                            st.metric(
+                                "Target",
+                                f"${float(_target):.2f}",
+                            )
+                        except (TypeError, ValueError):
+                            st.metric("Target", str(_target))
+                with col_s:
+                    if _stop not in (None, "", 0):
+                        try:
+                            st.metric(
+                                "Stop Loss",
+                                f"${float(_stop):.2f}",
+                            )
+                        except (TypeError, ValueError):
+                            st.metric("Stop Loss", str(_stop))
+                with col_p:
+                    if _pct not in (None, "", "—"):
+                        st.metric(
+                            "Expected Move",
+                            f"{_pct}%",
+                        )
+
+            _summ = (score or {}).get("summary", "")
+            if _summ:
+                st.caption(str(_summ))
+
             _tc, _pc = st.columns(2)
             with _tc:
                 if st.button(
@@ -404,9 +465,17 @@ def render_deep_dive(ticker: str) -> None:
                     except Exception as e:
                         st.caption(f"Paper trade unavailable: {e}")
         elif score and not score.get("error"):
-            st.caption(score.get("summary", ""))
+            _sc2 = float(score.get("overall_score") or 0)
+            _grade2 = str(score.get("grade", "C"))
+            st.metric(
+                "AI Score",
+                f"{_sc2:.1f}/10",
+                delta=f"Grade {_grade2}",
+                delta_color="off",
+            )
+            st.caption(score.get("summary", "") or "")
         else:
-            st.caption("Recommendation data unavailable.")
+            st.caption("Recommendation unavailable.")
 
         st.markdown("### What's driving this")
         signals = (score or {}).get("signals") or []

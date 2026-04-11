@@ -1,0 +1,51 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""News list / overlay for Analyze and Deep Dive."""
+3	import streamlit as st
+4	
+5	from components.analyze_news_headline import render_analyze_headline_news_panel
+6	
+7	
+8	def render_news(ticker: str, *, max_items: int = 12) -> None:
+9	    """Headlines for a ticker (price_cache) + optional sentiment strip."""
+10	    try:
+11	        from trading.data.price_cache import get_news
+12	
+13	        items = get_news(ticker) or []
+14	        if not items:
+15	            st.caption("No recent headlines.")
+16	            return
+17	        st.subheader("Headlines")
+18	        for item in items[:max_items]:
+19	            content = item.get("content") or {}
+20	            _title = (
+21	                item.get("title")
+22	                or item.get("headline")
+23	                or content.get("title")
+24	                or content.get("summary")
+25	                or ""
+26	            ).strip()
+27	            if not _title:
+28	                continue
+29	            _url = (
+30	                item.get("url")
+31	                or item.get("link")
+32	                or item.get("href")
+33	                or content.get("url")
+34	                or content.get("link")
+35	                or ""
+36	            )
+37	            _show_title = _title[:160]
+38	            src = item.get("source") or item.get("publisher") or ""
+39	            if _url and _show_title:
+40	                st.markdown(f"**[{_show_title}]({_url})**")
+41	            elif _show_title:
+42	                st.markdown(f"**{_show_title}**")
+43	            if src:
+44	                st.caption(src)
+45	    except Exception as e:
+46	        st.caption(f"unavailable: {e}")
+47	
+48	
+49	def render_news_overlay_strip(ticker: str) -> None:
+50	    """Legacy HOT/POS/NEG strip used above tabs on Analyze."""
+51	    render_analyze_headline_news_panel(ticker)

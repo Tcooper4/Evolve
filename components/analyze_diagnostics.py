@@ -22,17 +22,6 @@ def _render_risk_summary(ticker: str, hist) -> None:
         _rets = _close.pct_change().dropna()
 
         _vol = float(_rets.std() * np.sqrt(252))
-        _vol_label = (
-            "very high"
-            if _vol > 0.6
-            else "high"
-            if _vol > 0.4
-            else "elevated"
-            if _vol > 0.25
-            else "normal"
-            if _vol > 0.15
-            else "low"
-        )
 
         _sma50 = (
             float(_close.iloc[-50:].mean())
@@ -60,24 +49,50 @@ def _render_risk_summary(ticker: str, hist) -> None:
             ((_close - _roll_max) / _roll_max).min() * 100
         )
 
-        parts = []
-        parts.append(
-            f"**{ticker}** is in a **{_trend}** with **{_vol_label} volatility** "
-            f"({(_vol * 100):.0f}% annualised)."
+        _vol_plain = (
+            "moves around a lot"
+            if _vol > 0.4
+            else "is fairly volatile"
+            if _vol > 0.25
+            else "moves at a normal pace"
+            if _vol > 0.15
+            else "is relatively stable"
+        )
+        _trend_plain = (
+            "been going up recently"
+            if _trend == "uptrend"
+            else "been going down recently"
+            if _trend == "downtrend"
+            else "been moving sideways"
         )
         if _trending:
-            parts.append(
-                "The price series is **trending** (non-stationary) — momentum "
-                "strategies may work better than mean-reversion."
+            _stat_plain = (
+                "It has been trending in one direction, which means "
+                "momentum strategies (following the trend) tend to work "
+                "better here."
             )
         else:
-            parts.append(
-                "The price series shows **mean-reverting** tendencies — range "
-                "trading may be effective."
+            _stat_plain = (
+                "It tends to bounce back after big moves up or down, "
+                "which means buying dips or selling rallies can work well."
             )
-        parts.append(
-            f"Maximum drawdown over the period: **{_drawdown:.1f}%**."
+        _dd_abs = abs(_drawdown)
+        _dd_plain = (
+            f"The worst it has dropped from a peak during this period was "
+            f"**{_dd_abs:.0f}%** — "
+            + (
+                "that's a significant drop to be aware of."
+                if _dd_abs > 20
+                else "a moderate pullback."
+                if _dd_abs > 10
+                else "a relatively small pullback."
+            )
         )
+        parts = [
+            f"**{ticker}** has {_trend_plain} and {_vol_plain} "
+            f"({_vol * 100:.0f}% yearly swings). "
+            f"{_stat_plain} {_dd_plain}"
+        ]
 
         st.info(" ".join(parts), icon="📊")
     except Exception as e:
@@ -98,62 +113,5 @@ def render_diagnostics(ticker: str, hist) -> None:
             return
         diag = EconometricDiagnostics(ticker, hist)
         diag.render_streamlit()
-    except Exception as e:
-        st.caption(f"unavailable: {e}")
-
-    st.markdown("---")
-    st.caption("Quick checks (ADF, Ljung-Box, ARCH)")
-    try:
-        import numpy as np
-        from trading.data.price_cache import get_history
-
-        _ss_data = st.session_state.get(
-            "analyze_forecast_data")
-        if (_ss_data is not None
-                and hasattr(_ss_data, "empty")
-                and not _ss_data.empty):
-            _dh = _ss_data
-        elif (hist is not None
-                and hasattr(hist, "empty")
-                and not hist.empty):
-            _dh = hist
-        else:
-            _dh = get_history(
-                ticker, period="1y")
-        if _dh is None or _dh.empty:
-            st.caption("Load price data to see quick diagnostics.")
-            return
-        _close = _dh["Close"].dropna()
-        _returns = _close.pct_change().dropna()
-        st.markdown("**Stationarity (ADF)**")
-        try:
-            from statsmodels.tsa.stattools import adfuller
-
-            _adf = adfuller(_close.values)
-            _adf_p = _adf[1]
-            _adf_stat = _adf[0]
-            _col = "#26a69a" if _adf_p < 0.05 else "#ef5350"
-            st.markdown(
-                f'<span style="color:{_col}">ADF {_adf_stat:.4f} | p={_adf_p:.4f} | '
-                f'{"Stationary" if _adf_p < 0.05 else "Non-stationary"}</span>',
-                unsafe_allow_html=True,
-            )
-        except ImportError:
-            st.caption("statsmodels not installed for ADF")
-
-        st.markdown("**Ljung-Box**")
-        try:
-            from statsmodels.stats.diagnostic import acorr_ljungbox
-
-            _lb = acorr_ljungbox(_returns, lags=[10], return_df=True)
-            _lb_p = float(_lb["lb_pvalue"].iloc[0])
-            _col = "#26a69a" if _lb_p > 0.05 else "#ef5350"
-            st.markdown(
-                f'<span style="color:{_col}">p={_lb_p:.4f} | '
-                f'{"White noise" if _lb_p > 0.05 else "Autocorrelation"}</span>',
-                unsafe_allow_html=True,
-            )
-        except ImportError:
-            st.caption("statsmodels not installed for Ljung-Box")
     except Exception as e:
         st.caption(f"unavailable: {e}")

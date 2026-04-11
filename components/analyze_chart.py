@@ -12,12 +12,27 @@ from trading.data.price_cache import get_history, get_info, get_quote
 logger = logging.getLogger(__name__)
 
 
-def _intraday_rangebreaks_and_dtick(hist) -> tuple:
-    """US session gaps + tick step from actual bar spacing (yfinance interval)."""
-    rb = [
-        dict(bounds=["sat", "mon"]),
-        dict(bounds=[16, 9.5], pattern="hour"),
-    ]
+def _intraday_rangebreaks_and_dtick(
+    hist,
+    ticker: str = "",
+) -> tuple:
+    """
+    Returns (rangebreaks, dtick).
+    For 24hr assets (crypto/forex): weekends only.
+    For regular equities: weekends + overnight session gaps.
+    """
+    _24hr_suffixes = (
+        "-USD", "-EUR", "=X", "=F",
+    )
+    t_up = str(ticker).upper()
+    _is_24hr = any(
+        t_up.endswith(s) for s in _24hr_suffixes
+    ) or str(ticker).startswith("^")
+
+    rb = [dict(bounds=["sat", "mon"])]
+    if not _is_24hr:
+        rb.append(dict(bounds=[16, 9.5], pattern="hour"))
+
     dtick = None
     if hist is not None and len(hist) >= 2:
         try:
@@ -248,7 +263,10 @@ def render_price_chart(
                 except Exception:
                     pass
 
-                _rb, _dtick = _intraday_rangebreaks_and_dtick(hist)
+                _rb, _dtick = _intraday_rangebreaks_and_dtick(
+                    hist,
+                    ticker=ticker,
+                )
                 _x1 = dict(
                     gridcolor="#1a2535",
                     showgrid=True,
@@ -578,7 +596,10 @@ def render_price_chart(
                     except Exception:
                         pass
 
-                    _rb_l, _dtick_l = _intraday_rangebreaks_and_dtick(_hist)
+                    _rb_l, _dtick_l = _intraday_rangebreaks_and_dtick(
+                        _hist,
+                        ticker=ticker,
+                    )
                     _xa_l = dict(
                         gridcolor="#1a2535",
                         showgrid=True,
