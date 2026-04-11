@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Single-ticker deep analysis surface (scroll + 4 tabs)."""
-import asyncio
+"""Single-ticker deep analysis surface (scroll + 5 tabs)."""
 import logging
 from datetime import datetime
 
@@ -219,23 +218,50 @@ def render_deep_dive(ticker: str) -> None:
             st.session_state["analyze_ticker"] = sym
 
         if hist is not None and not hist.empty:
+            _tf_options = {
+                "1W": ("5d", "15m", "15m"),
+                "1M": ("1mo", "1h", "1h"),
+                "3M": ("3mo", "1d", "1d"),
+                "6M": ("6mo", "1d", "1d"),
+                "1Y": ("1y", "1d", "1d"),
+                "2Y": ("2y", "1wk", "1W"),
+            }
+            _tf_key = f"dd_tf_{sym}"
+            if _tf_key not in st.session_state:
+                st.session_state[_tf_key] = "3M"
+
+            _tf_cols = st.columns(len(_tf_options))
+            for _i, (_lbl, _) in enumerate(_tf_options.items()):
+                with _tf_cols[_i]:
+                    if st.button(
+                        _lbl,
+                        key=f"dd_tf_{sym}_{_lbl}",
+                        type=(
+                            "primary"
+                            if st.session_state[_tf_key] == _lbl
+                            else "secondary"
+                        ),
+                    ):
+                        st.session_state[_tf_key] = _lbl
+                        st.rerun()
+
+            _sel_tf = st.session_state[_tf_key]
+            _period, _interval, _tf_label = _tf_options[_sel_tf]
+
+            _chart_hist = get_history(sym, period=_period, interval=_interval)
+            if _chart_hist is None or _chart_hist.empty:
+                _chart_hist = hist
+
             render_price_chart(
                 sym,
-                hist,
-                period="3mo",
-                period_label="3M",
-                _interval="1d",
-                _tf_label="1d",
+                _chart_hist,
+                period=_period,
+                period_label=_sel_tf,
+                _interval=_interval,
+                _tf_label=_tf_label,
                 trader_mode="Short-term",
                 st_ver=tuple(int(x) for x in st.__version__.split(".")[:2]),
             )
-            try:
-                from trading.analysis.chart_pattern_detector import ChartPatternDetector
-
-                with st.expander("Chart patterns", expanded=False):
-                    ChartPatternDetector(sym, hist).render_streamlit()
-            except Exception as e:
-                st.caption(f"unavailable: {e}")
 
         score = None
         try:
@@ -426,41 +452,52 @@ def render_deep_dive(ticker: str) -> None:
             st.caption(f"SEC data unavailable: {e}")
 
         try:
-            from trading.commentary.commentary_engine import (
-                CommentaryRequest,
-                CommentaryType,
-                create_commentary_engine,
-            )
+            from config.llm_config import llm_available
+            from agents.llm.active_llm_calls import call_active_llm_simple
 
-            _eng = create_commentary_engine()
-            if _eng is None:
-                raise ValueError("Commentary engine unavailable")
-            _req = CommentaryRequest(
-                commentary_type=CommentaryType.MARKET_REGIME,
-                symbol=sym,
-                timestamp=datetime.now(),
-                market_data=hist,
-            )
-            _loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(_loop)
-            try:
-                _resp = _loop.run_until_complete(
-                    _eng.generate_commentary(_req)
+            if (
+                llm_available()
+                and hist is not None
+                and not hist.empty
+            ):
+                _cm = {c.lower(): c for c in hist.columns}
+                _cc = _cm.get("close", hist.columns[0])
+                _last = float(hist[_cc].iloc[-1])
+                _chg_20d = (
+                    float(
+                        (
+                            hist[_cc].iloc[-1]
+                            / hist[_cc].iloc[-20]
+                            - 1
+                        )
+                        * 100
+                    )
+                    if len(hist) >= 20
+                    else 0.0
                 )
-            finally:
-                _loop.close()
-            _txt = (
-                getattr(_resp, "detailed_analysis", None)
-                or getattr(_resp, "summary", None)
-                or ""
-            )
-            if _txt:
-                st.markdown("**AI Commentary**")
-                st.markdown(_txt[:4000])
-        except Exception as e:
-            logger.debug("Commentary: %s", e)
 
-        tf, tn, tr, tp = st.tabs(["Forecast", "News", "Risk", "Patterns"])
+                _prompt = (
+                    f"You are a financial analyst. Give a 2-3 "
+                    f"sentence commentary on {sym} for a trader. "
+                    f"Current price: ${_last:.2f}. "
+                    f"20-day change: {_chg_20d:+.1f}%. "
+                    f"AI Score: "
+                    f"{(score or {}).get('overall_score', 'N/A')}. "
+                    f"Be concise and actionable."
+                )
+                _commentary = call_active_llm_simple(
+                    _prompt,
+                    max_tokens=150,
+                )
+                if _commentary:
+                    st.markdown("**AI Commentary**")
+                    st.markdown(_commentary.strip())
+        except Exception as _ce:
+            logger.debug("Commentary: %s", _ce)
+
+        tf, tn, tr, to, tp = st.tabs(
+            ["Forecast", "News", "Risk", "Options", "Patterns"]
+        )
         with tf:
             import time as _time_fc
 
@@ -540,8 +577,12 @@ def render_deep_dive(ticker: str) -> None:
             render_news(sym)
         with tr:
             render_diagnostics(sym, hist)
-            st.markdown("---")
-            render_options(sym)
+        with to:
+            st.subheader(f"Options Flow — {sym}")
+            try:
+                render_options(sym)
+            except Exception as _oe:
+                st.caption(f"Options unavailable: {_oe}")
         with tp:
             try:
                 from trading.analysis.chart_pattern_detector import ChartPatternDetector

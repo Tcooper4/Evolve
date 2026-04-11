@@ -1,0 +1,938 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""
+3	Evolve Home â€” single scroll: pulse, briefing, watchlist, news, chat, deep dive.
+4	"""
+5	import logging
+6	import sys
+7	import time
+8	from pathlib import Path
+9	
+10	project_root = Path(__file__).parent.parent.absolute()
+11	if str(project_root) not in sys.path:
+12	    sys.path.insert(0, str(project_root))
+13	
+14	import streamlit as st
+15	
+16	from components.deep_dive import render_deep_dive
+17	from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
+18	from config.llm_config import get_llm_config
+19	from config.user_store import load_user_preferences, save_user_preferences
+20	from trading.data.price_cache import get_history, get_info, get_quote
+21	
+22	logger = logging.getLogger(__name__)
+23	
+24	try:
+25	    st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
+26	except Exception as e:
+27	    logger.warning("Dashboard: keyboard shortcut JS failed: %s", e)
+28	inject_theme()
+29	render_top_bar()
+30	
+31	
+32	@st.cache_data(ttl=900)
+33	def get_market_pulse() -> dict:
+34	    tickers = {
+35	        "SPY": "S&P 500",
+36	        "^VIX": "VIX",
+37	    }
+38	    out = {}
+39	    for tkr, label in tickers.items():
+40	        try:
+41	            q = get_quote(tkr)
+42	            price = q.get("price")
+43	            if price is None:
+44	                h = get_history(tkr, period="1d")
+45	                if not h.empty:
+46	                    price = float(h["Close"].iloc[-1])
+47	            prev = q.get("prev_close")
+48	            if prev in (None, 0) and tkr != "^VIX":
+49	                h2 = get_history(tkr, period="5d")
+50	                if len(h2) >= 2:
+51	                    prev = float(h2["Close"].iloc[-2])
+52	            if price is None or prev in (None, 0):
+53	                continue
+54	            chg = (float(price) - float(prev)) / float(prev) * 100
+55	            out[tkr] = {"label": label, "price": float(price), "chg": chg}
+56	        except Exception:
+57	            continue
+58	    return out
+59	
+60	
+61	def _set_deep_dive(symbol: str) -> None:
+62	    st.session_state["deep_dive_ticker"] = symbol.strip().upper()
+63	    st.session_state["analyze_ticker"] = st.session_state["deep_dive_ticker"]
+64	    st.rerun()
+65	
+66	
+67	def _score_color(val: float) -> str:
+68	    if val >= 7:
+69	        return "green"
+70	    if val >= 6:
+71	        return "orange"
+72	    return "red"
+73	
+74	
+75	def _home_platform_context() -> str:
+76	    """Extra context for router + synthesis: focus ticker, briefing regime, top picks."""
+77	    parts = []
+78	    dd = st.session_state.get("deep_dive_ticker") or st.session_state.get(
+79	        "analyze_ticker"
+80	    )
+81	    if dd:
+82	        parts.append(f"User focus ticker (deep dive / Home): {str(dd).strip().upper()}")
+83	    br = st.session_state.get("home_briefing_report") or {}
+84	    reg = br.get("market_regime") or {}
+85	    if reg:
+86	        parts.append(
+87	            f"Latest morning briefing regime: {reg.get('regime')} â€” "
+88	            f"{reg.get('description', '')} "
+89	            f"VIX={reg.get('vix_level')} SPY_trend={reg.get('spy_trend')}"
+90	        )
+91	    opps = br.get("top_opportunities") or []
+92	    if opps:
+93	        lines = [f"Top opportunities from cached briefing ({len(opps)}):"]
+94	        for o in opps[:5]:
+95	            lines.append(
+96	                f"  - {o.get('symbol')}: AI score {o.get('ai_score')} "
+97	                f"price {o.get('current_price')}"
+98	            )
+99	        parts.append("\n".join(lines))
+100	    return "\n\n".join(parts)
+101	
+102	
+103	def _home_chat_reply(prompt: str):
+104	    try:
+105	        from agents.llm.tool_executor import execute_with_tools
+106	        from trading.memory import get_memory_store
+107	        from trading.services import chat_nl_service
+108	
+109	        store = get_memory_store()
+110	        try:
+111	            store.ingest_preference_text(prompt, source="home_chat")
+112	        except Exception as e:
+113	            logger.warning("Home chat: preference ingest failed: %s", e)
+114	        dd = st.session_state.get("deep_dive_ticker") or st.session_state.get(
+115	            "home_chat_context_ticker"
+116	        )
+117	        if dd:
+118	            prompt = f"[Context: focus ticker {dd}]\n{prompt}"
+119	        if "chat_router" not in st.session_state:
+120	            try:
+121	                from trading.agents.enhanced_prompt_router import (
+122	                    EnhancedPromptRouterAgent,
+123	                )
+124	
+125	                st.session_state.chat_router = EnhancedPromptRouterAgent()
+126	            except Exception as e:
+127	                logger.warning("Home chat: router failed: %s", e)
+128	                st.session_state.chat_router = None
+129	        router = st.session_state.get("chat_router")
+130	        route_result = (
+131	            chat_nl_service.parse_intent(router, prompt)
+132	            if router
+133	            else {"intent": "unknown", "args": {}}
+134	        )
+135	        intent = (
+136	            route_result.get("intent", "unknown")
+137	            if isinstance(route_result, dict)
+138	            else getattr(route_result, "intent", "unknown")
+139	        )
+140	        memory_context = chat_nl_service.get_memory_context(store)
+141	        agent_response = chat_nl_service.run_agent_action(prompt)
+142	        context_block = chat_nl_service.build_context_block(
+143	            memory_context,
+144	            agent_response,
+145	            intent=intent,
+146	            store=store,
+147	        )
+148	        conv = [
+149	            {"role": m["role"], "content": m.get("content", "")}
+150	            for m in st.session_state.home_chat_messages[:-1]
+151	        ]
+152	        focus = ""
+153	        if dd:
+154	            focus = str(dd).strip().upper()
+155	            if "(" in focus:
+156	                focus = focus.split("(")[0].strip().upper()
+157	        return execute_with_tools(
+158	            user_message=prompt,
+159	            context_block=context_block,
+160	            conversation_messages=conv,
+161	            system_prompt=chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
+162	            platform_context_suffix=_home_platform_context(),
+163	            focus_symbol=focus or None,
+164	            available_tools=[
+165	                "scan_universe",
+166	                "get_ai_score",
+167	                "get_forecast",
+168	                "get_news",
+169	                "get_risk_metrics",
+170	                "get_pattern_analysis",
+171	                "run_backtest",
+172	                "get_options_sentiment",
+173	            ],
+174	            max_tokens=2048,
+175	        )
+176	    except Exception as e:
+177	        logger.exception("Home chat turn failed: %s", e)
+178	        from agents.llm.tool_executor import ToolChatResult
+179	
+180	        return ToolChatResult(text=f"Something went wrong: {e}", tool_captions=[])
+181	
+182	
+183	session_id = st.session_state.get("evolve_session_id") or st.session_state.get(
+184	    "session_id", ""
+185	)
+186	prefs = load_user_preferences(session_id) if session_id else {}
+187	_prefs_done = bool(
+188	    prefs.get("onboarding_done") or prefs.get("onboarding_completed")
+189	)
+190	if _prefs_done:
+191	    st.session_state["onboarding_done"] = True
+192	elif "onboarding_done" not in st.session_state:
+193	    st.session_state["onboarding_done"] = False
+194	
+195	if not st.session_state["onboarding_done"]:
+196	    st.title("Welcome to Evolve")
+197	    st.info(
+198	        "Every morning Evolve scans thousands of stocks and shows you the best "
+199	        "setups â€” no configuration needed."
+200	    )
+201	    st.info(
+202	        "Tap any stock to see a full analysis with a plain-English buy/sell "
+203	        "recommendation."
+204	    )
+205	    st.info(
+206	        "Ask the chat anything â€” it knows the market, your watchlist, and can "
+207	        "explain anything."
+208	    )
+209	    if st.button("Get started", type="primary"):
+210	        st.session_state["onboarding_done"] = True
+211	        if session_id:
+212	            save_user_preferences(
+213	                session_id, {**prefs, "onboarding_done": True}
+214	            )
+215	        st.rerun()
+216	    st.stop()
+217	
+218	st.title("Home")
+219	st.caption(
+220	    "Your trading copilot â€” market pulse and morning briefing first; "
+221	    "watchlist, news, and chat; open a ticker for deep dive at the bottom."
+222	)
+223	
+224	try:
+225	    _cfg = get_llm_config()
+226	    _has_llm = _cfg.has_openai() or _cfg.has_anthropic()
+227	    if not _has_llm:
+228	        _has_llm = bool(
+229	            st.session_state.get("user_key_OPENAI_API_KEY")
+230	            or st.session_state.get("user_key_ANTHROPIC_API_KEY")
+231	        )
+232	    if not _has_llm:
+233	        st.info(
+234	            "Add an OpenAI or Anthropic key "
+235	            "in Settings to enable the chat "
+236	            "agent, AI commentary, and morning "
+237	            "briefing narrative. "
+238	            "All market data features are active.",
+239	            icon="â„¹ï¸",
+240	        )
+241	except Exception as e:
+242	    logger.warning("Home LLM availability strip skipped: %s", e)
+243	
+244	# --- Market pulse ---
+245	st.subheader("Market pulse")
+246	pulse = get_market_pulse()
+247	c_sp, c_vx = st.columns(2)
+248	with c_sp:
+249	    spy = pulse.get("SPY")
+250	    if spy:
+251	        st.metric(
+252	            "SPY",
+253	            f"${spy['price']:.2f}",
+254	            f"{spy['chg']:+.2f}%",
+255	            help=spy["label"],
+256	        )
+257	    else:
+258	        st.caption("Markets loading...")
+259	with c_vx:
+260	    vx = pulse.get("^VIX")
+261	    if vx:
+262	        st.metric("VIX", f"{vx['price']:.2f}", f"{vx['chg']:+.2f}%")
+263	    else:
+264	        st.caption("Markets loading...")
+265	
+266	# --- Breaking news (lightweight â€” above briefing) ---
+267	st.markdown("---")
+268	st.subheader("Breaking news")
+269	_news_cache_key = "home_news_summaries"
+270	_news_cache_ts = "home_news_summaries_ts"
+271	try:
+272	    from trading.data.news_aggregator import (
+273	        get_financial_headlines,
+274	        get_walter_bloomberg_headlines,
+275	    )
+276	
+277	    items = get_walter_bloomberg_headlines(5) or get_financial_headlines(5) or []
+278	    if (
+279	        _news_cache_key not in st.session_state
+280	        or time.time() - st.session_state.get(_news_cache_ts, 0) > 3600
+281	    ):
+282	        summaries = []
+283	        try:
+284	            from config.llm_config import llm_available, require_llm
+285	
+286	            from agents.llm.active_llm_calls import call_active_llm_simple
+287	
+288	            if not llm_available():
+289	                require_llm("AI-enhanced headlines")
+290	                summaries = [
+291	                    {
+292	                        "title": (it.get("title") or "")[:200],
+293	                        "why": "",
+294	                        "url": it.get("url", "") or it.get("link", ""),
+295	                    }
+296	                    for it in items[:5]
+297	                    if (it.get("title") or "").strip()
+298	                ]
+299	            else:
+300	                for it in items[:5]:
+301	                    title = (it.get("title") or "")[:200]
+302	                    if not title:
+303	                        continue
+304	                    why = ""
+305	                    try:
+306	                        why = call_active_llm_simple(
+307	                            f"In one short sentence, why might this matter to traders: {title}",
+308	                            max_tokens=80,
+309	                        ).strip()
+310	                    except Exception:
+311	                        why = ""
+312	                    summaries.append(
+313	                        {
+314	                            "title": title,
+315	                            "why": why,
+316	                            "url": it.get("url", "") or it.get("link", ""),
+317	                        }
+318	                    )
+319	        except Exception as _ne:
+320	            logger.warning("Home news: LLM summaries failed: %s", _ne)
+321	            summaries = [
+322	                {
+323	                    "title": (it.get("title") or "")[:200],
+324	                    "why": "",
+325	                    "url": it.get("url", "") or it.get("link", ""),
+326	                }
+327	                for it in items[:5]
+328	                if (it.get("title") or "").strip()
+329	            ]
+330	        try:
+331	            st.session_state[_news_cache_key] = summaries
+332	            st.session_state[_news_cache_ts] = time.time()
+333	        except Exception as _se:
+334	            logger.warning("Home news: session cache failed: %s", _se)
+335	    news_with_summaries = st.session_state.get(_news_cache_key) or []
+336	    for it in news_with_summaries:
+337	        title = (it.get("title") or "")[:200]
+338	        if not title:
+339	            continue
+340	        why = (it.get("why") or "").strip()
+341	        url = it.get("url", "") or ""
+342	        if url:
+343	            st.markdown(
+344	                f"**[{title}]({url})**"
+345	            )
+346	        else:
+347	            st.markdown(f"**{title}**")
+348	        if why:
+349	            st.caption(f"Why it matters: {why}")
+350	except Exception as e:
+351	    st.caption(f"unavailable: {e}")
+352	
+353	
+354	def _build_fallback_digest(scores: list) -> str:
+355	    """Plain text digest when LLM is unavailable."""
+356	    if not scores:
+357	        return "No watchlist data."
+358	    _top = scores[0]
+359	    _bot = scores[-1]
+360	    _bullish = [s for s in scores if s["score"] >= 6.5]
+361	    _bearish = [s for s in scores if s["score"] <= 4.0]
+362	    _lines = []
+363	    if _bullish:
+364	        _syms = ", ".join(s["symbol"] for s in _bullish[:3])
+365	        _lines.append(f"**Strongest setups:** {_syms}")
+366	    if _bearish:
+367	        _syms = ", ".join(s["symbol"] for s in _bearish[:3])
+368	        _lines.append(f"**Weak signals:** {_syms}")
+369	    _lines.append(
+370	        f"**Top pick:** {_top['symbol']} "
+371	        f"(score {_top['score']:.1f}, grade {_top['grade']})"
+372	    )
+373	    return " Â· ".join(_lines) if _lines else "No clear setups."
+374	
+375	
+376	# --- Watchlist (fragment â€” loads independently of briefing) ---
+377	@st.fragment
+378	def _render_watchlist():
+379	    st.subheader("Your watchlist")
+380	    MAX_WATCHLIST_SCORES = 5
+381	    if "watchlist_load_all_scores" not in st.session_state:
+382	        st.session_state["watchlist_load_all_scores"] = False
+383	    try:
+384	        from trading.analysis.ai_score import compute_ai_score
+385	        from trading.data.watchlist import WatchlistManager
+386	
+387	        wm = WatchlistManager()
+388	        rows = wm.get_all() or []
+389	        syms = [str(r.get("symbol", "")).upper() for r in rows if r.get("symbol")]
+390	        if not syms:
+391	            st.caption(
+392	                "Your watchlist is empty. Search any ticker using the search bar above, "
+393	                "open it, then click 'Add to watchlist' in the deep dive."
+394	            )
+395	        else:
+396	            _load_all = bool(st.session_state.get("watchlist_load_all_scores"))
+397	            _max_score = len(syms[:15]) if _load_all else min(
+398	                MAX_WATCHLIST_SCORES, len(syms[:15])
+399	            )
+400	            if len(syms) > MAX_WATCHLIST_SCORES:
+401	                _b1, _b2 = st.columns([3, 1])
+402	                with _b1:
+403	                    if not _load_all:
+404	                        st.caption(
+405	                            f"Showing AI scores for the first {MAX_WATCHLIST_SCORES} "
+406	                            "tickers. Open a ticker for full analysis."
+407	                        )
+408	                with _b2:
+409	                    if st.button("Load all scores", key="wl_load_all_scores"):
+410	                        try:
+411	                            st.session_state["watchlist_load_all_scores"] = True
+412	                            st.rerun()
+413	                        except Exception as _re:
+414	                            logger.warning("watchlist load all: %s", _re)
+415	            scored_count = 0
+416	            for sym in syms[:15]:
+417	                if scored_count >= _max_score:
+418	                    break
+419	                try:
+420	                    q = get_quote(sym)
+421	                    px = q.get("price")
+422	                    prev = q.get("prev_close")
+423	                    if px is None:
+424	                        h = get_history(sym, period="5d")
+425	                        if not h.empty:
+426	                            px = float(h["Close"].iloc[-1])
+427	                        if len(h) >= 2 and prev in (None, 0):
+428	                            prev = float(h["Close"].iloc[-2])
+429	                    dlt = None
+430	                    if px is not None and prev not in (None, 0):
+431	                        dlt = (float(px) - float(prev)) / float(prev) * 100
+432	                    ai = compute_ai_score(sym)
+433	                    try:
+434	                        st.session_state[f"ai_cache_{sym}"] = ai
+435	                    except Exception:
+436	                        pass
+437	                    asc = float(ai.get("overall_score", 0) or 0)
+438	                    c1, c2 = st.columns([3, 1])
+439	                    with c1:
+440	                        d_s = f"{dlt:+.2f}%" if dlt is not None else "â€”"
+441	                        color = (
+442	                            "green"
+443	                            if dlt and dlt > 0
+444	                            else "red"
+445	                            if dlt and dlt < 0
+446	                            else "gray"
+447	                        )
+448	                        px_s = f"${float(px):.2f}" if px is not None else "â€”"
+449	                        st.markdown(
+450	                            f"**{sym}** {px_s} :{color}[{d_s}] Â· "
+451	                            f":{_score_color(asc)}[AI {asc:.1f}]"
+452	                        )
+453	                    with c2:
+454	                        if st.button("View", key=f"wl_{sym}"):
+455	                            _set_deep_dive(sym)
+456	                    scored_count += 1
+457	                except Exception as ex:
+458	                    st.caption(f"unavailable: {ex}")
+459	
+460	            # Watchlist AI Digest
+461	            try:
+462	                import time as _wt
+463	
+464	                _dig_key = "wl_digest"
+465	                _dig_ts_key = "wl_digest_ts"
+466	                _dig_sym_key = "wl_digest_syms"
+467	                _now_dig = _wt.time()
+468	                _cached_dig = st.session_state.get(_dig_key)
+469	                _cached_ts = st.session_state.get(_dig_ts_key, 0)
+470	                _cached_syms = st.session_state.get(_dig_sym_key, [])
+471	
+472	                _wl_scores = []
+473	                for _s in syms[:15]:
+474	                    _ai = st.session_state.get(f"ai_cache_{_s}")
+475	                    if _ai and not _ai.get("error"):
+476	                        _top_sig = [
+477	                            sig.get("name", "")
+478	                            + ": "
+479	                            + str(sig.get("value", ""))
+480	                            for sig in _ai.get("signals", [])
+481	                            if sig.get("impact") in ("positive", "negative")
+482	                        ][:3]
+483	                        _wl_scores.append(
+484	                            {
+485	                                "symbol": _s,
+486	                                "score": _ai.get(
+487	                                    "overall_score",
+488	                                    5.0,
+489	                                ),
+490	                                "grade": _ai.get("grade", "C"),
+491	                                "top_signals": _top_sig,
+492	                            }
+493	                        )
+494	
+495	                _stale = (
+496	                    _now_dig - _cached_ts > 3600
+497	                    or set(_cached_syms) != set(syms)
+498	                )
+499	
+500	                st.markdown("---")
+501	                st.markdown("#### ðŸ§  Watchlist Digest")
+502	
+503	                _col_d1, _col_d2 = st.columns([6, 1])
+504	                with _col_d2:
+505	                    _refresh = st.button(
+506	                        "â†»",
+507	                        key="wl_digest_refresh",
+508	                        help="Refresh digest",
+509	                    )
+510	
+511	                if _refresh:
+512	                    st.session_state.pop(_dig_key, None)
+513	                    _stale = True
+514	
+515	                if not _stale and _cached_dig:
+516	                    with _col_d1:
+517	                        st.markdown(_cached_dig)
+518	                elif _wl_scores:
+519	                    with _col_d1:
+520	                        with st.spinner("Generating digest..."):
+521	                            try:
+522	                                from config.llm_config import (
+523	                                    llm_available,
+524	                                    require_llm,
+525	                                )
+526	
+527	                                from agents.llm.active_llm_calls import (
+528	                                    call_active_llm_simple,
+529	                                )
+530	
+531	                                _sorted = sorted(
+532	                                    _wl_scores,
+533	                                    key=lambda x: x["score"],
+534	                                    reverse=True,
+535	                                )
+536	                                if not llm_available():
+537	                                    require_llm("Watchlist digest")
+538	                                    _digest = _build_fallback_digest(
+539	                                        _sorted,
+540	                                    )
+541	                                else:
+542	                                    _top3 = _sorted[:3]
+543	                                    _prompt = (
+544	                                        "You are a quant analyst. Write a "
+545	                                        "3-4 sentence plain-English digest "
+546	                                        "of this watchlist. Mention the "
+547	                                        "strongest and weakest setups, any "
+548	                                        "notable signals, and overall tone. "
+549	                                        "Be direct and specific. No "
+550	                                        "disclaimers.\n\n"
+551	                                        "Watchlist scores:\n"
+552	                                        f"{_sorted}\n\nTop signals:\n{_top3}"
+553	                                    )
+554	                                    _digest = call_active_llm_simple(
+555	                                        _prompt,
+556	                                        max_tokens=200,
+557	                                    )
+558	                                    if not _digest:
+559	                                        _digest = _build_fallback_digest(
+560	                                            _sorted,
+561	                                        )
+562	                            except Exception:
+563	                                _digest = _build_fallback_digest(
+564	                                    sorted(
+565	                                        _wl_scores,
+566	                                        key=lambda x: x["score"],
+567	                                        reverse=True,
+568	                                    ),
+569	                                )
+570	
+571	                            st.session_state[_dig_key] = _digest
+572	                            st.session_state[_dig_ts_key] = _now_dig
+573	                            st.session_state[_dig_sym_key] = list(syms)
+574	                            st.markdown(_digest)
+575	                else:
+576	                    with _col_d1:
+577	                        st.caption(
+578	                            "Add tickers to your watchlist to see "
+579	                            "your daily digest."
+580	                        )
+581	            except Exception as _de:
+582	                st.caption(f"Digest unavailable: {_de}")
+583	    except Exception as e:
+584	        st.caption(f"unavailable: {e}")
+585	
+586	
+587	_render_watchlist()
+588	
+589	# --- Morning briefing (primary value â€” cached 30m) ---
+590	st.markdown("---")
+591	st.subheader("Morning briefing")
+592	st.caption(
+593	    "Briefing forecasts use a fast "
+594	    "consensus model optimised for "
+595	    "speed. For full precision, open "
+596	    "any ticker in the Analyze page. "
+597	    "Generate on demand below (cached 30 minutes)."
+598	)
+599	
+600	
+601	@st.fragment
+602	def _render_briefing():
+603	    _bkey = "home_briefing_report"
+604	    _btkey = "home_briefing_ts"
+605	    _bpkey = "home_briefing_prefs"
+606	
+607	    def _load_briefing_prefs_home() -> dict:
+608	        try:
+609	            from config.user_store import load_user_preferences
+610	            from utils.session_utils import get_stable_user_id
+611	
+612	            _uid = st.session_state.get(
+613	                "evolve_session_id"
+614	            ) or get_stable_user_id()
+615	            return load_user_preferences(_uid) or {}
+616	        except Exception:
+617	            return {}
+618	
+619	    def _briefing_pref_fingerprint(_prefs: dict) -> str:
+620	        """Invalidate home cache when Settings-saved prefs affecting the scan change."""
+621	        sectors = _prefs.get("preferred_sectors") or []
+622	        if isinstance(sectors, list):
+623	            sectors = tuple(sorted(str(s) for s in sectors))
+624	        else:
+625	            sectors = ()
+626	        return "|".join(
+627	            [
+628	                str(_prefs.get("briefing_universe", "")),
+629	                str(float(_prefs.get("min_ai_score", 5.5))),
+630	                str(bool(_prefs.get("watchlist_only", False))),
+631	                str(bool(_prefs.get("include_forecasts", False))),
+632	                str(sectors),
+633	                str(_prefs.get("opportunity_direction", "")),
+634	                str(_prefs.get("scoring_style", "")),
+635	            ]
+636	        )
+637	
+638	    _now = time.time()
+639	    _prefs_now = _load_briefing_prefs_home()
+640	    _pref_hash = _briefing_pref_fingerprint(_prefs_now)
+641	    _cached = st.session_state.get(_bkey)
+642	    _cached_ts = st.session_state.get(_btkey, 0)
+643	    _cached_prefs = st.session_state.get(_bpkey, "")
+644	    _fresh = (
+645	        _cached is not None
+646	        and (_now - _cached_ts) < 1800
+647	        and _cached_prefs == _pref_hash
+648	    )
+649	
+650	    def _run_briefing() -> None:
+651	        import traceback
+652	
+653	        _prefs = _load_briefing_prefs_home()
+654	
+655	        _universe_pref = _prefs.get(
+656	            "briefing_universe",
+657	            "SP100 (balanced, ~60s)",
+658	        )
+659	        _universe_map = {
+660	            "Top 25 (fastest, ~30s)": "sp100",
+661	            "SP100 (balanced, ~60s)": "sp100",
+662	            "SP500 (broadest, ~3min)": "sp500",
+663	            "NASDAQ100 (tech-heavy)": "nasdaq100",
+664	        }
+665	        _universe = _universe_map.get(_universe_pref, "sp100")
+666	        _min_score = float(_prefs.get("min_ai_score", 5.5))
+667	        _include_fc = bool(_prefs.get("include_forecasts", False))
+668	
+669	        try:
+670	            from agents.briefing.morning_briefing import MorningBriefing
+671	
+672	            if _include_fc:
+673	                st.info(
+674	                    "Generating briefing: Quick Score scan, then 5-model "
+675	                    "consensus forecasts per top pick (expect several minutes). "
+676	                    "News and watchlist above refresh independently.",
+677	                    icon="â³",
+678	                )
+679	            else:
+680	                st.info(
+681	                    "Generating briefing: Quick Score ranking only (~30s on Cloud). "
+682	                    "Enable â€œInclude price forecastsâ€ in Settings for targets. "
+683	                    "News and watchlist above refresh independently.",
+684	                    icon="â³",
+685	                )
+686	            _mb = MorningBriefing(
+687	                universe=_universe,
+688	                min_ai_score=_min_score,
+689	            )
+690	            progress = st.progress(0, text="Scanning universe (Quick Score)â€¦")
+691	
+692	            def _brief_progress(done: int, total: int) -> None:
+693	                if total <= 0:
+694	                    return
+695	                progress.progress(
+696	                    min(1.0, float(done) / float(total)),
+697	                    text=f"Scanning universeâ€¦ {done}/{total}",
+698	                )
+699	
+700	            _fc_progress = None
+701	            if _include_fc:
+702	                _fc_progress = st.progress(
+703	                    0,
+704	                    text="Preparing forecastsâ€¦",
+705	                )
+706	
+707	            def _forecast_progress_cb(
+708	                done: int,
+709	                total: int,
+710	                symbol: str = "?",
+711	            ) -> None:
+712	                if _fc_progress is not None and total > 0:
+713	                    _fc_progress.progress(
+714	                        min(1.0, float(done + 1) / float(max(total, 1))),
+715	                        text=(
+716	                            f"Forecasting {symbol}â€¦ "
+717	                            f"{done + 1}/{total}"
+718	                        ),
+719	                    )
+720	
+721	            try:
+722	                report = _mb.generate(
+723	                    progress_callback=_brief_progress,
+724	                    forecast_progress_callback=(
+725	                        _forecast_progress_cb if _include_fc else None
+726	                    ),
+727	                )
+728	            finally:
+729	                progress.empty()
+730	                if _fc_progress is not None:
+731	                    _fc_progress.empty()
+732	
+733	            if report is None or report.get("error"):
+734	                st.error(
+735	                    "âš ï¸ Briefing returned no results: "
+736	                    + str(
+737	                        (report or {}).get("error", "?")
+738	                        if report is not None
+739	                        else "None"
+740	                    )
+741	                    + "\n\nTry refreshing the page or check Settings."
+742	                )
+743	                return
+744	
+745	            st.session_state[_bkey] = report
+746	            st.session_state[_btkey] = time.time()
+747	            st.session_state[_bpkey] = _briefing_pref_fingerprint(_prefs)
+748	            st.rerun()
+749	        except Exception as e:
+750	            logger.error(
+751	                "Briefing generation failed: %s\n%s",
+752	                e,
+753	                traceback.format_exc(),
+754	            )
+755	            st.error(
+756	                f"âš ï¸ Briefing failed: {e}\n\n"
+757	                f"Try refreshing the page or check Settings."
+758	            )
+759	
+760	    def _render_briefing_report(report: dict) -> None:
+761	        reg = report.get("market_regime") or {}
+762	        reg_lbl = reg.get("regime", "NEUTRAL")
+763	        vix_l = reg.get("vix_level")
+764	        reg_line = f"{reg_lbl.replace('_', '-').title()}"
+765	        if vix_l is not None:
+766	            reg_line += f" Â· VIX {vix_l:.1f}"
+767	        st.markdown(f"**{reg_line}** â€” {reg.get('description', '')}")
+768	        try:
+769	            from datetime import datetime
+770	
+771	            from trading.utils.time_utils import format_timestamp
+772	
+773	            _ts = report.get("timestamp") or ""
+774	            if _ts:
+775	                _dt = datetime.fromisoformat(_ts.replace("Z", "+00:00"))
+776	                st.caption(
+777	                    f"Briefing generated: "
+778	                    f"{format_timestamp(_dt, timezone='America/New_York')}"
+779	                )
+780	        except Exception:
+781	            pass
+782	
+783	        opps = report.get("top_opportunities") or []
+784	        _portfolio = report.get("portfolio")
+785	        if _portfolio and len(opps) >= 2:
+786	            _sharpe = _portfolio.get("expected_sharpe")
+787	            if _sharpe is not None:
+788	                st.caption(
+789	                    f"ðŸ“ Portfolio Sharpe: "
+790	                    f"{float(_sharpe):.2f} | "
+791	                    f"{_portfolio.get('note', '')}"
+792	                )
+793	        if opps:
+794	            for opp in opps[:5]:
+795	                sym = opp.get("symbol", "")
+796	                if not sym:
+797	                    continue
+798	                info = {}
+799	                try:
+800	                    info = get_info(sym) or {}
+801	                except Exception:
+802	                    pass
+803	                co = info.get("longName") or info.get("shortName") or ""
+804	                sec = info.get("sector") or ""
+805	                sc = float(opp.get("ai_score") or 0)
+806	                col_a, col_b = st.columns([4, 1])
+807	                with col_a:
+808	                    st.markdown(
+809	                        f"**{sym}** Â· {co} Â· _{sec}_ â€” "
+810	                        f":{_score_color(sc)}[Quick Score {sc:.1f}]"
+811	                    )
+812	                    th = opp.get("thesis") or ""
+813	                    if th:
+814	                        st.caption(th)
+815	                    fc = opp.get("forecast") or {}
+816	                    if fc:
+817	                        st.caption(
+818	                            f"Entry **{opp.get('entry')}** â†’ Target "
+819	                            f"**{fc.get('consensus_price')}**"
+820	                        )
+821	                    if opp.get("risk_note"):
+822	                        st.caption(opp["risk_note"])
+823	                    _weight = opp.get("weight_pct")
+824	                    if _weight:
+825	                        st.caption(
+826	                            f"Suggested allocation: **{_weight}** of portfolio "
+827	                            f"(mean-variance optimized)"
+828	                        )
+829	                with col_b:
+830	                    if st.button("Open", key=f"hb_{sym}"):
+831	                        _set_deep_dive(sym)
+832	        else:
+833	            st.caption(
+834	                "No opportunities passed the score threshold right now."
+835	            )
+836	
+837	    if not _fresh:
+838	        if (
+839	            _cached is not None
+840	            and (_now - _cached_ts) < 1800
+841	            and _cached_prefs != _pref_hash
+842	        ):
+843	            st.info(
+844	                "Your briefing preferences were updated â€” "
+845	                "generate a fresh briefing to apply them."
+846	            )
+847	        else:
+848	            st.info(
+849	                "Morning briefing not yet "
+850	                "generated for this session."
+851	            )
+852	        if st.button(
+853	            "ðŸŒ… Generate Morning Briefing",
+854	            key="gen_briefing_btn",
+855	            type="primary",
+856	        ):
+857	            st.session_state["_briefing_requested"] = True
+858	            st.rerun()
+859	        if st.session_state.get("_briefing_requested"):
+860	            st.session_state.pop("_briefing_requested", None)
+861	            _run_briefing()
+862	        return
+863	
+864	    _render_briefing_report(st.session_state[_bkey])
+865	    if st.button(
+866	        "ðŸ”„ Refresh Briefing",
+867	        key="refresh_briefing_btn",
+868	    ):
+869	        st.session_state.pop(_bkey, None)
+870	        st.session_state.pop(_btkey, None)
+871	        st.session_state.pop(_bpkey, None)
+872	        st.rerun()
+873	
+874	
+875	_render_briefing()
+876	
+877	# --- Chat ---
+878	st.markdown("---")
+879	st.subheader("Chat")
+880	if "home_chat_messages" not in st.session_state:
+881	    st.session_state.home_chat_messages = []
+882	
+883	_pending = st.session_state.pop("home_chat_pending", None)
+884	_inp = st.chat_input(
+885	    "Ask anything about the market...",
+886	    key="home_bottom_chat",
+887	)
+888	_prompt = (_inp or _pending or "").strip()
+889	if _prompt:
+890	    st.session_state.home_chat_messages.append(
+891	        {"role": "user", "content": _prompt}
+892	    )
+893	
+894	for msg in st.session_state.home_chat_messages:
+895	    with st.chat_message(msg.get("role", "user")):
+896	        if msg.get("role") == "assistant":
+897	            for _c in msg.get("tool_captions") or []:
+898	                st.caption(_c)
+899	        st.markdown(msg.get("content", ""))
+900	
+901	if _prompt:
+902	    with st.chat_message("assistant"):
+903	        with st.spinner("Thinking..."):
+904	            _chat_res = _home_chat_reply(_prompt)
+905	            _reply = _chat_res.text
+906	            for _c in _chat_res.tool_captions or []:
+907	                st.caption(_c)
+908	            st.markdown(_reply)
+909	    st.session_state.home_chat_messages.append(
+910	        {
+911	            "role": "assistant",
+912	            "content": _reply,
+913	            "tool_captions": _chat_res.tool_captions or [],
+914	        }
+915	    )
+916	
+917	# --- Deep dive (user-selected ticker â€” bottom of page) ---
+918	dd = st.session_state.get("deep_dive_ticker")
+919	if dd:
+920	    st.markdown("---")
+921	    render_deep_dive(str(dd))
+922	
+923	try:
+924	    from trading.services.alert_checker import check_alerts_for_user
+925	    from utils.session_utils import get_stable_user_id
+926	
+927	    _uid = get_stable_user_id()
+928	    _triggered = check_alerts_for_user(_uid)
+929	    if _triggered:
+930	        for _alert in _triggered:
+931	            st.warning(
+932	                "Alert triggered: "
+933	                f"{_alert.get('symbol', '')} "
+934	                f"{_alert.get('condition', '')} "
+935	                f"{_alert.get('threshold', '')}"
+936	            )
+937	except Exception as _e:
+938	    logger.debug("Alert check failed: %s", _e)

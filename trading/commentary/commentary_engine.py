@@ -313,6 +313,54 @@ class CommentaryEngine:
             self.logger.error(f"Error generating performance analysis: {str(e)}")
             raise
 
+    async def _generate_market_regime_commentary(
+        self, request: CommentaryRequest, request_id: str
+    ) -> CommentaryResponse:
+        """Generate market-regime style commentary from OHLCV history."""
+        try:
+            md = request.market_data
+            if md is None or md.empty:
+                raise ValueError("Market data required for market regime commentary")
+
+            _col_map = {c.lower(): c for c in md.columns}
+            _cc = _col_map.get("close", md.columns[0])
+            _last = float(md[_cc].iloc[-1])
+            _chg_20d = 0.0
+            if len(md) >= 20:
+                _chg_20d = float(
+                    (md[_cc].iloc[-1] / md[_cc].iloc[-20] - 1.0) * 100.0
+                )
+
+            prompt = (
+                f"You are a market analyst. In 3-5 sentences, describe the "
+                f"recent price regime and tone for {request.symbol} "
+                f"(trend/volatility context only). "
+                f"Last close: {_last:.4f}. Approx. 20-session return: "
+                f"{_chg_20d:+.2f}%."
+            )
+
+            llm_response = await self.llm_interface.generate_response(prompt)
+            analysis = self._parse_llm_response(llm_response)
+
+            return CommentaryResponse(
+                request_id=request_id,
+                commentary_type=CommentaryType.MARKET_REGIME,
+                timestamp=datetime.now(),
+                title=f"Market Regime: {request.symbol}",
+                summary=analysis.get("summary", "Market regime commentary"),
+                detailed_analysis=analysis.get("analysis", ""),
+                key_insights=[],
+                recommendations=[],
+                risk_warnings=[],
+                confidence_score=0.65,
+                metadata={"symbol": request.symbol},
+            )
+        except Exception as e:
+            self.logger.error(
+                "Error generating market regime commentary: %s", str(e)
+            )
+            raise
+
     def _analyze_trade_context(
         self, trade_data: Dict[str, Any], market_data: Optional[pd.DataFrame]
     ) -> Dict[str, Any]:

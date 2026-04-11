@@ -228,10 +228,16 @@ input[type="number"], input[type="text"] {
     border: 1px solid rgba(255, 171, 64, 0.7);
 }
 
-/* Hide Streamlit branding */
+/* Hide Streamlit branding — do NOT hide raw `header`; that removes the
+   native sidebar expand/collapse control. Hide decoration + deploy only. */
 #MainMenu { visibility: hidden !important; }
 footer { visibility: hidden !important; }
-header { visibility: hidden !important; }
+[data-testid="stDecoration"] {
+    display: none !important;
+}
+[data-testid="stHeader"] {
+    background-color: #0a0e1a !important;
+}
 .stDeployButton { display: none !important; }
 """
     # Force dark theme config + CSS injection

@@ -17,22 +17,31 @@ def render_news(ticker: str, *, max_items: int = 12) -> None:
         st.subheader("Headlines")
         for item in items[:max_items]:
             content = item.get("content") or {}
-            title = (
+            _title = (
                 item.get("title")
                 or item.get("headline")
                 or content.get("title")
                 or content.get("summary")
                 or ""
-            )
-            if not title:
+            ).strip()
+            if not _title:
                 continue
+            _url = (
+                item.get("url")
+                or item.get("link")
+                or item.get("href")
+                or content.get("url")
+                or content.get("link")
+                or ""
+            )
+            _show_title = _title[:160]
             src = item.get("source") or item.get("publisher") or ""
-            link = item.get("url") or item.get("link") or ""
-            st.markdown(f"**{title[:160]}**")
+            if _url and _show_title:
+                st.markdown(f"**[{_show_title}]({_url})**")
+            elif _show_title:
+                st.markdown(f"**{_show_title}**")
             if src:
                 st.caption(src)
-            if link:
-                st.caption(f"[Link]({link})")
     except Exception as e:
         st.caption(f"unavailable: {e}")
 

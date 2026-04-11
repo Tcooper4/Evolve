@@ -1,0 +1,565 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""Single-ticker deep analysis surface (scroll + 4 tabs)."""
+3	import asyncio
+4	import logging
+5	from datetime import datetime
+6	
+7	import streamlit as st
+8	
+9	from components.analyze_ai_score import top_signals_summary
+10	from components.analyze_chart import render_price_chart
+11	from components.analyze_diagnostics import render_diagnostics
+12	from components.analyze_forecast import render_forecast
+13	from components.analyze_news import render_news
+14	from components.analyze_options import render_options
+15	from trading.data.price_cache import get_history, get_info, get_quote
+16	
+17	logger = logging.getLogger(__name__)
+18	
+19	
+20	def _deep_dive_platform_suffix(
+21	    sym: str,
+22	    price,
+23	    chg,
+24	    score,
+25	    rec,
+26	) -> str:
+27	    """Pre-loaded ticker context for tool router + synthesis (no tool execution here)."""
+28	    parts = [f"Deep dive symbol: {sym}"]
+29	    if price is not None:
+30	        chg_s = f"{float(chg):+.2f}%" if chg is not None else "â€”"
+31	        parts.append(f"Last price: ${float(price):.2f} Â· session change {chg_s}")
+32	    if score and not score.get("error"):
+33	        parts.append(
+34	            f"AI score: overall {score.get('overall_score')} grade {score.get('grade')} "
+35	            f"(T/M/S/F: {score.get('technical_score')}/"
+36	            f"{score.get('momentum_score')}/{score.get('sentiment_score')}/"
+37	            f"{score.get('fundamental_score')})"
+38	        )
+39	        summ = score.get("summary") or ""
+40	        if summ:
+41	            parts.append(f"Score summary: {summ[:600]}")
+42	    sigs = (score or {}).get("signals") or []
+43	    if sigs:
+44	        parts.append("Top signals:")
+45	        for s in sigs[:5]:
+46	            parts.append(
+47	                f"  - [{s.get('impact')}] {s.get('name')}: {s.get('value')}"
+48	            )
+49	    if rec:
+50	        parts.append(
+51	            f"Recommendation snapshot: {rec.get('action')} Â· "
+52	            f"conviction {rec.get('conviction')} Â· entry {rec.get('entry')} Â· "
+53	            f"target {rec.get('target')} Â· stop {rec.get('stop')}"
+54	        )
+55	    try:
+56	        from trading.data.earnings_calendar import get_upcoming_earnings
+57	
+58	        er = get_upcoming_earnings(sym)
+59	        if er and er.get("days_until") is not None:
+60	            parts.append(f"Upcoming earnings: in {er.get('days_until')} days")
+61	    except Exception:
+62	        pass
+63	    try:
+64	        from trading.data.news_aggregator import get_news
+65	
+66	        items = get_news(sym, max_items=5)
+67	        if items:
+68	            parts.append("Recent headlines (snapshot):")
+69	            for it in items[:5]:
+70	                t = (it.get("title") or it.get("headline") or str(it))[:200]
+71	                parts.append(f"  - {t}")
+72	    except Exception:
+73	        pass
+74	    return "\n".join(parts)
+75	
+76	
+77	def _render_deep_dive_chat(
+78	    sym: str,
+79	    price,
+80	    chg,
+81	    score,
+82	    rec,
+83	) -> None:
+84	    """Bottom chat bar: same tool loop as Home, with ticker-heavy context."""
+85	    st.markdown("---")
+86	    st.subheader(f"Ask about {sym}")
+87	    _dk = f"deep_dive_chat_{sym}"
+88	    if _dk not in st.session_state:
+89	        st.session_state[_dk] = []
+90	
+91	    platform_suffix = _deep_dive_platform_suffix(sym, price, chg, score, rec)
+92	    _inp = st.chat_input(f"Ask about {sym}...", key=f"dd_chat_in_{sym}")
+93	    _raw = (_inp or "").strip()
+94	
+95	    if _raw:
+96	        st.session_state[_dk].append({"role": "user", "content": _raw})
+97	
+98	    for msg in st.session_state[_dk]:
+99	        with st.chat_message(msg.get("role", "user")):
+100	            if msg.get("role") == "assistant":
+101	                for _c in msg.get("tool_captions") or []:
+102	                    st.caption(_c)
+103	            st.markdown(msg.get("content", ""))
+104	
+105	    if not _raw:
+106	        return
+107	
+108	    res = None
+109	    with st.chat_message("assistant"):
+110	        with st.spinner("Thinking..."):
+111	            try:
+112	                from agents.llm.tool_executor import execute_with_tools
+113	                from trading.memory import get_memory_store
+114	                from trading.services import chat_nl_service
+115	
+116	                store = get_memory_store()
+117	                um = f"[Deep dive: {sym}]\n{_raw}"
+118	                try:
+119	                    store.ingest_preference_text(um, source="deep_dive_chat")
+120	                except Exception as e:
+121	                    logger.warning("Deep dive chat: preference ingest failed: %s", e)
+122	                if "chat_router" not in st.session_state:
+123	                    try:
+124	                        from trading.agents.enhanced_prompt_router import (
+125	                            EnhancedPromptRouterAgent,
+126	                        )
+127	
+128	                        st.session_state.chat_router = EnhancedPromptRouterAgent()
+129	                    except Exception as e:
+130	                        logger.warning("Deep dive chat: router failed: %s", e)
+131	                        st.session_state.chat_router = None
+132	                router = st.session_state.get("chat_router")
+133	                route_result = (
+134	                    chat_nl_service.parse_intent(router, um)
+135	                    if router
+136	                    else {"intent": "unknown", "args": {}}
+137	                )
+138	                intent = (
+139	                    route_result.get("intent", "unknown")
+140	                    if isinstance(route_result, dict)
+141	                    else getattr(route_result, "intent", "unknown")
+142	                )
+143	                memory_context = chat_nl_service.get_memory_context(store)
+144	                agent_response = chat_nl_service.run_agent_action(um)
+145	                context_block = chat_nl_service.build_context_block(
+146	                    memory_context,
+147	                    agent_response,
+148	                    intent=intent,
+149	                    store=store,
+150	                )
+151	                conv = [
+152	                    {"role": m["role"], "content": m.get("content", "")}
+153	                    for m in st.session_state[_dk][:-1]
+154	                ]
+155	                res = execute_with_tools(
+156	                    user_message=um,
+157	                    context_block=context_block,
+158	                    conversation_messages=conv,
+159	                    system_prompt=chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
+160	                    platform_context_suffix=platform_suffix,
+161	                    focus_symbol=sym,
+162	                    available_tools=[
+163	                        "scan_universe",
+164	                        "get_ai_score",
+165	                        "get_forecast",
+166	                        "get_news",
+167	                        "get_risk_metrics",
+168	                    ],
+169	                    max_tokens=2048,
+170	                )
+171	                for _c in res.tool_captions or []:
+172	                    st.caption(_c)
+173	                st.markdown(res.text)
+174	            except Exception as e:
+175	                logger.exception("Deep dive chat failed: %s", e)
+176	                from agents.llm.tool_executor import ToolChatResult
+177	
+178	                res = ToolChatResult(
+179	                    text=f"Chat unavailable: {e}",
+180	                    tool_captions=[],
+181	                )
+182	                st.caption(res.text)
+183	    st.session_state[_dk].append(
+184	        {
+185	            "role": "assistant",
+186	            "content": res.text if res else "",
+187	            "tool_captions": (res.tool_captions or []) if res else [],
+188	        }
+189	    )
+190	
+191	
+192	def render_deep_dive(ticker: str) -> None:
+193	    sym = (ticker or "").strip().upper()
+194	    if not sym:
+195	        return
+196	    try:
+197	        q = get_quote(sym)
+198	        price = q.get("price")
+199	        prev = q.get("prev_close")
+200	        hist = get_history(sym, period="3mo", interval="1d")
+201	        if price is None and hist is not None and not hist.empty:
+202	            price = float(hist["Close"].iloc[-1])
+203	        chg = None
+204	        if price is not None and prev not in (None, 0):
+205	            chg = (float(price) - float(prev)) / float(prev) * 100
+206	        info = get_info(sym) or {}
+207	        name = info.get("longName") or info.get("shortName") or sym
+208	        c1, c2, c3 = st.columns([1, 4, 1])
+209	        with c1:
+210	            if st.button("â† Back", key="deep_dive_back"):
+211	                st.session_state.pop("deep_dive_ticker", None)
+212	                st.session_state.pop("home_chat_pending", None)
+213	                st.rerun()
+214	        with c2:
+215	            chg_s = f"{chg:+.2f}%" if chg is not None else "â€”"
+216	            st.markdown(f"## {sym} Â· {name}")
+217	            st.caption(f"Last **${float(price):.2f}** Â· Day **{chg_s}**" if price else sym)
+218	        with c3:
+219	            st.session_state["analyze_ticker"] = sym
+220	
+221	        if hist is not None and not hist.empty:
+222	            render_price_chart(
+223	                sym,
+224	                hist,
+225	                period="3mo",
+226	                period_label="3M",
+227	                _interval="1d",
+228	                _tf_label="1d",
+229	                trader_mode="Short-term",
+230	                st_ver=tuple(int(x) for x in st.__version__.split(".")[:2]),
+231	            )
+232	            try:
+233	                from trading.analysis.chart_pattern_detector import ChartPatternDetector
+234	
+235	                with st.expander("Chart patterns", expanded=False):
+236	                    ChartPatternDetector(sym, hist).render_streamlit()
+237	            except Exception as e:
+238	                st.caption(f"unavailable: {e}")
+239	
+240	        score = None
+241	        try:
+242	            from trading.analysis.ai_score import compute_ai_score
+243	
+244	            score = compute_ai_score(sym, hist)
+245	        except Exception:
+246	            score = None
+247	        _rec_key = f"deep_dive_rec_{sym}"
+248	        rec = st.session_state.get(_rec_key)
+249	        if rec is None:
+250	            _fc_key_for_rec = f"deep_dive_forecast_{sym}"
+251	            if st.session_state.get(_fc_key_for_rec):
+252	                try:
+253	                    from components.analyze_ai_score import (
+254	                        get_ai_recommendation_dict,
+255	                    )
+256	
+257	                    rec = get_ai_recommendation_dict(
+258	                        sym, hist, trader_mode="Short-term"
+259	                    )
+260	                    if rec:
+261	                        st.session_state[_rec_key] = rec
+262	                except Exception as _rec_e:
+263	                    logger.debug("Deep dive recommendation: %s", _rec_e)
+264	        st.markdown("### Recommendation")
+265	        if rec:
+266	            act = rec.get("action", "HOLD")
+267	            st.markdown(f"**{act}** Â· conviction **{rec.get('conviction', 'â€”')}**")
+268	            st.caption(
+269	                f"Entry {rec.get('entry')} Â· Target {rec.get('target')} Â· "
+270	                f"Stop {rec.get('stop')} Â· Expected move **{rec.get('pct_move', 'â€”')}%**"
+271	            )
+272	            _tc, _pc = st.columns(2)
+273	            with _tc:
+274	                if st.button(
+275	                    "Track recommendation",
+276	                    key=f"track_{sym}",
+277	                ):
+278	                    try:
+279	                        from trading.services.recommendation_tracker import (
+280	                            RecommendationTracker,
+281	                        )
+282	                        from utils.session_utils import get_stable_user_id
+283	
+284	                        _uid = get_stable_user_id()
+285	                        if not _uid:
+286	                            st.warning(
+287	                                "Sign in or complete onboarding to save tracking."
+288	                            )
+289	                        else:
+290	                            _ai = float(
+291	                                (score or {}).get("overall_score")
+292	                                or rec.get("signal_score")
+293	                                or 0
+294	                            )
+295	                            tracker = RecommendationTracker()
+296	                            tracker.save_recommendation(
+297	                                session_id=_uid,
+298	                                symbol=sym,
+299	                                action=str(rec.get("action", "HOLD")),
+300	                                entry_price=float(rec.get("entry") or 0),
+301	                                target_price=float(rec.get("target") or 0),
+302	                                stop_price=float(rec.get("stop") or 0),
+303	                                ai_score=_ai,
+304	                                timestamp=datetime.now().isoformat(),
+305	                            )
+306	                            st.success(
+307	                                "Recommendation saved for tracking"
+308	                            )
+309	                    except Exception as e:
+310	                        st.caption(f"Tracking unavailable: {e}")
+311	            with _pc:
+312	                if st.button("+ Paper Trade", key=f"paper_{sym}"):
+313	                    try:
+314	                        from trading.execution.models import OrderType
+315	                        from trading.execution.trade_execution_simulator import (
+316	                            TradeExecutionSimulator,
+317	                        )
+318	
+319	                        _act = str(rec.get("action", "HOLD")).upper()
+320	                        _side = (
+321	                            "buy"
+322	                            if _act == "BUY"
+323	                            else "sell"
+324	                            if _act == "SELL"
+325	                            else "buy"
+326	                        )
+327	                        _sim = TradeExecutionSimulator()
+328	                        _entry = float(rec.get("entry") or 0)
+329	                        _sim.place_order(
+330	                            symbol=sym,
+331	                            order_type=OrderType.MARKET,
+332	                            side=_side,
+333	                            quantity=1.0,
+334	                            price=_entry if _entry > 0 else None,
+335	                            stop_price=float(rec.get("stop") or 0)
+336	                            or None,
+337	                        )
+338	                        st.success(
+339	                            f"Paper trade opened: {_act} {sym} @ {_entry}"
+340	                        )
+341	                    except Exception as e:
+342	                        st.caption(f"Paper trade unavailable: {e}")
+343	        elif score and not score.get("error"):
+344	            st.caption(score.get("summary", ""))
+345	        else:
+346	            st.caption("Recommendation data unavailable.")
+347	
+348	        st.markdown("### What's driving this")
+349	        signals = (score or {}).get("signals") or []
+350	        for s in signals[:5]:
+351	            imp = s.get("impact", "neutral")
+352	            icon = "ðŸŸ¢" if imp == "positive" else "ðŸ”´" if imp == "negative" else "ðŸŸ¡"
+353	            nm = s.get("name", "")
+354	            val = s.get("value", "")
+355	            st.markdown(f"{icon} **{nm}** â€” {val}")
+356	        st.caption(top_signals_summary(signals))
+357	
+358	        _completeness = (score or {}).get("signal_completeness") or {}
+359	        if _completeness:
+360	            _available = _completeness.get("available", [])
+361	            _unavailable = _completeness.get("unavailable", [])
+362	            _fallback = _completeness.get("fallback", [])
+363	            _n = len(_available)
+364	            _total = 11
+365	            _color = (
+366	                "ðŸŸ¢" if _n >= 8
+367	                else "ðŸŸ¡" if _n >= 5
+368	                else "ðŸ”´"
+369	            )
+370	            st.caption(
+371	                f"{_color} Signal completeness: "
+372	                f"**{_n}/{_total}** sources "
+373	                f"returning real data"
+374	            )
+375	            if _unavailable:
+376	                st.caption(
+377	                    f"Unavailable: {', '.join(_unavailable)}"
+378	                )
+379	            if _fallback:
+380	                st.caption(
+381	                    f"Using fallback (0/neutral): {', '.join(_fallback)}"
+382	                )
+383	        else:
+384	            quality = (score or {}).get("data_quality") or {}
+385	            unavailable = [
+386	                k for k, v in quality.items() if v == "unavailable"
+387	            ]
+388	            if unavailable:
+389	                st.caption(
+390	                    f"Data unavailable: {', '.join(unavailable)}. "
+391	                    f"Score reflects available signals only."
+392	                )
+393	
+394	        try:
+395	            from trading.data.sec_edgar import get_latest_filing, get_sec_signal
+396	
+397	            _sec = get_sec_signal(sym)
+398	            _filing = get_latest_filing(sym, "10-Q") or get_latest_filing(sym, "10-K")
+399	
+400	            if _sec.get("sec_source") not in ("unavailable", "error", "no_filing"):
+401	                st.markdown("**SEC Filing Analysis**")
+402	                _label = str(_sec.get("sec_label", "neutral"))
+403	                _icon = {
+404	                    "positive": "ðŸŸ¢",
+405	                    "negative": "ðŸ”´",
+406	                    "neutral": "â¬œ",
+407	                }.get(_label.lower(), "â¬œ")
+408	                col1, col2 = st.columns(2)
+409	                with col1:
+410	                    st.metric("Filing sentiment", f"{_icon} {_label.title()}")
+411	                with col2:
+412	                    if _filing:
+413	                        st.metric(
+414	                            "Latest filing",
+415	                            str(_filing.get("form", "")),
+416	                            delta=str(_filing.get("date", "")),
+417	                            delta_color="off",
+418	                        )
+419	                themes = _sec.get("sec_themes") or []
+420	                if themes:
+421	                    st.caption("Key themes: " + " Â· ".join(str(t) for t in themes[:3]))
+422	                st.caption(
+423	                    f"Source: SEC EDGAR ({_sec.get('sec_source')})"
+424	                )
+425	        except Exception as e:
+426	            st.caption(f"SEC data unavailable: {e}")
+427	
+428	        try:
+429	            from trading.commentary.commentary_engine import (
+430	                CommentaryRequest,
+431	                CommentaryType,
+432	                create_commentary_engine,
+433	            )
+434	
+435	            _eng = create_commentary_engine()
+436	            if _eng is None:
+437	                raise ValueError("Commentary engine unavailable")
+438	            _req = CommentaryRequest(
+439	                commentary_type=CommentaryType.MARKET_REGIME,
+440	                symbol=sym,
+441	                timestamp=datetime.now(),
+442	                market_data=hist,
+443	            )
+444	            _loop = asyncio.new_event_loop()
+445	            asyncio.set_event_loop(_loop)
+446	            try:
+447	                _resp = _loop.run_until_complete(
+448	                    _eng.generate_commentary(_req)
+449	                )
+450	            finally:
+451	                _loop.close()
+452	            _txt = (
+453	                getattr(_resp, "detailed_analysis", None)
+454	                or getattr(_resp, "summary", None)
+455	                or ""
+456	            )
+457	            if _txt:
+458	                st.markdown("**AI Commentary**")
+459	                st.markdown(_txt[:4000])
+460	        except Exception as e:
+461	            logger.debug("Commentary: %s", e)
+462	
+463	        tf, tn, tr, tp = st.tabs(["Forecast", "News", "Risk", "Patterns"])
+464	        with tf:
+465	            import time as _time_fc
+466	
+467	            _fc_key = f"deep_dive_forecast_{sym}"
+468	            _fc_ts_key = f"deep_dive_forecast_ts_{sym}"
+469	            _cached_fc = st.session_state.get(_fc_key)
+470	            _cached_fc_age = _time_fc.time() - st.session_state.get(
+471	                _fc_ts_key, 0.0
+472	            )
+473	            forecast_result = None
+474	            if _cached_fc is None or _cached_fc_age > 600:
+475	                if st.button(
+476	                    "ðŸ“ˆ Generate Forecast",
+477	                    key=f"dd_forecast_btn_{sym}",
+478	                ):
+479	                    with st.spinner("Running consensus forecast..."):
+480	                        _fc = render_forecast(sym, hist, horizon=7)
+481	                    if _fc:
+482	                        st.session_state[_fc_key] = _fc
+483	                        st.session_state[_fc_ts_key] = _time_fc.time()
+484	                    forecast_result = _fc
+485	                else:
+486	                    st.info(
+487	                        "Click **Generate Forecast** to run the multi-model "
+488	                        "consensus.",
+489	                        icon="ðŸ“ˆ",
+490	                    )
+491	            else:
+492	                forecast_result = _cached_fc
+493	                _cm = {c.lower(): c for c in hist.columns}
+494	                _cc = _cm.get("close", hist.columns[0])
+495	                last = float(hist[_cc].iloc[-1])
+496	                cp = (_cached_fc or {}).get("consensus_price")
+497	                direction = (_cached_fc or {}).get("direction", "â€”")
+498	                conviction = (_cached_fc or {}).get("conviction", "â€”")
+499	                models = (_cached_fc or {}).get("models_used") or []
+500	                st.subheader("Consensus forecast")
+501	                st.metric(
+502	                    "Direction",
+503	                    direction,
+504	                    delta=f"{conviction} conviction",
+505	                )
+506	                if cp:
+507	                    pct = (float(cp) - last) / last * 100 if last else 0
+508	                    st.metric(
+509	                        "Consensus price",
+510	                        f"${float(cp):.2f}",
+511	                        delta=f"{pct:+.1f}%",
+512	                    )
+513	                if models:
+514	                    st.caption(
+515	                        "Models: " + ", ".join(str(m) for m in models[:12])
+516	                    )
+517	                st.caption(
+518	                    "Using cached forecast (refreshes every 10 min)."
+519	                )
+520	            _wf_conf = (forecast_result or {}).get("walk_forward_confidence")
+521	            _wf_warn = (forecast_result or {}).get("walk_forward_warnings") or []
+522	            if _wf_conf:
+523	                _conf_color = {
+524	                    "high": "ðŸŸ¢",
+525	                    "medium": "ðŸŸ¡",
+526	                    "low": "ðŸ”´",
+527	                }.get(str(_wf_conf).lower(), "â¬œ")
+528	                st.caption(
+529	                    f"{_conf_color} Walk-forward validated confidence: "
+530	                    f"{str(_wf_conf).upper()} â€” run Backtest â†’ Walk-Forward to update."
+531	                )
+532	            else:
+533	                st.caption(
+534	                    "â¬œ Walk-forward confidence: not yet validated. Run "
+535	                    "Backtest â†’ Walk-Forward tab to calibrate."
+536	                )
+537	            for w in _wf_warn:
+538	                st.warning(w)
+539	        with tn:
+540	            render_news(sym)
+541	        with tr:
+542	            render_diagnostics(sym, hist)
+543	            st.markdown("---")
+544	            render_options(sym)
+545	        with tp:
+546	            try:
+547	                from trading.analysis.chart_pattern_detector import ChartPatternDetector
+548	
+549	                if hist is not None and not hist.empty:
+550	                    ChartPatternDetector(sym, hist).render_streamlit()
+551	                else:
+552	                    st.caption("No history for pattern detection.")
+553	            except Exception as e:
+554	                st.caption(f"unavailable: {e}")
+555	
+556	        ctx = sym
+557	        if rec:
+558	            ctx = (
+559	                f"{sym} (action {rec.get('action')}, "
+560	                f"target {rec.get('target')})"
+561	            )
+562	        st.session_state["home_chat_context_ticker"] = ctx
+563	        _render_deep_dive_chat(sym, price, chg, score, rec)
+564	    except Exception as e:
+565	        st.caption(f"unavailable: {e}")

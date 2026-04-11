@@ -874,45 +874,46 @@ def _render_briefing():
 
 _render_briefing()
 
-# --- Chat ---
-st.markdown("---")
-st.subheader("Chat")
-if "home_chat_messages" not in st.session_state:
-    st.session_state.home_chat_messages = []
+# --- Chat (hidden while deep dive is open — deep dive has its own chat) ---
+if not st.session_state.get("deep_dive_ticker"):
+    st.markdown("---")
+    st.subheader("Chat")
+    if "home_chat_messages" not in st.session_state:
+        st.session_state.home_chat_messages = []
 
-_pending = st.session_state.pop("home_chat_pending", None)
-_inp = st.chat_input(
-    "Ask anything about the market...",
-    key="home_bottom_chat",
-)
-_prompt = (_inp or _pending or "").strip()
-if _prompt:
-    st.session_state.home_chat_messages.append(
-        {"role": "user", "content": _prompt}
+    _pending = st.session_state.pop("home_chat_pending", None)
+    _inp = st.chat_input(
+        "Ask anything about the market...",
+        key="home_bottom_chat",
     )
+    _prompt = (_inp or _pending or "").strip()
+    if _prompt:
+        st.session_state.home_chat_messages.append(
+            {"role": "user", "content": _prompt}
+        )
 
-for msg in st.session_state.home_chat_messages:
-    with st.chat_message(msg.get("role", "user")):
-        if msg.get("role") == "assistant":
-            for _c in msg.get("tool_captions") or []:
-                st.caption(_c)
-        st.markdown(msg.get("content", ""))
+    for msg in st.session_state.home_chat_messages:
+        with st.chat_message(msg.get("role", "user")):
+            if msg.get("role") == "assistant":
+                for _c in msg.get("tool_captions") or []:
+                    st.caption(_c)
+            st.markdown(msg.get("content", ""))
 
-if _prompt:
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            _chat_res = _home_chat_reply(_prompt)
-            _reply = _chat_res.text
-            for _c in _chat_res.tool_captions or []:
-                st.caption(_c)
-            st.markdown(_reply)
-    st.session_state.home_chat_messages.append(
-        {
-            "role": "assistant",
-            "content": _reply,
-            "tool_captions": _chat_res.tool_captions or [],
-        }
-    )
+    if _prompt:
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                _chat_res = _home_chat_reply(_prompt)
+                _reply = _chat_res.text
+                for _c in _chat_res.tool_captions or []:
+                    st.caption(_c)
+                st.markdown(_reply)
+        st.session_state.home_chat_messages.append(
+            {
+                "role": "assistant",
+                "content": _reply,
+                "tool_captions": _chat_res.tool_captions or [],
+            }
+        )
 
 # --- Deep dive (user-selected ticker — bottom of page) ---
 dd = st.session_state.get("deep_dive_ticker")
