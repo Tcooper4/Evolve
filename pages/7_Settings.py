@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Settings page — Watchlist, Alerts, System (from Alerts, Admin, Watchlist).
 """
@@ -781,7 +781,7 @@ with tab_admin:
             )
 
         st.markdown("#### App")
-        st.metric("Version", "v3.19.0")
+        st.metric("Version", "v4.6.7")
 
         st.markdown("#### Optional packages")
         try:
