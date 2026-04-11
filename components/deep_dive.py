@@ -270,21 +270,35 @@ def render_deep_dive(ticker: str) -> None:
                 st_ver=tuple(int(x) for x in st.__version__.split(".")[:2]),
             )
 
+        _prefs_dd: dict = {}
+        try:
+            from config.user_store import load_user_preferences
+            from utils.session_utils import get_stable_user_id
+
+            _uid_dd = (
+                st.session_state.get("evolve_session_id")
+                or get_stable_user_id()
+            )
+            _prefs_dd = load_user_preferences(_uid_dd) or {}
+        except Exception:
+            _prefs_dd = {}
+
+        _scoring_style = str(
+            _prefs_dd.get("scoring_style", "Balanced (default)"),
+        )
+
         score = None
         try:
             from trading.analysis.ai_score import compute_ai_score
 
-            score = compute_ai_score(sym, hist)
+            score = compute_ai_score(
+                sym, hist, scoring_style=_scoring_style,
+            )
         except Exception:
             score = None
 
         _show_short = False
         try:
-            from config.user_store import load_user_preferences
-            from utils.session_utils import get_stable_user_id
-
-            _uid_dd = get_stable_user_id()
-            _prefs_dd = load_user_preferences(_uid_dd) or {}
             _od_dd = _prefs_dd.get(
                 "opportunity_direction",
                 "Bullish only (BUY signals)",
@@ -302,7 +316,10 @@ def render_deep_dive(ticker: str) -> None:
                 from trading.analysis.ai_score import compute_short_score
 
                 short_score_result = compute_short_score(
-                    sym, hist, ai_result=score
+                    sym,
+                    hist,
+                    ai_result=score,
+                    scoring_style=_scoring_style,
                 )
             except Exception:
                 short_score_result = None
@@ -318,7 +335,10 @@ def render_deep_dive(ticker: str) -> None:
                     )
 
                     rec = get_ai_recommendation_dict(
-                        sym, hist, trader_mode="Short-term"
+                        sym,
+                        hist,
+                        trader_mode="Short-term",
+                        scoring_style=_scoring_style,
                     )
                     if rec:
                         st.session_state[_rec_key] = rec

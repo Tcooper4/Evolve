@@ -49,50 +49,74 @@ SIGNAL_SOURCES = [
     "ml_score",
 ]
 
-
-def _get_scoring_weights() -> Dict[str, float]:
-    """Dimension weights; adjusted by Settings → scoring_style when available."""
-    base = {
+# Settings → Research → Score weighting style (must match pages/7_Settings.py)
+SCORING_STYLE_WEIGHTS = {
+    "Balanced (default)": {
         "technical": 0.30,
         "momentum": 0.35,
         "sentiment": 0.20,
         "fundamental": 0.15,
-    }
+    },
+    "Momentum-heavy": {
+        "technical": 0.20,
+        "momentum": 0.50,
+        "sentiment": 0.15,
+        "fundamental": 0.15,
+    },
+    "Technical-heavy": {
+        "technical": 0.50,
+        "momentum": 0.25,
+        "sentiment": 0.15,
+        "fundamental": 0.10,
+    },
+    "Fundamental-heavy": {
+        "technical": 0.15,
+        "momentum": 0.20,
+        "sentiment": 0.20,
+        "fundamental": 0.45,
+    },
+}
+
+
+def _resolve_style_weights(
+    scoring_style: Optional[str] = None,
+) -> Dict[str, float]:
+    """Static dimension weights for IC blend and composite overall_score."""
+    _balanced = SCORING_STYLE_WEIGHTS["Balanced (default)"]
+    _key = (scoring_style or "").strip()
+    if _key and _key in SCORING_STYLE_WEIGHTS:
+        return dict(SCORING_STYLE_WEIGHTS[_key])
+    if _key:
+        for _label, _w in SCORING_STYLE_WEIGHTS.items():
+            if _label.split()[0] in _key or _key in _label:
+                return dict(_w)
+        return dict(_balanced)
     try:
         from config.user_store import load_user_preferences
         from utils.session_utils import get_stable_user_id
 
-        prefs = load_user_preferences(get_stable_user_id()) or {}
-        style = str(prefs.get("scoring_style", "Balanced"))
-        if "Momentum" in style:
-            return {
-                "technical": 0.20,
-                "momentum": 0.50,
-                "sentiment": 0.20,
-                "fundamental": 0.10,
-            }
-        if "Technical" in style:
-            return {
-                "technical": 0.50,
-                "momentum": 0.25,
-                "sentiment": 0.15,
-                "fundamental": 0.10,
-            }
-        if "Fundamental" in style:
-            return {
-                "technical": 0.20,
-                "momentum": 0.20,
-                "sentiment": 0.15,
-                "fundamental": 0.45,
-            }
+        _uid = None
+        try:
+            _uid = st.session_state.get("evolve_session_id")
+        except Exception:
+            pass
+        if not _uid:
+            _uid = get_stable_user_id()
+        prefs = load_user_preferences(_uid) or {}
+        sk = str(prefs.get("scoring_style", "Balanced (default)")).strip()
+        return dict(SCORING_STYLE_WEIGHTS.get(sk, _balanced))
     except Exception:
-        pass
-    return base
+        return dict(_balanced)
+
+
+def _get_scoring_weights() -> Dict[str, float]:
+    """Dimension weights from Settings → scoring_style (prefs path)."""
+    return _resolve_style_weights(None)
 
 
 def _compute_ic_weights(
     symbol: str,
-    _user_style: str = "Balanced",
+    scoring_style: Optional[str] = None,
     regime_label: str = "",
     vix_level: float = 0.0,
 ) -> Dict[str, float]:
@@ -113,14 +137,9 @@ def _compute_ic_weights(
        40% user style weights
     """
     try:
-        _static = _get_scoring_weights()
+        _static = _resolve_style_weights(scoring_style)
     except Exception:
-        _static = {
-            "technical": 0.30,
-            "momentum": 0.35,
-            "sentiment": 0.20,
-            "fundamental": 0.15,
-        }
+        _static = dict(SCORING_STYLE_WEIGHTS["Balanced (default)"])
 
     try:
         from scipy.stats import spearmanr
@@ -885,7 +904,11 @@ def _bundle_momentum_base(
     }
 
 
-def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
+def compute_ai_score(
+    symbol: str,
+    hist: Optional[pd.DataFrame] = None,
+    scoring_style: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Compute AI Score for a ticker.
 
@@ -893,6 +916,8 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         symbol: ticker string
         hist: optional pre-fetched history DataFrame (Close, Volume, etc.)
               If None, fetches 6mo via price_cache (shared TTL).
+        scoring_style: optional Settings label (e.g. \"Momentum-heavy\").
+              If None, loads from user preferences.
 
     Returns dict:
         overall_score: float 1-10
@@ -907,28 +932,49 @@ def compute_ai_score(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[s
         error: str | None
     """
     if hist is not None and not hist.empty:
-        result = _compute_ai_score_impl(symbol, hist)
+        result = _compute_ai_score_impl(
+            symbol, hist, scoring_style=scoring_style,
+        )
         _persist_ai_score_result(symbol, result)
         return result
     sym_key = str(symbol or "").strip().upper()
     if not sym_key:
         return _error_score(str(symbol or ""), "Invalid symbol")
-    result = _compute_ai_score_cached(sym_key)
+    _style_key = (
+        scoring_style
+        if scoring_style is not None
+        else "__prefs__"
+    )
+    result = _compute_ai_score_cached(sym_key, _style_key)
     _persist_ai_score_result(sym_key, result)
     return result
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def _compute_ai_score_cached(symbol: str) -> Dict[str, Any]:
+def _compute_ai_score_cached(
+    symbol: str,
+    scoring_style_key: str = "__prefs__",
+) -> Dict[str, Any]:
     try:
         h = _pc_get_history(symbol, period="6mo")
     except Exception as e:
         logger.warning("ai_score: price_cache get_history failed: %s", e)
         h = pd.DataFrame()
-    return _compute_ai_score_impl(symbol, h)
+    _style = (
+        None
+        if scoring_style_key == "__prefs__"
+        else scoring_style_key
+    )
+    return _compute_ai_score_impl(
+        symbol, h, scoring_style=_style,
+    )
 
 
-def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
+def _compute_ai_score_impl(
+    symbol: str,
+    hist: Optional[pd.DataFrame] = None,
+    scoring_style: Optional[str] = None,
+) -> Dict[str, Any]:
     """Internal AI score computation (used by compute_ai_score)."""
     try:
         _regime_label = ""
@@ -946,16 +992,14 @@ def _compute_ai_score_impl(symbol: str, hist: Optional[pd.DataFrame] = None) -> 
         try:
             weights = _compute_ic_weights(
                 symbol,
+                scoring_style=scoring_style,
                 regime_label=_regime_label,
                 vix_level=_vix_level,
             )
         except Exception:
-            weights = {
-                "technical": 0.30,
-                "momentum": 0.35,
-                "sentiment": 0.20,
-                "fundamental": 0.15,
-            }
+            weights = dict(
+                SCORING_STYLE_WEIGHTS["Balanced (default)"],
+            )
             try:
                 if _regime_label:
                     weights = _apply_regime_tilt(
@@ -2204,6 +2248,7 @@ def compute_short_score(
     symbol: str,
     hist: Optional[pd.DataFrame],
     ai_result: Optional[Dict[str, Any]] = None,
+    scoring_style: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Short candidate score (0-10). Higher = stronger bearish thesis.
@@ -2212,7 +2257,9 @@ def compute_short_score(
     """
     try:
         if ai_result is None:
-            ai_result = compute_ai_score(symbol, hist)
+            ai_result = compute_ai_score(
+                symbol, hist, scoring_style=scoring_style,
+            )
 
         if ai_result.get("error"):
             return _neutral_short(symbol)

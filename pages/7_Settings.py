@@ -244,7 +244,10 @@ with tab_alerts:
 
         import pandas as pd
 
-        _sid = get_stable_user_id()
+        _sid = (
+            st.session_state.get("evolve_session_id")
+            or get_stable_user_id()
+        )
         if not _sid:
             st.caption(
                 "Sign in or complete onboarding so alerts can be saved."
@@ -403,7 +406,10 @@ with tab_track:
             RecommendationTracker,
         )
 
-        _tsid = get_stable_user_id()
+        _tsid = (
+            st.session_state.get("evolve_session_id")
+            or get_stable_user_id()
+        )
         if not _tsid:
             st.info(
                 "Complete onboarding so recommendations can be tied to "
@@ -755,7 +761,10 @@ with tab_research:
                     "include_forecasts": include_forecasts,
                 },
             )
-            st.success("Preferences saved. Refresh Home to apply.")
+            st.success(
+                "Preferences saved. Changes apply to the Morning Briefing, "
+                "Scanner, and AI Score on next use."
+            )
         except Exception as e:
             st.caption(f"Could not save: {e}")
 
@@ -796,7 +805,7 @@ with tab_admin:
             )
 
         st.markdown("#### App")
-        st.metric("Version", "v4.6.7")
+        st.metric("Version", "v4.7.1")
 
         st.markdown("#### Optional packages")
         try:

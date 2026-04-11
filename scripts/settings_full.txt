@@ -1,0 +1,1133 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""
+3	Settings page â€” Watchlist, Alerts, System (from Alerts, Admin, Watchlist).
+4	"""
+5	import json
+6	import logging
+7	import sys
+8	import uuid
+9	from datetime import datetime
+10	from pathlib import Path
+11	import os
+12	
+13	project_root = Path(__file__).resolve().parent.parent
+14	logger = logging.getLogger(__name__)
+15	if str(project_root) not in sys.path:
+16	    sys.path.insert(0, str(project_root))
+17	
+18	import streamlit as st
+19	
+20	from components.theme import inject_theme, render_top_bar, keyboard_shortcut_js
+21	from trading.data.ticker_resolver import resolve_ticker
+22	
+23	try:
+24	    from trading.utils.notification_system import NotificationSystem
+25	except Exception:
+26	    NotificationSystem = None
+27	try:
+28	    import psutil
+29	except Exception:
+30	    psutil = None
+31	try:
+32	    from config.user_store import load_user_preferences, save_user_preferences
+33	except Exception:
+34	    load_user_preferences = save_user_preferences = None
+35	
+36	try:
+37	    st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
+38	except Exception:
+39	    pass
+40	inject_theme()
+41	render_top_bar()
+42	
+43	st.title("âš™ï¸ Settings")
+44	st.caption("Watchlist, alerts, and system configuration")
+45	
+46	tab_wl, tab_keys, tab_alerts, tab_track, tab_research, tab_admin = st.tabs([
+47	    "Watchlist",
+48	    "ðŸ”‘ API Keys",
+49	    "Alerts",
+50	    "Performance",
+51	    "Research preferences",
+52	    "System",
+53	])
+54	
+55	with tab_wl:
+56	    st.subheader("Watchlist")
+57	    try:
+58	        if load_user_preferences:
+59	            prefs = load_user_preferences(st.session_state.get("evolve_session_id", "") or "default")
+60	            if prefs:
+61	                st.caption("User preferences loaded from user_store.")
+62	        from components.watchlist_widget import render_watchlist
+63	        render_watchlist()
+64	    except Exception as e:
+65	        st.caption(f"Feature unavailable: {e}")
+66	
+67	with tab_keys:
+68	    st.subheader("API Keys")
+69	    st.caption(
+70	        "Your keys are encrypted and stored "
+71	        "locally. They persist across sessions "
+72	        "and are never shared."
+73	    )
+74	    try:
+75	        from utils.session_utils import (
+76	            get_stable_user_id
+77	        )
+78	        from config.user_store import (
+79	            save_user_api_keys,
+80	            load_user_api_keys,
+81	        )
+82	        _uid = st.session_state.get("evolve_session_id") or get_stable_user_id()
+83	        _saved = load_user_api_keys(_uid) or {}
+84	
+85	        # Show masked existing keys
+86	        _has_anthropic = bool(
+87	            _saved.get("ANTHROPIC_API_KEY")
+88	            or os.environ.get("ANTHROPIC_API_KEY")
+89	        )
+90	        _has_openai = bool(
+91	            _saved.get("OPENAI_API_KEY")
+92	            or os.environ.get("OPENAI_API_KEY")
+93	        )
+94	        _has_news = bool(
+95	            _saved.get("NEWS_API_KEY")
+96	            or os.environ.get("NEWS_API_KEY")
+97	        )
+98	        _has_reddit = bool(
+99	            _saved.get("REDDIT_CLIENT_ID")
+100	            or os.environ.get("REDDIT_CLIENT_ID")
+101	        )
+102	
+103	        st.markdown("#### OpenAI")
+104	        if _has_openai:
+105	            st.success("âœ… OpenAI key saved")
+106	        openai_key = st.text_input(
+107	            "OpenAI API key",
+108	            type="password",
+109	            placeholder="sk-... (leave blank to keep existing)",
+110	            key="settings_openai_key",
+111	            help="Chat, commentary, morning briefing narrative.",
+112	        )
+113	
+114	        st.markdown("#### Anthropic (optional)")
+115	        if _has_anthropic:
+116	            st.success("âœ… Anthropic key saved")
+117	        anthropic_key = st.text_input(
+118	            "Anthropic API key",
+119	            type="password",
+120	            placeholder="sk-ant-... (leave blank to keep existing)",
+121	            key="settings_anthropic_key",
+122	            help="Alternative LLM â€” Claude for chat and agents.",
+123	        )
+124	
+125	        st.markdown("#### News API (optional)")
+126	        if _has_news:
+127	            st.success("âœ… News API key saved")
+128	        news_key = st.text_input(
+129	            "News API key",
+130	            type="password",
+131	            placeholder="NewsAPI key (leave blank to keep existing)",
+132	            key="settings_news_key",
+133	        )
+134	
+135	        st.markdown("#### Reddit (optional)")
+136	        if _has_reddit:
+137	            st.success("âœ… Reddit app credentials saved")
+138	        reddit_client_id = st.text_input(
+139	            "Reddit client ID",
+140	            type="password",
+141	            placeholder="Reddit app client ID",
+142	            key="settings_reddit_id",
+143	        )
+144	        reddit_secret = st.text_input(
+145	            "Reddit client secret",
+146	            type="password",
+147	            placeholder="Reddit app secret",
+148	            key="settings_reddit_secret",
+149	        )
+150	
+151	        _pref_llm = (
+152	            load_user_preferences(_uid) or {}
+153	        ).get("preferred_llm_provider") or "openai"
+154	        provider = st.selectbox(
+155	            "Preferred LLM provider",
+156	            ["openai", "anthropic"],
+157	            index=(0 if _pref_llm == "openai" else 1),
+158	            help="Default provider for chat and agents.",
+159	        )
+160	
+161	        if st.button(
+162	            "Save API Keys",
+163	            key="settings_save_keys"
+164	        ):
+165	            keys_to_save = {}
+166	            if anthropic_key.strip():
+167	                keys_to_save[
+168	                    "ANTHROPIC_API_KEY"
+169	                ] = anthropic_key.strip()
+170	            if openai_key.strip():
+171	                keys_to_save[
+172	                    "OPENAI_API_KEY"
+173	                ] = openai_key.strip()
+174	            if news_key.strip():
+175	                keys_to_save["NEWS_API_KEY"] = news_key.strip()
+176	            if reddit_client_id.strip():
+177	                keys_to_save["REDDIT_CLIENT_ID"] = reddit_client_id.strip()
+178	            if reddit_secret.strip():
+179	                keys_to_save["REDDIT_CLIENT_SECRET"] = reddit_secret.strip()
+180	            if keys_to_save:
+181	                save_user_api_keys(
+182	                    _uid, keys_to_save
+183	                )
+184	                for k, v in keys_to_save.items():
+185	                    st.session_state[f"user_key_{k}"] = v
+186	                _is_cloud = (
+187	                    os.environ.get("STREAMLIT_SHARING_MODE")
+188	                    or os.environ.get("IS_STREAMLIT_CLOUD")
+189	                    or not os.path.exists(".env")
+190	                )
+191	                if _is_cloud:
+192	                    from config.user_store import inject_user_keys_to_session
+193	                    inject_user_keys_to_session(_uid)
+194	                else:
+195	                    from config.user_store import inject_user_keys_to_env
+196	                    inject_user_keys_to_env(_uid)
+197	                try:
+198	                    from config.user_store import save_user_preferences, load_user_preferences
+199	                    _p = load_user_preferences(_uid) or {}
+200	                    save_user_preferences(
+201	                        _uid,
+202	                        {**_p, "preferred_llm_provider": provider},
+203	                    )
+204	                except Exception as _e:
+205	                    st.caption(f"Preference note: {_e}")
+206	                st.success(
+207	                    "Keys saved and activated. "
+208	                    "They will load automatically "
+209	                    "next time you open the app."
+210	                )
+211	            else:
+212	                st.info(
+213	                    "No new keys entered. "
+214	                    "Existing keys unchanged."
+215	                )
+216	
+217	        # Clear keys option
+218	        if st.button(
+219	            "Clear Saved Keys",
+220	            key="settings_clear_keys"
+221	        ):
+222	            save_user_api_keys(_uid, {
+223	                "ANTHROPIC_API_KEY": "",
+224	                "OPENAI_API_KEY": "",
+225	                "NEWS_API_KEY": "",
+226	                "REDDIT_CLIENT_ID": "",
+227	                "REDDIT_CLIENT_SECRET": "",
+228	            })
+229	            st.warning("Keys cleared.")
+230	
+231	    except Exception as e:
+232	        st.caption(
+233	            f"API key storage unavailable: {e}"
+234	        )
+235	
+236	with tab_alerts:
+237	    st.subheader("Alerts")
+238	    st.caption(
+239	        "Saved price and score alerts (stored with your user preferences)."
+240	    )
+241	    try:
+242	        from utils.session_utils import get_stable_user_id
+243	        from utils.dataframe_utils import normalize_for_display
+244	
+245	        import pandas as pd
+246	
+247	        _sid = get_stable_user_id()
+248	        if not _sid:
+249	            st.caption(
+250	                "Sign in or complete onboarding so alerts can be saved."
+251	            )
+252	        elif not (load_user_preferences and save_user_preferences):
+253	            st.caption("User preferences storage is not available.")
+254	        else:
+255	            _prefs = load_user_preferences(_sid) or {}
+256	            _alerts = list(_prefs.get("evolve_alerts", []))
+257	            if not isinstance(_alerts, list):
+258	                _alerts = []
+259	
+260	            _cond_labels = {
+261	                "price_above": "Price Above",
+262	                "price_below": "Price Below",
+263	                "ai_score_above": "AI Score Above",
+264	                "pct_change": "% Change",
+265	            }
+266	
+267	            if _alerts:
+268	                st.markdown("#### Saved alerts")
+269	                _rows = []
+270	                for _a in _alerts:
+271	                    if not isinstance(_a, dict):
+272	                        continue
+273	                    _rows.append({
+274	                        "Symbol": _a.get("symbol", ""),
+275	                        "Condition": _cond_labels.get(
+276	                            _a.get("condition", ""),
+277	                            _a.get("condition", ""),
+278	                        ),
+279	                        "Threshold": _a.get("threshold", ""),
+280	                        "Created": _a.get("created_at", "")[:19]
+281	                        if _a.get("created_at")
+282	                        else "",
+283	                        "id": _a.get("id", ""),
+284	                    })
+285	                if _rows:
+286	                    _adf = pd.DataFrame(_rows)
+287	                    _display = _adf.drop(columns=["id"], errors="ignore")
+288	                    st.dataframe(
+289	                        normalize_for_display(_display),
+290	                        width="stretch",
+291	                        hide_index=True,
+292	                    )
+293	
+294	                _del_opts = [
+295	                    f"{r.get('Symbol', '')} â€” {r.get('Condition', '')} "
+296	                    f"(threshold {r.get('Threshold', '')})"
+297	                    for r in _rows
+298	                    if r.get("id")
+299	                ]
+300	                _ids = [r.get("id") for r in _rows if r.get("id")]
+301	                if _del_opts and _ids:
+302	                    _pick = st.selectbox(
+303	                        "Remove alert",
+304	                        list(range(len(_ids))),
+305	                        format_func=lambda i: _del_opts[i],
+306	                        key="settings_alert_delete_pick",
+307	                    )
+308	                    if st.button(
+309	                        "Delete selected alert",
+310	                        key="settings_alert_delete_btn",
+311	                    ):
+312	                        _rid = _ids[_pick]
+313	                        _alerts = [
+314	                            _x for _x in _alerts
+315	                            if isinstance(_x, dict)
+316	                            and _x.get("id") != _rid
+317	                        ]
+318	                        _prefs["evolve_alerts"] = _alerts
+319	                        try:
+320	                            save_user_preferences(_sid, _prefs)
+321	                            st.success("Alert removed.")
+322	                            st.rerun()
+323	                        except Exception as _se:
+324	                            logger.warning(
+325	                                "settings: save after delete failed: %s",
+326	                                _se,
+327	                            )
+328	                            st.caption(
+329	                                f"Could not save removal: {_se}"
+330	                            )
+331	            else:
+332	                st.info("No saved alerts yet.")
+333	
+334	            st.markdown("---")
+335	            st.markdown("#### New alert")
+336	            _sym = st.text_input(
+337	                "Symbol",
+338	                value="AAPL",
+339	                key="settings_alert_symbol",
+340	            ).strip().upper()
+341	            _sym = resolve_ticker(_sym, validate=False)
+342	            _cond_ui = st.selectbox(
+343	                "Condition",
+344	                [
+345	                    "Price Above",
+346	                    "Price Below",
+347	                    "AI Score Above",
+348	                    "% Change",
+349	                ],
+350	                key="settings_alert_condition",
+351	            )
+352	            _cond_key = {
+353	                "Price Above": "price_above",
+354	                "Price Below": "price_below",
+355	                "AI Score Above": "ai_score_above",
+356	                "% Change": "pct_change",
+357	            }[_cond_ui]
+358	            _thr = st.number_input(
+359	                "Threshold value",
+360	                value=150.0
+361	                if _cond_key in ("price_above", "price_below")
+362	                else (6.5 if _cond_key == "ai_score_above" else 3.0),
+363	                step=0.25,
+364	                key="settings_alert_threshold",
+365	            )
+366	            if st.button("Save alert", key="settings_alert_save", type="primary"):
+367	                if not _sym:
+368	                    st.warning("Enter a symbol.")
+369	                else:
+370	                    _new = {
+371	                        "id": str(uuid.uuid4()),
+372	                        "symbol": _sym,
+373	                        "condition": _cond_key,
+374	                        "threshold": float(_thr),
+375	                        "created_at": datetime.now().isoformat(),
+376	                    }
+377	                    _alerts.append(_new)
+378	                    _prefs["evolve_alerts"] = _alerts
+379	                    try:
+380	                        save_user_preferences(_sid, _prefs)
+381	                        st.success(f"Saved alert for {_sym}.")
+382	                        st.rerun()
+383	                    except Exception as _se:
+384	                        logger.warning(
+385	                            "settings: save alert failed: %s", _se
+386	                        )
+387	                        st.caption(f"Could not save alert: {_se}")
+388	    except Exception as e:
+389	        logger.warning("settings alerts tab failed: %s", e)
+390	        st.caption(f"Alerts unavailable: {e}")
+391	
+392	with tab_track:
+393	    st.subheader("Performance tracking")
+394	    st.caption(
+395	        "Tracked recommendations from Deep Dive â€” live P&L vs entry, "
+396	        "target, and stop."
+397	    )
+398	    try:
+399	        from utils.session_utils import get_stable_user_id
+400	        from utils.dataframe_utils import normalize_for_display
+401	        import pandas as pd
+402	        from trading.services.recommendation_tracker import (
+403	            RecommendationTracker,
+404	        )
+405	
+406	        _tsid = get_stable_user_id()
+407	        if not _tsid:
+408	            st.info(
+409	                "Complete onboarding so recommendations can be tied to "
+410	                "your account."
+411	            )
+412	        else:
+413	            _trk = RecommendationTracker()
+414	            _clr_c, _ = st.columns([1, 3])
+415	            with _clr_c:
+416	                if st.button(
+417	                    "Clear closed recommendations",
+418	                    key="rec_clear_closed",
+419	                    help="Remove closed rows from stored tracking history.",
+420	                ):
+421	                    try:
+422	                        _nrm = _trk.clear_closed_recommendations(_tsid)
+423	                        st.success(
+424	                            f"Removed {_nrm} closed recommendation(s)."
+425	                        )
+426	                        st.rerun()
+427	                    except Exception as _cle:
+428	                        logger.warning(
+429	                            "settings: clear closed recs failed: %s", _cle
+430	                        )
+431	                        st.caption(f"Could not clear: {_cle}")
+432	            _summ = _trk.get_performance_summary(_tsid)
+433	            t1, t2, t3, t4 = st.columns(4)
+434	            with t1:
+435	                st.metric(
+436	                    "Tracked (open)",
+437	                    str(_summ.get("total_recommendations") or 0),
+438	                )
+439	            with t2:
+440	                _wr = _summ.get("win_rate")
+441	                st.metric(
+442	                    "Win rate (target vs stop)",
+443	                    f"{float(_wr)*100:.1f}%"
+444	                    if _wr is not None
+445	                    else "â€”",
+446	                )
+447	            with t3:
+448	                _ar = _summ.get("avg_return_pct")
+449	                st.metric(
+450	                    "Avg P&L %",
+451	                    f"{_ar:.2f}" if _ar is not None else "â€”",
+452	                )
+453	            with t4:
+454	                st.caption(
+455	                    f"Best {_summ.get('best_trade_pct')} Â· "
+456	                    f"worst {_summ.get('worst_trade_pct')}"
+457	                )
+458	            _outs = _trk.check_outcomes(_tsid)
+459	            if _outs:
+460	                _odf = pd.DataFrame(_outs)
+461	                st.dataframe(
+462	                    normalize_for_display(_odf),
+463	                    width="stretch",
+464	                    hide_index=True,
+465	                )
+466	            else:
+467	                st.info(
+468	                    "No open tracked picks. Use **Track recommendation** "
+469	                    "on a tickerâ€™s Deep Dive card."
+470	                )
+471	    except Exception as e:
+472	        st.caption(f"Feature unavailable: {e}")
+473	
+474	with tab_research:
+475	    st.markdown("### Briefing & scanner preferences")
+476	    st.caption(
+477	        "Customize your morning briefing and scanner defaults."
+478	    )
+479	    try:
+480	        from utils.session_utils import get_stable_user_id
+481	        from config.user_store import load_user_preferences, save_user_preferences
+482	
+483	        _uid = st.session_state.get("evolve_session_id") or get_stable_user_id()
+484	        _prefs = load_user_preferences(_uid) or {}
+485	    except Exception:
+486	        _uid = ""
+487	        _prefs = {}
+488	
+489	    universe_opts = [
+490	        "Top 25 (fastest, ~30s)",
+491	        "SP100 (balanced, ~60s)",
+492	        "NASDAQ100 (tech-heavy)",
+493	        "SP500 (broadest, ~3min)",
+494	    ]
+495	    style_opts = [
+496	        "Balanced (default)",
+497	        "Momentum-heavy",
+498	        "Technical-heavy",
+499	        "Fundamental-heavy",
+500	    ]
+501	
+502	    _def_u = "Top 25 (fastest, ~30s)"
+503	    _stored_u = _prefs.get("briefing_universe", _def_u)
+504	    _u_idx = (
+505	        universe_opts.index(_stored_u) if _stored_u in universe_opts else 0
+506	    )
+507	
+508	    _def_s = "Balanced (default)"
+509	    _stored_s = _prefs.get("scoring_style", _def_s)
+510	    _s_idx = style_opts.index(_stored_s) if _stored_s in style_opts else 0
+511	
+512	    min_score = st.slider(
+513	        "Minimum AI Score for briefing",
+514	        min_value=4.0,
+515	        max_value=8.0,
+516	        value=float(_prefs.get("min_ai_score", 5.5)),
+517	        step=0.5,
+518	        key="pref_min_score",
+519	        help="Lower = more stocks shown. Higher = only strongest signals.",
+520	    )
+521	
+522	    max_results = st.slider(
+523	        "Max opportunities to show",
+524	        min_value=1,
+525	        max_value=10,
+526	        value=int(_prefs.get("briefing_max_results", 3)),
+527	        step=1,
+528	        help=(
+529	            "How many top opportunities to list in the morning briefing "
+530	            "(longs and shorts each cap here). More rows = longer run when "
+531	            "forecasts are enabled."
+532	        ),
+533	        key="briefing_max_results_slider",
+534	    )
+535	
+536	    universe_choice = st.selectbox(
+537	        "Briefing scan universe",
+538	        options=universe_opts,
+539	        index=_u_idx,
+540	        key="pref_universe",
+541	    )
+542	
+543	    scoring_style = st.radio(
+544	        "Score weighting style",
+545	        options=style_opts,
+546	        index=_s_idx,
+547	        key="pref_scoring",
+548	        horizontal=True,
+549	    )
+550	
+551	    direction_opts = [
+552	        "Bullish only (BUY signals)",
+553	        "Both directions",
+554	        "Bearish only (short signals)",
+555	    ]
+556	    _def_d = "Bullish only (BUY signals)"
+557	    _stored_d = _prefs.get("opportunity_direction", _def_d)
+558	    _d_idx = (
+559	        direction_opts.index(_stored_d) if _stored_d in direction_opts else 0
+560	    )
+561	    opportunity_direction = st.radio(
+562	        "Show opportunities",
+563	        options=direction_opts,
+564	        index=_d_idx,
+565	        key="pref_direction",
+566	        horizontal=True,
+567	        help="Bullish only filters out picks where forecast target is below entry.",
+568	    )
+569	
+570	    ALL_SECTORS = [
+571	        "Technology",
+572	        "Healthcare",
+573	        "Finance",
+574	        "Energy",
+575	        "Consumer Cyclical",
+576	        "Consumer Defensive",
+577	        "Industrial",
+578	        "Communication Services",
+579	        "Materials",
+580	        "Real Estate",
+581	        "Utilities",
+582	    ]
+583	    _stored_sectors = _prefs.get("preferred_sectors") or []
+584	    if not isinstance(_stored_sectors, list):
+585	        _stored_sectors = []
+586	    preferred_sectors = st.multiselect(
+587	        "Focus sectors",
+588	        options=ALL_SECTORS,
+589	        default=[s for s in _stored_sectors if s in ALL_SECTORS],
+590	        key="pref_sectors",
+591	        help="Leave empty to scan all sectors. Select to limit briefing candidates.",
+592	    )
+593	
+594	    watchlist_only = st.toggle(
+595	        "Briefing from watchlist only",
+596	        value=bool(_prefs.get("watchlist_only", False)),
+597	        key="pref_watchlist_only",
+598	        help="When ON, briefing scans your saved watchlist tickers only.",
+599	    )
+600	    if watchlist_only:
+601	        st.caption(
+602	            "Your watchlist tickers will be scanned instead of the universe. "
+603	            "Add tickers under Watchlist to include them."
+604	        )
+605	
+606	    include_forecasts = st.toggle(
+607	        "Include price forecasts",
+608	        value=bool(_prefs.get("include_forecasts", False)),
+609	        key="pref_include_forecasts",
+610	        help=(
+611	            "âš ï¸ Adds 2â€“3 minutes. Generates entry, target and stop prices per "
+612	            "top pick using 5-model consensus. Recommended for desktop use only. "
+613	            "When off, briefing completes in ~30 seconds (Quick Score ranking only)."
+614	        ),
+615	    )
+616	
+617	    st.markdown("#### Market signals")
+618	    st.caption(
+619	        "Manual computation only. Results are saved to your profile and shown "
+620	        "on Home (market pulse)."
+621	    )
+622	    _gpr_stored = _prefs.get("cached_gpr")
+623	    if _gpr_stored and _gpr_stored.get("current") is not None:
+624	        st.success(
+625	            f"GPR loaded: {_gpr_stored.get('current')} "
+626	            f"({_gpr_stored.get('level')}) â€” {_gpr_stored.get('trend')}"
+627	        )
+628	    if st.button(
+629	        "ðŸŒ Load Geopolitical Risk Index",
+630	        key="load_gpr_btn",
+631	        help=(
+632	            "Downloads Caldara & Iacoviello GPR index (~5â€“60s). "
+633	            "Cached 30 days on disk."
+634	        ),
+635	    ):
+636	        with st.spinner("Downloading GPR indexâ€¦"):
+637	            try:
+638	                from trading.analysis.macro_factors import MacroFactors
+639	
+640	                _mf_g = MacroFactors()
+641	                _gpr_result = _mf_g._get_gpr_index()
+642	                if _gpr_result.get("current") is not None:
+643	                    _merged = dict(load_user_preferences(_uid) or {})
+644	                    _merged["cached_gpr"] = _gpr_result
+645	                    save_user_preferences(_uid, _merged)
+646	                    st.success(
+647	                        f"GPR loaded: {_gpr_result['current']:.0f} "
+648	                        f"({_gpr_result.get('level')})"
+649	                    )
+650	                    st.rerun()
+651	                else:
+652	                    st.error(
+653	                        "GPR download failed â€” check network or try again later."
+654	                    )
+655	            except Exception as _ge:
+656	                st.error(f"GPR error: {_ge}")
+657	
+658	    _rb_stored = _prefs.get("cached_revision_breadth")
+659	    if _rb_stored and _rb_stored.get("success"):
+660	        st.success(
+661	            f"EPS breadth: {_rb_stored['pct_up']:.0f}% â†‘ / "
+662	            f"{_rb_stored['pct_down']:.0f}% â†“ "
+663	            f"({_rb_stored.get('sample_size', 0)} stocks)"
+664	        )
+665	    if st.button(
+666	        "ðŸ“Š Compute EPS revision breadth",
+667	        key="compute_breadth_btn",
+668	        help=(
+669	            "Samples 150 S&P 500 names for EPS revision trend. "
+670	            "May take several minutes. Cached 24h in-process."
+671	        ),
+672	    ):
+673	        with st.spinner(
+674	            "Sampling stocks for EPS revision breadth (may take several minutes)â€¦"
+675	        ):
+676	            try:
+677	                from trading.data.earnings_quality import get_revision_breadth
+678	
+679	                _rb_result = get_revision_breadth(sample_size=150)
+680	                if _rb_result.get("success"):
+681	                    _merged_b = dict(load_user_preferences(_uid) or {})
+682	                    _merged_b["cached_revision_breadth"] = _rb_result
+683	                    save_user_preferences(_uid, _merged_b)
+684	                    st.success(
+685	                        f"EPS breadth: {_rb_result['pct_up']:.0f}% upward revisions "
+686	                        f"({_rb_result.get('sample_size', 0)} stocks sampled)"
+687	                    )
+688	                    st.rerun()
+689	                else:
+690	                    st.warning("Breadth compute returned no usable data.")
+691	            except Exception as _be:
+692	                st.error(f"Breadth error: {_be}")
+693	
+694	    st.markdown("---")
+695	    st.markdown("### ðŸ“Š Signal IC Status")
+696	    st.caption(
+697	        "Dynamic signal weights activate after 30+ scored observations per symbol "
+698	        "or 100+ globally."
+699	    )
+700	    try:
+701	        import os
+702	        import sqlite3
+703	
+704	        from trading.analysis.signal_score_store import (
+705	            _DB_PATH,
+706	            _TABLE,
+707	            fill_forward_returns,
+708	        )
+709	
+710	        if os.path.exists(_DB_PATH):
+711	            with sqlite3.connect(_DB_PATH) as _c:
+712	                _n = _c.execute(
+713	                    f"SELECT COUNT(*) FROM {_TABLE}"
+714	                ).fetchone()[0]
+715	                _n_filled = _c.execute(
+716	                    f"SELECT COUNT(*) FROM {_TABLE} "
+717	                    "WHERE return_7d IS NOT NULL"
+718	                ).fetchone()[0]
+719	            st.metric("Scored observations", _n)
+720	            st.metric("With realized returns", _n_filled)
+721	            if st.button(
+722	                "Fill forward returns now",
+723	                key="fill_returns",
+724	            ):
+725	                _filled = fill_forward_returns()
+726	                st.success(
+727	                    f"Filled {_filled} return observations"
+728	                )
+729	        else:
+730	            st.caption(
+731	                "No data yet â€” score some tickers in Analyze to begin "
+732	                "accumulating data."
+733	            )
+734	    except Exception as _ie:
+735	        st.caption(f"IC status unavailable: {_ie}")
+736	
+737	    st.markdown("---")
+738	    if st.button("Save preferences", key="save_research_prefs", type="primary"):
+739	        try:
+740	            from config.user_store import save_user_preferences as _save_rp
+741	            from utils.session_utils import get_stable_user_id as _gid
+742	
+743	            _uid_save = st.session_state.get("evolve_session_id") or _gid()
+744	            _save_rp(
+745	                _uid_save,
+746	                {
+747	                    **_prefs,
+748	                    "min_ai_score": min_score,
+749	                    "briefing_max_results": max_results,
+750	                    "briefing_universe": universe_choice,
+751	                    "scoring_style": scoring_style,
+752	                    "opportunity_direction": opportunity_direction,
+753	                    "preferred_sectors": preferred_sectors,
+754	                    "watchlist_only": watchlist_only,
+755	                    "include_forecasts": include_forecasts,
+756	                },
+757	            )
+758	            st.success("Preferences saved. Refresh Home to apply.")
+759	        except Exception as e:
+760	            st.caption(f"Could not save: {e}")
+761	
+762	with tab_admin:
+763	    st.subheader("System")
+764	    try:
+765	        st.caption(
+766	            "Process metrics, optional packages, and cache footprint."
+767	        )
+768	
+769	        if psutil:
+770	            _cpu = psutil.cpu_percent(interval=0.1)
+771	            _mem = psutil.virtual_memory()
+772	            st.markdown("#### Resource usage")
+773	            _m1, _m2 = st.columns(2)
+774	            with _m1:
+775	                st.metric("CPU usage", f"{_cpu:.1f}%")
+776	            with _m2:
+777	                st.metric("RAM usage", f"{_mem.percent:.1f}%")
+778	            try:
+779	                _root = (
+780	                    os.environ.get("SystemDrive", "C:") + "\\"
+781	                    if os.name == "nt"
+782	                    else "/"
+783	                )
+784	                _disk = psutil.disk_usage(_root)
+785	                st.metric(
+786	                    "Disk usage",
+787	                    f"{_disk.percent:.1f}%",
+788	                    help=f"Root: {_root}",
+789	                )
+790	            except Exception as _de:
+791	                logger.warning("settings: disk usage failed: %s", _de)
+792	                st.caption(f"Disk metrics unavailable: {_de}")
+793	        else:
+794	            st.caption(
+795	                "Install psutil for CPU, memory, and disk metrics."
+796	            )
+797	
+798	        st.markdown("#### App")
+799	        st.metric("Version", "v4.6.7")
+800	
+801	        st.markdown("#### Optional packages")
+802	        try:
+803	            import importlib.metadata as _imd
+804	
+805	            _nf_ver = _imd.version("neuralforecast")
+806	            _nf_label = (
+807	                f"neuralforecast {_nf_ver} "
+808	                f"(N-BEATS, N-HiTS, PatchTST, TFT)"
+809	            )
+810	            _nf_ok = True
+811	        except Exception:
+812	            _nf_label = (
+813	                "neuralforecast (N-BEATS, N-HiTS, PatchTST, TFT)"
+814	            )
+815	            _nf_ok = False
+816	        _opt = [
+817	            ("shap", "shap"),
+818	            (_nf_label, "__nf__"),
+819	            ("faiss", "faiss"),
+820	            ("cvxpy", "cvxpy"),
+821	            ("pandas_ta", "pandas_ta"),
+822	        ]
+823	        _oc1, _oc2 = st.columns(2)
+824	        for _i, (_label, _mod) in enumerate(_opt):
+825	            if _mod == "__nf__":
+826	                _ok = _nf_ok
+827	            else:
+828	                _ok = False
+829	                try:
+830	                    __import__(_mod)
+831	                    _ok = True
+832	                except Exception:
+833	                    pass
+834	            _target = _oc1 if _i % 2 == 0 else _oc2
+835	            with _target:
+836	                st.write(
+837	                    f"{'âœ…' if _ok else 'âŒ'} {_label}"
+838	                )
+839	
+840	        st.markdown("#### Model cache (.cache/)")
+841	        _cache_root = project_root / ".cache"
+842	        _n_files = 0
+843	        _size_b = 0
+844	        try:
+845	            if _cache_root.exists():
+846	                for _p in _cache_root.rglob("*"):
+847	                    if _p.is_file():
+848	                        _n_files += 1
+849	                        try:
+850	                            _size_b += _p.stat().st_size
+851	                        except OSError as _oe:
+852	                            logger.debug(
+853	                                "settings: cache stat skip: %s", _oe
+854	                            )
+855	            _mb = _size_b / (1024 * 1024)
+856	            st.metric("Cache files", f"{_n_files}")
+857	            st.metric("Approx. size", f"{_mb:.2f} MB")
+858	        except Exception as _ce:
+859	            logger.warning("settings: cache scan failed: %s", _ce)
+860	            st.caption(f"Could not scan .cache: {_ce}")
+861	
+862	        st.markdown("---")
+863	        st.markdown("#### Platform Monitoring")
+864	        try:
+865	            import sys as _sys
+866	            from pathlib import Path as _Path
+867	
+868	            _mroot = project_root / "_archive" / "monitoring"
+869	            _mon_ok = False
+870	            if _mroot.is_dir():
+871	                _mp = str(_mroot)
+872	                if _mp not in _sys.path:
+873	                    _sys.path.insert(0, _mp)
+874	                try:
+875	                    from health_check import HealthChecker
+876	
+877	                    _hc = HealthChecker()
+878	                    _health = _hc.check_system_health()
+879	                    st.json(
+880	                        {
+881	                            k: _health[k]
+882	                            for k in ("timestamp", "status", "uptime_seconds")
+883	                            if k in _health
+884	                        }
+885	                    )
+886	                    _comps = _health.get("components") or {}
+887	                    if _comps:
+888	                        st.caption("Components")
+889	                        st.json(_comps)
+890	                    _mon_ok = True
+891	                except Exception as _me:
+892	                    logger.warning("settings: monitoring failed: %s", _me)
+893	            if not _mon_ok:
+894	                st.info(
+895	                    "Monitoring module not yet available."
+896	                )
+897	        except Exception as _me2:
+898	            st.caption(f"Monitoring unavailable: {_me2}")
+899	
+900	        st.markdown("---")
+901	        st.markdown("**ML Score Model**")
+902	        try:
+903	            from trading.analysis.ml_score_trainer import (
+904	                MLScoreTrainer,
+905	                SP100_SAMPLE,
+906	            )
+907	
+908	            _ml_dir = project_root / ".cache" / "ml_score"
+909	            _ml_model = _ml_dir / "ml_score_model.joblib"
+910	            _ml_meta_f = _ml_dir / "ml_score_meta.json"
+911	            model_exists = _ml_model.is_file()
+912	            _ml_meta = {}
+913	            if _ml_meta_f.is_file():
+914	                try:
+915	                    _ml_meta = json.loads(
+916	                        _ml_meta_f.read_text(encoding="utf-8")
+917	                    )
+918	                except Exception as _je:
+919	                    logger.debug("settings: ml meta read: %s", _je)
+920	            if model_exists and _ml_meta.get("training_date"):
+921	                _vda = _ml_meta.get("val_directional_accuracy")
+922	                _da_pct = (
+923	                    f"{float(_vda)*100:.1f}%"
+924	                    if _vda is not None
+925	                    else "â€”"
+926	                )
+927	                st.success("ML Score model is trained and active.")
+928	                st.caption(
+929	                    f"Training date: {_ml_meta.get('training_date', '')[:19]} Â· "
+930	                    f"Directional accuracy (val): {_da_pct} Â· "
+931	                    f"n_samples: {_ml_meta.get('n_samples', 'â€”')}"
+932	                )
+933	            else:
+934	                st.warning(
+935	                    "AI Score is using rules-based scoring. Train the ML "
+936	                    "model to enable blended ML scoring."
+937	                )
+938	            _uni_choice = st.selectbox(
+939	                "Training universe size",
+940	                [
+941	                    "Quick (20 stocks)",
+942	                    "Standard (50 stocks)",
+943	                    "Full SP100 (100 stocks)",
+944	                ],
+945	                key="ml_train_universe",
+946	            )
+947	            _sp100_fp = project_root / "data" / "universes" / "sp100.json"
+948	            _train_uni = []
+949	            try:
+950	                _raw_u = json.loads(
+951	                    _sp100_fp.read_text(encoding="utf-8")
+952	                )
+953	                if isinstance(_raw_u, list):
+954	                    if "Quick" in _uni_choice:
+955	                        _train_uni = [str(x) for x in _raw_u[:20]]
+956	                    elif "Standard" in _uni_choice:
+957	                        _train_uni = [str(x) for x in _raw_u[:50]]
+958	                    else:
+959	                        _train_uni = [str(x) for x in _raw_u[:100]]
+960	            except Exception as _ue:
+961	                logger.warning("settings: universe load failed: %s", _ue)
+962	            if st.button("Train ML Score Model", key="train_ml_score"):
+963	                _n = len(_train_uni) if _train_uni else len(SP100_SAMPLE)
+964	                _prog_ml = st.progress(0, text="Preparingâ€¦")
+965	                _ml_status = st.empty()
+966	
+967	                def _ml_progress(sym: str, cur: int, total: int) -> None:
+968	                    if total <= 0:
+969	                        return
+970	                    p = min(float(cur) / float(total), 1.0)
+971	                    _prog_ml.progress(p, text=f"{sym} ({cur}/{total})")
+972	                    _ml_status.caption(
+973	                        f"Building dataset: {sym} â€” {cur} of {total} tickers"
+974	                    )
+975	
+976	                with st.spinner(
+977	                    "Training ML Score model on historical dataâ€¦ "
+978	                    f"(~3â€“10 min for {_n} stocks)"
+979	                ):
+980	                    try:
+981	                        trainer = MLScoreTrainer()
+982	                        result = trainer.train(
+983	                            universe=_train_uni if _train_uni else None,
+984	                            progress_callback=_ml_progress,
+985	                        )
+986	                    except Exception as _te:
+987	                        result = {"error": str(_te)}
+988	                _prog_ml.progress(1.0, text="Done")
+989	                if result.get("error"):
+990	                    st.error(f"Training failed: {result['error']}")
+991	                else:
+992	                    import time as _time_ml
+993	
+994	                    st.session_state["ml_score_trained_at"] = _time_ml.time()
+995	                    _da = float(
+996	                        result.get("val_directional_accuracy") or 0
+997	                    )
+998	                    _r2 = result.get("val_r2")
+999	                    _nf = result.get("n_features", "?")
+1000	                    st.success(
+1001	                        f"ML Score model trained. Features: {_nf}, "
+1002	                        f"RÂ²: {_r2}"
+1003	                    )
+1004	                    st.caption(
+1005	                        f"Samples: {result.get('n_samples')} Â· "
+1006	                        f"Validation â€” directional accuracy: "
+1007	                        f"{_da*100:.1f}% Â· "
+1008	                        f"n_samples: {result.get('n_samples')}"
+1009	                    )
+1010	        except Exception as e:
+1011	            st.caption(f"ML Score training unavailable: {e}")
+1012	
+1013	        st.markdown("---")
+1014	        st.markdown("**Model Hyperparameter Optimization**")
+1015	        try:
+1016	            import yfinance as yf
+1017	
+1018	            from trading.optimization.optuna_optimizer import get_optimizer
+1019	
+1020	            st.caption(
+1021	                "Optimize XGBoost hyperparameters using Bayesian search (Optuna) "
+1022	                "on a short SPY feature window."
+1023	            )
+1024	            opt_model = st.selectbox(
+1025	                "Model to optimize",
+1026	                ["xgboost", "ridge", "catboost"],
+1027	                key="opt_model_select",
+1028	            )
+1029	            if st.button("Run Optimization", key="optuna_run_btn"):
+1030	                if opt_model != "xgboost":
+1031	                    st.caption(
+1032	                        "Only the XGBoost + Optuna path is wired here; "
+1033	                        "choose xgboost for a live run."
+1034	                    )
+1035	                else:
+1036	                    with st.spinner(
+1037	                        "Optimizing xgboostâ€¦ this may take several minutes"
+1038	                    ):
+1039	                        try:
+1040	                            _h = yf.Ticker("SPY").history(period="2y")
+1041	                            if _h.empty:
+1042	                                st.warning("No SPY data.")
+1043	                            else:
+1044	                                import pandas as pd
+1045	
+1046	                                _c = _h["Close"].astype(float)
+1047	                                _df = pd.DataFrame(
+1048	                                    {
+1049	                                        "y": _c.pct_change().shift(-1),
+1050	                                        "x1": _c.shift(1),
+1051	                                        "x2": _c.shift(2),
+1052	                                    }
+1053	                                ).dropna()
+1054	                                X = _df[["x1", "x2"]]
+1055	                                y = _df["y"]
+1056	                                optimizer = get_optimizer()
+1057	                                result = optimizer.optimize_xgboost(
+1058	                                    X, y, n_trials=min(40, 80)
+1059	                                )
+1060	                                if result and not result.get("error"):
+1061	                                    st.success(
+1062	                                        f"Best score (RMSE): "
+1063	                                        f"{result.get('best_score', 'N/A')}"
+1064	                                    )
+1065	                                    st.json(result.get("best_params", {}))
+1066	                                else:
+1067	                                    st.caption(
+1068	                                        f"Optimization failed: "
+1069	                                        f"{result.get('error', 'unknown')}"
+1070	                                    )
+1071	                        except Exception as oe:
+1072	                            st.caption(f"Optimization failed: {oe}")
+1073	        except Exception as e:
+1074	            st.caption(f"Optimizer unavailable: {e}")
+1075	
+1076	        st.markdown("---")
+1077	        st.markdown("**System Backup & Recovery**")
+1078	        try:
+1079	            import asyncio
+1080	
+1081	            from trading.recovery.disaster_recovery_manager import (
+1082	                DisasterRecoveryManager,
+1083	            )
+1084	
+1085	            drm = DisasterRecoveryManager()
+1086	            col_b1, col_b2 = st.columns(2)
+1087	            with col_b1:
+1088	                if st.button("Create Backup", key="backup_btn"):
+1089	                    try:
+1090	                        asyncio.run(drm.create_backup())
+1091	                        st.success("Backup created")
+1092	                    except Exception as be:
+1093	                        st.caption(f"Backup failed: {be}")
+1094	            with col_b2:
+1095	                if st.button("List Backups", key="list_backups_btn"):
+1096	                    try:
+1097	                        backups = drm.list_backups()
+1098	                        if backups:
+1099	                            st.json(
+1100	                                [b.backup_id for b in backups[:5]]
+1101	                            )
+1102	                        else:
+1103	                            st.caption("No backups found")
+1104	                    except Exception as le:
+1105	                        st.caption(f"Could not list backups: {le}")
+1106	        except Exception as re:
+1107	            st.caption(f"Recovery system unavailable: {re}")
+1108	
+1109	        if st.button(
+1110	            "Clear session & reload",
+1111	            key="settings_session_reboot",
+1112	            help="Clears Streamlit session state and cached data, then reloads.",
+1113	        ):
+1114	            try:
+1115	                st.cache_data.clear()
+1116	            except Exception as _x:
+1117	                logger.warning("settings: cache_data.clear: %s", _x)
+1118	            try:
+1119	                st.session_state.clear()
+1120	            except Exception as _x:
+1121	                logger.warning("settings: session_state.clear: %s", _x)
+1122	            st.rerun()
+1123	    except Exception as e:
+1124	        logger.warning("settings system tab failed: %s", e)
+1125	        st.caption(f"System panel unavailable: {e}")
+1126	
+1127	
+1128	# Page Assistant
+1129	try:
+1130	    from ui.page_assistant import render_page_assistant
+1131	    render_page_assistant("Settings")
+1132	except Exception:
+1133	    pass

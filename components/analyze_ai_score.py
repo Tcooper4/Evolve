@@ -8,14 +8,22 @@ import streamlit as st
 from components.analyze_common import _generate_recommendation, _news_sentiment_score
 
 
-def render_ai_score(ticker: str, hist, *, trader_mode: str = "Short-term") -> None:
+def render_ai_score(
+    ticker: str,
+    hist,
+    *,
+    trader_mode: str = "Short-term",
+    scoring_style: Optional[str] = None,
+) -> None:
     """Compute AI Score, signals table, and buy/sell-style recommendation."""
     try:
         from trading.analysis.ai_score import compute_ai_score
 
         _sym = (ticker or "").strip().upper() or "AAPL"
         with st.spinner("Computing AI Score..."):
-            score_result = compute_ai_score(_sym, hist)
+            score_result = compute_ai_score(
+                _sym, hist, scoring_style=scoring_style,
+            )
         if score_result.get("error"):
             st.caption(str(score_result.get("error")))
             return
@@ -120,7 +128,11 @@ def render_ai_score(ticker: str, hist, *, trader_mode: str = "Short-term") -> No
 
 
 def get_ai_recommendation_dict(
-    ticker: str, hist, *, trader_mode: str = "Short-term"
+    ticker: str,
+    hist,
+    *,
+    trader_mode: str = "Short-term",
+    scoring_style: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Structured recommendation for Deep Dive header card (no Streamlit)."""
     try:
@@ -131,7 +143,9 @@ def get_ai_recommendation_dict(
         )
 
         _sym = (ticker or "").strip().upper() or "AAPL"
-        score_result = compute_ai_score(_sym, hist)
+        score_result = compute_ai_score(
+            _sym, hist, scoring_style=scoring_style,
+        )
         if score_result.get("error"):
             return None
         forecast_result = None

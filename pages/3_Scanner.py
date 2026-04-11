@@ -41,6 +41,10 @@ try:
 except Exception:
     pass
 
+_pref_sectors = _scanner_prefs.get("preferred_sectors") or []
+if not isinstance(_pref_sectors, list):
+    _pref_sectors = []
+
 if "scanner_prefs_hydrated" not in st.session_state:
     _pu = str(_scanner_prefs.get("briefing_universe", ""))
     _def_scan_uni = "S&P 100 (~100, fastest)"
@@ -547,7 +551,17 @@ def _scanner_table():
                 from trading.data.price_cache import get_history as _gh
 
                 _hist = _gh(selected, period="6mo")
-                _ai = compute_ai_score(selected, _hist)
+                _ss_st = str(
+                    _scanner_prefs.get(
+                        "scoring_style",
+                        "Balanced (default)",
+                    ),
+                )
+                _ai = compute_ai_score(
+                    selected,
+                    _hist,
+                    scoring_style=_ss_st,
+                )
                 if _ai.get("error") is None:
                     st.markdown(f"**{selected}** — {_ai['summary']}")
                     _sigs = pd.DataFrame(_ai.get("signals", []))
@@ -659,6 +673,14 @@ with tab_scan:
         st.warning("Select at least one filter to run a scan.")
         st.stop()
 
+    if _pref_sectors:
+        st.caption(
+            "Sector filter active: "
+            f"{', '.join(_pref_sectors)} "
+            "(set in Settings → Research preferences). "
+            "Results are narrowed after each scan."
+        )
+
     if st.button("Run Scan", type="primary", key="scanner_run_btn"):
         progress_bar = st.progress(0.0, text="Scanning...")
 
@@ -699,7 +721,50 @@ with tab_scan:
         if scan_result.get("error"):
             st.error(f"Scan error: {scan_result['error']}")
         else:
-            st.session_state.scanner_results = scan_result
+            _sr = dict(scan_result)
+            _rows = list(_sr.get("results") or [])
+            if _pref_sectors and _rows:
+                try:
+                    import yfinance as yf
+
+                    _syms = [
+                        str(r.get("symbol") or "").strip().upper()
+                        for r in _rows
+                        if r.get("symbol")
+                    ]
+                    if _syms:
+                        _tickers = yf.Tickers(" ".join(_syms[:100]))
+                        for r in _rows:
+                            _sym = str(r.get("symbol") or "").strip().upper()
+                            if not _sym:
+                                continue
+                            try:
+                                _sec = (
+                                    _tickers.tickers[_sym]
+                                    .info.get("sector", "")
+                                    or ""
+                                )
+                                r["sector"] = str(_sec).strip()
+                            except Exception:
+                                r["sector"] = ""
+                except Exception as _sec_e:
+                    logger.warning(
+                        "Scanner: sector lookup failed: %s", _sec_e,
+                    )
+                    for r in _rows:
+                        r.setdefault("sector", "")
+                _filtered = [
+                    r
+                    for r in _rows
+                    if (r.get("sector") or "").strip() in _pref_sectors
+                ]
+                if _filtered:
+                    _sr["results"] = _filtered
+                    _sr["passed"] = len(_filtered)
+                else:
+                    _sr["results"] = []
+                    _sr["passed"] = 0
+            st.session_state.scanner_results = _sr
             st.rerun()
 
     if "scanner_results" not in st.session_state:

@@ -25,6 +25,7 @@ def render_tabbed_analyze_sections(
     _interval: str,
     _tf_label: str,
     score_mode: str = "Buy",
+    scoring_style: str = "Balanced (default)",
 ) -> None:
     _be = st.session_state.get("forecasting_backend")
     if not _be:
@@ -53,6 +54,7 @@ def render_tabbed_analyze_sections(
         _tf_label=_tf_label,
         backend=backend,
         score_mode=score_mode,
+        scoring_style=scoring_style,
     )
 
     # Single-select sections (not st.tabs): Streamlit runs *every* tab body on each

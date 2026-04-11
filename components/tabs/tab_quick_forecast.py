@@ -40,6 +40,7 @@ def render(
     _tf_label: str,
     *,
     score_mode: str = "Buy",
+    scoring_style: str = "Balanced (default)",
     backend: dict,
 ) -> None:
     """Streamlit tab body (legacy Analyze)."""
@@ -176,24 +177,34 @@ def render(
                     # Cache AI score per symbol for 5 minutes to avoid recompute on tab switch
                     import time as _time
 
-                    _ai_score_key = f"ai_score_{_sym}"
-                    _ai_score_ts_key = f"ai_score_ts_{_sym}"
+                    _ai_score_key = (
+                        f"ai_score_{_sym}_{trader_mode}_{scoring_style}"
+                    )
+                    _ai_score_ts_key = (
+                        f"ai_score_ts_{_sym}_{trader_mode}_{scoring_style}"
+                    )
                     _cached_score = st.session_state.get(_ai_score_key)
                     _cached_ts = st.session_state.get(_ai_score_ts_key, 0.0)
                     _score_age = _time.time() - _cached_ts
 
                     if _cached_score is None or _score_age > 300:
                         with st.spinner("Computing AI Score..."):
-                            score_result = compute_ai_score(_sym, _hist)
+                            score_result = compute_ai_score(
+                                _sym,
+                                _hist,
+                                scoring_style=scoring_style,
+                            )
                         st.session_state[_ai_score_key] = score_result
                         # Also store under canonical key for cross-component access
                         st.session_state["ai_score_result"] = score_result
                         st.session_state[_ai_score_ts_key] = _time.time()
                         st.session_state.pop(
-                            f"short_score_{_sym}_{trader_mode}", None,
+                            f"short_score_{_sym}_{trader_mode}_{scoring_style}",
+                            None,
                         )
                         st.session_state.pop(
-                            f"short_score_ts_{_sym}_{trader_mode}", None,
+                            f"short_score_ts_{_sym}_{trader_mode}_{scoring_style}",
+                            None,
                         )
                     else:
                         score_result = _cached_score
@@ -205,8 +216,12 @@ def render(
                     ):
                         from trading.analysis.ai_score import compute_short_score
 
-                        _sk = f"short_score_{_sym}_{trader_mode}"
-                        _stk = f"short_score_ts_{_sym}_{trader_mode}"
+                        _sk = (
+                            f"short_score_{_sym}_{trader_mode}_{scoring_style}"
+                        )
+                        _stk = (
+                            f"short_score_ts_{_sym}_{trader_mode}_{scoring_style}"
+                        )
                         _short_age = _time.time() - float(
                             st.session_state.get(_stk, 0.0) or 0.0,
                         )
@@ -215,7 +230,10 @@ def render(
                             or _short_age > 300
                         ):
                             short_result = compute_short_score(
-                                _sym, _hist, score_result,
+                                _sym,
+                                _hist,
+                                score_result,
+                                scoring_style=scoring_style,
                             )
                             if not short_result.get("error"):
                                 st.session_state[_sk] = short_result

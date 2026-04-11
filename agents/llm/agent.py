@@ -2137,12 +2137,28 @@ class PromptAgent:
             # AI Score
             try:
                 from trading.analysis.ai_score import compute_ai_score
+                from config.user_store import load_user_preferences
+                from utils.session_utils import get_stable_user_id
+
+                _ss_ag = "Balanced (default)"
+                try:
+                    _uid_ag = get_stable_user_id()
+                    _p_ag = load_user_preferences(_uid_ag) or {}
+                    _ss_ag = str(
+                        _p_ag.get("scoring_style", "Balanced (default)"),
+                    )
+                except Exception:
+                    pass
                 _hist = None
                 if data is not None and not data.empty and close_col and len(df) >= 20:
                     _hist = df.rename(columns={close_col: "Close"}).copy()
                     if "volume" in _hist.columns:
                         _hist = _hist.rename(columns={"volume": "Volume"})
-                _ai = compute_ai_score(symbol, _hist)
+                _ai = compute_ai_score(
+                    symbol,
+                    _hist,
+                    scoring_style=_ss_ag,
+                )
                 if _ai.get("error") is None:
                     parts.append(
                         f"AI Score: {_ai['overall_score']}/10 ({_ai['grade']}) — "

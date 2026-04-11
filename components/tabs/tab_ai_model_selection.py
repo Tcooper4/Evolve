@@ -39,6 +39,7 @@ def render(
     _tf_label: str,
     *,
     score_mode: str = "Buy",
+    scoring_style: str = "Balanced (default)",
     backend: dict,
 ) -> None:
     """Streamlit tab body (legacy Analyze)."""

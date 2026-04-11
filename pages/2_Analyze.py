@@ -182,6 +182,22 @@ else:
     _interval = "1d"
     _tf_label = "1d"
 
+_scoring_style = "Balanced (default)"
+try:
+    from config.user_store import load_user_preferences
+    from utils.session_utils import get_stable_user_id
+
+    _uid_a = (
+        st.session_state.get("evolve_session_id")
+        or get_stable_user_id()
+    )
+    _a_prefs = load_user_preferences(_uid_a) or {}
+    _scoring_style = str(
+        _a_prefs.get("scoring_style", "Balanced (default)"),
+    )
+except Exception:
+    _scoring_style = "Balanced (default)"
+
 hist = get_history(ticker, period=period, interval=_interval)
 if not hist.empty:
     render_price_chart(
@@ -206,6 +222,7 @@ render_tabbed_analyze_sections(
     _interval=_interval,
     _tf_label=_tf_label,
     score_mode=score_mode,
+    scoring_style=_scoring_style,
 )
 
 render_page_assistant("Analyze")
