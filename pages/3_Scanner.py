@@ -138,6 +138,27 @@ def _load_universe(name: str, fallback: list) -> list:
     return fallback
 
 
+def _scanner_sector_matches_prefs(
+    sec_raw: str,
+    pref_sectors: list,
+) -> bool:
+    """
+    True if yfinance sector string matches any Settings preferred sector.
+
+    Uses the same substring rule as morning briefing: each preference label
+    (e.g. \"Finance\", \"Industrial\") may appear inside yfinance names
+    (\"Financial Services\", \"Industrials\").
+    """
+    sec_l = (sec_raw or "").strip().lower()
+    if not sec_l:
+        return False
+    for s in pref_sectors or []:
+        _p = str(s).strip().lower()
+        if _p and _p in sec_l:
+            return True
+    return False
+
+
 def _get_short_float(ticker: str) -> str:
     try:
         import yfinance as yf
@@ -756,7 +777,10 @@ with tab_scan:
                 _filtered = [
                     r
                     for r in _rows
-                    if (r.get("sector") or "").strip() in _pref_sectors
+                    if _scanner_sector_matches_prefs(
+                        r.get("sector") or "",
+                        _pref_sectors,
+                    )
                 ]
                 if _filtered:
                     _sr["results"] = _filtered
