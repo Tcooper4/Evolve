@@ -38,9 +38,17 @@ def render(
     _interval: str,
     _tf_label: str,
     *,
+    score_mode: str = "Buy",
     backend: dict,
 ) -> None:
     """Streamlit tab body (legacy Analyze)."""
+    try:
+        from components.analyze_diagnostics import _render_risk_summary
+
+        _render_risk_summary(ticker, hist)
+    except Exception:
+        pass
+
     DataLoader = backend["DataLoader"]
     DataLoadRequest = backend["DataLoadRequest"]
     YFinanceProvider = backend["YFinanceProvider"]
@@ -72,9 +80,17 @@ def render(
         st.caption("Quick checks (ADF, Ljung-Box, ARCH)")
 
         try:
-            _dh = st.session_state.get("analyze_forecast_data") or get_history(ticker, period="1y")
+            _cached_fc = st.session_state.get("analyze_forecast_data")
+            if (
+                _cached_fc is not None
+                and isinstance(_cached_fc, pd.DataFrame)
+                and not _cached_fc.empty
+            ):
+                _dh = _cached_fc
+            else:
+                _dh = get_history(ticker, period="1y")
 
-            if _dh is not None and not _dh.empty:
+            if _dh is not None and not getattr(_dh, "empty", True):
                 _close = _dh["Close"].dropna()
                 _returns = _close.pct_change().dropna()
 

@@ -88,10 +88,16 @@ def get_news(ticker: str) -> list:
                 or content.get("summary")
                 or ""
             )
+            title = str(title or "").strip()
+            if title and "({'url'" in title:
+                title = title.split("({")[0].strip()
+            elif title and "({'" in title:
+                title = title.split("({")[0].strip()
+            if title.startswith("{"):
+                title = ""
             merged = dict(item)
             merged["url"] = str(url or "").strip()
-            if title and not merged.get("title"):
-                merged["title"] = title
+            merged["title"] = title
             out.append(merged)
         return out
     except Exception:

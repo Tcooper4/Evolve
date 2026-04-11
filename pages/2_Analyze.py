@@ -81,7 +81,7 @@ if "analyze_ticker" not in st.session_state:
 if "analyze_forecast_horizon" not in st.session_state:
     st.session_state["analyze_forecast_horizon"] = 7
 
-c1, c2, c3 = st.columns([2, 2, 2])
+c1, c2, c3, c4 = st.columns([2, 2, 2, 2])
 with c1:
     st.markdown("### Analyze")
     st.caption("Single-stock deep analysis")
@@ -95,11 +95,27 @@ with c2:
     )
 with c3:
     trader_mode = st.radio(
-        "Mode",
+        "Trading Style",
         ["Short-term", "Long-term"],
         horizontal=True,
         key="analyze_trader_mode",
         label_visibility="collapsed",
+        help=(
+            "Short-term: weights momentum and technical signals. "
+            "Long-term: weights fundamentals and earnings."
+        ),
+    )
+with c4:
+    score_mode = st.radio(
+        "Score Mode",
+        ["Buy", "Short"],
+        horizontal=True,
+        key="analyze_score_mode",
+        label_visibility="collapsed",
+        help=(
+            "Buy: AI Score rates the long/buy thesis. "
+            "Short: rates the bearish/short thesis."
+        ),
     )
 
 _sym = (ticker or "").strip()
@@ -189,6 +205,7 @@ render_tabbed_analyze_sections(
     trader_mode=trader_mode,
     _interval=_interval,
     _tf_label=_tf_label,
+    score_mode=score_mode,
 )
 
 render_page_assistant("Analyze")

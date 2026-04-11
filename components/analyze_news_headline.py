@@ -46,6 +46,14 @@ def render_analyze_headline_news_panel(ticker: str) -> None:
                         or content.get("summary")
                         or ""
                     )
+                    _url = (
+                        item.get("url")
+                        or item.get("link")
+                        or item.get("href")
+                        or (item.get("content") or {}).get("url")
+                        or (item.get("content") or {}).get("clickThroughUrl")
+                        or ""
+                    )
                     if not raw_title:
                         continue
                     title_lower = raw_title.lower()
@@ -61,6 +69,13 @@ def render_analyze_headline_news_panel(ticker: str) -> None:
                     else:
                         ns_label = "NEU"
                     _ic = sentiment_icon_for_label(ns_label)
-                    st.markdown(f"{_ic} {raw_title[:80]}")
+                    _clean_title = str(raw_title)[:120].strip()
+                    _url_s = str(_url or "").strip()
+                    if _url_s:
+                        st.markdown(
+                            f"{_ic} **[{_clean_title}]({_url_s})**",
+                        )
+                    else:
+                        st.markdown(f"{_ic} **{_clean_title}**")
     except Exception as e:
         st.caption(f"unavailable: {e}")

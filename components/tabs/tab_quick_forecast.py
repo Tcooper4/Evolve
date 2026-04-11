@@ -39,6 +39,7 @@ def render(
     _interval: str,
     _tf_label: str,
     *,
+    score_mode: str = "Buy",
     backend: dict,
 ) -> None:
     """Streamlit tab body (legacy Analyze)."""
@@ -74,6 +75,8 @@ def render(
             )
             return
 
+        _score_mode_lc = str(score_mode or "Buy").strip().lower()
+
         # Reuse chart `hist` only when it is daily, spans a full year (or longer), and
         # has enough rows — not 3M/6M windows (would underfeed the models).
         hist_fc = None
@@ -106,6 +109,14 @@ def render(
             f"✅ Ready: {len(hist_fc)} daily rows for {symbol} "
             "(from chart range or 1y load)"
         )
+
+        if _score_mode_lc == "short":
+            st.warning(
+                "Short Score mode active — forecasts still show price direction. "
+                "For the short thesis, look for downward forecasts and high Short "
+                "Score in the Technical tab.",
+                icon="📉",
+            )
 
         # Earnings proximity warning (forecasts may be less reliable near earnings)
         try:
@@ -178,63 +189,140 @@ def render(
                         # Also store under canonical key for cross-component access
                         st.session_state["ai_score_result"] = score_result
                         st.session_state[_ai_score_ts_key] = _time.time()
+                        st.session_state.pop(
+                            f"short_score_{_sym}_{trader_mode}", None,
+                        )
+                        st.session_state.pop(
+                            f"short_score_ts_{_sym}_{trader_mode}", None,
+                        )
                     else:
                         score_result = _cached_score
-                    if score_result.get("error") is None:
-                        score = score_result["overall_score"]
-                        grade = score_result["grade"]
 
-                        # Trader-mode-specific display weights
-                        if trader_mode == "Short-term":
-                            display_weights = {
-                                "technical": 0.45,
-                                "momentum": 0.40,
-                                "sentiment": 0.10,
-                                "fundamental": 0.05,
-                            }
-                            mode_label = "Short-term weights"
-                        else:
-                            display_weights = {
-                                "technical": 0.20,
-                                "momentum": 0.20,
-                                "sentiment": 0.15,
-                                "fundamental": 0.45,
-                            }
-                            mode_label = "Long-term weights"
+                    short_result = None
+                    if (
+                        _score_mode_lc == "short"
+                        and score_result.get("error") is None
+                    ):
+                        from trading.analysis.ai_score import compute_short_score
 
-                        component_scores = {
-                            "technical": score_result.get("technical_score", 0),
-                            "momentum": score_result.get("momentum_score", 0),
-                            "sentiment": score_result.get("sentiment_score", 0),
-                            "fundamental": score_result.get("fundamental_score", 0),
-                        }
-                        weighted_score = sum(
-                            component_scores[k] * display_weights[k] for k in display_weights
+                        _sk = f"short_score_{_sym}_{trader_mode}"
+                        _stk = f"short_score_ts_{_sym}_{trader_mode}"
+                        _short_age = _time.time() - float(
+                            st.session_state.get(_stk, 0.0) or 0.0,
                         )
-                        weighted_score = round(min(10.0, max(0.0, weighted_score)), 1)
+                        if (
+                            st.session_state.get(_sk) is None
+                            or _short_age > 300
+                        ):
+                            short_result = compute_short_score(
+                                _sym, _hist, score_result,
+                            )
+                            if not short_result.get("error"):
+                                st.session_state[_sk] = short_result
+                                st.session_state[_stk] = _time.time()
+                        else:
+                            short_result = st.session_state.get(_sk)
 
-                        # Show mode impact clearly (diff vs base score)
-                        try:
-                            base_score = float(score_result.get("overall_score", 0) or 0)
-                            diff = round(weighted_score - base_score, 1)
-                            diff_str = (
-                                f"+{diff}" if diff > 0
-                                else str(diff) if diff < 0
-                                else "="
+                    if score_result.get("error") is None:
+                        if (
+                            _score_mode_lc == "short"
+                            and short_result is not None
+                            and not short_result.get("error")
+                        ):
+                            score = float(
+                                short_result.get("short_score", 0) or 0,
                             )
-                            diff_color = (
-                                "#26a69a" if diff > 0
-                                else "#ef5350" if diff < 0
-                                else "#4a6080"
+                            grade = str(short_result.get("grade") or "")
+                            _summary_txt = str(
+                                short_result.get("summary") or "",
                             )
-                            st.markdown(
-                                f'<span style="font-size:11px;color:{diff_color}">'
-                                f"{trader_mode} view: {diff_str} vs base score"
-                                f"</span>",
-                                unsafe_allow_html=True,
+                        elif _score_mode_lc == "short":
+                            score = float(
+                                score_result.get("overall_score", 0) or 0,
                             )
-                        except Exception:
-                            pass
+                            grade = str(score_result.get("grade") or "")
+                            _summary_txt = str(
+                                score_result.get("summary") or "",
+                            )
+                            st.caption(
+                                "Short Score unavailable; showing buy-side AI metrics.",
+                            )
+                        else:
+                            score = score_result["overall_score"]
+                            grade = score_result["grade"]
+                            _summary_txt = str(
+                                score_result.get("summary") or "",
+                            )
+
+                        # Trader-mode-specific display weights (buy-side AI only)
+                        if _score_mode_lc != "short":
+                            if trader_mode == "Short-term":
+                                display_weights = {
+                                    "technical": 0.45,
+                                    "momentum": 0.40,
+                                    "sentiment": 0.10,
+                                    "fundamental": 0.05,
+                                }
+                                mode_label = "Short-term weights"
+                            else:
+                                display_weights = {
+                                    "technical": 0.20,
+                                    "momentum": 0.20,
+                                    "sentiment": 0.15,
+                                    "fundamental": 0.45,
+                                }
+                                mode_label = "Long-term weights"
+
+                            component_scores = {
+                                "technical": score_result.get("technical_score", 0),
+                                "momentum": score_result.get("momentum_score", 0),
+                                "sentiment": score_result.get("sentiment_score", 0),
+                                "fundamental": score_result.get("fundamental_score", 0),
+                            }
+                            weighted_score = sum(
+                                component_scores[k] * display_weights[k]
+                                for k in display_weights
+                            )
+                            weighted_score = round(
+                                min(10.0, max(0.0, weighted_score)), 1,
+                            )
+
+                            # Show mode impact clearly (diff vs base score)
+                            try:
+                                base_score = float(
+                                    score_result.get("overall_score", 0) or 0,
+                                )
+                                diff = round(weighted_score - base_score, 1)
+                                diff_str = (
+                                    f"+{diff}" if diff > 0
+                                    else str(diff) if diff < 0
+                                    else "="
+                                )
+                                diff_color = (
+                                    "#26a69a" if diff > 0
+                                    else "#ef5350" if diff < 0
+                                    else "#4a6080"
+                                )
+                                st.markdown(
+                                    f'<span style="font-size:11px;color:{diff_color}">'
+                                    f"{trader_mode} view: {diff_str} vs base score"
+                                    f"</span>",
+                                    unsafe_allow_html=True,
+                                )
+                            except Exception:
+                                pass
+                        else:
+                            display_weights = {}
+                            component_scores = {
+                                "technical": score_result.get("technical_score", 0),
+                                "momentum": score_result.get("momentum_score", 0),
+                                "sentiment": score_result.get("sentiment_score", 0),
+                                "fundamental": score_result.get("fundamental_score", 0),
+                            }
+                            weighted_score = 0.0
+                            mode_label = (
+                                f"{trader_mode} · Short Score mode"
+                            )
 
                         # News sentiment score feeding into sentiment view
                         news_score = _news_sentiment_score(_sym)
@@ -261,17 +349,36 @@ def render(
                                 "model in Settings → AI & Signals."
                             )
 
-                        st.markdown("### 🤖 AI Score")
+                        _long_ov = float(
+                            score_result.get("overall_score", 0) or 0,
+                        )
+                        if _score_mode_lc == "short":
+                            st.markdown("### 📉 Short Score")
+                        else:
+                            st.markdown("### 🤖 AI Score")
                         top_cols = st.columns([2, 2, 2, 2])
                         with top_cols[0]:
                             st.metric(
-                                "Model Score",
+                                "Short Score"
+                                if _score_mode_lc == "short"
+                                else "Model Score",
                                 f"{score}/10",
                                 delta=grade,
                                 delta_color="normal" if score >= 5 else "inverse",
                             )
                         with top_cols[1]:
-                            st.metric("Weighted Score", f"{weighted_score}/10", help=mode_label)
+                            if _score_mode_lc == "short":
+                                st.metric(
+                                    "Buy-side AI",
+                                    f"{_long_ov:.1f}/10",
+                                    help="Long/buy thesis (context)",
+                                )
+                            else:
+                                st.metric(
+                                    "Weighted Score",
+                                    f"{weighted_score}/10",
+                                    help=mode_label,
+                                )
                         with top_cols[2]:
                             st.markdown("**News Score**")
                             _ns_ic = sentiment_icon_for_label(ns_label)
@@ -281,28 +388,42 @@ def render(
                         with top_cols[3]:
                             st.caption(mode_label)
 
-                        # Component bars with weights
-                        bar_rows = [
-                            ("Technical", "technical"),
-                            ("Momentum", "momentum"),
-                            ("Sentiment", "sentiment"),
-                            ("Fundamental", "fundamental"),
-                        ]
-                        for label, key_name in bar_rows:
-                            val = float(component_scores.get(key_name, 0) or 0)
-                            w = display_weights.get(key_name, 0)
-                            pct = int(round(w * 100))
-                            cols_row = st.columns([2, 5, 1])
-                            with cols_row[0]:
-                                st.markdown(f"**{label}**")
-                            with cols_row[1]:
-                                st.progress(min(1.0, max(0.0, val / 10.0)))
-                            with cols_row[2]:
-                                st.markdown(f"{val:.1f}  ({pct}%)")
+                        # Component bars with weights (buy-side view)
+                        if _score_mode_lc != "short":
+                            bar_rows = [
+                                ("Technical", "technical"),
+                                ("Momentum", "momentum"),
+                                ("Sentiment", "sentiment"),
+                                ("Fundamental", "fundamental"),
+                            ]
+                            for label, key_name in bar_rows:
+                                val = float(
+                                    component_scores.get(key_name, 0) or 0,
+                                )
+                                w = display_weights.get(key_name, 0)
+                                pct = int(round(w * 100))
+                                cols_row = st.columns([2, 5, 1])
+                                with cols_row[0]:
+                                    st.markdown(f"**{label}**")
+                                with cols_row[1]:
+                                    st.progress(
+                                        min(1.0, max(0.0, val / 10.0)),
+                                    )
+                                with cols_row[2]:
+                                    st.markdown(f"{val:.1f}  ({pct}%)")
 
-                        st.caption(score_result["summary"])
+                        st.caption(_summary_txt)
+                        _drive_sigs = (
+                            (short_result.get("signals") or [])
+                            if (
+                                _score_mode_lc == "short"
+                                and short_result is not None
+                                and not short_result.get("error")
+                            )
+                            else score_result.get("signals", [])
+                        )
                         with st.expander("What drives this score?", expanded=False):
-                            signals = score_result.get("signals", [])
+                            signals = _drive_sigs
                             if signals:
                                 by_impact = sorted(
                                     signals,
@@ -319,7 +440,7 @@ def render(
                             else:
                                 st.caption("No signal breakdown available.")
                         with st.expander("📊 Signal Breakdown", expanded=False):
-                            signals = score_result.get("signals", [])
+                            signals = _drive_sigs
                             if signals:
                                 sig_df = pd.DataFrame(
                                     signals
@@ -333,11 +454,23 @@ def render(
 
                                 def _color_impact(val):
                                     colors = {
-                                        "positive": "background-color: #1a4a2a; color: #26a69a",
-                                        "negative": "background-color: #3a1a1a; color: #ef5350",
-                                        "neutral": "background-color: #3a2a0a; color: #ff9800",
+                                        "positive": (
+                                            "background-color: #1a4a2a; color: #26a69a"
+                                        ),
+                                        "negative": (
+                                            "background-color: #3a1a1a; color: #ef5350"
+                                        ),
+                                        "bearish": (
+                                            "background-color: #3a1a1a; color: #ef5350"
+                                        ),
+                                        "risk": (
+                                            "background-color: #3a2a0a; color: #ff9800"
+                                        ),
+                                        "neutral": (
+                                            "background-color: #3a2a0a; color: #ff9800"
+                                        ),
                                     }
-                                    return colors.get(val, "")
+                                    return colors.get(str(val).lower(), "")
 
                                 try:
                                     styler = sig_df.style.applymap(
@@ -348,12 +481,33 @@ def render(
                                     st.dataframe(normalize_for_display(sig_df), width='stretch')
                         # Recommendation panel
                         try:
-                            _rec = _generate_recommendation(
-                                ticker,
-                                score_result,
-                                st.session_state.get("current_forecast_result"),
-                                trader_mode,
-                            )
+                            if (
+                                _score_mode_lc == "short"
+                                and short_result is not None
+                                and not short_result.get("error")
+                            ):
+                                _rec = _generate_recommendation(
+                                    ticker,
+                                    score_result,
+                                    st.session_state.get(
+                                        "current_forecast_result",
+                                    ),
+                                    trader_mode,
+                                    score_mode="Short",
+                                    short_score=float(
+                                        short_result.get("short_score", 0)
+                                        or 0,
+                                    ),
+                                )
+                            else:
+                                _rec = _generate_recommendation(
+                                    ticker,
+                                    score_result,
+                                    st.session_state.get(
+                                        "current_forecast_result",
+                                    ),
+                                    trader_mode,
+                                )
                             if _rec:
                                 _action = _rec["action"]
                                 _conv = _rec["conviction"]
@@ -362,7 +516,7 @@ def render(
                                     "#26a69a"
                                     if "BUY" in _action
                                     else "#ef5350"
-                                    if "SELL" in _action
+                                    if "SELL" in _action or "SHORT" in _action
                                     else "#ff9800"
                                 )
                                 _reasons_html = ""
@@ -445,7 +599,7 @@ def render(
                                             f'color:#4a6080;'
                                             f'letter-spacing:1px;'
                                             f'margin-bottom:3px">'
-                                            f'{"TARGET ↑" if "BUY" in _action else "TARGET ↓" if "SELL" in _action else "RANGE"}</div>'
+                                            f'{"TARGET ↑" if "BUY" in _action else "TARGET ↓" if "SELL" in _action or "SHORT" in _action else "RANGE"}</div>'
                                             f'<div style="font-size:15px;'
                                             f'font-weight:bold;'
                                             f'color:{_tc2}">'

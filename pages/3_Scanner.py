@@ -42,9 +42,6 @@ except Exception:
     pass
 
 if "scanner_prefs_hydrated" not in st.session_state:
-    st.session_state["scanner_min_ai_score"] = float(
-        _scanner_prefs.get("min_ai_score", 6.5)
-    )
     _pu = str(_scanner_prefs.get("briefing_universe", ""))
     _def_scan_uni = "S&P 100 (~100, fastest)"
     if "NASDAQ100" in _pu or "NASDAQ" in _pu:
@@ -248,6 +245,8 @@ def _scanner_table():
     )
     _uni_lbl = st.session_state.get("scanner_universe_choice", "selected universe")
     _fa = scan_result.get("filters_applied") or []
+    _sel_filters = st.session_state.get("scanner_filters") or []
+    _short_mode = "high_short_score" in _fa or "high_short_score" in _sel_filters
     _fa_s = ", ".join(_fa) if _fa else "none"
     st.caption(
         f"{scan_result.get('passed', 0)} of {scan_result.get('scanned', 0)} stocks "
@@ -371,6 +370,11 @@ def _scanner_table():
     if "News" not in df_display.columns and "news_score" in df.columns:
         df_display["News"] = df["news_score"]
 
+    if _short_mode and "AI Score" in df_display.columns:
+        df_display = df_display.rename(
+            columns={"AI Score": "Buy Score ↑"},
+        )
+
     # Drop internal display columns
     _drop = ["_news_color", "news_color"]
     df_display = df_display.drop(
@@ -428,7 +432,12 @@ def _scanner_table():
         return styles.get(str(val).strip(), styles["NEU"])
 
     styler = df_display.style
-    if "AI Score" in df_display.columns:
+    if "Buy Score ↑" in df_display.columns:
+        try:
+            styler = styler.map(_color_score, subset=["Buy Score ↑"])
+        except Exception:
+            styler = styler.applymap(_color_score, subset=["Buy Score ↑"])
+    elif "AI Score" in df_display.columns:
         try:
             styler = styler.map(_color_score, subset=["AI Score"])
         except Exception:
@@ -479,18 +488,27 @@ def _scanner_table():
 
     st.dataframe(styler, width="stretch", height=400, key="scanner_results_df")
 
+    if _short_mode:
+        st.caption(
+            "⬇️ Short filter active — **Buy Score ↑** shows how bullish the stock is. "
+            "Low Buy Score + high **Short Score ⬇️** = stronger short candidate."
+        )
     st.caption(
         "⚡ Quick Score is a fast technical estimate (RSI, momentum, volume, trend). "
         "For the full 16-signal AI Score, select a ticker in Signal Breakdown below."
     )
 
     _score_col = (
-        "AI Score"
-        if "AI Score" in df_display.columns
+        "Buy Score ↑"
+        if _short_mode and "Buy Score ↑" in df_display.columns
         else (
-            "Quick Score ⚡"
-            if "Quick Score ⚡" in df_display.columns
-            else None
+            "AI Score"
+            if "AI Score" in df_display.columns
+            else (
+                "Quick Score ⚡"
+                if "Quick Score ⚡" in df_display.columns
+                else None
+            )
         )
     )
     if len(df_display) >= 3 and _score_col:
@@ -566,7 +584,12 @@ with col_score:
         "Min Quick Score",
         min_value=0.0,
         max_value=10.0,
-        value=6.0,
+        value=float(
+            st.session_state.get(
+                "scanner_min_ai_score",
+                float(_scanner_prefs.get("min_ai_score", 6.5)),
+            ),
+        ),
         step=0.5,
         key="scanner_min_ai_score",
         label_visibility="collapsed",

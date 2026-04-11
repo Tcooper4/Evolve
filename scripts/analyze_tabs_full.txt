@@ -1,0 +1,198 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""
+3	Analyze page: tab definitions stay here; bodies live in components/tabs/.
+4	"""
+5	import streamlit as st
+6	
+7	from components.tabs.tab_ai_model_selection import render as render_ai_model_selection
+8	from components.tabs.tab_causal import render as render_causal
+9	from components.tabs.tab_diagnostics import render as render_diagnostics
+10	from components.tabs.tab_earnings import render as render_earnings
+11	from components.tabs.tab_market_analysis import render as render_market_analysis
+12	from components.tabs.tab_monte_carlo import render as render_monte_carlo
+13	from components.tabs.tab_multi_asset_gnn import render as render_multi_asset_gnn
+14	from components.tabs.tab_options_chain import render as render_options_chain
+15	from components.tabs.tab_quick_forecast import render as render_quick_forecast
+16	from components.tabs.tab_scanner_signals import render as render_scanner_signals
+17	
+18	
+19	def render_tabbed_analyze_sections(
+20	    ticker: str,
+21	    hist,
+22	    period: str,
+23	    period_label: str,
+24	    trader_mode: str,
+25	    _interval: str,
+26	    _tf_label: str,
+27	) -> None:
+28	    _be = st.session_state.get("forecasting_backend")
+29	    if not _be:
+30	        st.error("Forecasting backend could not be loaded.")
+31	        return
+32	    backend = {
+33	        "DataLoader": _be["DataLoader"],
+34	        "DataLoadRequest": _be["DataLoadRequest"],
+35	        "YFinanceProvider": _be["YFinanceProvider"],
+36	        "LSTMForecaster": _be["LSTMForecaster"],
+37	        "XGBoostModel": _be["XGBoostModel"],
+38	        "ProphetModel": _be["ProphetModel"],
+39	        "ARIMAModel": _be["ARIMAModel"],
+40	        "FeatureEngineering": _be["FeatureEngineering"],
+41	        "DataPreprocessor": _be["DataPreprocessor"],
+42	        "ModelSelectorAgent": _be["ModelSelectorAgent"],
+43	        "MarketAnalyzer": _be["MarketAnalyzer"],
+44	    }
+45	    kw = dict(
+46	        ticker=ticker,
+47	        hist=hist,
+48	        period=period,
+49	        period_label=period_label,
+50	        trader_mode=trader_mode,
+51	        _interval=_interval,
+52	        _tf_label=_tf_label,
+53	        backend=backend,
+54	    )
+55	
+56	    # Single-select sections (not st.tabs): Streamlit runs *every* tab body on each
+57	    # rerun, which triggered Quick Forecast (get_history + AI Score) even when the
+58	    # user was on Risk/Market/etc.
+59	    st.markdown("---")
+60	    _section_opts = [
+61	        "Forecast",
+62	        "Risk",
+63	        "Market",
+64	        "Technical",
+65	        "Research",
+66	    ]
+67	    if "analyze_active_section" not in st.session_state:
+68	        st.session_state["analyze_active_section"] = _section_opts[0]
+69	    _cur = st.session_state.get("analyze_active_section")
+70	    if _cur not in _section_opts:
+71	        st.session_state["analyze_active_section"] = _section_opts[0]
+72	    section = st.radio(
+73	        "Analyze section",
+74	        _section_opts,
+75	        horizontal=True,
+76	        key="analyze_active_section",
+77	        label_visibility="collapsed",
+78	    )
+79	    st.markdown("---")
+80	
+81	    if section == "Forecast":
+82	        render_quick_forecast(**kw)
+83	        st.markdown("---")
+84	        with st.expander("Model selection details"):
+85	            render_ai_model_selection(**kw)
+86	
+87	    elif section == "Risk":
+88	        c_mc, c_opt = st.columns([3, 2])
+89	        with c_mc:
+90	            render_monte_carlo(**kw)
+91	        with c_opt:
+92	            render_options_chain(**kw)
+93	        st.markdown("---")
+94	        render_scanner_signals(**kw)
+95	
+96	    elif section == "Market":
+97	        render_market_analysis(**kw)
+98	        st.markdown("---")
+99	        render_earnings(**kw)
+100	
+101	    elif section == "Technical":
+102	        render_diagnostics(**kw)
+103	        st.markdown("---")
+104	        st.caption(
+105	            "Chart patterns feed into AI Score automatically. View detected patterns "
+106	            "in the deep dive for this ticker."
+107	        )
+108	        if st.button(
+109	            f"Open deep dive for {ticker}",
+110	            key="analyze_open_deep_dive",
+111	            type="primary",
+112	        ):
+113	            st.session_state["deep_dive_ticker"] = ticker
+114	            st.switch_page("pages/1_Dashboard.py")
+115	
+116	    elif section == "Research":
+117	        render_multi_asset_gnn(**kw)
+118	        st.markdown("---")
+119	        render_causal(**kw)
+120	        st.markdown("---")
+121	        st.markdown("## Signal IC Analysis")
+122	        st.caption(
+123	            "Measures whether a historical price/volume-only score predicts forward returns "
+124	            "(no live Reddit/options/yfinance fundamentals â€” avoids look-ahead). "
+125	            "Runs on historical data â€” typically faster than full AI Score."
+126	        )
+127	
+128	        col1, col2 = st.columns(2)
+129	        with col1:
+130	            ic_symbols = st.multiselect(
+131	                "Symbols to analyze",
+132	                options=[
+133	                    "AAPL",
+134	                    "MSFT",
+135	                    "NVDA",
+136	                    "GOOGL",
+137	                    "AMZN",
+138	                    "META",
+139	                    "TSLA",
+140	                    "JPM",
+141	                    "V",
+142	                    "XOM",
+143	                ],
+144	                default=["AAPL", "MSFT", "NVDA"],
+145	                key="analyze_ic_symbols",
+146	            )
+147	        with col2:
+148	            ic_lookback = st.selectbox(
+149	                "Lookback period",
+150	                options=[126, 252, 504],
+151	                format_func=lambda x: {
+152	                    126: "6 months",
+153	                    252: "1 year",
+154	                    504: "2 years",
+155	                }[x],
+156	                index=1,
+157	                key="analyze_ic_lookback",
+158	            )
+159	
+160	        if st.button(
+161	            "Run IC Analysis",
+162	            key="analyze_ic_run_btn",
+163	            type="primary",
+164	        ):
+165	            if not ic_symbols:
+166	                st.warning("Select at least one symbol")
+167	            else:
+168	                progress_bar = st.progress(0, text="Starting...")
+169	
+170	                def _ic_progress(done: int, total: int) -> None:
+171	                    t = max(total, 1)
+172	                    progress_bar.progress(
+173	                        done / t,
+174	                        text=f"Analyzing {done}/{total}...",
+175	                    )
+176	
+177	                with st.spinner(f"Computing IC for {len(ic_symbols)} symbols..."):
+178	                    try:
+179	                        from trading.analysis.signal_ic import get_ic_analyzer
+180	
+181	                        analyzer = get_ic_analyzer()
+182	                        report = analyzer.run_analysis(
+183	                            symbols=ic_symbols,
+184	                            lookback_days=ic_lookback,
+185	                            progress_callback=_ic_progress,
+186	                        )
+187	                        progress_bar.progress(1.0, text="Complete")
+188	                        st.session_state["analyze_ic_report"] = report
+189	                    except Exception as e:
+190	                        progress_bar.progress(1.0, text="Stopped")
+191	                        st.caption(f"IC analysis failed: {e}")
+192	
+193	        if "analyze_ic_report" in st.session_state:
+194	            from trading.analysis.signal_ic import get_ic_analyzer
+195	
+196	            get_ic_analyzer().render_streamlit(
+197	                st.session_state["analyze_ic_report"],
+198	            )

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Settings page — Watchlist, Alerts, System (from Alerts, Admin, Watchlist).
 """
@@ -519,6 +519,20 @@ with tab_research:
         help="Lower = more stocks shown. Higher = only strongest signals.",
     )
 
+    max_results = st.slider(
+        "Max opportunities to show",
+        min_value=1,
+        max_value=10,
+        value=int(_prefs.get("briefing_max_results", 3)),
+        step=1,
+        help=(
+            "How many top opportunities to list in the morning briefing "
+            "(longs and shorts each cap here). More rows = longer run when "
+            "forecasts are enabled."
+        ),
+        key="briefing_max_results_slider",
+    )
+
     universe_choice = st.selectbox(
         "Briefing scan universe",
         options=universe_opts,
@@ -732,6 +746,7 @@ with tab_research:
                 {
                     **_prefs,
                     "min_ai_score": min_score,
+                    "briefing_max_results": max_results,
                     "briefing_universe": universe_choice,
                     "scoring_style": scoring_style,
                     "opportunity_direction": opportunity_direction,

@@ -24,6 +24,7 @@ def render_tabbed_analyze_sections(
     trader_mode: str,
     _interval: str,
     _tf_label: str,
+    score_mode: str = "Buy",
 ) -> None:
     _be = st.session_state.get("forecasting_backend")
     if not _be:
@@ -51,6 +52,7 @@ def render_tabbed_analyze_sections(
         _interval=_interval,
         _tf_label=_tf_label,
         backend=backend,
+        score_mode=score_mode,
     )
 
     # Single-select sections (not st.tabs): Streamlit runs *every* tab body on each
@@ -99,6 +101,12 @@ def render_tabbed_analyze_sections(
         render_earnings(**kw)
 
     elif section == "Technical":
+        if str(score_mode or "Buy").strip() == "Short":
+            st.info(
+                "Short Score mode — signals below show the bearish thesis strength. "
+                "Higher Short Score = stronger case for shorting this stock.",
+                icon="📉",
+            )
         render_diagnostics(**kw)
         st.markdown("---")
         st.caption(

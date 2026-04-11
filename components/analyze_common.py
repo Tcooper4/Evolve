@@ -152,6 +152,9 @@ def _generate_recommendation(
     ai_score_result,
     forecast_result=None,
     trader_mode="Short-term",
+    *,
+    score_mode: str = "Buy",
+    short_score: Optional[float] = None,
 ):
     try:
         import streamlit as st
@@ -178,16 +181,41 @@ def _generate_recommendation(
             }
         _entry = float(last_price)
 
-        # Determine action from AI Score (not from consensus direction)
-        _score = ai_score_result.get(
-            "weighted_score", ai_score_result.get("overall_score", 5.0)
+        _use_short = (
+            str(score_mode or "Buy").strip().lower() == "short"
+            and short_score is not None
         )
-        try:
-            _score = float(_score)
-        except Exception:
-            _score = 5.0
+        if _use_short:
+            try:
+                _score = float(short_score)
+            except Exception:
+                _score = 5.0
+        else:
+            _score = ai_score_result.get(
+                "weighted_score", ai_score_result.get("overall_score", 5.0)
+            )
+            try:
+                _score = float(_score)
+            except Exception:
+                _score = 5.0
 
-        if _score >= 7.0:
+        if _use_short:
+            if _score >= 7.0:
+                _action = "SHORT"
+                _conv = "HIGH"
+            elif _score >= 6.0:
+                _action = "SHORT"
+                _conv = "MEDIUM"
+            elif _score <= 3.0:
+                _action = "HOLD"
+                _conv = "HIGH"
+            elif _score <= 4.0:
+                _action = "HOLD"
+                _conv = "MEDIUM"
+            else:
+                _action = "HOLD"
+                _conv = "LOW"
+        elif _score >= 7.0:
             _action = "BUY"
             _conv = "HIGH"
         elif _score >= 6.0:
@@ -258,6 +286,15 @@ def _generate_recommendation(
         ):
             _action = "HOLD"
             _conv = "LOW"
+        elif (
+            _use_short
+            and _action == "SHORT"
+            and _consensus_dir == "BULLISH"
+            and str(_consensus_conv).upper() == "HIGH"
+            and _score < 6.5
+        ):
+            _action = "HOLD"
+            _conv = "LOW"
 
         # Set target and stop based on action direction
         # _vol from ai_score is annualized decimal (e.g. 0.2528 = 25.28%)
@@ -279,7 +316,7 @@ def _generate_recommendation(
         if _action == "BUY":
             _target = _entry * (1 + _target_pct)
             _stop = _entry * (1 - _stop_pct)
-        elif _action == "SELL":
+        elif _action in ("SELL", "SHORT"):
             _target = _entry * (1 - _target_pct)
             _stop = _entry * (1 + _stop_pct)
         else:  # HOLD
@@ -297,11 +334,20 @@ def _generate_recommendation(
 
         # Build reasoning bullets aligned with action/direction
         _reasons = []
-        # AI Score strength
-        if _score >= 6.0:
-            _reasons.append(("+", f"AI Score bullish ({_score:.1f}/10)"))
-        elif _score <= 4.0:
-            _reasons.append(("-", f"AI Score bearish ({_score:.1f}/10)"))
+        if _use_short:
+            if _score >= 6.0:
+                _reasons.append(
+                    ("+", f"Short Score elevated ({_score:.1f}/10)"),
+                )
+            elif _score <= 4.0:
+                _reasons.append(
+                    ("-", f"Short Score weak ({_score:.1f}/10)"),
+                )
+        else:
+            if _score >= 6.0:
+                _reasons.append(("+", f"AI Score bullish ({_score:.1f}/10)"))
+            elif _score <= 4.0:
+                _reasons.append(("-", f"AI Score bearish ({_score:.1f}/10)"))
 
         # Consensus direction
         if _consensus_dir == "BULLISH":
@@ -321,7 +367,7 @@ def _generate_recommendation(
             _reasons.append(("-", "Technical trend is weak"))
 
         # Signal conflict warning
-        if _action in ("BUY", "SELL"):
+        if _action in ("BUY", "SELL", "SHORT"):
             if _action == "BUY" and _consensus_dir == "BEARISH":
                 _reasons.append(
                     ("⚠", "AI Score bullish but models bearish — use caution")
@@ -329,6 +375,13 @@ def _generate_recommendation(
             elif _action == "SELL" and _consensus_dir == "BULLISH":
                 _reasons.append(
                     ("⚠", "AI Score bearish but models bullish — use caution")
+                )
+            elif _action == "SHORT" and _consensus_dir == "BULLISH":
+                _reasons.append(
+                    (
+                        "⚠",
+                        "Short thesis strong but models bullish — use caution",
+                    ),
                 )
 
         if not _reasons:
@@ -340,7 +393,7 @@ def _generate_recommendation(
         # fc_target/fc_direction for backward compatibility (used by widget)
         if _action == "BUY":
             fc_direction = "up"
-        elif _action == "SELL":
+        elif _action in ("SELL", "SHORT"):
             fc_direction = "down"
         else:
             fc_direction = "flat"

@@ -85,6 +85,7 @@ def render(
     _interval: str,
     _tf_label: str,
     *,
+    score_mode: str = "Buy",
     backend: dict,
 ) -> None:
     del backend

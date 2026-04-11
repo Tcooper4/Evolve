@@ -91,10 +91,13 @@ def _home_platform_context() -> str:
         )
     opps = br.get("top_opportunities") or []
     if opps:
+        _sl = str(
+            br.get("top_opportunity_score_label") or "Quick Score",
+        )
         lines = [f"Top opportunities from cached briefing ({len(opps)}):"]
         for o in opps[:5]:
             lines.append(
-                f"  - {o.get('symbol')}: AI score {o.get('ai_score')} "
+                f"  - {o.get('symbol')}: {_sl} {o.get('ai_score')} "
                 f"price {o.get('current_price')}"
             )
         parts.append("\n".join(lines))
@@ -690,6 +693,7 @@ def _render_briefing():
             [
                 str(_prefs.get("briefing_universe", "")),
                 str(float(_prefs.get("min_ai_score", 5.5))),
+                str(int(_prefs.get("briefing_max_results", 3))),
                 str(bool(_prefs.get("watchlist_only", False))),
                 str(bool(_prefs.get("include_forecasts", False))),
                 str(sectors),
@@ -727,6 +731,8 @@ def _render_briefing():
         }
         _universe = _universe_map.get(_universe_pref, "sp100")
         _min_score = float(_prefs.get("min_ai_score", 5.5))
+        _max_results = int(_prefs.get("briefing_max_results", 3))
+        _max_results = max(1, min(10, _max_results))
         _include_fc = bool(_prefs.get("include_forecasts", False))
 
         try:
@@ -749,16 +755,24 @@ def _render_briefing():
             _mb = MorningBriefing(
                 universe=_universe,
                 min_ai_score=_min_score,
+                max_positions=_max_results,
                 prefs=_prefs,
             )
             progress = st.progress(0, text="Scanning universe (Quick Score)…")
 
-            def _brief_progress(done: int, total: int) -> None:
+            def _brief_progress(
+                done: int,
+                total: int,
+                **kwargs,
+            ) -> None:
                 if total <= 0:
                     return
                 progress.progress(
                     min(1.0, float(done) / float(total)),
-                    text=f"Scanning universe… {done}/{total}",
+                    text=(
+                        f"Scanning {total} stocks… "
+                        f"{done}/{total}"
+                    ),
                 )
 
             _fc_progress = None
@@ -845,6 +859,11 @@ def _render_briefing():
             pass
 
         opps = report.get("top_opportunities") or []
+        _opp_lbl = str(
+            report.get("top_opportunity_score_label") or "Quick Score",
+        )
+        _max_show = int(report.get("max_positions", 3) or 3)
+        _max_show = max(1, min(10, _max_show))
         _portfolio = report.get("portfolio")
         if _portfolio and len(opps) >= 2:
             _sharpe = _portfolio.get("expected_sharpe")
@@ -855,7 +874,7 @@ def _render_briefing():
                     f"{_portfolio.get('note', '')}"
                 )
         if opps:
-            for opp in opps[:5]:
+            for opp in opps[:_max_show]:
                 sym = opp.get("symbol", "")
                 if not sym:
                     continue
@@ -871,7 +890,7 @@ def _render_briefing():
                 with col_a:
                     st.markdown(
                         f"**{sym}** · {co} · _{sec}_ — "
-                        f":{_score_color(sc)}[Quick Score {sc:.1f}]"
+                        f":{_score_color(sc)}[{_opp_lbl} {sc:.1f}]"
                     )
                     th = opp.get("thesis") or ""
                     if th:
@@ -905,7 +924,7 @@ def _render_briefing():
                 "From your briefing scan when opportunities include bearish "
                 "setups (Settings)."
             )
-            for opp in short_opps[:3]:
+            for opp in short_opps[:_max_show]:
                 sym = opp.get("symbol", "")
                 if not sym:
                     continue

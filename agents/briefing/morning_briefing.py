@@ -169,6 +169,7 @@ class MorningBriefing:
             "risk_summary": {},
             "markdown": "",
             "error": None,
+            "max_positions": self.max_positions,
         }
 
         try:
@@ -224,10 +225,20 @@ class MorningBriefing:
                 except Exception as _sf:
                     logger.debug("Sector filter skipped: %s", _sf)
 
+            _scan_od = self._briefing_prefs.get(
+                "opportunity_direction",
+                "Bullish only (BUY signals)",
+            )
+            _cand_score_lbl = (
+                "Short Quick Score"
+                if "Bearish only" in _scan_od
+                else "Quick Score"
+            )
             logger.info(
-                "Morning briefing: found %d candidates above %.1f Quick Score",
+                "Morning briefing: found %d candidates above %.1f %s",
                 len(candidates),
                 self.min_ai_score,
+                _cand_score_lbl,
             )
 
             # Step 3: Deep analysis — try extra names until slots filled
@@ -306,7 +317,12 @@ class MorningBriefing:
             )
             if _include_shorts:
                 try:
-                    short_candidates = self._scan_shorts()
+                    # Bearish-only already ran high_short_score in _scan_universe;
+                    # reusing candidates avoids a second full-universe yf.download.
+                    if "Bearish only" in _od:
+                        short_candidates = list(candidates)
+                    else:
+                        short_candidates = self._scan_shorts()
                     for sc in short_candidates[: self.max_positions * 2]:
                         if len(short_opportunities) >= self.max_positions:
                             break
@@ -314,7 +330,9 @@ class MorningBriefing:
                         if not _sym:
                             continue
                         _sq = float(
-                            sc.get("short_quick_score", 5.0) or 5.0
+                            sc.get("short_quick_score")
+                            or sc.get("ai_score")
+                            or 5.0,
                         )
                         short_opportunities.append(
                             {
@@ -330,6 +348,62 @@ class MorningBriefing:
                         )
                 except Exception as _se:
                     logger.debug("Short scan failed: %s", _se)
+
+            _long_syms = {
+                o["symbol"]
+                for o in opportunities
+                if o.get("symbol")
+            }
+            _short_syms = {
+                s["symbol"]
+                for s in short_opportunities
+                if s.get("symbol")
+            }
+            _overlap = _long_syms & _short_syms
+            if _overlap:
+                _deduped_longs = []
+                for o in opportunities:
+                    sym = o.get("symbol")
+                    if sym not in _overlap:
+                        _deduped_longs.append(o)
+                        continue
+                    _ls = float(o.get("ai_score", 0) or 0)
+                    _ss = float(
+                        next(
+                            (
+                                s.get("short_score", 0)
+                                for s in short_opportunities
+                                if s.get("symbol") == sym
+                            ),
+                            0,
+                        )
+                        or 0
+                    )
+                    if _ls >= _ss:
+                        _deduped_longs.append(o)
+                _deduped_shorts = []
+                for s in short_opportunities:
+                    sym = s.get("symbol")
+                    if sym not in _overlap:
+                        _deduped_shorts.append(s)
+                        continue
+                    _ss = float(s.get("short_score", 0) or 0)
+                    _ls = float(
+                        next(
+                            (
+                                o.get("ai_score", 0)
+                                for o in opportunities
+                                if o.get("symbol") == sym
+                            ),
+                            0,
+                        )
+                        or 0
+                    )
+                    if _ss > _ls:
+                        _deduped_shorts.append(s)
+                opportunities = _deduped_longs
+                short_opportunities = _deduped_shorts
+
             report["short_opportunities"] = short_opportunities
 
             if len(opportunities) >= 2 and _include_forecasts:
@@ -403,6 +477,17 @@ class MorningBriefing:
 
             # Step 4: Watchlist alerts
             report["watchlist_alerts"] = self._get_watchlist_alerts()
+
+            report["top_opportunity_score_label"] = (
+                "Short Quick Score"
+                if "Bearish only" in (
+                    self._briefing_prefs.get(
+                        "opportunity_direction",
+                        "Bullish only (BUY signals)",
+                    )
+                )
+                else "Quick Score"
+            )
 
             # Step 5: Generate markdown
             report["markdown"] = self._format_markdown(report)
@@ -608,6 +693,7 @@ class MorningBriefing:
                     _uni_cap = _v
                     break
             uni = uni[:_uni_cap]
+            _universe_size = len(uni)
 
             _od = _p.get(
                 "opportunity_direction",
@@ -622,7 +708,7 @@ class MorningBriefing:
 
             logger.info(
                 "Morning briefing: scanning %d tickers (filter=%s)...",
-                len(uni),
+                _universe_size,
                 _scan_filter,
             )
             # tz_localize(None) is naive-only; batch tz strip is in market_scanner.scan_market
@@ -939,6 +1025,9 @@ class MorningBriefing:
 
     def _format_markdown(self, report: Dict[str, Any]) -> str:
         """Format report as readable markdown."""
+        _opp_score_lbl = str(
+            report.get("top_opportunity_score_label") or "Quick Score",
+        )
         lines = []
         now = datetime.now()
         lines.append(
@@ -982,7 +1071,7 @@ class MorningBriefing:
 
                 lines.append(
                     f"\n### {i}. {symbol} — "
-                    f"Quick Score: {score} | {price_disp}"
+                    f"{_opp_score_lbl}: {score} | {price_disp}"
                 )
 
                 forecast = opp.get("forecast", {})
@@ -1028,18 +1117,19 @@ class MorningBriefing:
         else:
             lines.append(
                 "## No High-Conviction Opportunities Today\n"
-                f"No stocks cleared the {self.min_ai_score} Quick Score "
-                "threshold. Consider lowering threshold or "
+                f"No stocks cleared the {self.min_ai_score} "
+                f"{_opp_score_lbl} threshold. Consider lowering threshold or "
                 "waiting for better setups."
             )
 
         short_opps = report.get("short_opportunities") or []
         if short_opps:
-            _n_s = min(3, len(short_opps))
+            _mx = int(report.get("max_positions", 3) or 3)
+            _n_s = min(_mx, len(short_opps))
             lines.append(
                 f"\n## Top {_n_s} Short Candidates"
             )
-            for i, opp in enumerate(short_opps[:3], 1):
+            for i, opp in enumerate(short_opps[:_n_s], 1):
                 sym = opp["symbol"]
                 score = opp.get(
                     "short_score",
@@ -1072,9 +1162,14 @@ class MorningBriefing:
                     f"{alert['message']}"
                 )
 
+        _footer_metric = (
+            "**Short Quick Score** (bearish technical ranking)"
+            if _opp_score_lbl == "Short Quick Score"
+            else "**Quick Score** (bullish technical estimate)"
+        )
         lines.append(
-            "\n---\n*Briefing uses **Quick Score** (technical estimate) for "
-            "speed. For full 16-signal AI Score, open any ticker in Analyze. "
+            f"\n---\n*Briefing uses {_footer_metric} for speed. "
+            "For full 16-signal AI Score, open any ticker in Analyze. "
             "Always verify signals before trading.*"
         )
 
@@ -1143,6 +1238,9 @@ class MorningBriefing:
 
             # Structured opportunities table
             opps = report.get("top_opportunities", [])
+            _tbl_score_lbl = str(
+                report.get("top_opportunity_score_label") or "Quick Score",
+            )
             if opps:
                 st.markdown("---")
                 st.markdown("**Quick Reference Table**")
@@ -1151,7 +1249,7 @@ class MorningBriefing:
                     forecast = opp.get("forecast", {})
                     rows.append({
                         "Symbol": opp["symbol"],
-                        "Quick Score": opp.get("ai_score", "N/A"),
+                        _tbl_score_lbl: opp.get("ai_score", "N/A"),
                         "Price": (
                             f"${float(opp['current_price']):.2f}"
                             if opp.get("current_price") is not None
