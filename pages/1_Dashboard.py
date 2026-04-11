@@ -21,6 +21,7 @@ from trading.data.price_cache import get_history, get_info, get_quote
 
 logger = logging.getLogger(__name__)
 
+
 try:
     st.markdown(keyboard_shortcut_js(), unsafe_allow_html=True)
 except Exception as e:
@@ -262,6 +263,68 @@ with c_vx:
         st.metric("VIX", f"{vx['price']:.2f}", f"{vx['chg']:+.2f}%")
     else:
         st.caption("Markets loading...")
+
+try:
+    from utils.session_utils import get_stable_user_id
+
+    _uid_mp = st.session_state.get("evolve_session_id") or get_stable_user_id()
+    _up_mp = load_user_preferences(_uid_mp) or {}
+    _gpr_mp = _up_mp.get("cached_gpr")
+    _rb_mp = _up_mp.get("cached_revision_breadth")
+    _c_gpr, _c_rb = st.columns(2)
+    with _c_gpr:
+        if _gpr_mp and _gpr_mp.get("current") is not None:
+            st.metric(
+                "Geopolitical Risk",
+                f"{float(_gpr_mp['current']):.0f} ({_gpr_mp.get('level', '')})",
+                delta=str(_gpr_mp.get("trend", "")),
+                delta_color=(
+                    "inverse"
+                    if _gpr_mp.get("level") in ("HIGH", "ELEVATED")
+                    else "normal"
+                ),
+                help=(
+                    str(_gpr_mp.get("description", ""))
+                    + " | Caldara & Iacoviello"
+                ),
+            )
+        else:
+            st.metric(
+                "Geopolitical Risk",
+                "Not loaded",
+                help=(
+                    "Compute in Settings → Briefing & scanner preferences "
+                    "(Market signals)."
+                ),
+            )
+    with _c_rb:
+        if _rb_mp and _rb_mp.get("success"):
+            _rb_sig = _rb_mp.get("signal", "NEUTRAL")
+            st.metric(
+                "EPS Revision Breadth",
+                f"{_rb_mp['pct_up']:.0f}% ↑ / "
+                f"{_rb_mp['pct_down']:.0f}% ↓",
+                delta=_rb_sig,
+                delta_color=(
+                    "normal"
+                    if _rb_sig == "POSITIVE"
+                    else "inverse"
+                    if _rb_sig == "NEGATIVE"
+                    else "off"
+                ),
+                help=str(_rb_mp.get("description", "")),
+            )
+        else:
+            st.metric(
+                "EPS Revision Breadth",
+                "Not loaded",
+                help=(
+                    "Compute in Settings → Briefing & scanner preferences "
+                    "(Market signals)."
+                ),
+            )
+except Exception:
+    pass
 
 # --- Breaking news (lightweight — above briefing) ---
 st.markdown("---")
@@ -832,6 +895,47 @@ def _render_briefing():
         else:
             st.caption(
                 "No opportunities passed the score threshold right now."
+            )
+
+        short_opps = report.get("short_opportunities") or []
+        if short_opps:
+            st.markdown("#### Short candidates")
+            st.caption(
+                "From your briefing scan when opportunities include bearish "
+                "setups (Settings)."
+            )
+            for opp in short_opps[:3]:
+                sym = opp.get("symbol", "")
+                if not sym:
+                    continue
+                _ss = float(opp.get("short_score") or 0)
+                _cp = opp.get("current_price")
+                _price_txt = (
+                    f"${float(_cp):.2f}"
+                    if _cp is not None
+                    else "N/A"
+                )
+                col_sa, col_sb = st.columns([4, 1])
+                with col_sa:
+                    _ssc = (
+                        "red"
+                        if _ss >= 7.0
+                        else "orange"
+                        if _ss >= 6.0
+                        else "green"
+                    )
+                    st.markdown(
+                        f"**{sym}** — :{_ssc}[Short Quick {_ss:.1f}] · "
+                        f"{_price_txt}"
+                    )
+                    if opp.get("thesis"):
+                        st.caption(str(opp["thesis"]))
+                with col_sb:
+                    if st.button("Open", key=f"hb_short_{sym}"):
+                        _set_deep_dive(sym)
+            st.caption(
+                "⚠️ Short selling involves unlimited risk. "
+                "Always use stop losses."
             )
 
     if not _fresh:

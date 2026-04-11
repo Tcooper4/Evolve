@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Single-ticker deep analysis surface (scroll + 5 tabs)."""
 import logging
+import time
 from datetime import datetime
 
 import streamlit as st
@@ -251,6 +252,12 @@ def render_deep_dive(ticker: str) -> None:
             _chart_hist = get_history(sym, period=_period, interval=_interval)
             if _chart_hist is None or _chart_hist.empty:
                 _chart_hist = hist
+                # Align chart params with fallback series (default 3mo / 1d)
+                _period = "3mo"
+                _interval = "1d"
+                _tf_label = "1d"
+                _sel_tf = "3M"
+                st.session_state[_tf_key] = "3M"
 
             render_price_chart(
                 sym,
@@ -270,6 +277,36 @@ def render_deep_dive(ticker: str) -> None:
             score = compute_ai_score(sym, hist)
         except Exception:
             score = None
+
+        _show_short = False
+        try:
+            from config.user_store import load_user_preferences
+            from utils.session_utils import get_stable_user_id
+
+            _uid_dd = get_stable_user_id()
+            _prefs_dd = load_user_preferences(_uid_dd) or {}
+            _od_dd = _prefs_dd.get(
+                "opportunity_direction",
+                "Bullish only (BUY signals)",
+            )
+            _show_short = (
+                "Both" in _od_dd
+                or "Bearish" in _od_dd
+            )
+        except Exception:
+            pass
+
+        short_score_result = None
+        if _show_short and score and not score.get("error"):
+            try:
+                from trading.analysis.ai_score import compute_short_score
+
+                short_score_result = compute_short_score(
+                    sym, hist, ai_result=score
+                )
+            except Exception:
+                short_score_result = None
+
         _rec_key = f"deep_dive_rec_{sym}"
         rec = st.session_state.get(_rec_key)
         if rec is None:
@@ -381,6 +418,39 @@ def render_deep_dive(ticker: str) -> None:
             st.markdown(f"{icon} **{nm}** — {val}")
         st.caption(top_signals_summary(signals))
 
+        if _show_short and short_score_result and not short_score_result.get(
+            "error"
+        ):
+            _ss = short_score_result
+            _sc = float(_ss.get("short_score", 5.0))
+            st.markdown("### Short Score")
+            _sc_color = (
+                "red"
+                if _sc >= 7.0
+                else "orange"
+                if _sc >= 6.0
+                else "green"
+            )
+            st.markdown(
+                f":{_sc_color}[**{_ss.get('label', '?')} — {_sc:.1f}/10**]"
+            )
+            for s in (_ss.get("signals") or [])[:4]:
+                imp = str(s.get("impact", "")).lower()
+                icon = (
+                    "🔴"
+                    if imp in ("bearish", "negative")
+                    else "⚠️"
+                    if imp == "risk"
+                    else "⚪"
+                )
+                st.markdown(
+                    f"{icon} **{s.get('name')}** — {s.get('value')}"
+                )
+            st.caption(
+                "Short Score measures bearish thesis strength. "
+                "High score = stronger case for shorting."
+            )
+
         _completeness = (score or {}).get("signal_completeness") or {}
         if _completeness:
             _available = _completeness.get("available", [])
@@ -455,43 +525,59 @@ def render_deep_dive(ticker: str) -> None:
             from config.llm_config import llm_available
             from agents.llm.active_llm_calls import call_active_llm_simple
 
+            _cmt_key = f"dd_ai_commentary_{sym}"
+            _cmt_ts_key = f"dd_ai_commentary_ts_{sym}"
+            _cmt_ttl = 3600.0
+            _now_cm = time.time()
+            _cached_cm = st.session_state.get(_cmt_key)
+            _cm_age = _now_cm - float(
+                st.session_state.get(_cmt_ts_key, 0.0)
+            )
+
             if (
                 llm_available()
                 and hist is not None
                 and not hist.empty
             ):
-                _cm = {c.lower(): c for c in hist.columns}
-                _cc = _cm.get("close", hist.columns[0])
-                _last = float(hist[_cc].iloc[-1])
-                _chg_20d = (
-                    float(
-                        (
-                            hist[_cc].iloc[-1]
-                            / hist[_cc].iloc[-20]
-                            - 1
-                        )
-                        * 100
-                    )
-                    if len(hist) >= 20
-                    else 0.0
-                )
-
-                _prompt = (
-                    f"You are a financial analyst. Give a 2-3 "
-                    f"sentence commentary on {sym} for a trader. "
-                    f"Current price: ${_last:.2f}. "
-                    f"20-day change: {_chg_20d:+.1f}%. "
-                    f"AI Score: "
-                    f"{(score or {}).get('overall_score', 'N/A')}. "
-                    f"Be concise and actionable."
-                )
-                _commentary = call_active_llm_simple(
-                    _prompt,
-                    max_tokens=150,
-                )
-                if _commentary:
+                if _cached_cm and _cm_age < _cmt_ttl:
                     st.markdown("**AI Commentary**")
-                    st.markdown(_commentary.strip())
+                    st.markdown(str(_cached_cm))
+                else:
+                    _cm = {c.lower(): c for c in hist.columns}
+                    _cc = _cm.get("close", hist.columns[0])
+                    _last = float(hist[_cc].iloc[-1])
+                    _chg_20d = (
+                        float(
+                            (
+                                hist[_cc].iloc[-1]
+                                / hist[_cc].iloc[-20]
+                                - 1
+                            )
+                            * 100
+                        )
+                        if len(hist) >= 20
+                        else 0.0
+                    )
+
+                    _prompt = (
+                        f"You are a financial analyst. Give a 2-3 "
+                        f"sentence commentary on {sym} for a trader. "
+                        f"Current price: ${_last:.2f}. "
+                        f"20-day change: {_chg_20d:+.1f}%. "
+                        f"AI Score: "
+                        f"{(score or {}).get('overall_score', 'N/A')}. "
+                        f"Be concise and actionable."
+                    )
+                    _commentary = call_active_llm_simple(
+                        _prompt,
+                        max_tokens=150,
+                    )
+                    if _commentary:
+                        _txt_cm = _commentary.strip()
+                        st.session_state[_cmt_key] = _txt_cm
+                        st.session_state[_cmt_ts_key] = _now_cm
+                        st.markdown("**AI Commentary**")
+                        st.markdown(_txt_cm)
         except Exception as _ce:
             logger.debug("Commentary: %s", _ce)
 

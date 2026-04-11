@@ -142,6 +142,7 @@ class MorningBriefing:
             "timestamp": datetime.now().isoformat(),
             "market_regime": {},
             "top_opportunities": [],
+            "short_opportunities": [],
             "watchlist_alerts": [],
             "risk_summary": {},
             "markdown": "",
@@ -271,6 +272,43 @@ class MorningBriefing:
                     sym,
                     elapsed,
                 )
+
+            short_opportunities: List[Dict[str, Any]] = []
+            _od = self._briefing_prefs.get(
+                "opportunity_direction",
+                "Bullish only (BUY signals)",
+            )
+            _include_shorts = (
+                "Both directions" in _od
+                or "Bearish only" in _od
+            )
+            if _include_shorts:
+                try:
+                    short_candidates = self._scan_shorts()
+                    for sc in short_candidates[: self.max_positions * 2]:
+                        if len(short_opportunities) >= self.max_positions:
+                            break
+                        _sym = sc.get("symbol")
+                        if not _sym:
+                            continue
+                        _sq = float(
+                            sc.get("short_quick_score", 5.0) or 5.0
+                        )
+                        short_opportunities.append(
+                            {
+                                "symbol": _sym,
+                                "short_score": _sq,
+                                "current_price": sc.get("price"),
+                                "thesis": (
+                                    f"Short Quick Score {_sq:.1f} — "
+                                    "bearish technical setup"
+                                ),
+                                "direction": "SHORT",
+                            }
+                        )
+                except Exception as _se:
+                    logger.debug("Short scan failed: %s", _se)
+            report["short_opportunities"] = short_opportunities
 
             if len(opportunities) >= 2 and _include_forecasts:
                 try:
@@ -421,6 +459,63 @@ class MorningBriefing:
             regime["error"] = str(e)
 
         return regime
+
+    def _scan_shorts(self) -> List[Dict[str, Any]]:
+        """Scan for short candidates using Short Quick Score."""
+        try:
+            from trading.analysis.market_scanner import (
+                _get_universe,
+                scan_market,
+            )
+
+            u = (self.universe or "sp100").lower()
+            uni = list(_get_universe(u))
+            try:
+                _p = getattr(self, "_briefing_prefs", {}) or {}
+                pref_uni = str(_p.get("briefing_universe") or "")
+                if "NASDAQ100" in pref_uni:
+                    uni = list(_get_universe("nasdaq100"))
+                elif "SP500" in pref_uni:
+                    uni = list(_get_universe("sp500"))[:50]
+                elif "SP100" in pref_uni:
+                    uni = list(_get_universe("sp100"))
+                elif "Top 25" in pref_uni:
+                    uni = list(_get_universe("sp100"))[:25]
+                if _p.get("watchlist_only"):
+                    try:
+                        from trading.data.watchlist import WatchlistManager
+
+                        _wl = WatchlistManager().get_all() or []
+                        _syms = [
+                            str(r.get("symbol", "")).strip().upper()
+                            for r in _wl
+                            if r.get("symbol")
+                        ]
+                        if _syms:
+                            uni = _syms
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+            uni = uni[: self.BRIEFING_UNIVERSE_CAP]
+            raw = scan_market(
+                filters=["high_short_score"],
+                universe=uni,
+                max_results=self.max_positions * 4,
+                min_quick_score=5.5,
+            )
+            rows = raw.get("results") or []
+            rows.sort(
+                key=lambda x: float(
+                    x.get("short_quick_score", 0) or 0
+                ),
+                reverse=True,
+            )
+            return rows[: self.max_positions * 2]
+        except Exception as e:
+            logger.debug("Short scan: %s", e)
+            return []
 
     def _scan_universe(
         self,
@@ -871,6 +966,34 @@ class MorningBriefing:
                 f"No stocks cleared the {self.min_ai_score} Quick Score "
                 "threshold. Consider lowering threshold or "
                 "waiting for better setups."
+            )
+
+        short_opps = report.get("short_opportunities") or []
+        if short_opps:
+            _n_s = min(3, len(short_opps))
+            lines.append(
+                f"\n## Top {_n_s} Short Candidates"
+            )
+            for i, opp in enumerate(short_opps[:3], 1):
+                sym = opp["symbol"]
+                score = opp.get(
+                    "short_score",
+                    opp.get("short_quick_score", "N/A"),
+                )
+                _cp = opp.get("current_price")
+                price_disp = (
+                    f"${_cp:.2f}"
+                    if _cp is not None
+                    else "N/A"
+                )
+                lines.append(
+                    f"\n### {i}. {sym} — Short Score: {score} | {price_disp}"
+                )
+                if opp.get("thesis"):
+                    lines.append(f"**Thesis:** {opp['thesis']}")
+            lines.append(
+                "\n⚠️ *Short selling involves unlimited risk. "
+                "Always use stop losses.*"
             )
 
         # Watchlist alerts

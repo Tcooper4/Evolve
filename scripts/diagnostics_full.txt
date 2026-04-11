@@ -1,0 +1,73 @@
+﻿1	# -*- coding: utf-8 -*-
+2	"""Econometric diagnostics (EconometricDiagnostics + quick stats)."""
+3	import streamlit as st
+4	
+5	
+6	def render_diagnostics(ticker: str, hist) -> None:
+7	    try:
+8	        from trading.analysis.econometric_diagnostics import EconometricDiagnostics
+9	
+10	        if hist is None or hist.empty:
+11	            st.caption("No history for diagnostics.")
+12	            return
+13	        diag = EconometricDiagnostics(ticker, hist)
+14	        diag.render_streamlit()
+15	    except Exception as e:
+16	        st.caption(f"unavailable: {e}")
+17	
+18	    st.markdown("---")
+19	    st.caption("Quick checks (ADF, Ljung-Box, ARCH)")
+20	    try:
+21	        import numpy as np
+22	        from trading.data.price_cache import get_history
+23	
+24	        _ss_data = st.session_state.get(
+25	            "analyze_forecast_data")
+26	        if (_ss_data is not None
+27	                and hasattr(_ss_data, "empty")
+28	                and not _ss_data.empty):
+29	            _dh = _ss_data
+30	        elif (hist is not None
+31	                and hasattr(hist, "empty")
+32	                and not hist.empty):
+33	            _dh = hist
+34	        else:
+35	            _dh = get_history(
+36	                ticker, period="1y")
+37	        if _dh is None or _dh.empty:
+38	            st.caption("Load price data to see quick diagnostics.")
+39	            return
+40	        _close = _dh["Close"].dropna()
+41	        _returns = _close.pct_change().dropna()
+42	        st.markdown("**Stationarity (ADF)**")
+43	        try:
+44	            from statsmodels.tsa.stattools import adfuller
+45	
+46	            _adf = adfuller(_close.values)
+47	            _adf_p = _adf[1]
+48	            _adf_stat = _adf[0]
+49	            _col = "#26a69a" if _adf_p < 0.05 else "#ef5350"
+50	            st.markdown(
+51	                f'<span style="color:{_col}">ADF {_adf_stat:.4f} | p={_adf_p:.4f} | '
+52	                f'{"Stationary" if _adf_p < 0.05 else "Non-stationary"}</span>',
+53	                unsafe_allow_html=True,
+54	            )
+55	        except ImportError:
+56	            st.caption("statsmodels not installed for ADF")
+57	
+58	        st.markdown("**Ljung-Box**")
+59	        try:
+60	            from statsmodels.stats.diagnostic import acorr_ljungbox
+61	
+62	            _lb = acorr_ljungbox(_returns, lags=[10], return_df=True)
+63	            _lb_p = float(_lb["lb_pvalue"].iloc[0])
+64	            _col = "#26a69a" if _lb_p > 0.05 else "#ef5350"
+65	            st.markdown(
+66	                f'<span style="color:{_col}">p={_lb_p:.4f} | '
+67	                f'{"White noise" if _lb_p > 0.05 else "Autocorrelation"}</span>',
+68	                unsafe_allow_html=True,
+69	            )
+70	        except ImportError:
+71	            st.caption("statsmodels not installed for Ljung-Box")
+72	    except Exception as e:
+73	        st.caption(f"unavailable: {e}")

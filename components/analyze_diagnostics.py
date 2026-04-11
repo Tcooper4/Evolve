@@ -1,9 +1,95 @@
 # -*- coding: utf-8 -*-
 """Econometric diagnostics (EconometricDiagnostics + quick stats)."""
+import logging
+
 import streamlit as st
+
+logger = logging.getLogger(__name__)
+
+
+def _render_risk_summary(ticker: str, hist) -> None:
+    """
+    Plain-English interpretation of key risk metrics for non-technical users.
+    """
+    if hist is None or hist.empty:
+        return
+    try:
+        import numpy as np
+
+        _cm = {c.lower(): c for c in hist.columns}
+        _cc = _cm.get("close", hist.columns[0])
+        _close = hist[_cc].dropna()
+        _rets = _close.pct_change().dropna()
+
+        _vol = float(_rets.std() * np.sqrt(252))
+        _vol_label = (
+            "very high"
+            if _vol > 0.6
+            else "high"
+            if _vol > 0.4
+            else "elevated"
+            if _vol > 0.25
+            else "normal"
+            if _vol > 0.15
+            else "low"
+        )
+
+        _sma50 = (
+            float(_close.iloc[-50:].mean())
+            if len(_close) >= 50
+            else None
+        )
+        _last = float(_close.iloc[-1])
+        _trend = (
+            "uptrend"
+            if _sma50 and _last > _sma50
+            else "downtrend"
+            if _sma50
+            else "unknown trend"
+        )
+
+        _mid = max(1, len(_close) // 2)
+        _mean_1h = float(_close.iloc[:_mid].mean())
+        _mean_2h = float(_close.iloc[_mid:].mean())
+        _trending = (
+            abs(_mean_2h - _mean_1h) / max(abs(_mean_1h), 1e-12) > 0.05
+        )
+
+        _roll_max = _close.cummax()
+        _drawdown = float(
+            ((_close - _roll_max) / _roll_max).min() * 100
+        )
+
+        parts = []
+        parts.append(
+            f"**{ticker}** is in a **{_trend}** with **{_vol_label} volatility** "
+            f"({(_vol * 100):.0f}% annualised)."
+        )
+        if _trending:
+            parts.append(
+                "The price series is **trending** (non-stationary) — momentum "
+                "strategies may work better than mean-reversion."
+            )
+        else:
+            parts.append(
+                "The price series shows **mean-reverting** tendencies — range "
+                "trading may be effective."
+            )
+        parts.append(
+            f"Maximum drawdown over the period: **{_drawdown:.1f}%**."
+        )
+
+        st.info(" ".join(parts), icon="📊")
+    except Exception as e:
+        logger.debug("Risk summary: %s", e)
 
 
 def render_diagnostics(ticker: str, hist) -> None:
+    try:
+        _render_risk_summary(ticker, hist)
+    except Exception:
+        pass
+
     try:
         from trading.analysis.econometric_diagnostics import EconometricDiagnostics
 

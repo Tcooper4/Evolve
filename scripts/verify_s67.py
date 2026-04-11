@@ -57,7 +57,8 @@ _r = subprocess.run(
         "-c",
         "import sys; sys.path.insert(0,'.');"
         "from trading.analysis.market_scanner import _quick_score;"
-        "s1 = _quick_score(45, 8.0, 3.0, 1.8, -3.0);"
+        "s1 = _quick_score(45, 8.0, 3.0, 1.8, -3.0, "
+        "vs_sma50=4.0, vol_expansion=1.3);"
         "print(f'Strong stock: {s1}');"
         "assert s1 >= 7.0, f'Expected >=7, got {s1}';"
         "s2 = _quick_score(75, -8.0, -4.0, 0.4, -40.0);"

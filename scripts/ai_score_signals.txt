@@ -1,0 +1,71 @@
+﻿1150	                            "value": round(_pcr, 3),
+1151	                            "impact": "negative",
+1152	                            "description": "Options: unusual put activity",
+1153	                        }
+1154	                    )
+1155	            elif _of.get("error"):
+1156	                _signal_status["options_flow"] = "fallback"
+1157	            else:
+1158	                _signal_status["options_flow"] = "fallback"
+1159	        except Exception as _oe:
+1160	            logger.debug("Options flow AI score hook skipped: %s", _oe)
+1161	
+1162	        # â”€â”€ SENTIMENT SCORE (0-10) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+1163	        sentiment_score = 5.0  # neutral default
+1164	        _short_sec = _parallel_results.get("short_sec")
+1165	        si = None
+1166	        _sec = None
+1167	        if isinstance(_short_sec, dict):
+1168	            si = _short_sec.get("short")
+1169	            _sec = _short_sec.get("sec")
+1170	
+1171	        try:
+1172	            if si is not None:
+1173	                squeeze_score = si.get("short_squeeze_score", 0) or 0
+1174	                short_pct = si.get("short_pct_float")
+1175	                if short_pct is None:
+1176	                    short_pct = 0
+1177	                short_pct_f = float(short_pct)
+1178	                if short_pct_f >= 20:
+1179	                    si_sentiment = 9.0
+1180	                elif short_pct_f >= 15:
+1181	                    si_sentiment = 7.5
+1182	                elif short_pct_f >= 10:
+1183	                    si_sentiment = 6.5
+1184	                elif short_pct_f >= 5:
+1185	                    si_sentiment = 5.5
+1186	                else:
+1187	                    si_sentiment = 4.0
+1188	                squeeze_tier = (
+1189	                    "EXTREME"
+1190	                    if short_pct_f >= 20
+1191	                    else "HIGH"
+1192	                    if short_pct_f >= 15
+1193	                    else "ELEVATED"
+1194	                    if short_pct_f >= 10
+1195	                    else "MODERATE"
+1196	                    if short_pct_f >= 5
+1197	                    else "LOW"
+1198	                )
+1199	
+1200	                # If float short is very elevated, also lift momentum
+1201	                if short_pct_f >= 25:
+1202	                    momentum_score = min(10.0, momentum_score + 2.0)
+1203	                elif short_pct_f >= 15:
+1204	                    momentum_score = min(10.0, momentum_score + 1.5)
+1205	
+1206	                signals.append(
+1207	                    {
+1208	                        "name": "Short Squeeze Score",
+1209	                        "value": round(float(squeeze_score), 1),
+1210	                        "impact": "positive" if squeeze_score > 50 else "neutral",
+1211	                        "description": f"Float short: {short_pct_f:.1f}% â€” Squeeze: {squeeze_tier}",
+1212	                    }
+1213	                )
+1214	                sentiment_score = si_sentiment
+1215	        except Exception:
+1216	            pass
+1217	
+1218	        try:
+1219	            _dp = {}
+1220	            if isinstance(_short_sec, dict):

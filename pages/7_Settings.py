@@ -600,6 +600,83 @@ with tab_research:
         ),
     )
 
+    st.markdown("#### Market signals")
+    st.caption(
+        "Manual computation only. Results are saved to your profile and shown "
+        "on Home (market pulse)."
+    )
+    _gpr_stored = _prefs.get("cached_gpr")
+    if _gpr_stored and _gpr_stored.get("current") is not None:
+        st.success(
+            f"GPR loaded: {_gpr_stored.get('current')} "
+            f"({_gpr_stored.get('level')}) — {_gpr_stored.get('trend')}"
+        )
+    if st.button(
+        "🌍 Load Geopolitical Risk Index",
+        key="load_gpr_btn",
+        help=(
+            "Downloads Caldara & Iacoviello GPR index (~5–60s). "
+            "Cached 30 days on disk."
+        ),
+    ):
+        with st.spinner("Downloading GPR index…"):
+            try:
+                from trading.analysis.macro_factors import MacroFactors
+
+                _mf_g = MacroFactors()
+                _gpr_result = _mf_g._get_gpr_index()
+                if _gpr_result.get("current") is not None:
+                    _merged = dict(load_user_preferences(_uid) or {})
+                    _merged["cached_gpr"] = _gpr_result
+                    save_user_preferences(_uid, _merged)
+                    st.success(
+                        f"GPR loaded: {_gpr_result['current']:.0f} "
+                        f"({_gpr_result.get('level')})"
+                    )
+                    st.rerun()
+                else:
+                    st.error(
+                        "GPR download failed — check network or try again later."
+                    )
+            except Exception as _ge:
+                st.error(f"GPR error: {_ge}")
+
+    _rb_stored = _prefs.get("cached_revision_breadth")
+    if _rb_stored and _rb_stored.get("success"):
+        st.success(
+            f"EPS breadth: {_rb_stored['pct_up']:.0f}% ↑ / "
+            f"{_rb_stored['pct_down']:.0f}% ↓ "
+            f"({_rb_stored.get('sample_size', 0)} stocks)"
+        )
+    if st.button(
+        "📊 Compute EPS revision breadth",
+        key="compute_breadth_btn",
+        help=(
+            "Samples 150 S&P 500 names for EPS revision trend. "
+            "May take several minutes. Cached 24h in-process."
+        ),
+    ):
+        with st.spinner(
+            "Sampling stocks for EPS revision breadth (may take several minutes)…"
+        ):
+            try:
+                from trading.data.earnings_quality import get_revision_breadth
+
+                _rb_result = get_revision_breadth(sample_size=150)
+                if _rb_result.get("success"):
+                    _merged_b = dict(load_user_preferences(_uid) or {})
+                    _merged_b["cached_revision_breadth"] = _rb_result
+                    save_user_preferences(_uid, _merged_b)
+                    st.success(
+                        f"EPS breadth: {_rb_result['pct_up']:.0f}% upward revisions "
+                        f"({_rb_result.get('sample_size', 0)} stocks sampled)"
+                    )
+                    st.rerun()
+                else:
+                    st.warning("Breadth compute returned no usable data.")
+            except Exception as _be:
+                st.error(f"Breadth error: {_be}")
+
     st.markdown("---")
     st.markdown("### 📊 Signal IC Status")
     st.caption(

@@ -67,6 +67,10 @@ SCAN_FILTERS = {
     "quick_technical": (
         "Quick Score ⚡ ≥ threshold (technical estimate, instant)"
     ),
+    "high_short_score": (
+        "Short Quick Score ⬇️ ≥ threshold "
+        "(bearish technical estimate, instant)"
+    ),
 }
 
 _SCAN_AI_MAX_WORKERS = 8
@@ -220,12 +224,48 @@ def scan_market(
             vs_sma20_pct = (
                 round((last_price / sma20 - 1) * 100, 2) if sma20 else None
             )
+            vs_sma50_pct = (
+                round((last_price / sma50 - 1) * 100, 2)
+                if sma50
+                else None
+            )
+            _vol5 = None
+            if len(close) >= 6:
+                _rel5 = np.diff(close[-6:]) / np.maximum(
+                    close[-6:-1], 1e-12
+                )
+                _vol5 = float(np.std(_rel5))
+            _vol20 = None
+            if len(close) >= 21:
+                _rel20 = np.diff(close[-21:]) / np.maximum(
+                    close[-21:-1], 1e-12
+                )
+                _vol20 = float(np.std(_rel20))
+            vol_expansion = (
+                float(_vol5 / _vol20)
+                if (
+                    _vol5 is not None
+                    and _vol20 is not None
+                    and _vol20 > 0
+                )
+                else 1.0
+            )
             qs_pre = _quick_score(
                 rsi,
                 ret_20d,
                 vs_sma20_pct,
                 vol_ratio,
                 pct_from_high,
+                vs_sma50=vs_sma50_pct,
+                vol_expansion=vol_expansion,
+            )
+            _sqs = _short_quick_score(
+                rsi,
+                ret_20d,
+                vs_sma20_pct,
+                vol_ratio,
+                pct_from_high,
+                vs_sma50=vs_sma50_pct,
             )
 
             # Apply filters
@@ -267,6 +307,10 @@ def scan_market(
                     if qs_pre < float(min_quick_score):
                         passes = False
                         break
+                elif f == "high_short_score":
+                    if _sqs < float(min_quick_score):
+                        passes = False
+                        break
 
             if not passes:
                 continue
@@ -280,6 +324,7 @@ def scan_market(
                 "pct_from_52w_high": round(pct_from_high, 2),
                 "volume_ratio": round(vol_ratio, 2),
                 "quick_score": qs_pre,
+                "short_quick_score": _sqs,
             }
             pending.append((symbol, hist.copy(), partial))
 
@@ -349,7 +394,15 @@ def scan_market(
         }
         results.append(row)
 
-    results.sort(key=lambda x: x.get("quick_score") or 0.0, reverse=True)
+    _sort_key = (
+        "short_quick_score"
+        if filters and "high_short_score" in filters
+        else "quick_score"
+    )
+    results.sort(
+        key=lambda x: float(x.get(_sort_key) or 0.0),
+        reverse=True,
+    )
 
     return {
         "results": results[:max_results],
@@ -385,18 +438,22 @@ def _quick_score(
     vs_sma20: Optional[float],
     vol_ratio: float,
     pct_from_high: float,
+    vs_sma50: Optional[float] = None,
+    vol_expansion: float = 1.0,
 ) -> float:
     """
     Fast technical pre-score (0-10).
     Computed from batch-downloaded data only — no extra API calls.
     Used as a fast alternative to the full AI Score for large universe scans.
 
-    Components (equal weight):
+    Components (equal weight, 7 total when extras provided):
       RSI position    (0-10)
       20d momentum    (0-10)
       SMA20 position  (0-10)
       Volume ratio    (0-10)
       52w high prox   (0-10)
+      SMA50 position  (0-10)
+      Vol expansion   (0-10) — short vs medium vol of returns
     """
     scores = []
 
@@ -465,6 +522,109 @@ def _quick_score(
         scores.append(4.0)
     else:
         scores.append(2.0)
+
+    if vs_sma50 is not None:
+        if vs_sma50 > 5:
+            scores.append(8.0)
+        elif vs_sma50 > 2:
+            scores.append(7.0)
+        elif vs_sma50 > 0:
+            scores.append(6.0)
+        elif vs_sma50 > -3:
+            scores.append(5.0)
+        else:
+            scores.append(3.0)
+
+    if ret_20d > 2 and vol_expansion > 1.2:
+        scores.append(7.5)
+    elif ret_20d < -2 and vol_expansion > 1.2:
+        scores.append(3.0)
+    else:
+        scores.append(5.5)
+
+    if not scores:
+        return 5.0
+    return round(sum(scores) / len(scores), 1)
+
+
+def _short_quick_score(
+    rsi: Optional[float],
+    ret_20d: float,
+    vs_sma20: Optional[float],
+    vol_ratio: float,
+    pct_from_high: float,
+    vs_sma50: Optional[float] = None,
+) -> float:
+    """
+    Fast bearish pre-score (0-10).
+    Higher = stronger short candidate (inverse of long quick score).
+    """
+    scores = []
+
+    if rsi is not None:
+        if rsi > 75:
+            scores.append(9.0)
+        elif rsi > 65:
+            scores.append(7.0)
+        elif rsi > 50:
+            scores.append(5.5)
+        elif rsi > 35:
+            scores.append(4.0)
+        else:
+            scores.append(2.0)
+
+    if ret_20d < -10:
+        scores.append(9.0)
+    elif ret_20d < -5:
+        scores.append(8.0)
+    elif ret_20d < -2:
+        scores.append(7.0)
+    elif ret_20d < 0:
+        scores.append(5.5)
+    elif ret_20d < 5:
+        scores.append(3.5)
+    else:
+        scores.append(2.0)
+
+    if vs_sma20 is not None:
+        if vs_sma20 < -5:
+            scores.append(8.5)
+        elif vs_sma20 < -2:
+            scores.append(7.0)
+        elif vs_sma20 < 0:
+            scores.append(5.5)
+        elif vs_sma20 < 2:
+            scores.append(4.0)
+        else:
+            scores.append(2.5)
+
+    if ret_20d < 0 and vol_ratio > 1.5:
+        scores.append(8.0)
+    elif ret_20d > 0 and vol_ratio > 1.5:
+        scores.append(3.0)
+    else:
+        scores.append(5.0)
+
+    if pct_from_high < -30:
+        scores.append(7.5)
+    elif pct_from_high < -20:
+        scores.append(6.5)
+    elif pct_from_high < -10:
+        scores.append(5.5)
+    elif pct_from_high < -5:
+        scores.append(4.0)
+    else:
+        scores.append(2.5)
+
+    if vs_sma50 is not None:
+        if vs_sma50 < -5:
+            scores.append(8.5)
+        elif vs_sma50 < -2:
+            scores.append(7.0)
+        elif vs_sma50 < 0:
+            scores.append(5.5)
+        else:
+            scores.append(3.0)
 
     if not scores:
         return 5.0

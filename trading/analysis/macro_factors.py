@@ -15,6 +15,8 @@ Dependencies: yfinance (already installed), fredapi (optional)
 
 import logging
 from datetime import datetime, timedelta
+from io import BytesIO
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -38,6 +40,12 @@ class MacroFactors:
     - Market volatility regime (VIX)
     - Inflation regime (TIP/IEF ratio)
     """
+
+    GPR_URL = (
+        "https://www.matteoiacoviello.com/gpr_files/data_gpr_export.xls"
+    )
+    GPR_CACHE_PATH = Path("data") / "gpr_cache.json"
+    GPR_CACHE_TTL = 86400 * 30
 
     def __init__(self):
         self._cache: Dict[str, Any] = {}
@@ -90,6 +98,7 @@ class MacroFactors:
             "credit_spreads": self._get_credit_spreads(),
             "dollar": self._get_dollar_strength(),
             "inflation": self._get_inflation_regime(),
+            "geopolitical": self._get_gpr_index(),
             "overall_regime": {},
         }
 
@@ -165,6 +174,38 @@ class MacroFactors:
                     ),
                 })
 
+        geo = factors.get("geopolitical", {})
+        geo_level = geo.get("level", "UNKNOWN")
+        geo_trend = geo.get("trend", "STABLE")
+        if geo_level == "HIGH":
+            _gadj = -1.5 if geo_trend == "RISING" else -1.0
+            score_adj += _gadj
+            signals.append({
+                "name": "Geopolitical Risk",
+                "value": f"{geo.get('current', '?')} ({geo_level})",
+                "impact": "negative",
+                "description": (
+                    (geo.get("description") or "")
+                    + (" — and rising" if geo_trend == "RISING" else "")
+                ),
+            })
+        elif geo_level == "ELEVATED":
+            score_adj -= 0.5
+            signals.append({
+                "name": "Geopolitical Risk",
+                "value": f"{geo.get('current', '?')} ({geo_level})",
+                "impact": "negative",
+                "description": geo.get("description", ""),
+            })
+        elif geo_level == "LOW":
+            score_adj += 0.3
+            signals.append({
+                "name": "Geopolitical Risk",
+                "value": f"{geo.get('current', '?')} ({geo_level})",
+                "impact": "positive",
+                "description": geo.get("description", ""),
+            })
+
         # Sector-specific adjustments
         if sector:
             sector_adj = self._sector_macro_adjustment(sector, factors)
@@ -178,6 +219,135 @@ class MacroFactors:
             "signals": signals,
             "regime": regime.get("label", "NEUTRAL"),
         }
+
+    def _get_gpr_index(self) -> Dict[str, Any]:
+        """
+        Caldara & Iacoviello GPR index (monthly).
+        Cached 30 days under data/gpr_cache.json.
+        """
+        import json
+        import time
+        import urllib.request
+
+        cache = self.GPR_CACHE_PATH
+        try:
+            if cache.exists():
+                _c = json.loads(
+                    cache.read_text(encoding="utf-8", errors="replace")
+                )
+                if time.time() - _c.get("ts", 0) < self.GPR_CACHE_TTL:
+                    return _c["data"]
+        except Exception:
+            pass
+
+        try:
+            with urllib.request.urlopen(
+                self.GPR_URL,
+                timeout=60,
+            ) as resp:
+                raw = resp.read()
+            df = None
+            for _eng in ("xlrd", "openpyxl", None):
+                try:
+                    df = pd.read_excel(
+                        BytesIO(raw),
+                        engine=_eng,
+                    )
+                    break
+                except Exception:
+                    continue
+            if df is None or df.empty:
+                raise ValueError("GPR workbook empty or unreadable")
+
+            df.columns = [str(c).strip() for c in df.columns]
+            gpr_col = next(
+                (
+                    c for c in df.columns
+                    if c in ("GPRD", "GPR", "gpr", "gprd")
+                ),
+                None,
+            )
+            if gpr_col is None:
+                _skip = {"Year", "Month", "year", "month", "DATE", "date"}
+                _nums = [
+                    c for c in df.columns
+                    if c not in _skip
+                    and pd.to_numeric(
+                        df[c],
+                        errors="coerce",
+                    ).notna().sum() > 10
+                ]
+                if _nums:
+                    gpr_col = _nums[0]
+            if gpr_col is None:
+                raise ValueError("GPR column not found")
+
+            series = pd.to_numeric(
+                df[gpr_col],
+                errors="coerce",
+            ).dropna()
+            if len(series) < 12:
+                raise ValueError("Insufficient GPR data")
+
+            current = float(series.iloc[-1])
+            recent = float(series.iloc[-3:].mean())
+            prior = float(series.iloc[-6:-3].mean())
+            pct = float((series < current).sum() / len(series) * 100)
+            p75 = float(series.quantile(0.75))
+            p90 = float(series.quantile(0.90))
+
+            level = (
+                "HIGH" if current >= p90
+                else "ELEVATED" if current >= p75
+                else "NORMAL" if current >= float(series.quantile(0.25))
+                else "LOW"
+            )
+            trend = (
+                "RISING" if recent > prior * 1.1
+                else "FALLING" if recent < prior * 0.9
+                else "STABLE"
+            )
+            descriptions = {
+                "HIGH": (
+                    "Geopolitical risk very elevated — "
+                    "historically linked to market stress"
+                ),
+                "ELEVATED": (
+                    "Geopolitical risk above normal — monitor closely"
+                ),
+                "NORMAL": "Geopolitical risk within normal range",
+                "LOW": (
+                    "Geopolitical risk low — supportive for risk assets"
+                ),
+            }
+            result = {
+                "current": round(current, 1),
+                "percentile": round(pct, 1),
+                "level": level,
+                "trend": trend,
+                "description": descriptions.get(level, ""),
+                "source": "Caldara & Iacoviello",
+            }
+            try:
+                cache.parent.mkdir(parents=True, exist_ok=True)
+                cache.write_text(
+                    json.dumps(
+                        {"ts": time.time(), "data": result},
+                    ),
+                    encoding="utf-8",
+                )
+            except Exception:
+                pass
+            return result
+        except Exception as e:
+            logger.debug("GPR fetch failed: %s", e)
+            return {
+                "current": None,
+                "level": "UNKNOWN",
+                "trend": "STABLE",
+                "description": "GPR data unavailable",
+                "error": str(e),
+            }
 
     def _get_yield_curve(self) -> Dict[str, Any]:
         """Get yield curve data (10Y-2Y spread)."""

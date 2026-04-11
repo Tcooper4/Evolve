@@ -20,7 +20,7 @@ Earnings quality signals.
 
 import logging
 import time
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -256,5 +256,114 @@ def _neutral_eq(sym: str) -> Dict[str, Any]:
         "beat_streak": 0,
         "composite_score": 5.0,
         "signal": "NEUTRAL",
+        "success": False,
+    }
+
+
+_BREADTH_CACHE: Dict[str, Any] = {}
+_BREADTH_TS: float = 0.0
+_BREADTH_TTL = 86400.0
+
+
+def get_revision_breadth(
+    sample_size: int = 150,
+) -> Dict[str, Any]:
+    """
+    EPS revision breadth across an S&P 500 sample.
+    Cached 24 hours in-process.
+    """
+    import random
+    import time as _time
+    from concurrent.futures import (
+        ThreadPoolExecutor,
+        as_completed,
+    )
+
+    global _BREADTH_CACHE, _BREADTH_TS
+
+    _now = _time.time()
+    if _BREADTH_CACHE and _now - _BREADTH_TS < _BREADTH_TTL:
+        return dict(_BREADTH_CACHE)
+
+    try:
+        from trading.analysis.market_scanner import _get_universe
+
+        uni = _get_universe("sp500")
+        random.seed(42)
+        sample: List[str] = random.sample(
+            uni,
+            min(sample_size, len(uni)),
+        )
+
+        results: List[str] = []
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            futs = {
+                ex.submit(get_earnings_quality, sym): sym
+                for sym in sample
+            }
+            for fut in as_completed(futs):
+                try:
+                    r = fut.result(timeout=30)
+                    if r.get("success"):
+                        results.append(
+                            r.get(
+                                "revision_signal",
+                                "NEUTRAL",
+                            )
+                        )
+                except Exception:
+                    pass
+
+        if not results:
+            return _neutral_breadth()
+
+        n = len(results)
+        n_up = results.count("UP")
+        n_down = results.count("DOWN")
+        pct_up = round(n_up / n * 100, 1)
+        pct_down = round(n_down / n * 100, 1)
+        pct_neut = round(100.0 - pct_up - pct_down, 1)
+        score = max(
+            0.0,
+            min(
+                10.0,
+                5.0 + (n_up - n_down) / n * 5.0,
+            ),
+        )
+        signal = (
+            "POSITIVE" if pct_up > pct_down + 10
+            else "NEGATIVE" if pct_down > pct_up + 10
+            else "NEUTRAL"
+        )
+        result = {
+            "pct_up": pct_up,
+            "pct_down": pct_down,
+            "pct_neutral": pct_neut,
+            "breadth_score": round(score, 2),
+            "signal": signal,
+            "sample_size": n,
+            "description": (
+                f"{pct_up:.0f}% of {n} sampled stocks have upward "
+                f"EPS revisions, {pct_down:.0f}% downward"
+            ),
+            "success": True,
+        }
+        _BREADTH_CACHE = result
+        _BREADTH_TS = _now
+        return result
+    except Exception as e:
+        logger.debug("Revision breadth failed: %s", e)
+        return _neutral_breadth()
+
+
+def _neutral_breadth() -> Dict[str, Any]:
+    return {
+        "pct_up": 33.3,
+        "pct_down": 33.3,
+        "pct_neutral": 33.3,
+        "breadth_score": 5.0,
+        "signal": "NEUTRAL",
+        "sample_size": 0,
+        "description": "Revision breadth unavailable",
         "success": False,
     }

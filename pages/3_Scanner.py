@@ -361,6 +361,7 @@ def _scanner_table():
             "pct_from_52w_high": "vs 52w High%",
             "volume_ratio": "Vol Ratio",
             "quick_score": "Quick Score ⚡",
+            "short_quick_score": "Short Score ⬇️",
             "ai_score": "AI Score",
             "ai_grade": "Grade",
             "news_score": "News",
@@ -448,6 +449,34 @@ def _scanner_table():
             styler = styler.map(_color_news_cell, subset=["News"])
         except Exception:
             styler = styler.applymap(_color_news_cell, subset=["News"])
+
+    def _color_short(val):
+        try:
+            v = float(val)
+            if v >= 7:
+                return (
+                    "background-color: #3a1a1a; color: #ef5350"
+                )
+            if v >= 6:
+                return (
+                    "background-color: #3a2a0a; color: #ff9800"
+                )
+            return ""
+        except Exception:
+            return ""
+
+    if "Short Score ⬇️" in df_display.columns:
+        try:
+            styler = styler.map(
+                _color_short,
+                subset=["Short Score ⬇️"],
+            )
+        except Exception:
+            styler = styler.applymap(
+                _color_short,
+                subset=["Short Score ⬇️"],
+            )
+
     st.dataframe(styler, width="stretch", height=400, key="scanner_results_df")
 
     st.caption(

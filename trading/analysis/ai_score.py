@@ -2185,3 +2185,199 @@ def _error_score(symbol: str, error: str) -> Dict[str, Any]:
         "last_price": None,
         "error": error,
     }
+
+
+def _neutral_short(symbol: str) -> Dict[str, Any]:
+    return {
+        "symbol": symbol,
+        "short_score": 5.0,
+        "grade": "C",
+        "label": "Not a Short",
+        "signals": [],
+        "long_score": 5.0,
+        "summary": "Short score unavailable",
+        "error": "unavailable",
+    }
+
+
+def compute_short_score(
+    symbol: str,
+    hist: Optional[pd.DataFrame],
+    ai_result: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Short candidate score (0-10). Higher = stronger bearish thesis.
+    Reweights existing AI Score signals (no extra data fetch when ai_result
+    is passed).
+    """
+    try:
+        if ai_result is None:
+            ai_result = compute_ai_score(symbol, hist)
+
+        if ai_result.get("error"):
+            return _neutral_short(symbol)
+
+        signals = ai_result.get("signals") or []
+        _sig_map = {
+            str(s.get("name", "")).lower().strip(): s
+            for s in signals
+        }
+
+        score = 5.0
+        short_signals: List[Dict[str, Any]] = []
+
+        tech = float(ai_result.get("technical_score", 5.0) or 5.0)
+        score += (10.0 - tech) * 0.15 - 0.75
+
+        mom = float(ai_result.get("momentum_score", 5.0) or 5.0)
+        score += (10.0 - mom) * 0.20 - 1.0
+
+        _rsi_sig = _sig_map.get("rsi") or {}
+        try:
+            _rsi_val = float(
+                str(_rsi_sig.get("value", 50)).replace("%", "").strip()
+            )
+            if _rsi_val > 75:
+                score += 1.5
+                short_signals.append(
+                    {
+                        "name": "RSI",
+                        "value": round(_rsi_val, 1),
+                        "impact": "bearish",
+                        "description": (
+                            f"Overbought RSI {_rsi_val:.0f} — reversal risk"
+                        ),
+                    }
+                )
+            elif _rsi_val > 65:
+                score += 0.5
+            elif _rsi_val < 35:
+                score -= 1.0
+        except Exception:
+            pass
+
+        _ins_sig = (
+            _sig_map.get("insider flow")
+            or _sig_map.get("insider")
+            or {}
+        )
+        _ins_impact = str(_ins_sig.get("impact", "")).lower()
+        if _ins_impact == "negative":
+            score += 1.0
+            short_signals.append(
+                {
+                    "name": "Insider Flow",
+                    "value": _ins_sig.get("value", "Selling"),
+                    "impact": "bearish",
+                    "description": "Insider selling detected",
+                }
+            )
+        elif _ins_impact == "positive":
+            score -= 0.5
+
+        _eq_sig = _sig_map.get("earnings quality") or {}
+        _eq_impact = str(_eq_sig.get("impact", "")).lower()
+        if _eq_impact == "negative":
+            score += 0.8
+            short_signals.append(
+                {
+                    "name": "Earnings Quality",
+                    "value": _eq_sig.get("value", "Concern"),
+                    "impact": "bearish",
+                    "description": (
+                        "High accruals or deteriorating earnings quality"
+                    ),
+                }
+            )
+
+        _acc_sig = _sig_map.get("accruals") or {}
+        if str(_acc_sig.get("impact", "")).lower() == "negative":
+            score += 0.5
+            short_signals.append(
+                {
+                    "name": "Accruals",
+                    "value": _acc_sig.get("value", "High"),
+                    "impact": "bearish",
+                    "description": _acc_sig.get("description", ""),
+                }
+            )
+
+        _si_sig = (
+            _sig_map.get("short squeeze score")
+            or _sig_map.get("short interest")
+            or {}
+        )
+        try:
+            _si_desc = str(_si_sig.get("description", "")).lower()
+            _si_pct = 0.0
+            if "float" in _si_desc and "%" in _si_desc:
+                if "float:" in _si_desc:
+                    _part = _si_desc.split("float:", 1)[1]
+                elif "float short:" in _si_desc:
+                    _part = _si_desc.split("float short:", 1)[1]
+                else:
+                    _part = ""
+                if _part:
+                    _si_pct = float(_part.split("%", 1)[0].strip())
+            if _si_pct >= 20:
+                score -= 1.5
+                short_signals.append(
+                    {
+                        "name": "Short Interest",
+                        "value": f"{_si_pct:.1f}%",
+                        "impact": "risk",
+                        "description": (
+                            f"Already {_si_pct:.0f}% short — crowded, "
+                            "squeeze risk"
+                        ),
+                    }
+                )
+            elif _si_pct >= 10:
+                score -= 0.5
+            elif 0 < _si_pct < 3:
+                score += 0.3
+        except Exception:
+            pass
+
+        fund = float(ai_result.get("fundamental_score", 5.0) or 5.0)
+        if fund < 4.0:
+            score += 0.8
+            short_signals.append(
+                {
+                    "name": "Fundamentals",
+                    "value": round(fund, 1),
+                    "impact": "bearish",
+                    "description": "Weak fundamental score",
+                }
+            )
+
+        score = float(max(0.0, min(10.0, score)))
+
+        if score >= 7.0:
+            grade = "A"
+            label = "Strong Short"
+        elif score >= 6.0:
+            grade = "B"
+            label = "Moderate Short"
+        elif score >= 5.0:
+            grade = "C"
+            label = "Weak Short"
+        else:
+            grade = "D"
+            label = "Not a Short"
+
+        return {
+            "symbol": symbol,
+            "short_score": round(score, 2),
+            "grade": grade,
+            "label": label,
+            "signals": short_signals,
+            "long_score": float(
+                ai_result.get("overall_score", 5.0) or 5.0
+            ),
+            "summary": f"{label} — Short Score {score:.1f}/10",
+            "error": None,
+        }
+    except Exception as e:
+        logger.debug("Short score failed %s: %s", symbol, e)
+        return _neutral_short(symbol)
