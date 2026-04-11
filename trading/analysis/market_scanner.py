@@ -336,7 +336,10 @@ def scan_market(
     if len(filters) == 0:
         ai_by_symbol: Dict[str, Any] = {}
         n_pend = len(pending)
-        _emit_progress(0, max(1, total), "ai")
+        # Denominator = items scored (pending), not full universe — done_ai only
+        # reaches n_pend. When n_pend==0, use (1,1) so UI shows 100% not stuck at 0.
+        _ai_denom = max(1, n_pend)
+        _emit_progress(0, _ai_denom, "ai")
         if pending:
             done_ai = 0
             with ThreadPoolExecutor(max_workers=_SCAN_AI_MAX_WORKERS) as executor:
@@ -348,9 +351,9 @@ def scan_market(
                     sym, ai = fut.result()
                     ai_by_symbol[sym] = ai
                     done_ai += 1
-                    _emit_progress(done_ai, max(1, total), "ai")
+                    _emit_progress(done_ai, _ai_denom, "ai")
         else:
-            _emit_progress(0, max(1, total), "ai")
+            _emit_progress(1, 1, "ai")
 
         for symbol, _hist, partial in pending:
             ai = ai_by_symbol.get(symbol)
@@ -382,8 +385,9 @@ def scan_market(
 
     # Quick Score only (no bulk AI) — Scanner tab / briefing phase 1.
     n_pend = len(pending)
-    _emit_progress(0, max(1, total), "ai")
-    _emit_progress(n_pend, max(1, total), "ai")
+    _ai_denom = max(1, n_pend)
+    _emit_progress(0, _ai_denom, "ai")
+    _emit_progress(n_pend if n_pend > 0 else 1, _ai_denom, "ai")
 
     for symbol, _hist, partial in pending:
         row = {
