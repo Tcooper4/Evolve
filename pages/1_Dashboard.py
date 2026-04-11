@@ -749,6 +749,7 @@ def _render_briefing():
             _mb = MorningBriefing(
                 universe=_universe,
                 min_ai_score=_min_score,
+                prefs=_prefs,
             )
             progress = st.progress(0, text="Scanning universe (Quick Score)…")
 

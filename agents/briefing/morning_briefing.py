@@ -52,12 +52,16 @@ class MorningBriefing:
         universe: str = "sp100",
         min_ai_score: Optional[float] = None,
         max_positions: int = 3,
+        prefs: Optional[Dict[str, Any]] = None,
     ):
         self.universe = universe
         self.min_ai_score = float(min_ai_score or 5.5)
         self.max_positions = max_positions
         self._last_report: Optional[Dict[str, Any]] = None
-        self._briefing_prefs: Dict[str, Any] = {}
+        self._briefing_prefs_supplied = prefs is not None
+        self._briefing_prefs: Dict[str, Any] = (
+            dict(prefs) if prefs is not None else {}
+        )
 
     def _load_briefing_prefs(self) -> Dict[str, Any]:
         try:
@@ -142,11 +146,19 @@ class MorningBriefing:
         forecast_progress_callback: optional callable(done, total, symbol)
             during per-ticker forecast phase (when include_forecasts is on).
         """
-        self._briefing_prefs = self._load_briefing_prefs()
+        if not self._briefing_prefs_supplied:
+            if not self._briefing_prefs:
+                self._briefing_prefs = self._load_briefing_prefs()
         _p = self._briefing_prefs
         if _p.get("min_ai_score") is not None:
             self.min_ai_score = float(_p["min_ai_score"])
 
+        logger.info(
+            "Morning briefing prefs: universe=%s min_score=%.1f direction=%s",
+            self._briefing_prefs.get("briefing_universe", "default"),
+            self.min_ai_score,
+            self._briefing_prefs.get("opportunity_direction", "default"),
+        )
         logger.info("Morning briefing: starting generation")
         report = {
             "timestamp": datetime.now().isoformat(),
@@ -597,25 +609,38 @@ class MorningBriefing:
                     break
             uni = uni[:_uni_cap]
 
+            _od = _p.get(
+                "opportunity_direction",
+                "Bullish only (BUY signals)",
+            )
+            _is_bearish_only = "Bearish only" in _od
+            _scan_filter = (
+                "high_short_score"
+                if _is_bearish_only
+                else "quick_technical"
+            )
+
             logger.info(
-                "Morning briefing: scanning %d tickers...",
+                "Morning briefing: scanning %d tickers (filter=%s)...",
                 len(uni),
+                _scan_filter,
             )
             # tz_localize(None) is naive-only; batch tz strip is in market_scanner.scan_market
 
-            _cap = min(
-                200,
-                max(len(uni), self.max_positions * 16),
-            )
-            _min_q = max(
-                4.5,
-                float(self.min_ai_score) - 1.5,
-            )
             _pre = scan_market(
-                filters=["quick_technical"],
+                filters=[_scan_filter],
                 universe=uni,
-                max_results=_cap,
-                min_quick_score=_min_q,
+                max_results=min(
+                    200,
+                    max(
+                        len(uni),
+                        self.max_positions * 16,
+                    ),
+                ),
+                min_quick_score=max(
+                    4.5,
+                    float(self.min_ai_score) - 1.5,
+                ),
                 progress_callback=progress_callback,
             )
             if _pre.get("error"):
@@ -625,10 +650,15 @@ class MorningBriefing:
             rows = raw.get("results") or []
             candidates = []
             for r in rows:
-                _qs = float(r.get("quick_score", 0) or 0)
-                if _qs >= float(self.min_ai_score):
+                if _is_bearish_only:
+                    _score = float(
+                        r.get("short_quick_score", 0) or 0,
+                    )
+                else:
+                    _score = float(r.get("quick_score", 0) or 0)
+                if _score >= float(self.min_ai_score):
                     nc = dict(r)
-                    nc["ai_score"] = _qs
+                    nc["ai_score"] = _score
                     candidates.append(nc)
             candidates.sort(
                 key=lambda x: float(x.get("ai_score", 0) or 0),
