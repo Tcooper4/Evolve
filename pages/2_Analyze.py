@@ -144,26 +144,9 @@ period_label = st.radio(
 )
 period = period_map.get(period_label, "1y")
 
-_cache_key = f"autoloaded_{ticker}_{period}"
-_existing_data = st.session_state.get("analyze_forecast_data")
-_needs_load = (
-    st.session_state.get("_last_autoload_key") != _cache_key
-    or _existing_data is None
-    or (hasattr(_existing_data, "empty") and _existing_data.empty)
-)
-if _needs_load:
-    try:
-        _auto_hist = get_history(ticker, period=period)
-        if not _auto_hist.empty:
-            st.session_state["analyze_forecast_data"] = _auto_hist
-            st.session_state["_last_autoload_key"] = _cache_key
-            st.session_state["analyze_symbol"] = ticker
-    except Exception as _e:
-        logger.warning(
-            "Analyze: history load failed for %s: %s",
-            ticker, _e,
-        )
-        st.caption(f"⚠️ Could not load price history: {_e}")
+# Main chart uses `hist` from get_history below — not `analyze_forecast_data`.
+# Quick Forecast sets `analyze_forecast_data` (~1y daily) only when you run
+# consensus, so chart period never overwrites training data.
 
 _st_ver = tuple(int(x) for x in st.__version__.split(".")[:2])
 

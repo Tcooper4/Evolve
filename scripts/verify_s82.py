@@ -18,7 +18,7 @@ def fail(msg):
     print(f"FAIL  {msg}")
 
 
-# Fix 1 — forecast load guard
+# Fix 1 — Quick Forecast: AI lookback + consensus training symbol (S82 follow-up)
 tf = open(
     "components/tabs/tab_quick_forecast.py",
     encoding="utf-8",
@@ -30,10 +30,15 @@ try:
 except SyntaxError as e:
     fail(f"Syntax error forecast: {e}")
 
-if "_fc_load_key" in tf or "_fc_data_exists" in tf:
-    ok("Forecast load guard present")
+if (
+    "quick_forecast_ai_lookback" in tf
+    and "analyze_forecast_data_symbol" in tf
+):
+    ok("Quick Forecast AI/consensus data wiring present")
+elif "_fc_load_key" in tf or "_fc_data_exists" in tf:
+    ok("Forecast load guard present (legacy)")
 else:
-    fail("Forecast load guard missing")
+    fail("Quick Forecast data wiring missing")
 
 # Fix 2 — URL dict unwrapping
 tc = open(

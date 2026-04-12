@@ -69,7 +69,8 @@ def render(
 
             if st.session_state.get("analyze_forecast_data") is None:
                 st.warning(
-                    "⚠️ No forecast data yet — enter a ticker at the top and open the Forecast tab."
+                    "⚠️ No consensus training data yet — open **Forecast**, enter a ticker, "
+                    "then click **Generate Forecast** to load ~1 year of daily bars."
                 )
             else:
                 col1, col2 = st.columns([1, 1])

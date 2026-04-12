@@ -66,6 +66,9 @@ def render(
                     _fetched = _gh(ticker, period="1y")
                     if not _fetched.empty:
                         st.session_state["analyze_forecast_data"] = _fetched
+                        st.session_state["analyze_forecast_data_symbol"] = str(
+                            ticker,
+                        ).strip().upper()
                         st.session_state["analyze_symbol"] = ticker
                 except Exception:
                     pass
