@@ -116,23 +116,25 @@ def render(
             st.session_state.get("quick_forecast_ai_lookback", "1M"),
         ).strip()
         _ai_period_map = {
-            "1W": "5d",
+            # compute_ai_score() requires len(hist) >= 20 (ai_score.py); 5d daily
+            # never reaches that — use ~1mo of dailies for the "1W" preset label.
+            "1W": "1mo",
             "1M": "1mo",
             "3M": "3mo",
             "6M": "6mo",
             "1Y": "1y",
         }
         _ai_yf_period = _ai_period_map.get(_ai_lb, "1mo")
-        # 1W → ~3–5 daily bars from yfinance; longer windows need more history
-        # for stable AI features. Do not use one global minimum or 1W bricks the tab.
+        # Match compute_ai_score minimum (20 rows) so we do not pass the gate then
+        # get an error dict with no UI (tab only renders the panel when error is None).
         _ai_min_rows = {
-            "1W": 3,
-            "1M": 15,
-            "3M": 15,
-            "6M": 15,
-            "1Y": 15,
+            "1W": 20,
+            "1M": 20,
+            "3M": 20,
+            "6M": 20,
+            "1Y": 20,
         }
-        _min_ai_rows = int(_ai_min_rows.get(_ai_lb, 15))
+        _min_ai_rows = int(_ai_min_rows.get(_ai_lb, 20))
         _hist_ai = None
         try:
             _hist_ai = get_history(
@@ -158,10 +160,11 @@ def render(
             )
             return
 
-        if _ai_lb == "1W" and len(_hist_ai) < 15:
+        if _ai_lb == "1W":
             st.caption(
-                "One week is only a few daily bars — AI Score may be noisier; "
-                "use 1M+ for steadier signals."
+                "Preset **1W** loads about one month of daily bars so the AI "
+                "pipeline meets its 20-session minimum (true calendar-week dailies "
+                "are too sparse)."
             )
 
         if _score_mode_lc == "short":
@@ -269,18 +272,26 @@ def render(
                             _hist,
                             scoring_style=scoring_style,
                         )
-                    st.session_state[_ai_score_key] = score_result
-                    # Also store under canonical key for cross-component access
-                    st.session_state["ai_score_result"] = score_result
-                    st.session_state[_ai_score_ts_key] = _time.time()
-                    st.session_state.pop(
-                        f"short_score_{_sym}_{trader_mode}_{scoring_style}_{_ai_lb}",
-                        None,
-                    )
-                    st.session_state.pop(
-                        f"short_score_ts_{_sym}_{trader_mode}_{scoring_style}_{_ai_lb}",
-                        None,
-                    )
+                    if score_result.get("error"):
+                        # Do not cache failures — avoids silent stale "unavailable"
+                        # after fixing data or lookback.
+                        st.session_state.pop(_ai_score_key, None)
+                        st.session_state.pop(_ai_score_ts_key, None)
+                        st.session_state.pop("ai_score_result", None)
+                    else:
+                        st.session_state[_ai_score_key] = score_result
+                        st.session_state[_ai_score_ts_key] = _time.time()
+                        st.session_state.pop(
+                            f"short_score_{_sym}_{trader_mode}_{scoring_style}_{_ai_lb}",
+                            None,
+                        )
+                        st.session_state.pop(
+                            f"short_score_ts_{_sym}_{trader_mode}_{scoring_style}_{_ai_lb}",
+                            None,
+                        )
+                    # Canonical key for cross-component access (only when usable)
+                    if not score_result.get("error"):
+                        st.session_state["ai_score_result"] = score_result
                 else:
                     score_result = _cached_score
 
@@ -756,6 +767,13 @@ def render(
                             )
                     except Exception as _re:
                         st.caption(f"Recommendation unavailable: {_re}")
+                else:
+                    _err_msg = (
+                        score_result.get("summary")
+                        or score_result.get("error")
+                        or "AI Score unavailable."
+                    )
+                    st.warning(_err_msg)
         except Exception as _e:
             st.caption(f"AI Score unavailable: {_e}")
 
