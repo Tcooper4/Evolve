@@ -123,6 +123,16 @@ def render(
             "1Y": "1y",
         }
         _ai_yf_period = _ai_period_map.get(_ai_lb, "1mo")
+        # 1W → ~3–5 daily bars from yfinance; longer windows need more history
+        # for stable AI features. Do not use one global minimum or 1W bricks the tab.
+        _ai_min_rows = {
+            "1W": 3,
+            "1M": 15,
+            "3M": 15,
+            "6M": 15,
+            "1Y": 15,
+        }
+        _min_ai_rows = int(_ai_min_rows.get(_ai_lb, 15))
         _hist_ai = None
         try:
             _hist_ai = get_history(
@@ -140,13 +150,19 @@ def render(
         if (
             _hist_ai is None
             or getattr(_hist_ai, "empty", True)
-            or len(_hist_ai) < 15
+            or len(_hist_ai) < _min_ai_rows
         ):
             st.warning(
                 f"Not enough daily data for {symbol} at this lookback. "
                 "Try a longer window or a different ticker."
             )
             return
+
+        if _ai_lb == "1W" and len(_hist_ai) < 15:
+            st.caption(
+                "One week is only a few daily bars — AI Score may be noisier; "
+                "use 1M+ for steadier signals."
+            )
 
         if _score_mode_lc == "short":
             st.warning(
