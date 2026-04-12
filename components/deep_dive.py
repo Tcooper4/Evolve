@@ -219,45 +219,70 @@ def render_deep_dive(ticker: str) -> None:
             st.session_state["analyze_ticker"] = sym
 
         if hist is not None and not hist.empty:
-            _tf_options = {
-                "1W": ("5d", "15m", "15m"),
-                "1M": ("1mo", "1h", "1h"),
-                "3M": ("3mo", "1d", "1d"),
-                "6M": ("6mo", "1d", "1d"),
-                "1Y": ("1y", "1d", "1d"),
-                "2Y": ("2y", "1wk", "1W"),
+            _tf_period_map = {
+                "1W": ("5d", "15m"),
+                "1M": ("1mo", "1h"),
+                "3M": ("3mo", "1d"),
+                "6M": ("6mo", "1d"),
+                "1Y": ("1y", "1d"),
+                "2Y": ("2y", "1wk"),
             }
             _tf_key = f"dd_tf_{sym}"
             if _tf_key not in st.session_state:
                 st.session_state[_tf_key] = "3M"
 
-            _tf_cols = st.columns(len(_tf_options))
-            for _i, (_lbl, _) in enumerate(_tf_options.items()):
-                with _tf_cols[_i]:
-                    if st.button(
-                        _lbl,
-                        key=f"dd_tf_{sym}_{_lbl}",
-                        type=(
-                            "primary"
-                            if st.session_state[_tf_key] == _lbl
-                            else "secondary"
-                        ),
-                    ):
-                        st.session_state[_tf_key] = _lbl
-                        st.rerun()
+            _sel_tf = st.radio(
+                "Period",
+                list(_tf_period_map.keys()),
+                horizontal=True,
+                key=_tf_key,
+                label_visibility="collapsed",
+            )
+            _period, _interval = _tf_period_map[_sel_tf]
+            _tf_label = _sel_tf
 
-            _sel_tf = st.session_state[_tf_key]
-            _period, _interval, _tf_label = _tf_options[_sel_tf]
+            if _period in ("5d", "1mo"):
+                _intra_opts = {
+                    "5d": ["5m", "15m", "30m"],
+                    "1mo": ["30m", "1h"],
+                }
+                _intra_key = f"dd_intra_{sym}_{_period}"
+                _intra_default = (
+                    "15m" if _period == "5d" else "1h"
+                )
+                if _intra_key not in st.session_state:
+                    st.session_state[_intra_key] = _intra_default
+                _interval = st.radio(
+                    "Interval",
+                    _intra_opts[_period],
+                    horizontal=True,
+                    key=_intra_key,
+                    label_visibility="collapsed",
+                )
 
-            _chart_hist = get_history(sym, period=_period, interval=_interval)
+            _chart_hist = get_history(
+                sym,
+                period=_period,
+                interval=_interval,
+            )
             if _chart_hist is None or _chart_hist.empty:
-                _chart_hist = hist
-                # Align chart params with fallback series (default 3mo / 1d)
-                _period = "3mo"
-                _interval = "1d"
-                _tf_label = "1d"
-                _sel_tf = "3M"
-                st.session_state[_tf_key] = "3M"
+                if _period in ("5d", "1mo"):
+                    st.caption(
+                        "No intraday data — showing daily chart."
+                    )
+                    _chart_hist = get_history(
+                        sym,
+                        period=_period,
+                        interval="1d",
+                    )
+                    _interval = "1d"
+                if _chart_hist is None or _chart_hist.empty:
+                    _chart_hist = hist
+                    _period = "3mo"
+                    _interval = "1d"
+                    _tf_label = "1d"
+                    _sel_tf = "3M"
+                    st.session_state[_tf_key] = "3M"
 
             render_price_chart(
                 sym,
@@ -361,10 +386,16 @@ def render_deep_dive(ticker: str) -> None:
             col_sc, col_cv, col_en = st.columns(3)
             with col_sc:
                 st.metric(
-                    "AI Score",
+                    "Buy Score" if _show_short else "AI Score",
                     f"{_sc:.1f}/10",
                     delta=f"Grade {_grade}",
                     delta_color="off",
+                    help=(
+                        "Lower Buy Score = weaker long thesis = better "
+                        "short candidate"
+                        if _show_short
+                        else None
+                    ),
                 )
             with col_cv:
                 st.metric("Conviction", conv)
@@ -409,9 +440,18 @@ def render_deep_dive(ticker: str) -> None:
                             f"{_pct}%",
                         )
 
-            _summ = (score or {}).get("summary", "")
-            if _summ:
-                st.caption(str(_summ))
+            if _show_short:
+                st.caption(
+                    "📊 **Buy Score** "
+                    f"{_sc:.1f}/10 — "
+                    "lower = weaker bullish "
+                    "case = better for shorts. "
+                    "See Short Score below."
+                )
+            else:
+                _summ = (score or {}).get("summary", "")
+                if _summ:
+                    st.caption(str(_summ))
 
             _tc, _pc = st.columns(2)
             with _tc:
@@ -488,12 +528,27 @@ def render_deep_dive(ticker: str) -> None:
             _sc2 = float(score.get("overall_score") or 0)
             _grade2 = str(score.get("grade", "C"))
             st.metric(
-                "AI Score",
+                "Buy Score" if _show_short else "AI Score",
                 f"{_sc2:.1f}/10",
                 delta=f"Grade {_grade2}",
                 delta_color="off",
+                help=(
+                    "Lower Buy Score = weaker long thesis = better "
+                    "short candidate"
+                    if _show_short
+                    else None
+                ),
             )
-            st.caption(score.get("summary", "") or "")
+            if _show_short:
+                st.caption(
+                    "📊 **Buy Score** "
+                    f"{_sc2:.1f}/10 — "
+                    "lower = weaker bullish "
+                    "case = better for shorts. "
+                    "See Short Score below."
+                )
+            else:
+                st.caption(score.get("summary", "") or "")
         else:
             st.caption("Recommendation unavailable.")
 

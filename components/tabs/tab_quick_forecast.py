@@ -78,64 +78,73 @@ def render(
 
         _score_mode_lc = str(score_mode or "Buy").strip().lower()
 
-        # Reuse chart `hist` only when it is daily, spans a full year (or longer), and
-        # has enough rows — not 3M/6M windows (would underfeed the models).
-        hist_fc = None
-        _reuse_ok = (
-            hist is not None
-            and not getattr(hist, "empty", True)
-            and _interval == "1d"
-            and period in ("1y", "5y")
-            and len(hist) >= 200
+        _fc_load_key = f"_fc_loaded_{symbol}"
+        _fc_data_exists = (
+            st.session_state.get("analyze_forecast_data") is not None
+            and st.session_state.get("analyze_symbol") == symbol
+            and st.session_state.get(_fc_load_key)
         )
-        try:
-            if _reuse_ok:
-                hist_fc = hist.copy()
-            else:
-                with st.spinner(f"Loading {symbol} data (daily, 1y)..."):
-                    hist_fc = get_history(symbol, period="1y", interval="1d")
-        except Exception as _load_e:
-            logger.warning("Quick forecast: get_history failed: %s", _load_e)
+
+        if not _fc_data_exists:
+            # Reuse chart `hist` only when it is daily, spans a full year (or longer), and
+            # has enough rows — not 3M/6M windows (would underfeed the models).
             hist_fc = None
-
-        if hist_fc is None or getattr(hist_fc, "empty", True) or len(hist_fc) < 30:
-            st.warning(
-                f"Not enough daily data for {symbol}. Try a different ticker."
+            _reuse_ok = (
+                hist is not None
+                and not getattr(hist, "empty", True)
+                and _interval == "1d"
+                and period in ("1y", "5y")
+                and len(hist) >= 200
             )
-            return
+            try:
+                if _reuse_ok:
+                    hist_fc = hist.copy()
+                else:
+                    with st.spinner(f"Loading {symbol} data (daily, 1y)..."):
+                        hist_fc = get_history(symbol, period="1y", interval="1d")
+            except Exception as _load_e:
+                logger.warning("Quick forecast: get_history failed: %s", _load_e)
+                hist_fc = None
 
-        st.session_state["analyze_forecast_data"] = hist_fc.copy()
-        st.session_state["analyze_symbol"] = symbol
-        st.success(
-            f"✅ Ready: {len(hist_fc)} daily rows for {symbol} "
-            "(from chart range or 1y load)"
-        )
+            if hist_fc is None or getattr(hist_fc, "empty", True) or len(hist_fc) < 30:
+                st.warning(
+                    f"Not enough daily data for {symbol}. Try a different ticker."
+                )
+                return
 
-        if _score_mode_lc == "short":
-            st.warning(
-                "Short Score mode active — forecasts still show price direction. "
-                "For the short thesis, look for downward forecasts and high Short "
-                "Score in the Technical tab.",
-                icon="📉",
+            st.session_state["analyze_forecast_data"] = hist_fc.copy()
+            st.session_state["analyze_symbol"] = symbol
+            st.session_state[_fc_load_key] = True
+            st.success(
+                f"✅ Ready: {len(hist_fc)} daily rows for {symbol} "
+                "(from chart range or 1y load)"
             )
 
-        # Earnings proximity warning (forecasts may be less reliable near earnings)
-        try:
-            if st.session_state.get("analyze_forecast_data") is not None and symbol:
-                _e = get_upcoming_earnings(symbol)
-                if _e.get("is_within_window"):
-                    _d, _dt = _e["days_until"], _e["next_earnings_date"]
-                    _s = (
-                        f" | Last surprise: {_e['last_eps_surprise_pct']:+.1f}%"
-                        if _e.get("last_eps_surprise_pct") is not None
-                        else "  "
-                    )
-                    st.warning(
-                        f"Earnings in {_d} day{'s' if _d != 1 else ''} ({_dt}){_s} — "
-                        "forecasts may be less reliable near earnings."
-                    )
-        except Exception as _e:
-            logger.warning("Analyze: earnings proximity check failed: %s", _e)
+            if _score_mode_lc == "short":
+                st.warning(
+                    "Short Score mode active — forecasts still show price direction. "
+                    "For the short thesis, look for downward forecasts and high Short "
+                    "Score in the Technical tab.",
+                    icon="📉",
+                )
+
+            # Earnings proximity warning (forecasts may be less reliable near earnings)
+            try:
+                if st.session_state.get("analyze_forecast_data") is not None and symbol:
+                    _e = get_upcoming_earnings(symbol)
+                    if _e.get("is_within_window"):
+                        _d, _dt = _e["days_until"], _e["next_earnings_date"]
+                        _s = (
+                            f" | Last surprise: {_e['last_eps_surprise_pct']:+.1f}%"
+                            if _e.get("last_eps_surprise_pct") is not None
+                            else "  "
+                        )
+                        st.warning(
+                            f"Earnings in {_d} day{'s' if _d != 1 else ''} ({_dt}){_s} — "
+                            "forecasts may be less reliable near earnings."
+                        )
+            except Exception as _e:
+                logger.warning("Analyze: earnings proximity check failed: %s", _e)
 
         # Display loaded data
         if st.session_state.get("analyze_forecast_data") is not None:

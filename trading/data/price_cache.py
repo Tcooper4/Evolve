@@ -81,6 +81,18 @@ def get_news(ticker: str) -> list:
                 or content.get("clickThroughUrl")
                 or ""
             )
+            if isinstance(url, dict):
+                url = (
+                    url.get("url")
+                    or url.get("href")
+                    or url.get("link")
+                    or ""
+                )
+            if isinstance(url, dict):
+                url = ""
+            url = str(url or "").strip()
+            if url.startswith("{") or "': '" in url:
+                url = ""
             title = (
                 item.get("title")
                 or item.get("headline")
@@ -96,7 +108,7 @@ def get_news(ticker: str) -> list:
             if title.startswith("{"):
                 title = ""
             merged = dict(item)
-            merged["url"] = str(url or "").strip()
+            merged["url"] = url
             merged["title"] = title
             out.append(merged)
         return out

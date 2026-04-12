@@ -54,6 +54,18 @@ def render_analyze_headline_news_panel(ticker: str) -> None:
                         or (item.get("content") or {}).get("clickThroughUrl")
                         or ""
                     )
+                    if isinstance(_url, dict):
+                        _url = (
+                            _url.get("url")
+                            or _url.get("href")
+                            or _url.get("link")
+                            or ""
+                        )
+                    if isinstance(_url, dict):
+                        _url = ""
+                    _url = str(_url or "").strip()
+                    if _url.startswith("{") or "': '" in _url:
+                        _url = ""
                     if not raw_title:
                         continue
                     title_lower = raw_title.lower()

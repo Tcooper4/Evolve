@@ -261,86 +261,25 @@ with col_chat:
 
 with col_news:
     if "chat_news_results" not in st.session_state:
-        _t0 = "SPY"
-        try:
-            from trading.data.news_aggregator import get_news
-            _items0 = get_news(_t0, max_items=10)
-            if not _items0:
-                raise ValueError("aggregator empty")
-            st.session_state.chat_news_results = _items0
-            st.session_state.chat_news_ticker = _t0
-        except Exception:
-            try:
-                import yfinance as yf
-                _raw0 = yf.Ticker(_t0).news or []
-                _items0 = []
-                for _n in _raw0[:10]:
-                    _title0 = _n.get("title") or ""
-                    if not _title0:
-                        continue
-                    _items0.append({
-                        "title": _title0,
-                        "source": _n.get("publisher", ""),
-                        "url": _n.get("link", ""),
-                        "published": "",
-                    })
-                st.session_state.chat_news_results = _items0
-                st.session_state.chat_news_ticker = _t0
-            except Exception:
-                st.session_state.chat_news_results = []
-                st.session_state.chat_news_ticker = _t0
+        st.session_state.chat_news_results = None
+        st.session_state.chat_news_ticker = None
 
     def _fetch_and_store_news(ticker: str):
-        ticker = (
-            ticker or "SPY"
-        ).strip().upper() or "SPY"
+        _sym_n = (
+            (ticker or "SPY").strip().upper() or "SPY"
+        )
         try:
-            from trading.data.news_aggregator import get_news
-            _items = get_news(
-                ticker,
-                max_items=10)
-            if not _items:
-                raise ValueError(
-                    "aggregator empty")
-            st.session_state[
-                "chat_news_results"
-            ] = _items
-            st.session_state[
-                "chat_news_ticker"
-            ] = ticker
-        except Exception:
-            # Fallback: yfinance
-            # direct news fetch
-            try:
-                import yfinance as yf
-                _raw = yf.Ticker(
-                    ticker).news or []
-                _items = []
-                for _n in _raw[:10]:
-                    _title = (
-                        _n.get("title")
-                        or "")
-                    if not _title:
-                        continue
-                    _items.append({
-                        "title": _title,
-                        "source": _n.get(
-                            "publisher",
-                            ""),
-                        "url": _n.get(
-                            "link", ""),
-                        "published": "",
-                    })
-                st.session_state[
-                    "chat_news_results"
-                ] = _items
-                st.session_state[
-                    "chat_news_ticker"
-                ] = ticker
-            except Exception:
-                st.session_state[
-                    "chat_news_results"
-                ] = []
+            from trading.data.price_cache import get_news
+
+            items = get_news(_sym_n) or []
+            st.session_state["chat_news_results"] = items
+            st.session_state["chat_news_ticker"] = _sym_n
+        except Exception as _e:
+            logger.warning(
+                "Chat news fetch: %s",
+                _e,
+            )
+            st.session_state["chat_news_results"] = []
 
     def _on_get_news_click() -> None:
         """Read ticker from session after text_input commits (fixes stale value on click)."""
@@ -374,19 +313,41 @@ with col_news:
         key="chat_get_news_6",
         on_click=_on_get_news_click,
     )
-    items = st.session_state.get("chat_news_results") or []
-    if not items:
-        st.caption("News temporarily unavailable")
+    items = st.session_state.get("chat_news_results")
+    if items is None:
+        st.caption(
+            "Enter a ticker and click Get News to load headlines."
+        )
+    elif not items:
+        st.caption(
+            "No recent news found for this ticker."
+        )
     else:
         for i, item in enumerate(items[:8]):
-            title = item.get("title") or item.get("headline", "")
+            title = (
+                item.get("title")
+                or item.get("headline", "")
+            ).strip()
             if not title:
                 continue
-            publisher = item.get("source") or item.get("publisher", "")
-            link = item.get("url") or item.get("link", "")
-            st.markdown(f"**{title[:80]}** — {publisher}")
-            if link:
-                st.caption(f"[Read more]({link})")
+            url = (
+                item.get("url")
+                or item.get("link", "")
+            ).strip()
+            publisher = (
+                item.get("source")
+                or item.get("publisher", "")
+            )
+            if url:
+                st.markdown(
+                    f"**[{title[:120]}]({url})**"
+                )
+            else:
+                st.markdown(
+                    f"**{title[:120]}**"
+                )
+            if publisher:
+                st.caption(publisher)
             st.divider()
 
     st.subheader("Market context")

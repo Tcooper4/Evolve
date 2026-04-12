@@ -895,19 +895,35 @@ def render_price_chart(
                 _hist_1d = get_history(ticker, period="1d", interval="5m")
                 if not _hist_1d.empty:
                     _close = _hist_1d["Close"]
-                    _vwap = (_hist_1d["Close"] * _hist_1d["Volume"]).cumsum() / _hist_1d["Volume"].cumsum()
+                    _vol_s = _hist_1d["Volume"]
+                    _vwap = (_hist_1d["Close"] * _vol_s).cumsum() / _vol_s.cumsum()
                     _last = float(_close.iloc[-1])
                     _vwap_last = float(_vwap.iloc[-1])
-                    _vwap_dev = ((_last - _vwap_last) / _vwap_last * 100)
+                    _vwap_dev = None
+                    try:
+                        import math as _math
+
+                        if _math.isfinite(_vwap_last) and _vwap_last != 0.0:
+                            _vwap_dev = float(
+                                (_last / _vwap_last - 1) * 100,
+                            )
+                            if not _math.isfinite(_vwap_dev):
+                                _vwap_dev = None
+                    except Exception:
+                        _vwap_dev = None
                     _vol_avg = float(_hist_1d["Volume"].mean())
                     _vol_last = float(_hist_1d["Volume"].iloc[-1])
                     _vol_ratio = _vol_last / _vol_avg if _vol_avg > 0 else 1.0
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        _sign = "+" if _vwap_dev >= 0 else ""
+                        if _vwap_dev is not None:
+                            _sign = "+" if _vwap_dev >= 0 else ""
+                            _vwap_disp = f"{_sign}{_vwap_dev:.2f}%"
+                        else:
+                            _vwap_disp = "N/A"
                         st.metric(
                             "vs VWAP",
-                            f"{_sign}{_vwap_dev:.2f}%",
+                            _vwap_disp,
                             help="Price deviation from Volume Weighted Avg Price",
                         )
                     with c2:

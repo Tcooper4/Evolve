@@ -199,6 +199,23 @@ except Exception:
     _scoring_style = "Balanced (default)"
 
 hist = get_history(ticker, period=period, interval=_interval)
+if (
+    hist.empty
+    and period in ("1d", "5d")
+    and _interval != "1d"
+):
+    st.caption(
+        f"⚠️ No {_interval} intraday data for "
+        f"{ticker} — showing daily candles."
+    )
+    hist = get_history(
+        ticker,
+        period=period,
+        interval="1d",
+    )
+    _interval = "1d"
+    _tf_label = "1d"
+
 if not hist.empty:
     render_price_chart(
         ticker,
