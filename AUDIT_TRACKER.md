@@ -3,12 +3,13 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **36 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **42 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
 - 153 live files remained never content-reviewed as of last count; in progress
 
-## Most significant finding to date
-`trading/strategies/rsi_strategy.py` — the live RSI strategy — has been producing **zero real trading signals, ever**, due to three compounding bugs (undefined variable crash, case-sensitive column check causing a flat fallback RSI, and a pandas chained-indexing assignment that silently discarded every detected signal). Fixed and verified end-to-end. Given RSI is one of the core strategies feeding the scanner/AI Score pipeline, this was likely producing misleadingly quiet/absent signals in production.
+## Most significant findings to date
+- `trading/strategies/rsi_strategy.py` — the live RSI strategy — produced **zero real trading signals, ever** (3 compounding bugs). Fixed.
+- `trading/strategies/strategy_manager.py` — could **never be instantiated at all**, and its ensemble signal-combination logic had 2 more independent bugs on top. Fixed. Systematic AST search for the same `__init__`-returns-non-None pattern found 2 more instances elsewhere (`base_service.py`, `position_sizing_engine.py`), both fixed too.
 
 ## Resolved decisions
 - ✅ **Optimizer/strategy-selection cluster**: confirmed it did NOT run (7 sequential bugs). All fixed and verified working end-to-end (grid_search, genetic, pso, bayesian all converge correctly on a test objective). Still not wired into the live app — that wiring decision is separate and still open.
