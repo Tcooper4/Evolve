@@ -256,7 +256,17 @@ class PromptAgent:
         }
         self.strategy_gatekeeper = StrategyGatekeeper(default_strategies)
         self.trade_executor = TradeExecutionSimulator()
-        self.optimizer = SelfTuningOptimizer()
+        # FEATURE FIX: SelfTuningOptimizer was constructed with no config
+        # anywhere in the live app, so its parameter_bounds dict was always
+        # empty and optimize_strategy() unconditionally logged "No parameter
+        # bounds defined" and returned None - the entire self-tuning path
+        # was inert. The canonical per-strategy spaces now feed it real
+        # bounds and step sizes.
+        from trading.optimization.strategy_param_spaces import (
+            get_self_tuning_config,
+        )
+
+        self.optimizer = SelfTuningOptimizer(config=get_self_tuning_config())
         self.data_provider = FallbackDataProvider()
 
         # Strategy registry
