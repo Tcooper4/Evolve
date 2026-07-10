@@ -26,7 +26,8 @@ def sharpe_ratio(
     Returns:
         Sharpe ratio
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -51,7 +52,8 @@ def sortino_ratio(
     Returns:
         Sortino ratio
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -74,7 +76,8 @@ def max_drawdown(returns: Union[pd.Series, np.ndarray]) -> float:
     Returns:
         Maximum drawdown as a negative value
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -94,7 +97,8 @@ def cumulative_return(returns: Union[pd.Series, np.ndarray]) -> float:
     Returns:
         Cumulative return
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -115,7 +119,8 @@ def calmar_ratio(
     Returns:
         Calmar ratio
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -137,7 +142,8 @@ def avg_drawdown(returns: Union[pd.Series, np.ndarray]) -> float:
     Returns:
         Average drawdown
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -164,7 +170,8 @@ def drawdown_details(returns: Union[pd.Series, np.ndarray]) -> pd.DataFrame:
     Returns:
         DataFrame with drawdown details including start, end, duration, and depth
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return pd.DataFrame()
 
@@ -223,7 +230,8 @@ def omega_ratio(returns: Union[pd.Series, np.ndarray], threshold: float = 0.0) -
     Returns:
         Omega ratio
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -253,8 +261,21 @@ def information_ratio(
     Returns:
         Information ratio
     """
-    returns = np.array(returns)
-    benchmark_returns = np.array(benchmark_returns)
+    returns = np.array(returns, dtype=float)
+    benchmark_returns = np.array(benchmark_returns, dtype=float)
+
+    # BUG FIX: applying isfinite filtering to  alone (as the
+    # single-array metric functions in this file now do) would
+    # desynchronize it from benchmark_returns whenever either series had
+    # a gap, tripping the length-mismatch guard below and returning a
+    # misleading 0.0 instead of computing the ratio from the valid,
+    # aligned overlap. Paired filtering - keeping index i only where BOTH
+    # series are finite - preserves alignment for the covariance/active-
+    # return calculations that follow.
+    if len(returns) == len(benchmark_returns):
+        _valid = np.isfinite(returns) & np.isfinite(benchmark_returns)
+        returns = returns[_valid]
+        benchmark_returns = benchmark_returns[_valid]
 
     if len(returns) != len(benchmark_returns) or len(returns) == 0:
         return 0.0
@@ -283,8 +304,21 @@ def treynor_ratio(
     Returns:
         Treynor ratio
     """
-    returns = np.array(returns)
-    benchmark_returns = np.array(benchmark_returns)
+    returns = np.array(returns, dtype=float)
+    benchmark_returns = np.array(benchmark_returns, dtype=float)
+
+    # BUG FIX: applying isfinite filtering to  alone (as the
+    # single-array metric functions in this file now do) would
+    # desynchronize it from benchmark_returns whenever either series had
+    # a gap, tripping the length-mismatch guard below and returning a
+    # misleading 0.0 instead of computing the ratio from the valid,
+    # aligned overlap. Paired filtering - keeping index i only where BOTH
+    # series are finite - preserves alignment for the covariance/active-
+    # return calculations that follow.
+    if len(returns) == len(benchmark_returns):
+        _valid = np.isfinite(returns) & np.isfinite(benchmark_returns)
+        returns = returns[_valid]
+        benchmark_returns = benchmark_returns[_valid]
 
     if len(returns) != len(benchmark_returns) or len(returns) == 0:
         return 0.0
@@ -321,8 +355,21 @@ def jensen_alpha(
     Returns:
         Jensen's Alpha
     """
-    returns = np.array(returns)
-    benchmark_returns = np.array(benchmark_returns)
+    returns = np.array(returns, dtype=float)
+    benchmark_returns = np.array(benchmark_returns, dtype=float)
+
+    # BUG FIX: applying isfinite filtering to  alone (as the
+    # single-array metric functions in this file now do) would
+    # desynchronize it from benchmark_returns whenever either series had
+    # a gap, tripping the length-mismatch guard below and returning a
+    # misleading 0.0 instead of computing the ratio from the valid,
+    # aligned overlap. Paired filtering - keeping index i only where BOTH
+    # series are finite - preserves alignment for the covariance/active-
+    # return calculations that follow.
+    if len(returns) == len(benchmark_returns):
+        _valid = np.isfinite(returns) & np.isfinite(benchmark_returns)
+        returns = returns[_valid]
+        benchmark_returns = benchmark_returns[_valid]
 
     if len(returns) != len(benchmark_returns) or len(returns) == 0:
         return 0.0
@@ -355,7 +402,8 @@ def value_at_risk(
     Returns:
         Value at Risk
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -376,7 +424,8 @@ def conditional_value_at_risk(
     Returns:
         Conditional Value at Risk
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -402,7 +451,8 @@ def downside_deviation(
     Returns:
         Downside deviation
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -424,7 +474,8 @@ def gain_loss_ratio(returns: Union[pd.Series, np.ndarray]) -> float:
     Returns:
         Gain/loss ratio
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -450,7 +501,8 @@ def profit_factor(returns: Union[pd.Series, np.ndarray]) -> float:
     Returns:
         Profit factor
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -470,7 +522,8 @@ def recovery_factor(returns: Union[pd.Series, np.ndarray]) -> float:
     Returns:
         Recovery factor
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
@@ -490,7 +543,8 @@ def risk_reward_ratio(returns: Union[pd.Series, np.ndarray]) -> float:
     Returns:
         Risk/reward ratio
     """
-    returns = np.array(returns)
+    returns = np.array(returns, dtype=float)
+    returns = returns[np.isfinite(returns)]
     if len(returns) == 0:
         return 0.0
 
