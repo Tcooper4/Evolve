@@ -737,7 +737,17 @@ class ModelSelectorAgent(BaseAgent):
         # Normalize and combine metrics
         accuracy_score = avg_accuracy
         sharpe_score = min(avg_sharpe / 2.0, 1.0)  # Normalize to 0-1
-        drawdown_score = 1.0 - min(avg_drawdown, 1.0)  # Invert drawdown
+        # BUG FIX: max_drawdown follows this codebase's established
+        # convention of being stored as a negative number (e.g. -0.15
+        # for a 15% drawdown, verified repeatedly elsewhere this
+        # session). min(avg_drawdown, 1.0) on a negative number just
+        # returns that same negative number unchanged, and
+        # 1.0 - (a negative number) exceeds 1.0 - breaking this line's
+        # own "Invert drawdown" comment, which clearly intends a bounded
+        # [0,1] score. Verified concretely: a realistic -15% drawdown
+        # produced drawdown_score=1.15. Using abs() to get the drawdown
+        # magnitude before inverting.
+        drawdown_score = 1.0 - min(abs(avg_drawdown), 1.0)  # Invert drawdown
 
         # Weighted combination
         performance_score = (
