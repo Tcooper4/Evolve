@@ -42,8 +42,21 @@ def _get_conn() -> sqlite3.Connection:
 def _get_cipher():
     key = os.getenv("EVOLVE_ENCRYPTION_KEY", "")
     if not key:
-        # auto-generate and save on first run
+        # BUG FIX: this previously generated a new random key and wrote
+        # it only to the .env FILE, never updating this process's
+        # os.environ. Since os.getenv() re-reads the environment (not
+        # the file) on every call, EVERY call to _get_cipher() within
+        # the same running process generated a genuinely different
+        # random key whenever EVOLVE_ENCRYPTION_KEY wasn't pre-set.
+        # save_user_keys() would encrypt with one key, and a later
+        # load_user_keys() call in the same session would try to decrypt
+        # with a different key - failing with InvalidToken, silently
+        # caught and returning an empty dict as if no keys were ever
+        # saved. Verified concretely. Setting the key into os.environ
+        # immediately fixes consistency for the current process, on top
+        # of the existing .env write for future process restarts.
         key = Fernet.generate_key().decode()
+        os.environ["EVOLVE_ENCRYPTION_KEY"] = key
         # write to .env
         env_path = Path(".env")
         with open(env_path, "a") as f:
