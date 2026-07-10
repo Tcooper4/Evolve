@@ -306,6 +306,34 @@ class ARIMAModel(BaseModel):
         )
         logger.info(f"Best parameters: {best_params}")
 
+        # BUG FIX: best_model at this point was last fit inside
+        # _backtest_model() on data[:-self.backtest_steps] (train-only,
+        # for scoring purposes) - it never saw the most recent
+        # backtest_steps observations. Returning it as-is meant the model
+        # actually used for forecasting silently excluded the most recent
+        # data (5 trading days by default) even though it was available.
+        # Refit the chosen parameters on the FULL dataset before returning
+        # so the final model benefits from all available data, not just
+        # the truncated slice used to score candidate orders.
+        try:
+            if self.seasonal and config.get("m", 12) > 1 and len(best_params) == 6:
+                p, d, q, P, D, Q = best_params
+                final_model = pm.ARIMA(
+                    order=(p, d, q),
+                    seasonal_order=(P, D, Q, config.get("m", 12)),
+                )
+            else:
+                p, d, q = best_params[:3]
+                final_model = pm.ARIMA(order=(p, d, q))
+            final_model.fit(data)
+            best_model = final_model
+        except Exception as e:
+            logger.warning(
+                "Final refit on full data failed (%s); "
+                "falling back to the train-only-fit model from backtesting.",
+                e,
+            )
+
         return best_model
 
     def _backtest_model(self, model: Any, data: pd.Series) -> float:
