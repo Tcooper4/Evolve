@@ -3,7 +3,7 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **80 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **84 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
 
 ## Audit-the-auditor pass (in progress)
@@ -103,3 +103,14 @@ Closed out with a major finding: PerformanceCriticAgent could not be instantiate
 
 ## components/ COMPLETE (all 27 live files)
 Found and fixed 2 real bugs in backend files reached via this UI layer: a crash-causing negative EWMA alpha in trading/forecasting/forecast_postprocessor.py, and a confidence_level parameter silently ignored in trading/ui/components.py. Traced and verified dozens of function-call signatures across the chat/tool-execution chain, model comparison, AI Score, econometric diagnostics, GNN forecasting, and IC analysis integrations - all matched correctly. Also closed real coverage gaps in trading/forecasting (forecast_postprocessor.py, hybrid_model_selector.py referenced) and trading/ui (components.py, forecast_components.py, config/registry.py).
+
+## Depth re-verification pass (post-completion stress test)
+Prompted by a direct challenge on analysis depth (not just file coverage), went back and gave several files genuinely deeper scrutiny than their first pass received. Found 4 more real bugs:
+- trading/database/__init__.py: get_engine() existed but was never re-exported from the package, silently breaking pages/7_Settings.py's database-backup feature (found via a genuinely new file, trading/recovery/disaster_recovery_manager.py, that pages/5_Backtest.py and pages/7_Settings.py both use)
+- trading/options/options_forecaster.py: put option theta silently used the call theta formula (both if/else branches were identical) - verified against the standard Black-Scholes-Merton formula and the class's own actual default parameters, confirmed a real, meaningful numeric error (-4.89 vs correct -2.93)
+- trading/agents/market_regime_agent.py: volume_trend divided without safe_divide (unlike every other calculation in the same method), producing NaN on all-zero-volume data instead of a clean fallback
+- trading/agents/model_builder_agent.py: potential KeyError in _build_ensemble_model if a caller ever provides partial custom hyperparameters
+
+Also verified trading/backtesting/backtester.py's core Black-Scholes formula against a known textbook reference value (S=K=100,T=1,r=0.05,sigma=0.2 -> 10.4506), confirming it correct to 6 decimal places, and confirmed research_agent.py's OpenAI fallback methods and pages/5_Backtest.py's walk-forward validation split logic are both genuinely correct with no look-ahead bias.
+
+This pass also surfaced one more genuinely new file needing review: trading/validation/walk_forward_utils.py (confirmed live, reviewed and correct).
