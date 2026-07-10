@@ -23,13 +23,37 @@ logger = logging.getLogger(__name__)
 class StrategyOptimizer(BaseOptimizer):
     """Main strategy optimizer that orchestrates different optimization methods."""
 
-    def __init__(self, config: Optional[OptimizerConfig] = None):
+    def __init__(
+        self,
+        config: Optional[OptimizerConfig] = None,
+        data: Optional[pd.DataFrame] = None,
+        strategy_type: str = "generic",
+    ):
         """Initialize the strategy optimizer.
+
+        BUG FIX: BaseOptimizer.__init__ requires `data` and `strategy_type`
+        as required positional arguments with no defaults, but this
+        constructor only accepted `config` and called
+        `super().__init__(config)` - passing config into the `data` slot.
+        StrategyOptimizer() could not be instantiated at all before this
+        fix (TypeError: missing 1 required positional argument:
+        'strategy_type'). Since this orchestrator's actual optimize()
+        method already takes `data` as a per-call parameter (not bound at
+        construction time - each call can optimize against different
+        data), `data`/`strategy_type` are optional here with sensible
+        defaults rather than forcing every caller to supply a real
+        dataset just to construct the orchestrator.
 
         Args:
             config: Optimizer configuration
+            data: Optional DataFrame to bind at construction (rarely
+                needed - optimize() takes its own `data` argument per call)
+            strategy_type: Optional strategy type label for BaseOptimizer's
+                bookkeeping
         """
-        super().__init__(config)
+        if data is None:
+            data = pd.DataFrame()
+        super().__init__(data=data, strategy_type=strategy_type, config=config)
         self.optimization_methods = {
             "grid_search": GridSearch(),
             "bayesian": BayesianOptimization(),
@@ -40,13 +64,80 @@ class StrategyOptimizer(BaseOptimizer):
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Early stopping configuration
+        # BUG FIX: self.config is a strict Pydantic OptimizerConfig model
+        # (set by BaseOptimizer.__init__), not a dict - it has no .get()
+        # method at all, and most of these field names
+        # (early_stopping_enabled, early_stopping_min_delta,
+        # max_evaluations, timeout_seconds) aren't even declared on
+        # OptimizerConfig's schema (only early_stopping_patience is).
+        # This crashed with AttributeError on the very first
+        # instantiation. Using getattr() with the original intended
+        # defaults, which works safely whether or not a given field
+        # exists on the model, without modifying OptimizerConfig's shared
+        # schema (other optimizer classes also depend on it).
         self.early_stopping_config = {
-            "enabled": self.config.get("early_stopping_enabled", True),
-            "patience": self.config.get("early_stopping_patience", 10),
-            "min_delta": self.config.get("early_stopping_min_delta", 0.001),
-            "max_evaluations": self.config.get("max_evaluations", 1000),
-            "timeout_seconds": self.config.get("timeout_seconds", 3600),  # 1 hour
+            "enabled": getattr(self.config, "early_stopping_enabled", True),
+            "patience": getattr(self.config, "early_stopping_patience", 10),
+            "min_delta": getattr(self.config, "early_stopping_min_delta", 0.001),
+            "max_evaluations": getattr(self.config, "max_evaluations", 1000),
+            "timeout_seconds": getattr(self.config, "timeout_seconds", 3600),  # 1 hour
         }
+
+    def log_results(
+        self, results: List[OptimizationResult], **kwargs
+    ) -> Dict[str, Any]:
+        """Log optimization results with comprehensive analysis.
+
+        BUG FIX: this was declared @abstractmethod on BaseOptimizer but
+        never implemented here, which meant StrategyOptimizer - the main
+        entry point for this entire optimization cluster - could not be
+        instantiated at all (TypeError: Can't instantiate abstract class).
+        Verified directly: `StrategyOptimizer()` raised immediately before
+        this fix.
+
+        Args:
+            results: List of optimization results (as returned by optimize())
+            **kwargs: Additional logging parameters
+
+        Returns:
+            Dictionary summarizing the results
+        """
+        if not results:
+            return {"count": 0, "message": "No results to log"}
+
+        best = min(results, key=lambda r: r.best_score)
+        summary = {
+            "count": len(results),
+            "best_score": best.best_score,
+            "best_params": best.best_params,
+            "scores": [r.best_score for r in results],
+        }
+        self.logger.info(
+            "Optimization results: %d run(s), best_score=%.6f, best_params=%s",
+            summary["count"],
+            summary["best_score"],
+            summary["best_params"],
+        )
+        return summary
+
+    def plot_results(self, **kwargs):
+        """Plot optimization results.
+
+        BUG FIX: same missing-abstract-method issue as log_results above.
+        StrategyOptimizer orchestrates several underlying methods (grid
+        search, Bayesian, genetic, PSO, Ray Tune) that each produce their
+        own OptimizationResult; there's no single natural plot for the
+        orchestrator itself without a plotting library dependency this
+        module doesn't otherwise require. Logging a clear message rather
+        than silently doing nothing or raising, consistent with how the
+        rest of this codebase degrades gracefully when an optional
+        visualization isn't available (see e.g. BacktestVisualizer).
+        """
+        self.logger.info(
+            "plot_results() is not implemented for StrategyOptimizer; "
+            "inspect the OptimizationResult objects returned by optimize() "
+            "directly (best_params, all_scores, convergence_history)."
+        )
 
     def optimize(
         self,
@@ -121,6 +212,29 @@ class StrategyOptimizer(BaseOptimizer):
                 self.patience_counter = 0
                 self.start_time = time.time()
                 self.scores_history = []
+                # BUG FIX: __call__ below references self.logger (for
+                # max-evaluations/timeout/patience messages), but it was
+                # never set here - every one of those log calls raised
+                # AttributeError, silently caught somewhere upstream in
+                # the genetic/pso evaluation loops and printed as
+                # "Error evaluating individual: ...", flooding output
+                # without ever actually reporting early-stopping status.
+                self.logger = logging.getLogger(self.__class__.__name__)
+
+            # BUG FIX: this class previously returned float("inf") from all
+            # three early-stopping/limit paths below. That's fine for
+            # grid_search/genetic/pso, which just treat it as "very bad"
+            # and move on - but it crashes Bayesian optimization outright,
+            # since gp_minimize fits a Gaussian Process regression to the
+            # observed scores, and GP regression cannot fit non-finite
+            # target values at all. Verified concretely: bayesian
+            # optimization raised "ValueError: Input y contains infinity"
+            # the moment patience-based early stopping triggered (after
+            # just a few evaluations without improvement, which happens
+            # quickly on a simple objective). A large finite sentinel
+            # signals "very bad" to every method without breaking any of
+            # them.
+            _EARLY_STOP_PENALTY = 1e10
 
             def __call__(self, *args, **kwargs):
                 # Check evaluation limit
@@ -128,7 +242,7 @@ class StrategyOptimizer(BaseOptimizer):
                     self.logger.info(
                         f"Reached maximum evaluations: {self.max_evaluations}"
                     )
-                    return float("inf")
+                    return self._EARLY_STOP_PENALTY
 
                 # Check timeout
                 elapsed_time = time.time() - self.start_time
@@ -136,7 +250,7 @@ class StrategyOptimizer(BaseOptimizer):
                     self.logger.info(
                         f"Optimization timeout after {elapsed_time:.1f} seconds"
                     )
-                    return float("inf")
+                    return self._EARLY_STOP_PENALTY
 
                 # Evaluate objective
                 score = self.original_objective(*args, **kwargs)
@@ -159,7 +273,7 @@ class StrategyOptimizer(BaseOptimizer):
                     self.logger.info(
                         f"Early stopping triggered after {self.evaluation_count} evaluations"
                     )
-                    return float("inf")
+                    return self._EARLY_STOP_PENALTY
 
                 return score
 

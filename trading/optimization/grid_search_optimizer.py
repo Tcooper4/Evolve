@@ -208,6 +208,20 @@ class GridSearch(OptimizationMethod):
 
         optimization_time = (datetime.now() - start_time).total_seconds()
 
+        # BUG FIX: after an early-stopping break above, scores only has
+        # entries up to the break point, but param_grid still has every
+        # combination originally generated - the two lists went out of
+        # sync. _calculate_hyperparameter_importance indexes param_grid
+        # and scores in lockstep (same index i/j into both), so iterating
+        # the longer, un-trimmed param_grid raised IndexError the moment
+        # it tried to index past the end of the shorter scores list.
+        # Verified concretely: grid_search crashed with "IndexError: list
+        # index out of range" once early stopping caused a break.
+        # Trimming param_grid to match what was actually evaluated keeps
+        # both lists in sync and reflects the truth - only these
+        # evaluated combinations should feed feature importance anyway.
+        param_grid = param_grid[: len(scores)]
+
         # Calculate feature importance
         feature_importance = self._calculate_hyperparameter_importance(
             param_grid, scores
