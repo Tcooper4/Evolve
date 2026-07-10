@@ -3,16 +3,19 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **63 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **64 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
 - Fully complete directories: `trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis`, `trading/strategies`, `trading/data`, `trading/optimization`, `utils/`, `trading/utils/`, `trading/models/`
-- `trading/agents/`: 3 of 7 remaining files done (market_regime_agent.py - severe unfitted-scaler-after-cache-load bug fixed, enhanced_prompt_router.py - confirmed clean, model_selector_agent.py - bounded-score bug fixed). Still remain: model_builder_agent.py, performance_critic_agent.py, prompt_templates.py, research_agent.py
+- `trading/agents/`: 5 of 7 remaining files done (market_regime_agent.py, enhanced_prompt_router.py, model_selector_agent.py, research_agent.py, prompt_templates.py all reviewed - 2 real bugs fixed this pass). model_builder_agent.py reviewed, confirmed sound. performance_critic_agent.py partially reviewed - see honest finding below.
+
+## Honest finding, not "fixed" (would be dressing up broken code)
+`trading/agents/performance_critic_agent.py::_calculate_trading_metrics` passes `signals` (a pd.Series of -1/0/1 direction indicators) directly to `calculate_win_rate()` (imported from utils/common_helpers.py, which expects a list of trade dicts with a "pnl" key) - a genuine type mismatch that silently returns 0.0 (a wrong "0% win rate") instead of erroring or computing correctly, verified concretely. But the natural "fix" (pass `trades` instead) doesn't actually fix anything: `_extract_trades()`, called right below, is honestly self-labeled by its own author as `# Placeholder, actual implementation needed` and returns hardcoded fake trade data regardless of input. The entire trading-metrics pipeline in this method is acknowledged-incomplete, not a formula bug with an available correct answer. Not currently reachable via the one confirmed-live caller (critique_backtest only calls _setup(), never evaluate_model()). Flagging honestly rather than wiring fake data through a different function signature to make it superficially "work."
 
 ## Process correction on the record (condensed)
 Earlier this session, `strategy_comparison.py` was called "clean" based on reading its formulas without ever actually importing/running it - the module couldn't be imported at all (wrong class names). Fixed, and a systematic import-check across all 110 modules touched this session found this was isolated (all other failures traced to missing sandbox dependencies, since resolved). Lesson: "the formula is correct" and "the code runs" are different claims, both need checking - now doing both going forward, including for the torch-dependent files where full execution isn't possible in this sandbox (targeted isolated testing of the specific bug mechanism instead, as done for the BaseModel scaler bug and others).
 
-## Remaining ~69 live files
-`components`/`components/tabs` (27, largest remaining block), `trading/agents` (4 left), `pages` (7), `config` (4), `trading/ui`/`trading/forecasting`/`trading/memory`/`agents/llm` (3 each), and smaller pockets (~13 more)
+## Remaining ~68 live files
+`components`/`components/tabs` (27, largest remaining block), `pages` (7), `config` (4), `trading/ui`/`trading/forecasting`/`trading/memory`/`agents/llm` (3 each), and smaller pockets (~13 more)
 
 ## Flagged anomaly, not fixed (needs human judgment, not a guess)
 `trading/data/earnings_reaction.py::_compute_earnings_reactions` — computes `d0`/`d0_price` (price on the first trading day on/after the earnings date) but never uses either. The actual `move_1d/3d/5d` calculations index `future_dates[1]/[3]/[5]` instead, skipping over `d0` entirely. Two possible explanations: (a) a real bug — "1-day move" is actually measuring closer to a 2-day move, an incomplete refactor left `d0_price` behind; or (b) intentional — the convention is "N trading days after the pre-earnings close," and `d0_price` is simply vestigial. Could not determine which from the code alone. Not fixed, since guessing wrong would silently corrupt a real analytics output rather than fix it.
