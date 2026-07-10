@@ -3,11 +3,12 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **43 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **49 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
-- `trading/analysis`, `trading/strategies`, and `trading/data` all fully complete (3 of the original High priority directories)
-- Remaining High priority: `utils` (12), `trading/utils` (11)
-- Remaining Medium priority: `trading/models` (8), `trading/agents` (7), `pages` (7), `components`/`components/tabs` (27, spot-checked only)
+- Fully complete directories: `trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis`, `trading/strategies`, `trading/data`, `trading/optimization`
+- `utils/`: core financial-metric files done (performance_metrics.py, math_helpers.py, technical_indicators.py all fixed/verified); dataframe_utils, forecast_helpers, common_helpers, strategy_utils, model_cache, plotting_helper, safe_json_saver, session_utils, time_utils still need full-depth review (strategy_utils.py spot-checked, formulas confirmed correct but not live-consumed)
+- `trading/utils/`: safe_math.py and safe_indicators.py fixed (severe live bug - watchlist RSI crash + formula divergence); reward_function.py, data_manager.py, notification_system.py, credential_placeholders.py done; logging_utils.py, forecast_formatter.py, gpu_utils.py still remain
+- Remaining ~94 live files: rest of `utils`/`trading/utils` (~9 files), `components`/`components/tabs` (27), `trading/models` (8), `trading/agents` (7), `pages` (7), `config` (4), `trading/forecasting` (3), `trading/memory` (3), `agents/llm` (3), and smaller pockets (~13 more)
 
 ## Flagged anomaly, not fixed (needs human judgment, not a guess)
 `trading/data/earnings_reaction.py::_compute_earnings_reactions` — computes `d0`/`d0_price` (price on the first trading day on/after the earnings date) but never uses either. The actual `move_1d/3d/5d` calculations index `future_dates[1]/[3]/[5]` instead, skipping over `d0` entirely. Two possible explanations: (a) a real bug — "1-day move" is actually measuring closer to a 2-day move, an incomplete refactor left `d0_price` behind; or (b) intentional — the convention is "N trading days after the pre-earnings close," and `d0_price` is simply vestigial. Could not determine which from the code alone. Not fixed, since guessing wrong would silently corrupt a real analytics output rather than fix it.
