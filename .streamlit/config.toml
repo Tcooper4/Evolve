@@ -3,9 +3,9 @@ showSidebarNavigation = false
 
 [theme]
 base = "dark"
-backgroundColor = "#0a0e1a"
-secondaryBackgroundColor = "#0f1525"
-textColor = "#e0e6f0"
+backgroundColor = "#070b14"
+secondaryBackgroundColor = "#0c1322"
+textColor = "#e6ecf7"
 primaryColor = "#00d4ff"
 [server]
 maxUploadSize = 50
