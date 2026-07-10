@@ -81,7 +81,19 @@ class ForecastPostprocessor:
         if forecast.empty or forecast.max() == 0:
             alpha = 0.1
         else:
+            # BUG FIX: this previously only capped alpha at the upper
+            # bound (min(0.3, ...)), but the formula 1 - std/max can
+            # produce a NEGATIVE value whenever std exceeds max - a real,
+            # plausible scenario for forecasts with a small max value
+            # relative to their volatility (e.g. oscillating return
+            # forecasts). pandas' ewm() requires 0 < alpha <= 1 and
+            # raises ValueError otherwise. Verified concretely: a
+            # realistic small-magnitude, high-volatility forecast
+            # produced alpha=-12.99, crashing ewm(). Clamping to a
+            # sensible minimum (0.05) in addition to the existing
+            # maximum.
             alpha = min(0.3, 1 - forecast.std() / max(abs(forecast.max()), 1e-8))
+            alpha = max(0.05, alpha)
         logger.info(f"Dynamic EWMA smoothing with alpha={alpha:.4f}")
         return forecast.ewm(alpha=alpha).mean()
 
