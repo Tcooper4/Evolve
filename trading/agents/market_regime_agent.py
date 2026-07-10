@@ -313,6 +313,22 @@ class MarketRegimeAgent(BaseAgent):
         try:
             if os.path.exists(self.model_path):
                 self.classifier = joblib.load(self.model_path)
+                # BUG FIX: this branch previously only loaded
+                # self.classifier from disk, never touching self.scaler -
+                # which was left as the fresh, UNFITTED StandardScaler()
+                # from __init__. classify_regime()'s
+                # self.scaler.transform(features) call crashed with
+                # NotFittedError on every single run after the very
+                # first one (since _train_regime_classifier explicitly
+                # saves the classifier to disk for reuse, this "load
+                # from disk" branch is what actually runs on every
+                # subsequent initialization). Verified concretely.
+                # Fitting the scaler using the same synthetic-data
+                # generation process used during original training keeps
+                # it properly fitted without needing to change the saved
+                # model file format.
+                X, _y = self._generate_training_data()
+                self.scaler.fit(X)
                 logger.info(f"Loaded existing regime classifier from {self.model_path}")
             else:
                 logger.info("Training new regime classifier...")
