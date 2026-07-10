@@ -252,7 +252,17 @@ def create_confidence_interval(
     Returns:
         Tuple of (lower_bound, upper_bound)
     """
-    z_score = 1.96  # 95% confidence interval
+    # BUG FIX: z_score was previously hardcoded to 1.96 regardless of
+    # the confidence_level parameter actually passed in - the parameter
+    # was accepted but completely unused. The one confirmed live caller
+    # (create_forecast_chart) uses the default 0.95, which happens to
+    # match 1.96 by coincidence, so this wasn't currently producing
+    # wrong results - but any caller requesting a different confidence
+    # level (e.g. 0.99) would have silently gotten a 95%-width interval
+    # instead. Using scipy's inverse normal CDF to compute the correct
+    # z-score for whatever confidence_level is actually requested.
+    from scipy.stats import norm
+    z_score = norm.ppf(0.5 + confidence_level / 2)
     lower_bound = data["prediction"] - z_score * data["std_error"]
     upper_bound = data["prediction"] + z_score * data["std_error"]
     return (lower_bound, upper_bound)
