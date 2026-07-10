@@ -1146,46 +1146,73 @@ class LSTMForecaster(BaseModel):
                         f"Available: {list(X.columns)}"
                     )
 
-                X_scaled = self.X_scaler.fit_transform(X[feature_cols])
-                y_scaled = self.y_scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
-                
-                # Convert to DataFrame/Series for easier indexing
-                X_scaled_df = pd.DataFrame(X_scaled, index=X.index, columns=feature_cols)
-                y_scaled_series = pd.Series(y_scaled, index=y.index)
+                # BUG FIX: this previously fit both scalers on the FULL
+                # X/y (fit_transform), created sequences from the
+                # already-scaled full dataset, and only THEN split into
+                # train/val - the exact same scaler-leakage pattern
+                # already found and fixed in xgboost_model.py and
+                # ml_score_trainer.py earlier this session. The
+                # validation portion's statistics had already influenced
+                # how the training portion got normalized. Fixed by
+                # splitting the raw (unscaled) data first, fitting the
+                # scalers on the training portion only, and transforming
+                # both splits with that same fitted scaler.
+                _raw_split_idx = int(len(X[feature_cols]) * (1 - validation_split))
+                X_train_raw = X[feature_cols].iloc[:_raw_split_idx]
+                X_val_raw = X[feature_cols].iloc[_raw_split_idx:]
+                y_train_raw = y.iloc[:_raw_split_idx]
+                y_val_raw = y.iloc[_raw_split_idx:]
+
+                X_train_scaled = self.X_scaler.fit_transform(X_train_raw)
+                y_train_scaled = self.y_scaler.fit_transform(
+                    y_train_raw.values.reshape(-1, 1)
+                ).flatten()
+                X_val_scaled = self.X_scaler.transform(X_val_raw)
+                y_val_scaled = self.y_scaler.transform(
+                    y_val_raw.values.reshape(-1, 1)
+                ).flatten()
+
+                X_train_scaled_df = pd.DataFrame(
+                    X_train_scaled, index=X_train_raw.index, columns=feature_cols
+                )
+                y_train_scaled_series = pd.Series(y_train_scaled, index=y_train_raw.index)
+                X_val_scaled_df = pd.DataFrame(
+                    X_val_scaled, index=X_val_raw.index, columns=feature_cols
+                )
+                y_val_scaled_series = pd.Series(y_val_scaled, index=y_val_raw.index)
             except Exception as e:
                 logger.error(f"Failed to scale data: {e}")
                 raise ModelTrainingError(f"Data scaling failed: {str(e)}")
 
             # Prepare data for LSTM (reshape to [samples, timesteps, features])
-            # Now create sequences from SCALED data
+            # Create sequences separately within each split - this also
+            # correctly prevents any sequence from spanning across the
+            # train/val boundary (mixing future validation-period data
+            # into a training sequence, or vice versa).
             try:
                 seq_len = self.config["sequence_length"]
-                X_seq = []
-                y_seq = []
-                for i in range(len(X_scaled_df) - seq_len):
-                    X_seq.append(X_scaled_df.iloc[i : i + seq_len].values)
-                    y_seq.append(y_scaled_series.iloc[i + seq_len])
-                X_seq = np.array(X_seq)
-                y_seq = np.array(y_seq)
 
-                if X_seq.size == 0:
+                def _make_sequences(feat_df, target_series):
+                    xs, ys = [], []
+                    for i in range(len(feat_df) - seq_len):
+                        xs.append(feat_df.iloc[i : i + seq_len].values)
+                        ys.append(target_series.iloc[i + seq_len])
+                    return np.array(xs), np.array(ys)
+
+                X_train, y_train = _make_sequences(
+                    X_train_scaled_df, y_train_scaled_series
+                )
+                X_val, y_val = _make_sequences(X_val_scaled_df, y_val_scaled_series)
+
+                if X_train.size == 0:
                     raise ModelTrainingError(
-                        "DataLoader creation failed: insufficient data for sequence "
-                        f"length {seq_len}. Need at least {seq_len + 1} rows, got "
-                        f"{len(X_scaled_df)}."
+                        "DataLoader creation failed: insufficient training data for "
+                        f"sequence length {seq_len}. Need at least {seq_len + 1} "
+                        f"training rows, got {len(X_train_scaled_df)}."
                     )
             except Exception as e:
                 logger.error(f"Failed to prepare sequences: {e}")
                 raise ModelTrainingError(f"Sequence preparation failed: {str(e)}")
-
-            # Train/validation split
-            try:
-                split_idx = int(len(X_seq) * (1 - validation_split))
-                X_train, X_val = X_seq[:split_idx], X_seq[split_idx:]
-                y_train, y_val = y_seq[:split_idx], y_seq[split_idx:]
-            except Exception as e:
-                logger.error(f"Failed to split data: {e}")
-                raise ModelTrainingError(f"Data splitting failed: {str(e)}")
 
             # Convert to PyTorch tensors
             try:
