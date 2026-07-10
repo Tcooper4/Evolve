@@ -213,8 +213,20 @@ class SMAStrategy:
         if df.empty:
             raise ValueError("DataFrame is empty")
 
-        # Additional validation for 'Close' column presence and all-NaN
-        if "Close" not in df.columns or df["Close"].isna().all():
+        # Additional validation for close column presence and all-NaN.
+        # BUG FIX: this early-exit checked only the capitalized "Close"
+        # column, while everything downstream is deliberately
+        # case-insensitive (df_lower). Given lowercase OHLCV input (the
+        # convention ATR/CCI require, and what several internal callers
+        # pass), this branch silently returned an all-zero signals frame -
+        # no error, no signals, ever. Verified by execution: lowercase
+        # input produced 0 signal events on 500 bars where capitalized
+        # input produced normal crossover signals. Now matches the
+        # case-insensitive contract of the rest of this method.
+        _close_col = next(
+            (c for c in df.columns if str(c).lower() == "close"), None
+        )
+        if _close_col is None or df[_close_col].isna().all():
             # Return empty signals DataFrame with correct index and columns
             signals = pd.DataFrame(index=df.index)
             signals["signal"] = 0
