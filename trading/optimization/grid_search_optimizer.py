@@ -197,7 +197,20 @@ class GridSearch(OptimizationMethod):
                     best_params = params
 
                 # Check early stopping
-                if self._check_early_stopping(scores):
+                # BUG FIX: this call used _check_early_stopping's hardcoded
+                # defaults (patience=5), silently ignoring the early_stopping
+                # config StrategyOptimizer.optimize() passes down in kwargs.
+                # On any noisy objective the search died within ~patience
+                # evaluations of the first sampled point (verified: an
+                # RSI-parameter search stopped after 8 of a 40-eval budget
+                # and returned a worse-than-default "best"). Now honors the
+                # configured patience/min_delta when provided.
+                _es = kwargs.get("early_stopping") or {}
+                if self._check_early_stopping(
+                    scores,
+                    patience=int(_es.get("patience", 5)),
+                    min_delta=float(_es.get("min_delta", 1e-4)),
+                ):
                     self.logger.info(f"Early stopping at iteration {i}")
                     break
 
