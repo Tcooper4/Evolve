@@ -529,20 +529,38 @@ class XGBoostModel(BaseModel):
             X = features[self.selected_features]
 
             # Scale features
-            X_scaled = self.scaler.fit_transform(X)
+            # BUG FIX: previously fit the scaler on the FULL feature set
+            # before splitting into train/validation below, meaning the
+            # validation portion's own statistics (mean/std) leaked into
+            # how the training data got normalized - classic scaler
+            # leakage. Now split first (on raw, unscaled X), then fit the
+            # scaler on the training portion only, and use that same
+            # fitted scaler to transform both splits.
+            early_rounds = self.model_params.get("early_stopping_rounds")
+            n = len(X)
+            use_early_stopping = bool(early_rounds and n >= 20)
+
+            if use_early_stopping:
+                val_size = max(1, int(0.2 * n))
+                X_train_raw = X.iloc[:-val_size] if hasattr(X, "iloc") else X[:-val_size]
+                X_val_raw = X.iloc[-val_size:] if hasattr(X, "iloc") else X[-val_size:]
+                y_train = target.iloc[:-val_size] if hasattr(target, "iloc") else target[:-val_size]
+                y_val = target.iloc[-val_size:] if hasattr(target, "iloc") else target[-val_size:]
+
+                X_train = self.scaler.fit_transform(X_train_raw)
+                X_val = self.scaler.transform(X_val_raw)
+                # X_scaled used below for the fallback-model path and for
+                # is_trained bookkeeping; keep it consistent with the
+                # fitted (train-only) scaler.
+                X_scaled = self.scaler.transform(X)
+            else:
+                X_scaled = self.scaler.fit_transform(X)
 
             # Train model (pass eval_set when early_stopping_rounds is used to avoid "Must have at least 1 validation dataset")
             if self.model is not None:
                 try:
                     fit_kwargs = {}
-                    early_rounds = self.model_params.get("early_stopping_rounds")
-                    n = len(X_scaled)
-                    if early_rounds and n >= 20:
-                        val_size = max(1, int(0.2 * n))
-                        X_val = X_scaled[-val_size:]
-                        y_val = target.iloc[-val_size:] if hasattr(target, "iloc") else target[-val_size:]
-                        X_train = X_scaled[:-val_size]
-                        y_train = target.iloc[:-val_size] if hasattr(target, "iloc") else target[:-val_size]
+                    if use_early_stopping:
                         fit_kwargs["eval_set"] = [(X_val, y_val)]
                         fit_kwargs["early_stopping_rounds"] = min(early_rounds, 20)
                         self.model.fit(X_train, y_train, **fit_kwargs)
