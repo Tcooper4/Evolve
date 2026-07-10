@@ -35,33 +35,16 @@ logger = logging.getLogger(__name__)
 
 
 def _get_forecasting_backend():
-    try:
-        from trading.data.data_loader import DataLoader, DataLoadRequest
-        from trading.data.providers.yfinance_provider import YFinanceProvider
-        from trading.models.lstm_model import LSTMForecaster
-        from trading.models.xgboost_model import XGBoostModel
-        from trading.models.prophet_model import ProphetModel
-        from trading.models.arima_model import ARIMAModel
-        from trading.data.preprocessing import FeatureEngineering, DataPreprocessor
-        from trading.agents.model_selector_agent import ModelSelectorAgent
-        from trading.market.market_analyzer import MarketAnalyzer
+    """Load the backend via the shared resilient loader (see
+    trading/services/forecasting_backend.py). Previously one missing
+    optional dependency disabled every forecasting feature on this page."""
+    from trading.services.forecasting_backend import load_forecasting_backend
 
-        return {
-            "DataLoader": DataLoader,
-            "DataLoadRequest": DataLoadRequest,
-            "YFinanceProvider": YFinanceProvider,
-            "LSTMForecaster": LSTMForecaster,
-            "XGBoostModel": XGBoostModel,
-            "ProphetModel": ProphetModel,
-            "ARIMAModel": ARIMAModel,
-            "FeatureEngineering": FeatureEngineering,
-            "DataPreprocessor": DataPreprocessor,
-            "ModelSelectorAgent": ModelSelectorAgent,
-            "MarketAnalyzer": MarketAnalyzer,
-        }
-    except Exception as e:
-        logger.warning("Backtest: forecasting backend not available: %s", e)
-        return None
+    backend, missing = load_forecasting_backend()
+    if missing:
+        st.session_state["forecasting_backend_missing"] = missing
+        logger.warning("Backtest: partial forecasting backend; missing: %s", missing)
+    return backend or None
 
 
 if "forecasting_backend" not in st.session_state:

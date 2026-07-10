@@ -29,32 +29,21 @@ logger = logging.getLogger(__name__)
 
 
 def _get_forecasting_backend():
-    try:
-        from trading.data.data_loader import DataLoader, DataLoadRequest
-        from trading.data.providers.yfinance_provider import YFinanceProvider
-        from trading.models.lstm_model import LSTMForecaster
-        from trading.models.xgboost_model import XGBoostModel
-        from trading.models.prophet_model import ProphetModel
-        from trading.models.arima_model import ARIMAModel
-        from trading.data.preprocessing import FeatureEngineering, DataPreprocessor
-        from trading.agents.model_selector_agent import ModelSelectorAgent
-        from trading.market.market_analyzer import MarketAnalyzer
-        return {
-            "DataLoader": DataLoader,
-            "DataLoadRequest": DataLoadRequest,
-            "YFinanceProvider": YFinanceProvider,
-            "LSTMForecaster": LSTMForecaster,
-            "XGBoostModel": XGBoostModel,
-            "ProphetModel": ProphetModel,
-            "ARIMAModel": ARIMAModel,
-            "FeatureEngineering": FeatureEngineering,
-            "DataPreprocessor": DataPreprocessor,
-            "ModelSelectorAgent": ModelSelectorAgent,
-            "MarketAnalyzer": MarketAnalyzer,
-        }
-    except Exception as e:
-        logger.warning("Forecasting backend not available: %s", e)
-        return None
+    """Load the backend via the shared resilient loader.
+
+    BUG FIX: this previously wrapped eleven imports in a single
+    try/except - one missing optional dependency (verified: statsmodels ->
+    ARIMAModel) returned None and the whole Analyze page bricked via
+    st.stop(). The shared loader imports each component individually, so
+    the page runs with whatever subset is available and surfaces exactly
+    what's missing.
+    """
+    from trading.services.forecasting_backend import load_forecasting_backend
+
+    backend, missing = load_forecasting_backend()
+    if missing:
+        st.session_state["forecasting_backend_missing"] = missing
+    return backend or None
 
 
 if "forecasting_backend" not in st.session_state:
@@ -62,7 +51,18 @@ if "forecasting_backend" not in st.session_state:
 _be = st.session_state.get("forecasting_backend")
 if not _be:
     st.error("Forecasting backend could not be loaded. Check logs and dependencies.")
+    _missing = st.session_state.get("forecasting_backend_missing") or []
+    if _missing:
+        with st.expander("Missing components", expanded=False):
+            for _m in _missing:
+                st.caption(f"• {_m}")
     st.stop()
+_missing = st.session_state.get("forecasting_backend_missing") or []
+if _missing:
+    st.caption(
+        "⚠️ Running with a partial forecasting backend — unavailable: "
+        + ", ".join(m.split(" (")[0] for m in _missing)
+    )
 
 if "analyze_forecast_data" not in st.session_state:
     st.session_state["analyze_forecast_data"] = None
