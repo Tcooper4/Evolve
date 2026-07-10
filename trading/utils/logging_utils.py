@@ -664,6 +664,20 @@ def log_error_with_context(
 def close_loggers(logger_names: Optional[List[str]] = None) -> Dict[str, Any]:
     """Close log handlers to prevent file locks and memory leaks.
 
+    BUG FIX: this function was previously followed by a second,
+    parameterless `def close_loggers():` definition (a no-op-returning
+    duplicate) that silently shadowed this one - Python keeps only the
+    last definition of a function with a given name. That meant every
+    call to close_loggers() actually ran the shadowed version (which
+    returns None, no return statement at all), while
+    cleanup_logging_resources() below calls
+    close_result.get("closed_count", 0) expecting the dict THIS version
+    returns. The result: cleanup_logging_resources() crashed with
+    "AttributeError: 'NoneType' object has no attribute 'get'" on every
+    single call, and this richer implementation (with the ability to
+    close specific loggers by name) was completely unreachable. Removed
+    the duplicate.
+
     Args:
         logger_names: List of logger names to close. If None, closes all loggers.
 
@@ -709,12 +723,6 @@ def close_loggers(logger_names: Optional[List[str]] = None) -> Dict[str, Any]:
         }
 
 
-def close_loggers():
-    """Safely close and remove all handlers from root logger."""
-    log = logging.getLogger()
-    for handler in log.handlers[:]:
-        handler.close()
-        log.removeHandler(handler)
 
 
 def cleanup_logging_resources() -> Dict[str, Any]:

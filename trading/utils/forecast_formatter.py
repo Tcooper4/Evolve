@@ -82,9 +82,19 @@ class ForecastFormatter:
         Returns:
             Formatted DataFrame
         """
+        # BUG FIX: this previously had
+        # `if isinstance(forecast_data, pd.DataFrame): if not
+        # isinstance(forecast_data, pd.DataFrame): raise ValueError(...)`
+        # - a self-contradictory nested check that could never actually
+        # raise, AND never assigned `df` in this branch at all. The most
+        # common, expected input type (a plain DataFrame) crashed with
+        # "UnboundLocalError: cannot access local variable 'df'" at the
+        # normalize_datetime_index call below. There was also a second,
+        # unreachable `elif isinstance(forecast_data, pd.DataFrame): df =
+        # forecast_data` further down that could never be reached, since
+        # this first `if` already caught that exact case.
         if isinstance(forecast_data, pd.DataFrame):
-            if not isinstance(forecast_data, pd.DataFrame):
-                raise ValueError("Expected forecast input as a DataFrame")
+            df = forecast_data
         elif isinstance(forecast_data, np.ndarray):
             # Convert numpy array to DataFrame
             df = pd.DataFrame(forecast_data)
@@ -102,8 +112,6 @@ class ForecastFormatter:
             else:
                 logger.warning("No 'forecast' key found in dictionary")
                 df = pd.DataFrame(forecast_data)
-        elif isinstance(forecast_data, pd.DataFrame):
-            df = forecast_data
         else:
             logger.error(f"Unsupported forecast data type: {type(forecast_data)}")
             return pd.DataFrame()
@@ -172,14 +180,22 @@ class ForecastFormatter:
         lower.index = forecast.index
         upper.index = forecast.index
 
+        # BUG FIX: this previously had `forecast.iloc[:, 0] if
+        # len(forecast.columns) > 0 else forecast.iloc[:, 0]` - both
+        # branches were identical, making the columns-count check
+        # entirely vacuous. If forecast genuinely had zero columns, this
+        # crashed with a confusing "IndexError: single positional
+        # indexer is out-of-bounds" instead of a clear, actionable error.
+        if len(forecast.columns) == 0:
+            raise ValueError(
+                "format_confidence_intervals: forecast DataFrame has no columns"
+            )
+        forecast_series = forecast.iloc[:, 0]
+
         # Create confidence interval DataFrame
         ci_df = pd.DataFrame(
             {
-                "forecast": (
-                    forecast.iloc[:, 0]
-                    if len(forecast.columns) > 0
-                    else forecast.iloc[:, 0]
-                ),
+                "forecast": forecast_series,
                 "lower": lower,
                 "upper": upper,
             }
