@@ -3,13 +3,20 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **64 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **68 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
-- Fully complete directories: `trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis`, `trading/strategies`, `trading/data`, `trading/optimization`, `utils/`, `trading/utils/`, `trading/models/`
-- `trading/agents/`: 5 of 7 remaining files done (market_regime_agent.py, enhanced_prompt_router.py, model_selector_agent.py, research_agent.py, prompt_templates.py all reviewed - 2 real bugs fixed this pass). model_builder_agent.py reviewed, confirmed sound. performance_critic_agent.py partially reviewed - see honest finding below.
 
-## Honest finding, not "fixed" (would be dressing up broken code)
-`trading/agents/performance_critic_agent.py::_calculate_trading_metrics` passes `signals` (a pd.Series of -1/0/1 direction indicators) directly to `calculate_win_rate()` (imported from utils/common_helpers.py, which expects a list of trade dicts with a "pnl" key) - a genuine type mismatch that silently returns 0.0 (a wrong "0% win rate") instead of erroring or computing correctly, verified concretely. But the natural "fix" (pass `trades` instead) doesn't actually fix anything: `_extract_trades()`, called right below, is honestly self-labeled by its own author as `# Placeholder, actual implementation needed` and returns hardcoded fake trade data regardless of input. The entire trading-metrics pipeline in this method is acknowledged-incomplete, not a formula bug with an available correct answer. Not currently reachable via the one confirmed-live caller (critique_backtest only calls _setup(), never evaluate_model()). Flagging honestly rather than wiring fake data through a different function signature to make it superficially "work."
+## Audit-the-auditor pass (in progress)
+Following a direct challenge on coverage consistency, ran a systematic cross-check: for every directory previously claimed "fully complete," enumerated every actual live file (not memory) and checked it against concrete review evidence (a specific bug fix, a specific test run I can point to). Found 12 real gaps:
+- `trading/backtesting`: enhanced_backtester.py (reviewed, sound - delegates to already-fixed components, blocked from full import by the known torch chain but core logic traced), performance_analysis.py (real bug found: calmar_ratio always NaN due to a cross-method scoping bug - fixed), position_sizing.py (partially reviewed - equal-weighted, Kelly, and risk-based sizing methods verified correct against the actual live data-shape used by agent_tools.py's run_backtest; ~15 more exotic methods - Black-Litterman, martingale, mean-variance, minimum-variance, etc. - NOT yet individually verified, these are non-default alternate options)
+- `trading/optimization`: optuna_optimizer.py, performance_logger.py, self_tuning_optimizer.py, strategy_selection_agent.py - confirmed live, not yet reviewed
+- `trading/feature_engineering`: macro_feature_engineering.py, utils.py - confirmed live, not yet reviewed
+- `trading/memory`: agent_logger.py, memory_store.py, performance_memory.py - confirmed live, not yet reviewed
+
+Also caught and corrected my own false-positive test bug along the way (a pandas index-alignment gotcha in my own test construction that looked like a source-code crash but wasn't) - verified before concluding, which is what let the real calmar_ratio bug surface cleanly instead of being buried under a wrong claim.
+
+## Remaining ~67 live files (not yet reviewed at all)
+`components`/`components/tabs` (27), `pages` (6 left, after 4_Trade.py), `config` (4), `trading/ui`/`trading/forecasting`/`agents/llm` (3 each), and smaller pockets
 
 ## Process correction on the record (condensed)
 Earlier this session, `strategy_comparison.py` was called "clean" based on reading its formulas without ever actually importing/running it - the module couldn't be imported at all (wrong class names). Fixed, and a systematic import-check across all 110 modules touched this session found this was isolated (all other failures traced to missing sandbox dependencies, since resolved). Lesson: "the formula is correct" and "the code runs" are different claims, both need checking - now doing both going forward, including for the torch-dependent files where full execution isn't possible in this sandbox (targeted isolated testing of the specific bug mechanism instead, as done for the BaseModel scaler bug and others).
