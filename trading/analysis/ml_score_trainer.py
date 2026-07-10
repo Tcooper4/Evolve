@@ -316,12 +316,26 @@ class MLScoreTrainer:
             if X.empty or len(y) == 0:
                 return {"error": "No training data available"}
 
-            # Scale features
+            # BUG FIX: same scaler-leakage pattern found and fixed in
+            # xgboost_model.py earlier this session - this previously fit
+            # RobustScaler on the FULL X before splitting into
+            # train/validation below, meaning the validation portion's
+            # own statistics (median/IQR for RobustScaler) leaked into
+            # how the training data got normalized. Now splits first (on
+            # raw X), fits the scaler on the training portion only, and
+            # uses that same fitted scaler to transform both splits.
             from sklearn.preprocessing import RobustScaler
             self._scaler = RobustScaler()
-            X_scaled = self._scaler.fit_transform(X)
 
             self.feature_names = list(X.columns)
+
+            # Train/validation split (time-based) - now on raw X, before scaling
+            split = int(len(X) * 0.8)
+            X_train_raw, X_val_raw = X.iloc[:split], X.iloc[split:]
+            y_train, y_val = y.iloc[:split], y.iloc[split:]
+
+            X_train = self._scaler.fit_transform(X_train_raw)
+            X_val = self._scaler.transform(X_val_raw)
 
             # Train model
             if self.model_type == "xgboost":
@@ -343,11 +357,6 @@ class MLScoreTrainer:
                     learning_rate=0.05,
                     random_state=42,
                 )
-
-            # Train/validation split (time-based)
-            split = int(len(X_scaled) * 0.8)
-            X_train, X_val = X_scaled[:split], X_scaled[split:]
-            y_train, y_val = y.iloc[:split], y.iloc[split:]
 
             self.model.fit(X_train, y_train)
 
