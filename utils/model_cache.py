@@ -57,11 +57,20 @@ class ModelCache:
             str: Unique cache key
         """
         # Convert args and kwargs to a hashable format
+        # BUG FIX: this previously included a per-minute wall-clock
+        # timestamp in the cache key itself
+        # (datetime.now().strftime("%Y%m%d_%H%M")), which would defeat
+        # caching entirely if this method were ever actually called - a
+        # new, different key every 60 seconds regardless of whether the
+        # function arguments were identical. Confirmed this method is
+        # currently dead code (cache_function() below uses joblib's own
+        # internal hashing instead, never calling this helper) - fixing
+        # anyway for correctness, since a cache key must be a function of
+        # its inputs, not the current time.
         key_data = {
             "func_name": func_name,
             "args": self._hash_data(args),
             "kwargs": self._hash_data(kwargs),
-            "timestamp": datetime.now().strftime("%Y%m%d_%H%M"),
         }
 
         # Create hash
