@@ -3,7 +3,7 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **78 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **80 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
 
 ## Audit-the-auditor pass (in progress)
@@ -100,3 +100,6 @@ Note: trading/agents is intentionally NOT included in this "complete" set - it r
 Closed out with a major finding: PerformanceCriticAgent could not be instantiated at all (missing 4 abstract methods, missing __init__/config default, a crashing dead Backtester() call in _setup()) - meaning the confirmed-live critique_backtest chat tool has likely never worked in its entire history. Fixed all 3 compounding issues plus 12 separate instances of unformatted warning message strings across 4 detection methods. Verified the complete chain end-to-end.
 
 19 directories now fully, mechanically verified complete: the original 18 plus trading/agents.
+
+## components/ COMPLETE (all 27 live files)
+Found and fixed 2 real bugs in backend files reached via this UI layer: a crash-causing negative EWMA alpha in trading/forecasting/forecast_postprocessor.py, and a confidence_level parameter silently ignored in trading/ui/components.py. Traced and verified dozens of function-call signatures across the chat/tool-execution chain, model comparison, AI Score, econometric diagnostics, GNN forecasting, and IC analysis integrations - all matched correctly. Also closed real coverage gaps in trading/forecasting (forecast_postprocessor.py, hybrid_model_selector.py referenced) and trading/ui (components.py, forecast_components.py, config/registry.py).
