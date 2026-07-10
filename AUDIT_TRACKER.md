@@ -4,6 +4,15 @@ Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not 
 
 ## Fable session — upgrade & build pass (2026-07-10)
 
+**Session 2 additions (same day, continued):**
+- **risk_metrics consolidated + root-fixed** — `RiskMetric`/`RiskMetricsEngine` moved into `utils/risk_metrics.py` (single canonical module; old `trading/backtesting/risk_metrics.py` deleted, 3 callers redirected). Root cause of the ±31.5M Sharpe artifact fixed in `compute_performance_metrics`: zero-volatility series now yield 0.0 ratios (Sharpe, Sortino, Calmar), empty/all-NaN series short-circuit cleanly; normal path cross-checked against manual math.
+- **llm_interface duplicate: already resolved, tracker was stale** — `trading/llm/llm_interface.py` is a deliberate re-export bridge over `agents/llm/llm_interface.py` with a graceful stub fallback, not an independent implementation. No action needed; closing the item.
+- **Torch checklist item closed** — torch 2.13 installed; LSTM, TCN, Transformer, GNN all ran full fit/predict/forecast end-to-end. LSTM/TCN/GNN passed as-is (the audit's isolated-logic fixes hold under real execution). **Bug #90 (Transformer)**: `EncoderWithDropout` crashed on every forward pass with default config (nn.Sequential can't take the mask kwarg; masking defaults on) AND reused one encoder-layer instance across all depths (shared weights). Fixed; layers now independent deep copies.
+- **Position-sizing depth pass complete (bugs #91–95)** — all 22 methods executed directly (the dispatcher's silent equal-weighted fallback had masked every failure): risk_parity was inverted AND unreachable (#91); black_litterman's daily-vs-annual rf mismatch returned 0.0 unconditionally (#92); the same unit bug inverted mean_variance into a volatility-maximizer (#93); all four scipy sizers crashed into fallback for any already-held asset via duplicate names (#94); momentum_weighted/regime_based used daily-return scale where window returns belong — inert tilt + dead branch (#95). 14 new tests. Noted-not-changed: optimal_f duplicates the kelly formula; ML sizer's feature ordering is fragile but inert in practice.
+- **Bug count: 95.** New tests this session: 30 (optimizer) + 6 (earnings) + 7 (risk metrics/transformer) + 14 (sizing) = 57, all passing.
+
+**Session 1:**
+
 Shifted from bug-hunting to feature work per the handoff mandate, holding the same execution-verification standard. Everything below was verified by actually running the code path (synthetic OHLCV where the sandbox blocks Yahoo; streamlit AppTest for pages).
 
 **Features shipped:**
@@ -22,7 +31,7 @@ Shifted from bug-hunting to feature work per the handoff mandate, holding the sa
 
 **Tests:** `tests/test_optimization/test_strategy_backtest_objective.py` — 30 execution-level tests, all passing. Pre-existing suite shows an identical pass/fail set with this session's changes stashed vs applied (zero regressions; its failures are stale tests/missing sandbox deps that predate this session).
 
-**Still open from the handoff checklist:** position_sizing exotic methods depth pass; line-by-line depth on pages 2/3/6; torch models end-to-end (torch still not installed here); `llm_interface.py` and `risk_metrics.py` duplicate consolidation. (The earnings_reaction d0 anomaly is now resolved — see below.)
+**Still open from the handoff checklist:** line-by-line depth pass on pages 2_Analyze / 3_Scanner / 6_Chat. (Everything else — position sizing, torch models, both duplicate consolidations, and the earnings_reaction d0 anomaly — is now closed; see Session 2 notes above.)
 
 ## Status summary
 - **84 real bugs found and fixed**, all verified with actual execution (not just code review)
