@@ -270,22 +270,44 @@ class TransformerForecaster(BaseModel):
         )
 
         # Wrap encoder layer with Dropout after each attention block
+        # BUG FIX (three compounding issues, verified by execution):
+        # (1) each "layer" was nn.Sequential(encoder_layer, Dropout), but
+        #     forward() called layer(output, mask=..., src_key_padding_mask=...)
+        #     and nn.Sequential.forward accepts exactly one positional input -
+        #     every forward pass crashed with "Sequential.forward() got an
+        #     unexpected keyword argument 'mask'". Since masking defaults to
+        #     True in this model's config, the Transformer forecaster had
+        #     never successfully run a forward pass with default settings.
+        # (2) even without the crash, Sequential would have piped the mask
+        #     into nn.Dropout as well, which doesn't take one.
+        # (3) the SAME encoder_layer instance was placed in every wrapper, so
+        #     an N-layer encoder was actually one layer applied N times with
+        #     shared weights. PyTorch's own nn.TransformerEncoder deep-copies
+        #     the prototype layer for exactly this reason; now so does this.
+        # The layers and dropouts are now separate ModuleLists, each layer a
+        # deep copy, called explicitly with TransformerEncoderLayer's real
+        # keyword (src_mask, not mask).
+        import copy as _copy
+
         class EncoderWithDropout(nn.Module):
             def __init__(self, encoder_layer, num_layers, dropout_rate):
                 super().__init__()
                 self.layers = nn.ModuleList(
-                    [
-                        nn.Sequential(encoder_layer, nn.Dropout(dropout_rate))
-                        for _ in range(num_layers)
-                    ]
+                    [_copy.deepcopy(encoder_layer) for _ in range(num_layers)]
+                )
+                self.dropouts = nn.ModuleList(
+                    [nn.Dropout(dropout_rate) for _ in range(num_layers)]
                 )
 
             def forward(self, src, mask=None, src_key_padding_mask=None):
                 output = src
-                for layer in self.layers:
+                for layer, drop in zip(self.layers, self.dropouts):
                     output = layer(
-                        output, mask=mask, src_key_padding_mask=src_key_padding_mask
+                        output,
+                        src_mask=mask,
+                        src_key_padding_mask=src_key_padding_mask,
                     )
+                    output = drop(output)
                 return output
 
         self.transformer_encoder = EncoderWithDropout(
