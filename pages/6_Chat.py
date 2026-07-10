@@ -202,12 +202,29 @@ with col_chat:
                         try:
                             from agents.llm.tool_executor import execute_with_tools
 
+                            # Agent Skills: load matched playbooks (e.g.
+                            # signal interpretation, sizing discipline,
+                            # optimizer-results review) into the turn via
+                            # the context suffix. Never raises; '' when
+                            # nothing matches.
+                            try:
+                                from trading.services.skill_loader import (
+                                    render_skills_context,
+                                )
+
+                                _skills_ctx = render_skills_context(prompt)
+                            except Exception as _sk_e:
+                                logger.warning(
+                                    "Chat: skill loading failed: %s", _sk_e
+                                )
+                                _skills_ctx = ""
+
                             _tres = execute_with_tools(
                                 user_message=prompt,
                                 context_block=context_block,
                                 conversation_messages=conv,
                                 system_prompt=chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
-                                platform_context_suffix="",
+                                platform_context_suffix=_skills_ctx,
                                 focus_symbol=_focus_sym,
                                 available_tools=[
                                     "scan_universe",
