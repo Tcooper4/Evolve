@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 # Local imports
-from trading.agents.base_agent_interface import AgentResult, BaseAgent
+from trading.agents.base_agent_interface import AgentConfig, AgentResult, BaseAgent
 from trading.backtesting.backtester import Backtester
 from trading.memory.agent_memory import AgentMemory
 from trading.memory.performance_memory import PerformanceMemory
@@ -77,10 +77,42 @@ class PerformanceCriticAgent(BaseAgent):
     ]
     dependencies = ["trading.backtesting", "trading.evaluation", "trading.strategies"]
 
+    def __init__(self, config: Optional[AgentConfig] = None):
+        """Initialize the performance critic agent.
+
+        BUG FIX: this class previously had no __init__ of its own,
+        directly inheriting BaseAgent.__init__(self, config: AgentConfig)
+        - which requires config with no default. The confirmed-live
+        critique_backtest chat tool in agent_tools.py calls
+        PerformanceCriticAgent() with zero arguments, which crashed with
+        TypeError: missing 1 required positional argument: 'config'.
+        Verified concretely. Implemented following the same pattern
+        already used correctly by market_regime_agent.py.
+        """
+        if config is None:
+            config = AgentConfig(
+                name="PerformanceCriticAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={},
+            )
+        super().__init__(config)
+
     def _setup(self) -> None:
         """Setup method called during initialization."""
         self.memory = PerformanceMemory()
-        self.backtester = Backtester()
+        # BUG FIX: this previously also instantiated
+        # self.backtester = Backtester() here, with zero arguments.
+        # Backtester.__init__ requires `data: pd.DataFrame` as a
+        # required positional argument with no default - this crashed
+        # with TypeError on every single agent setup. Verified
+        # concretely. self.backtester is never actually referenced
+        # anywhere else in this file, so it was also entirely dead code
+        # even before crashing - removed rather than given fake/empty
+        # data just to avoid the crash.
         self.strategy_manager = StrategyManager()
         self.agent_memory = AgentMemory("trading/agents/agent_memory.json")
         self.reward_function = RewardFunction()
@@ -152,6 +184,54 @@ class PerformanceCriticAgent(BaseAgent):
 
         except Exception as e:
             return AgentResult(success=False, error_message=str(e))
+
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration.
+
+        BUG FIX: this and the three methods below were required abstract
+        methods (declared on BaseAgent) that this class never
+        implemented at all - PerformanceCriticAgent() could not be
+        instantiated, raising TypeError: Can't instantiate abstract
+        class PerformanceCriticAgent without an implementation for
+        abstract methods 'get_capabilities', 'get_requirements',
+        'handle_error', 'validate_config'. Verified concretely. This
+        means the confirmed-live critique_backtest chat tool in
+        agent_tools.py (which calls PerformanceCriticAgent() directly)
+        has likely never actually worked - it would hit this exact
+        crash on every call, caught by its own try/except, always
+        silently returning a generic error response instead of a real
+        critique. Implemented following the same pattern already used
+        correctly by market_regime_agent.py.
+        """
+        return bool(self.config and self.config.name)
+
+    def handle_error(self, error: Exception) -> AgentResult:
+        """Handle errors during execution with consistent logging/result shape."""
+        self.logger.error("PerformanceCriticAgent error: %s", error)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            metadata={"agent": self.config.name},
+        )
+
+    def get_capabilities(self) -> List[str]:
+        """Return the capabilities this agent provides."""
+        return [
+            "evaluate_model",
+            "calculate_performance_metrics",
+            "calculate_risk_metrics",
+            "detect_overfitting_signals",
+            "detect_instability_signals",
+            "assess_strategy_robustness",
+            "calculate_model_health_score",
+        ]
+
+    def get_requirements(self) -> Dict[str, Any]:
+        """Return this agent's dependencies/requirements."""
+        return {
+            "packages": ["numpy", "pandas"],
+        }
 
     def validate_input(self, **kwargs) -> bool:
         """Validate input parameters.
@@ -787,21 +867,21 @@ class PerformanceCriticAgent(BaseAgent):
             # Extremely high Sharpe ratio (>3.0) might indicate overfitting
             if sharpe_ratio > 3.0:
                 overfitting_signals.append(
-                    "WARNING: Extremely high Sharpe ratio ({:.2f}) may indicate overfitting. "
+                    f"WARNING: Extremely high Sharpe ratio ({sharpe_ratio:.2f}) may indicate overfitting. "
                     "Consider cross-validation and out-of-sample testing."
                 )
 
             # Very high win rate (>80%) with high profit factor
             if win_rate > 0.8 and profit_factor > 3.0:
                 overfitting_signals.append(
-                    "WARNING: Unusually high win rate ({:.1%}) with high profit factor ({:.2f}) "
+                    f"WARNING: Unusually high win rate ({win_rate:.1%}) with high profit factor ({profit_factor:.2f}) "
                     "suggests potential overfitting. Review strategy complexity."
                 )
 
             # Check for unrealistic returns
             if total_return > 2.0:  # >200% return
                 overfitting_signals.append(
-                    "WARNING: Extremely high total return ({:.1%}) may indicate overfitting "
+                    f"WARNING: Extremely high total return ({total_return:.1%}) may indicate overfitting "
                     "or data snooping bias."
                 )
 
@@ -809,14 +889,14 @@ class PerformanceCriticAgent(BaseAgent):
             total_trades = trading_metrics.get("total_trades", 0)
             if total_trades > 1000:
                 overfitting_signals.append(
-                    "WARNING: High number of trades ({}) may indicate over-optimization. "
+                    f"WARNING: High number of trades ({total_trades}) may indicate over-optimization. "
                     "Consider reducing strategy complexity."
                 )
 
             # Check for perfect or near-perfect metrics
             if win_rate > 0.95:
                 overfitting_signals.append(
-                    "CRITICAL: Near-perfect win rate ({:.1%}) strongly suggests overfitting. "
+                    f"CRITICAL: Near-perfect win rate ({win_rate:.1%}) strongly suggests overfitting. "
                     "Immediate strategy review required."
                 )
 
@@ -852,7 +932,7 @@ class PerformanceCriticAgent(BaseAgent):
 
             if volatility > 0.3 and total_return < 0.1:
                 instability_signals.append(
-                    "WARNING: High volatility ({:.1%}) with low returns ({:.1%}) indicates "
+                    f"WARNING: High volatility ({volatility:.1%}) with low returns ({total_return:.1%}) indicates "
                     "model instability. Consider smoothing parameters."
                 )
 
@@ -868,7 +948,7 @@ class PerformanceCriticAgent(BaseAgent):
             max_drawdown = risk_metrics.get("max_drawdown", 0)
             if max_drawdown < -0.3:
                 instability_signals.append(
-                    "CRITICAL: Extreme drawdown ({:.1%}) indicates severe model instability. "
+                    f"CRITICAL: Extreme drawdown ({max_drawdown:.1%}) indicates severe model instability. "
                     "Immediate intervention required."
                 )
 
@@ -880,7 +960,7 @@ class PerformanceCriticAgent(BaseAgent):
                 win_loss_ratio = abs(avg_win / avg_loss)
                 if win_loss_ratio < 0.5:
                     instability_signals.append(
-                        "WARNING: Poor win/loss ratio ({:.2f}) suggests inconsistent "
+                        f"WARNING: Poor win/loss ratio ({win_loss_ratio:.2f}) suggests inconsistent "
                         "strategy execution or poor risk management."
                     )
 
@@ -914,7 +994,7 @@ class PerformanceCriticAgent(BaseAgent):
             total_trades = trading_metrics.get("total_trades", 0)
             if total_trades < 10:
                 data_quality_signals.append(
-                    "WARNING: Very few trades ({}) - insufficient data for reliable evaluation. "
+                    f"WARNING: Very few trades ({total_trades}) - insufficient data for reliable evaluation. "
                     "Consider longer testing period."
                 )
 
@@ -922,7 +1002,7 @@ class PerformanceCriticAgent(BaseAgent):
             volatility = risk_metrics.get("volatility", 0)
             if volatility > 0.5:
                 data_quality_signals.append(
-                    "WARNING: Extremely high volatility ({:.1%}) may indicate data quality issues "
+                    f"WARNING: Extremely high volatility ({volatility:.1%}) may indicate data quality issues "
                     "or market anomalies."
                 )
 
@@ -963,7 +1043,7 @@ class PerformanceCriticAgent(BaseAgent):
             total_return = performance_metrics.get("total_return", 0)
             if total_return < -0.2:
                 market_regime_signals.append(
-                    "INFO: Poor performance ({:.1%} return) may be due to bear market conditions. "
+                    f"INFO: Poor performance ({total_return:.1%} return) may be due to bear market conditions. "
                     "Consider market regime adaptation."
                 )
 
@@ -971,7 +1051,7 @@ class PerformanceCriticAgent(BaseAgent):
             volatility = risk_metrics.get("volatility", 0)
             if volatility > 0.25:
                 market_regime_signals.append(
-                    "INFO: High volatility period ({:.1%}) detected. Model may need "
+                    f"INFO: High volatility period ({volatility:.1%}) detected. Model may need "
                     "volatility regime adjustments."
                 )
 
