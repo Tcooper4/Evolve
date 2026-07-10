@@ -570,7 +570,12 @@ class TransformerForecaster(BaseModel):
             self.X_mean = X.mean(axis=(0, 1))
             self.X_std = X.std(axis=(0, 1))
             X = (X - self.X_mean) / (self.X_std + 1e-8)
-        y = (y - self.y_mean) / self.y_std
+        # BUG FIX: y normalization had no epsilon protection, unlike X
+        # normalization directly above (which correctly uses
+        # self.X_std + 1e-8). A target window with zero variance (a real
+        # edge case - a flat price/return period) would divide by exactly
+        # zero here.
+        y = (y - self.y_mean) / (self.y_std + 1e-8)
 
         # Convert to tensors
         X = torch.FloatTensor(X)
