@@ -5,13 +5,17 @@ Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not 
 ## Status summary
 - **43 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
-- `trading/analysis` and `trading/strategies` fully complete
-- `trading/data`: 8 more files reviewed this pass (options_flow, sec_edgar, watchlist, news_aggregator, social_sentiment, insider_flow, earnings_reaction + institutional ownership) — all clean, no new bugs, but one genuine unresolved anomaly flagged below. ~7 files still remain in `trading/data` (analyst_signals, congressional_trading, dark_pool, earnings_calendar, news_fetcher, alpha_vantage_provider, base_provider, short_interest)
+- `trading/analysis`, `trading/strategies`, and `trading/data` all fully complete (3 of the original High priority directories)
 - Remaining High priority: `utils` (12), `trading/utils` (11)
 - Remaining Medium priority: `trading/models` (8), `trading/agents` (7), `pages` (7), `components`/`components/tabs` (27, spot-checked only)
 
 ## Flagged anomaly, not fixed (needs human judgment, not a guess)
 `trading/data/earnings_reaction.py::_compute_earnings_reactions` — computes `d0`/`d0_price` (price on the first trading day on/after the earnings date) but never uses either. The actual `move_1d/3d/5d` calculations index `future_dates[1]/[3]/[5]` instead, skipping over `d0` entirely. Two possible explanations: (a) a real bug — "1-day move" is actually measuring closer to a 2-day move, an incomplete refactor left `d0_price` behind; or (b) intentional — the convention is "N trading days after the pre-earnings close," and `d0_price` is simply vestigial. Could not determine which from the code alone. Not fixed, since guessing wrong would silently corrupt a real analytics output rather than fix it.
+
+## Minor notes (not bugs, not fixed)
+- `trading/data/short_interest.py` uses unlimited-duration `@lru_cache` (no TTL) while every other file in this directory uses TTL-based caching — an inconsistency, not a correctness issue given short interest data changes slowly.
+- `trading/data/dark_pool.py` has a redundant `max()` call that's mathematically always a no-op given non-negative volumes — harmless.
+- `trading/data/providers/alpha_vantage_provider.py` doesn't normalize ticker casing for its cache path, unlike the fix applied to `yfinance_provider.py` — but since there's no second, differently-normalized cache layer to be inconsistent with here, it's a minor missed optimization rather than the same confirmed bug.
 
 ## Most significant findings to date
 - `trading/strategies/rsi_strategy.py` — the live RSI strategy — produced **zero real trading signals, ever** (3 compounding bugs). Fixed.
