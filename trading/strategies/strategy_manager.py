@@ -260,6 +260,13 @@ class StrategyManager:
                 - auto_reload: Auto-reload strategies on changes (default: False)
         """
         self.config = config or {}
+        # BUG FIX: self.logger is referenced by generate_signals() and
+        # other methods below, but was never set in this __init__ (a
+        # different class earlier in this file, Strategy, does set it -
+        # StrategyManager does not inherit from it and never got its own).
+        # Verified: crashed with AttributeError on the first error-path
+        # log call.
+        self.logger = logging.getLogger(self.__class__.__name__)
 
         # Strategy storage
         self.strategies = {}
@@ -292,11 +299,16 @@ class StrategyManager:
         # Load strategies
         self._load_strategies()
 
-        return {
-            "success": True,
-            "message": "Strategy manager initialized successfully",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # BUG FIX: this previously ended with
+        # `return {"success": True, "message": ..., "timestamp": ...}`.
+        # __init__ must return None in Python - returning any other value
+        # raises TypeError immediately, meaning StrategyManager() could
+        # never be instantiated at all. Verified concretely:
+        # `TypeError: __init__() should return None, not 'dict'`. The
+        # "return a success/status dict" pattern is used correctly
+        # throughout this codebase's regular methods, but is invalid in
+        # __init__ specifically, whose return value Python discards (or
+        # errors on if non-None).
 
     def _load_strategies(self) -> None:
         """Load strategies from directory."""
@@ -585,16 +597,39 @@ class StrategyManager:
                 }
 
             # Combine signals using ensemble weights
+            # BUG FIX: this previously referenced a "Signal" (capital S)
+            # column, but every strategy's generate_signals() in this
+            # codebase consistently returns a lowercase "signal" column
+            # (verified directly in rsi/macd/sma/bollinger strategies).
+            # This KeyError'd on every single call, silently caught by
+            # the outer try/except and returning a failure dict instead
+            # of combined signals - meaning ensemble signal combination
+            # has never worked. Verified concretely: error was exactly
+            # "'Signal'" (a KeyError) before this fix.
             if self.ensemble_weights:
                 combined_signals = pd.Series(0, index=data.index)
                 for strategy_name, weight in self.ensemble_weights.items():
                     if strategy_name in signals:
-                        combined_signals += weight * signals[strategy_name]["Signal"]
+                        combined_signals += weight * signals[strategy_name]["signal"]
             else:
-                # Simple average
-                combined_signals = pd.concat(signals.values(), axis=1)["Signal"].mean(
-                    axis=1
-                )
+                # BUG FIX: this previously concatenated each strategy's
+                # FULL output DataFrame (all columns, e.g. signal,
+                # short_sma, long_sma, crossover_strength for SMA) then
+                # selected "signal" and called .mean(axis=1) - only
+                # actually correct when 2+ strategies were active, since
+                # selecting a repeated column name returns a DataFrame to
+                # average across. With exactly one active strategy (a
+                # very plausible, common case), selecting "signal"
+                # returns a Series instead, and Series.mean() doesn't
+                # accept axis=1 at all. Verified concretely: "No axis
+                # named 1 for object type Series" with one strategy
+                # active. Explicitly extracting just the signal Series
+                # from each strategy first avoids this entirely,
+                # regardless of how many strategies are active.
+                signal_series = {
+                    name: df["signal"] for name, df in signals.items()
+                }
+                combined_signals = pd.DataFrame(signal_series).mean(axis=1)
 
             return {
                 "success": True,

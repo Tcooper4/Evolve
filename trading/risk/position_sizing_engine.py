@@ -119,12 +119,10 @@ class PositionSizingEngine:
         self.allocation_history = []
 
         logger.info("Position Sizing Engine initialized")
-
-        return {
-            "success": True,
-            "message": "Initialization completed",
-            "timestamp": datetime.now().isoformat(),
-        }
+        # BUG FIX: same invalid non-None return-from-__init__ pattern as
+        # StrategyManager and BaseService, fixed elsewhere this session.
+        # Part of the disconnected agent-framework island (this class has
+        # zero live importers), but fixed for correctness regardless.
 
     def calculate_position_size(
         self,

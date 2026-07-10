@@ -72,13 +72,13 @@ class BaseService(ABC):
         self._setup_message_handlers()
 
         logger.info(f"Initialized {service_name} service")
-
-        return {
-            "success": True,
-            "message": f"{service_name} service initialized successfully",
-            "timestamp": datetime.now().isoformat(),
-            "redis_available": self.redis_available,
-        }
+        # BUG FIX: this previously ended with a
+        # `return {"success": True, ...}` statement. __init__ must return
+        # None in Python - any subclass calling super().__init__(...)
+        # would crash with TypeError immediately. Currently only affects
+        # the dead-island services (model_builder_service.py etc., none
+        # of which are wired into the live app), but would block wiring
+        # that subsystem in later.
 
     def _setup_message_handlers(self) -> Dict[str, Callable]:
         """Setup default message handlers.
