@@ -203,6 +203,51 @@ class PerformanceMemory:
                 "timestamp": datetime.now().isoformat(),
             }
 
+    def store_model_metadata(
+        self, model_id: str, metadata: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Store metadata for a built model, keyed by model_id.
+
+        BUG FIX: this method was called by
+        trading/agents/model_builder_agent.py::_save_model_metadata
+        (self.memory.store_model_metadata(result.model_id, metadata))
+        but never existed on this class at all - every call to
+        build_model() crashed with AttributeError right after a model
+        finished training. Verified concretely. update() (just above)
+        has a different, incompatible signature - it's keyed by
+        (ticker, model), while model build metadata has no ticker
+        concept at all, just a model_id. Implemented following the same
+        load-modify-save pattern update() uses, storing under a
+        dedicated "_model_metadata" top-level key (underscore-prefixed
+        to avoid any collision with actual ticker symbols, which are the
+        other top-level keys in this same JSON store).
+
+        Args:
+            model_id: Unique identifier for the built model
+            metadata: Model build metadata (type, timestamp, training
+                metrics, config, etc.)
+
+        Returns:
+            Dictionary containing operation status
+        """
+        try:
+            load_result = self.load()
+            if not load_result["success"]:
+                return load_result
+
+            data = load_result["result"]
+            model_metadata_store = data.get("_model_metadata", {})
+            model_metadata_store[model_id] = {
+                **metadata,
+                "stored_at": datetime.now().isoformat(),
+            }
+            data["_model_metadata"] = model_metadata_store
+
+            return self.save(data)
+        except Exception as e:
+            logger.error(f"Error storing model metadata for {model_id}: {e}")
+            return {"success": False, "error": str(e)}
+
     def update(
         self, ticker: str, model: str, metrics: Dict[str, Any]
     ) -> Dict[str, Any]:
