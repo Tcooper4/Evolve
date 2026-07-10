@@ -374,21 +374,29 @@ class PositionSizingEngine:
                 asset, price, strategy, signal, data, positions
             )
 
-        # Calculate risk contribution
-        risk_contrib = np.sqrt(np.diag(cov_matrix))
-        total_risk = np.sum(risk_contrib)
-
-        if total_risk == 0:
+        # Risk parity: equalize risk contribution, i.e. weight INVERSELY
+        # proportional to volatility.
+        # BUG FIX (two compounding issues, verified by execution):
+        # (1) weights were computed as risk_contrib / total_risk - weight
+        #     PROPORTIONAL to volatility, the exact inverse of risk parity
+        #     (the riskiest asset got the largest weight);
+        # (2) even that never ran: target_weights was a bare numpy array,
+        #     so `asset in target_weights` tested a string against float
+        #     values, was always False, and every call fell through to
+        #     equal-weighted. Risk parity had never returned a risk-parity
+        #     weight. Weights are now a pandas Series keyed by asset.
+        vols = returns_df.std()
+        inv_vol = 1.0 / vols.replace(0.0, np.nan)
+        inv_vol = inv_vol.replace([np.inf, -np.inf], np.nan).dropna()
+        if inv_vol.empty or inv_vol.sum() <= 0:
             return self._calculate_equal_weighted_size(
                 asset, price, strategy, signal, data, positions
             )
-
-        # Calculate target weights
-        target_weights = safe_divide(risk_contrib, total_risk, default=1.0 / len(risk_contrib))
+        target_weights = inv_vol / inv_vol.sum()
 
         # Calculate position size for new asset
-        if asset in target_weights:
-            return target_weights[asset] * abs(signal)
+        if asset in target_weights.index:
+            return float(target_weights[asset]) * abs(signal)
         else:
             return self._calculate_equal_weighted_size(
                 asset, price, strategy, signal, data, positions
@@ -424,7 +432,6 @@ class PositionSizingEngine:
 
         # Calculate Black-Litterman weights
         tau = 0.05  # Prior uncertainty
-        1 / view_confidence if view_confidence > 0 else 1
 
         # Calculate posterior returns and weights
         prior_return = market_return
@@ -433,10 +440,23 @@ class PositionSizingEngine:
         post_return = (prior_return + tau * view_return) / (1 + tau)
         post_cov = prior_cov * (1 + tau)
 
-        # Calculate position size
-        position_size = (post_return - self.risk_free_rate) / (
-            post_cov * self.risk_per_trade
-        )
+        # BUG FIX (verified by execution): the position size was computed as
+        # (post_return - self.risk_free_rate) / (post_cov * self.risk_per_trade)
+        # which mixed units - post_return is a DAILY mean return (~0.0004)
+        # while risk_free_rate is ANNUAL (0.02) - so the excess return was
+        # negative for essentially every real asset and the method returned
+        # 0.0 unconditionally (confirmed: 0.0 for a clearly uptrending
+        # series with a +0.8 view). It also used risk_per_trade (0.02) as
+        # an implicit risk-aversion coefficient, which would have exploded
+        # the scale ~150x once units were consistent. Now: consistent daily
+        # units and a standard, documented risk-aversion coefficient
+        # (lambda = 3, the classic Black-Litterman/He-Litterman choice);
+        # w = excess / (lambda * variance), clamped to position limits.
+        # (Also removed a dead `1 / view_confidence` statement whose result
+        # was discarded.)
+        daily_rf = self.risk_free_rate / 252.0
+        risk_aversion = 3.0
+        position_size = (post_return - daily_rf) / (post_cov * risk_aversion)
         return max(0, min(position_size, MAX_POSITION_SIZE))
 
     def _calculate_martingale_size(
@@ -644,7 +664,17 @@ class PositionSizingEngine:
         base_size = self._calculate_equal_weighted_size(
             asset, price, strategy, signal, data, positions
         )
-        momentum_factor = 1 + momentum * 2  # Scale momentum effect
+        # BUG FIX (verified by execution): momentum here is the mean DAILY
+        # return over 20 days (~±0.001 for a strong trend), so the old
+        # factor `1 + momentum * 2` moved sizing by ~0.2% - the method was
+        # functionally inert, and seed noise routinely sized a downtrending
+        # asset LARGER than an uptrending one. Momentum is now the 20-day
+        # window return (mean * 20), which is on the scale the tilt was
+        # clearly written for; a ±5% monthly move tilts sizing ±10%,
+        # clamped to [0.5x, 1.5x] so a crash/melt-up can't produce a
+        # negative or runaway size.
+        window_return = momentum * 20
+        momentum_factor = float(np.clip(1 + window_return * 2, 0.5, 1.5))
         return base_size * momentum_factor
 
     def _calculate_mean_variance_size(
@@ -668,7 +698,15 @@ class PositionSizingEngine:
             )
 
         # Get all available assets
-        available_assets = [asset] + list(positions.keys())
+        # BUG FIX (verified by execution): when the queried asset was
+        # already held, [asset] + positions produced a duplicate entry, so
+        # n_assets disagreed with the deduplicated covariance matrix built
+        # from a dict - the optimizer's weight vector didn't match the
+        # matrix dimensions, np.dot raised, and the method silently fell
+        # back to equal-weighted. Every optimization-based sizer was
+        # therefore inert for any asset already in the portfolio.
+        # dict.fromkeys deduplicates while preserving order.
+        available_assets = list(dict.fromkeys([asset] + list(positions.keys())))
         available_assets = [a for a in available_assets if a in data.columns]
 
         if len(available_assets) < 2:
@@ -701,10 +739,23 @@ class PositionSizingEngine:
         # Mean-variance optimization
         n_assets = len(available_assets)
 
+        # BUG FIX (verified by execution): the Sharpe objective subtracted
+        # the ANNUAL risk-free rate (0.02) from a DAILY portfolio return
+        # (~0.0005), making the excess return negative for every feasible
+        # portfolio. Maximizing a negative ratio then rewards LARGER
+        # volatility (it shrinks the ratio's magnitude toward zero), so the
+        # optimizer silently inverted into a volatility-maximizer and
+        # systematically zero-weighted the lowest-volatility assets.
+        # Confirmed: the calmest asset in a 4-asset frame got weight 0.0.
+        # The risk-free rate is now converted to daily units to match.
+        daily_rf = self.risk_free_rate / 252.0
+
         def portfolio_stats(weights):
             portfolio_return = np.sum(mean_returns * weights)
             portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
-            sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+            if portfolio_vol <= 0:
+                return 0.0
+            sharpe_ratio = (portfolio_return - daily_rf) / portfolio_vol
             return -sharpe_ratio  # Minimize negative Sharpe ratio
 
         # Constraints
@@ -750,7 +801,15 @@ class PositionSizingEngine:
             )
 
         # Get all available assets
-        available_assets = [asset] + list(positions.keys())
+        # BUG FIX (verified by execution): when the queried asset was
+        # already held, [asset] + positions produced a duplicate entry, so
+        # n_assets disagreed with the deduplicated covariance matrix built
+        # from a dict - the optimizer's weight vector didn't match the
+        # matrix dimensions, np.dot raised, and the method silently fell
+        # back to equal-weighted. Every optimization-based sizer was
+        # therefore inert for any asset already in the portfolio.
+        # dict.fromkeys deduplicates while preserving order.
+        available_assets = list(dict.fromkeys([asset] + list(positions.keys())))
         available_assets = [a for a in available_assets if a in data.columns]
 
         if len(available_assets) < 2:
@@ -828,7 +887,15 @@ class PositionSizingEngine:
             )
 
         # Get all available assets
-        available_assets = [asset] + list(positions.keys())
+        # BUG FIX (verified by execution): when the queried asset was
+        # already held, [asset] + positions produced a duplicate entry, so
+        # n_assets disagreed with the deduplicated covariance matrix built
+        # from a dict - the optimizer's weight vector didn't match the
+        # matrix dimensions, np.dot raised, and the method silently fell
+        # back to equal-weighted. Every optimization-based sizer was
+        # therefore inert for any asset already in the portfolio.
+        # dict.fromkeys deduplicates while preserving order.
+        available_assets = list(dict.fromkeys([asset] + list(positions.keys())))
         available_assets = [a for a in available_assets if a in data.columns]
 
         if len(available_assets) < 2:
@@ -911,7 +978,15 @@ class PositionSizingEngine:
             )
 
         # Get all available assets
-        available_assets = [asset] + list(positions.keys())
+        # BUG FIX (verified by execution): when the queried asset was
+        # already held, [asset] + positions produced a duplicate entry, so
+        # n_assets disagreed with the deduplicated covariance matrix built
+        # from a dict - the optimizer's weight vector didn't match the
+        # matrix dimensions, np.dot raised, and the method silently fell
+        # back to equal-weighted. Every optimization-based sizer was
+        # therefore inert for any asset already in the portfolio.
+        # dict.fromkeys deduplicates while preserving order.
+        available_assets = list(dict.fromkeys([asset] + list(positions.keys())))
         available_assets = [a for a in available_assets if a in data.columns]
 
         if len(available_assets) < 2:
@@ -1089,9 +1164,16 @@ class PositionSizingEngine:
             regime_adjustment = 1.0
 
         # Momentum regime
-        if momentum > 0.01:  # Strong positive momentum
+        # BUG FIX: momentum is the mean DAILY return over 20 days, but the
+        # thresholds (±0.01) were written for a WINDOW return - a ±1%/day
+        # 20-day average essentially never occurs, so this branch was dead
+        # and momentum_adjustment was always 1.0. Comparing the 20-day
+        # window return (momentum * 20) against the same ±1% thresholds
+        # makes the regime actually reachable.
+        window_return = momentum * 20
+        if window_return > 0.01:  # Strong positive momentum
             momentum_adjustment = 1.3
-        elif momentum < -0.01:  # Strong negative momentum
+        elif window_return < -0.01:  # Strong negative momentum
             momentum_adjustment = 0.7
         else:
             momentum_adjustment = 1.0
