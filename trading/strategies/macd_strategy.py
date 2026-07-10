@@ -136,9 +136,18 @@ class MACDStrategy:
             # Apply smoothing using short EMA window to reduce noise
             smoothing_window = kwargs.get("smoothing_window", 3)
             if smoothing_window > 1:
+                # BUG FIX: center=True made this rolling window use FUTURE
+                # data points (for window=3: t-1, t, t+1) to compute the
+                # smoothed signal at time t - genuine look-ahead bias,
+                # directly contradicting this file's own stated principle
+                # a few lines above ("never use backward fill in
+                # backtesting"). Verified: a value one step BEFORE a price
+                # spike already reflected it under center=True. Removing
+                # center=True (pandas default is False) makes the window
+                # strictly backward-looking.
                 signals["signal"] = (
                     signals["signal"]
-                    .rolling(window=smoothing_window, center=True, min_periods=1)
+                    .rolling(window=smoothing_window, min_periods=1)
                     .mean()
                 )
 
