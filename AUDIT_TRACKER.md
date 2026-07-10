@@ -3,11 +3,17 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **50 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **55 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
-- Fully complete directories: `trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis`, `trading/strategies`, `trading/data`, `trading/optimization`, `utils/` (all 21 files)
-- `trading/utils/`: safe_math.py, safe_indicators.py, reward_function.py, data_manager.py, notification_system.py, credential_placeholders.py, time_utils.py done; logging_utils.py, forecast_formatter.py, gpu_utils.py still remain (3 files)
-- Remaining ~88 live files: `trading/utils` remainder (3), `components`/`components/tabs` (27), `trading/models` (8), `trading/agents` (7), `pages` (7), `config` (4), `trading/forecasting` (3), `trading/memory` (3), `agents/llm` (3), and smaller pockets (~13 more)
+- Fully complete directories: `trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis`, `trading/strategies`, `trading/data`, `trading/optimization`, `utils/`, `trading/utils/`
+
+## Process correction on the record
+Earlier this session, `trading/strategies/strategy_comparison.py` was reported "reviewed, clean" based on reading its formulas (Wilson confidence interval, signal combination) and verifying them mathematically. That review never actually imported/ran the file - it turned out the module couldn't be imported at all (wrong class names in an import statement: `BollingerBandsStrategy`/`MACDStrategy`/`RSIStrategy` imported from `registry.py`, which defines none of them). A separate tuple/float type mismatch (`calculate_max_drawdown` returns a 3-tuple, assigned directly where a float was expected) was also found and silently broke normalized scoring even after the import was fixed. Both fixed and verified end-to-end.
+
+Following this, ran a systematic import-check across all 110 modules reviewed/fixed this session. Result: every other "failure" traced to a missing sandbox dependency (redis, textstat, aiohttp - all now installed and confirmed working; torch remains genuinely unavailable due to disk space, a separately-documented, known constraint). Zero other instances of the strategy_comparison.py class of bug (wrong names, broken imports) were found. This was an isolated incident, not a systemic gap in the review process - but it's a reminder that "the formula is correct" and "the code runs" are different claims and both need checking.
+
+## Remaining ~87 live files
+`components`/`components/tabs` (27), `trading/models` (8), `trading/agents` (7), `pages` (7), `config` (4), `trading/forecasting` (3), `trading/memory` (3), `agents/llm` (3), and smaller pockets (~13 more)
 
 ## Flagged anomaly, not fixed (needs human judgment, not a guess)
 `trading/data/earnings_reaction.py::_compute_earnings_reactions` — computes `d0`/`d0_price` (price on the first trading day on/after the earnings date) but never uses either. The actual `move_1d/3d/5d` calculations index `future_dates[1]/[3]/[5]` instead, skipping over `d0` entirely. Two possible explanations: (a) a real bug — "1-day move" is actually measuring closer to a 2-day move, an incomplete refactor left `d0_price` behind; or (b) intentional — the convention is "N trading days after the pre-earnings close," and `d0_price` is simply vestigial. Could not determine which from the code alone. Not fixed, since guessing wrong would silently corrupt a real analytics output rather than fix it.
