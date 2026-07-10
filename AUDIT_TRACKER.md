@@ -3,9 +3,11 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **42 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **43 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
-- 153 live files remained never content-reviewed as of last count; in progress
+- `trading/analysis` and `trading/strategies` now fully complete (both flagged High priority in the original tracker)
+- Remaining High priority: `trading/data` (~15 files), `utils` (12), `trading/utils` (11)
+- Remaining Medium priority: `trading/models` (8), `trading/agents` (7), `pages` (7), `components`/`components/tabs` (27, spot-checked only)
 
 ## Most significant findings to date
 - `trading/strategies/rsi_strategy.py` — the live RSI strategy — produced **zero real trading signals, ever** (3 compounding bugs). Fixed.
@@ -18,7 +20,7 @@ Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not 
 - 🔲 **Dead files identified but never archived**: `data/streaming_pipeline.py`, 4 strategy files, 4 analysis files, `trading/utils/visualization.py`, `trading/analytics/forecast_explainability.py`, 3 unused config systems (`config/app_config.py`, `config/config.py`, `trading/config/configuration.py`), `trading/core/performance.py`, `trading/feature_engineering/indicators.py`(unclear - flagged live and dead at different points, needs re-check), `trading/backtesting/edge_case_handler.py`, `trading/market/{market_data,market_indicators}.py`, 3 dead report files
 
 ## Fully content-reviewed (done)
-`trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis/ai_score.py`, `trading/strategies/*` (ALL 12 files, full directory complete), `trading/models/{xgboost,arima,garch,prophet,catboost,ridge,tcn,dataset,forecast_router}.py` + GNN + Transformer, `trading/nlp/{llm_processor,sentiment_processor}.py`, `trading/feature_engineering/feature_engineer.py`, `trading/data/preprocessing.py`, `trading/services/*` (all 6 live files), `trading/memory/agent_memory.py`, `trading/agents/base_agent_interface.py`, `trading/database/*`, `trading/report/{unified_trade_reporter,report_generator}.py`, `trading/market/market_analyzer.py`, `utils/risk_metrics.py`, `trading/data/{price_cache,fallback_provider,ticker_resolver,data_loader,external_signals,earnings_quality}.py`, `trading/data/providers/yfinance_provider.py`, `trading/optimization/*` (full cluster), UI/components (spot-checked, confirmed thin/clean)
+`trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis/*` (ALL 15 files, full directory complete), `trading/strategies/*` (ALL 12 files, full directory complete), `trading/models/{xgboost,arima,garch,prophet,catboost,ridge,tcn,dataset,forecast_router}.py` + GNN + Transformer, `trading/nlp/{llm_processor,sentiment_processor}.py`, `trading/feature_engineering/feature_engineer.py`, `trading/data/preprocessing.py`, `trading/services/*` (all 6 live files), `trading/memory/agent_memory.py`, `trading/agents/base_agent_interface.py`, `trading/database/*`, `trading/report/{unified_trade_reporter,report_generator}.py`, `trading/market/market_analyzer.py`, `utils/risk_metrics.py`, `trading/data/{price_cache,fallback_provider,ticker_resolver,data_loader,external_signals,earnings_quality}.py`, `trading/data/providers/yfinance_provider.py`, `trading/optimization/*` (full cluster), UI/components (spot-checked, confirmed thin/clean)
 
 ## Not yet reviewed (153 files) — by directory
 | Directory | Files | Priority |
