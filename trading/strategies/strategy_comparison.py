@@ -15,11 +15,9 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from trading.strategies.registry import (
-    BollingerBandsStrategy,
-    MACDStrategy,
-    RSIStrategy,
-)
+from trading.strategies.bollinger_strategy import BollingerStrategy
+from trading.strategies.macd_strategy import MACDStrategy
+from trading.strategies.rsi_strategy import RSIStrategy
 from trading.utils.safe_math import safe_divide
 from trading.utils.performance_metrics import (
     calculate_max_drawdown,
@@ -248,7 +246,7 @@ class StrategyComparisonMatrix:
         self.strategies = {
             "rsi": RSIStrategy(),
             "macd": MACDStrategy(),
-            "bollinger": BollingerBandsStrategy(),
+            "bollinger": BollingerStrategy(),
         }
         self.comparison_history = []
         self.performance_cache = {}
@@ -408,7 +406,19 @@ class StrategyComparisonMatrix:
             ) = self.normalizer.calculate_confidence_intervals(returns, "return")
 
             # Calculate other metrics
-            max_dd = calculate_max_drawdown(returns)
+            # BUG FIX: calculate_max_drawdown (from
+            # trading.utils.performance_metrics) returns a 3-tuple
+            # (max_dd_float, peak_timestamp, trough_timestamp), but this
+            # previously assigned the whole tuple directly to max_dd,
+            # which then got passed everywhere a plain float was expected
+            # - StrategyPerformance.max_drawdown, and
+            # _calculate_normalized_score's max_dd parameter (which calls
+            # abs(max_dd) on it). Verified concretely: abs() on the raw
+            # tuple raises TypeError, silently caught by
+            # _calculate_normalized_score's own try/except, meaning
+            # normalized scoring has never worked correctly for any
+            # strategy comparison call. Unpacking correctly here.
+            max_dd, _dd_peak_date, _dd_trough_date = calculate_max_drawdown(returns)
             volatility = returns.std() * np.sqrt(252)  # Annualized
 
             # Calculate trade-based metrics
