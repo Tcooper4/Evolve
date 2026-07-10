@@ -62,9 +62,25 @@ def safe_divide(
         return result
     
     # Convert to numpy arrays for vectorized operations
-    num_arr = np.asarray(numerator)
-    den_arr = np.asarray(denominator)
-    
+    num_arr = np.asarray(numerator, dtype=float)
+    den_arr = np.asarray(denominator, dtype=float)
+
+    # BUG FIX: broadcast to a common shape before creating the result
+    # array. Previously, if one argument was a true scalar (0-dimensional
+    # after np.asarray) while the other was an array/Series - e.g.
+    # safe_divide(100, some_pandas_series), a real and reasonable calling
+    # pattern - `result = np.full_like(num_arr, ...)` inherited the
+    # scalar's 0-d shape while `valid_mask` (from den_arr) had the
+    # array's shape, and `result[valid_mask]` crashed with
+    # "IndexError: too many indices for array: array is 0-dimensional".
+    # Verified concretely: this crashed safe_rsi() in safe_indicators.py
+    # (which calls safe_divide(100, denominator, ...) with a bare int
+    # numerator) on every single invocation - a live, reachable bug
+    # reached via components/watchlist_widget.py.
+    num_arr, den_arr = np.broadcast_arrays(num_arr, den_arr)
+    num_arr = num_arr.copy()
+    den_arr = den_arr.copy()
+
     # Create mask for valid denominators
     valid_mask = np.abs(den_arr) >= epsilon
     

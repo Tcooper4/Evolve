@@ -18,24 +18,44 @@ def safe_rsi(
 ) -> pd.Series:
     """
     Calculate RSI with division-by-zero protection.
-    
-    This function replaces the buggy pattern:
-        rs = gain / loss  # BUG: loss can be zero!
-        rsi = 100 - (100 / (1 + rs))
-    
+
+    BUG FIX: this previously implemented its own independent RSI formula
+    using a simple moving average for gain/loss, rather than Wilder's
+    smoothing (the standard method, and the one used by every other RSI
+    calculation in this codebase - rsi_strategy.py, rsi_utils.py,
+    adaptive_selector.py, market_scanner.py). Verified concretely: on
+    identical price data, this produced a mean absolute difference of
+    ~12 RSI points (max 50 points) versus the authoritative
+    trading.utils.safe_math.safe_rsi - a severe, user-visible
+    inconsistency, since this function is the one actually used by the
+    live watchlist widget (components/watchlist_widget.py via
+    pages/7_Settings.py). Separately, this also crashed outright on
+    every call due to a bug in safe_divide's handling of a scalar
+    numerator with an array denominator (fixed in safe_math.py directly,
+    since other callers could hit the same crash).
+
+    Now delegates the actual RSI calculation to the authoritative
+    Wilder's-smoothing implementation, preserving only the DataFrame/
+    price_column convenience this function offered that the other one
+    doesn't.
+
     Args:
         prices: Price series or DataFrame
         period: RSI period (default 14)
         price_column: Column name if DataFrame provided
-        epsilon: Minimum denominator value
-        
+        epsilon: Unused (kept for backward-compatible signature); the
+            underlying Wilder's implementation handles the zero-loss
+            edge case directly.
+
     Returns:
         RSI series (0-100)
-        
+
     Examples:
         >>> rsi = safe_rsi(data["close"])
         >>> rsi = safe_rsi(data, price_column="Close")
     """
+    from trading.utils.safe_math import safe_rsi as _wilder_rsi
+
     # Handle DataFrame input
     if isinstance(prices, pd.DataFrame):
         if price_column is None:
@@ -43,20 +63,9 @@ def safe_rsi(
         price_series = prices[price_column]
     else:
         price_series = prices
-    
-    # Calculate gains and losses
-    delta = price_series.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    
-    # Safe division: rs = gain / loss
-    rs = safe_divide(gain, loss, default=0.0, epsilon=epsilon)
-    
-    # Calculate RSI - use safe_divide for final calculation to handle edge cases
-    denominator = 1 + rs
-    rsi = 100 - safe_divide(100, denominator, default=50.0, epsilon=epsilon)
-    
-    return pd.Series(rsi, index=price_series.index, name="RSI")
+
+    result = _wilder_rsi(price_series, period=period)
+    return pd.Series(result, index=price_series.index, name="RSI")
 
 
 def safe_bollinger_bandwidth(
