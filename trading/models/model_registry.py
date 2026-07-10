@@ -19,7 +19,22 @@ class ModelRegistry:
         self._register_default_models()
     
     def _register_default_models(self):
-        """Register all available models with metadata."""
+        """Register all available models with metadata.
+
+        BUG FIX: every `except ImportError as e:` block in this method
+        was widened to `except Exception as e:`. Verified concretely that
+        a narrower fix wasn't sufficient: different optional dependencies
+        fail with different exception types when unavailable in this
+        environment (TypeError from the LSTM/base_model import chain
+        subclassing a None Dataset class, AttributeError from the GNN
+        import chain accessing .Module on a None torch.nn). Catching only
+        ImportError (or even ImportError+TypeError) meant one model's
+        registration failure crashed the ENTIRE registry - every other
+        model, XGBoost/ARIMA/Prophet/etc., never got registered either -
+        instead of gracefully skipping just the one broken model, which
+        is this method's entire design intent
+        (see every other block's own try/except ImportError pattern).
+        """
         
         # === SINGLE-ASSET MODELS (for quick forecast) ===
         
@@ -46,7 +61,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 100
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"LSTM model not available: {e}")
         
         try:
@@ -59,7 +74,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 50
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"XGBoost model not available: {e}")
         
         try:
@@ -72,7 +87,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 100
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"Prophet model not available: {e}")
         
         try:
@@ -85,7 +100,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 50
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"ARIMA model not available: {e}")
         
         try:
@@ -98,7 +113,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 100
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"Ensemble model not available: {e}")
         
         # === ADVANCED SINGLE-ASSET MODELS ===
@@ -113,7 +128,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 100
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"TCN model not available: {e}")
         
         try:
@@ -126,14 +141,23 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 100
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"GARCH model not available: {e}")
         
         # Old Autoformer removed - now using NeuralForecast version below
         
         try:
-            from trading.models.advanced.transformer.time_series_transformer import TimeSeriesTransformer
-            self.register('Transformer', TimeSeriesTransformer, {
+            # BUG FIX: this previously imported a non-existent name
+            # 'TimeSeriesTransformer' - the real class is
+            # TransformerForecaster (class TransformerForecaster(BaseModel),
+            # confirmed and already fixed earlier this session). Gracefully
+            # caught by the except ImportError below (no crash), but it
+            # silently excluded a genuine, working model from the
+            # registry - anyone calling get('Transformer') or checking
+            # list_models() would never see it, even though the
+            # underlying implementation is sound.
+            from trading.models.advanced.transformer.time_series_transformer import TransformerForecaster
+            self.register('Transformer', TransformerForecaster, {
                 'type': 'single_asset',
                 'complexity': 'high',
                 'description': 'Advanced transformer with attention mechanism',
@@ -141,7 +165,7 @@ class ModelRegistry:
                 'requires_gpu': True,
                 'min_data_points': 200
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"Transformer model not available: {e}")
         
         try:
@@ -154,7 +178,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 50
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"CatBoost model not available: {e}")
         
         try:
@@ -167,7 +191,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 30
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"Ridge model not available: {e}")
         
         try:
@@ -180,7 +204,7 @@ class ModelRegistry:
                 'requires_gpu': False,
                 'min_data_points': 150
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"Hybrid model not available: {e}")
         
         # === MULTI-ASSET MODELS (NOT for quick forecast!) ===
@@ -197,7 +221,7 @@ class ModelRegistry:
                 'max_assets': 20,
                 'min_data_points': 100
             })
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"GNN model not available: {e}")
         
         # ============================================================================
@@ -261,7 +285,7 @@ class ModelRegistry:
                     "PatchTST, TFT disabled"
                 )
 
-        except ImportError as e:
+        except Exception as e:
             logger.warning(
                 "NeuralForecast registration skipped (import error): %s", e
             )
