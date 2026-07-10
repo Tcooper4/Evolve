@@ -1,6 +1,6 @@
 # Technical Debt Register
 
-Last updated: v3.40.0
+Last updated: 2026-07-10 (Fable session)
 
 ## Known issues (not blocking)
 
@@ -26,6 +26,10 @@ Last updated: v3.40.0
 - agents/llm/agent.py is ~2800 lines — candidate for splitting
 
 ## Resolved (formerly in debt)
+
+- risk_metrics duplication: consolidated into utils/risk_metrics.py (backtesting copy removed); flat-series Sharpe/Sortino blowup root-fixed (Fable session)
+- llm_interface "duplication": trading/llm copy is a deliberate re-export bridge, not a duplicate — no action needed
+- 17 one-off repair/audit scripts moved out of tests/ root to _archive/scripts/tests-oneoffs/ (zero importers each, verified)
 
 - SHAP explainability (installed)
 - Trade duration in Trade.to_dict()

@@ -1,166 +1,125 @@
-# Evolve AI Trading Platform
+# Evolve — AI Trading Research Platform
 
-A production-ready quantitative trading platform with a **Streamlit UI**, natural-language Chat, forecasting, strategy backtesting, execution (paper/live), portfolio and risk management, and configurable **LLM selection** (Claude, GPT-4, Gemini, Ollama, HuggingFace, Kimi).
-
----
-
-## What Evolve Does
-
-- **Natural language interface** — Chat and intent parsing drive forecasting, backtests, and execution.
-- **Forecasting** — Multiple models (LSTM, XGBoost, Prophet, ARIMA, Transformer, etc.) with ensemble and explainability.
-- **Strategy testing** — Backtest strategies (RSI, MACD, Bollinger, custom) with walk-forward validation and cost modeling.
-- **Trade execution** — Paper and live execution via Alpaca (or other brokers) with a unified execution agent and broker adapter.
-- **Portfolio & risk** — Allocation, risk controls, and monitoring.
-- **Model lab** — Train, compare, and tune models.
-- **Reports** — Export to PDF, Excel, HTML.
-- **Admin** — System config, API keys, broker settings, **AI model (LLM) selection** stored in preference memory.
-- **Memory** — Preference and performance memory (MemoryStore) for LLM choice and other app-wide settings.
+A personal SPX/multi-asset **systematic research platform**: a Streamlit
+terminal with AI scoring, multi-model forecasting, market scanning,
+strategy backtesting and parameter optimization, risk analytics, paper
+trading, and an LLM chat agent with platform tools. Evolve informs
+trading decisions; it does not make them — **all execution is
+paper/simulated by design**, with the human in the loop for anything that
+matters.
 
 ---
 
-## Application Structure
+## What Evolve does
 
-- **Entry point:** Streamlit app at project root.
-- **UI:** `app.py` (main app) and `pages/` (Streamlit pages).
+- **AI Score** — 16-signal composite score (1–10) with grade and
+  per-signal breakdown, in Buy or Short mode.
+- **Forecasting** — LSTM, XGBoost, Prophet, ARIMA, TCN, Transformer, GNN,
+  GARCH, Ridge, CatBoost and ensembles, with explainability.
+- **Scanner** — screen S&P 100/500, Nasdaq 100, Russell 1000/3000 or a
+  custom list by technical filters, quick score, news score, and short
+  interest; pairs-trading cointegration scan.
+- **Backtesting & optimization** — walk-forward validation, strategy
+  comparison, and a **strategy optimizer** (grid search / genetic / PSO /
+  Bayesian) with **out-of-sample validation on by default** and one-click
+  apply into backtests.
+- **Risk analytics** — Sharpe/Sortino/Calmar, drawdown, VaR/CVaR, and 22
+  position-sizing methods (Kelly family, risk parity, mean-variance,
+  regime/factor-based, and more).
+- **Chat agent** — natural-language interface backed by a configurable
+  LLM, with platform tools (scan, score, forecast, news, risk, patterns,
+  backtest, options sentiment) and on-demand **skill playbooks**
+  (`skills/`).
+- **MCP server** — every platform tool exposed over the Model Context
+  Protocol for Claude Desktop/Code and other agents. See
+  [`docs/MCP_SERVER.md`](docs/MCP_SERVER.md).
+- **Paper trading** — simulated execution and portfolio tracking
+  (`trading/execution/trade_execution_simulator.py`). There is no live
+  broker integration.
+
+## The app
+
+`app.py` boots the terminal and routes to seven pages:
 
 | Page | Purpose |
-|------|--------|
-| **Home** | Dashboard and quick actions |
-| **Chat** | Natural-language requests (forecast, backtest, analyze) |
-| **Forecasting** | Time-series forecasts and model comparison |
-| **Strategy Testing** | Backtest and tune strategies |
-| **Trade Execution** | Paper/live orders and execution status |
-| **Portfolio** | Positions and allocation |
-| **Risk Management** | Risk metrics and controls |
-| **Performance** | Strategy and system performance |
-| **Model Lab** | Model training and comparison |
-| **Reports** | Generate and export reports |
-| **Alerts** | Notifications and alerts |
-| **Admin** | Config, API keys, broker, **LLM selection** |
-| **Memory** | Preference and performance memory |
+|------|---------|
+| **Dashboard** | Market overview, watchlist, morning briefing |
+| **Analyze** | Single-stock deep dive: chart, AI Score, forecast, news, options, earnings |
+| **Scanner** | Universe screening, signal breakdown, pairs trading |
+| **Trade** | Paper trading and position management |
+| **Backtest** | Walk-forward validation, strategy comparison, backtests, **Optimizer** |
+| **Chat** | LLM chat with platform tools, news panel, macro context |
+| **Settings** | Preferences, API keys, LLM selection |
 
----
+## Quick start
 
-## LLM Configuration
-
-The app uses a **single active LLM** for Chat, commentary, and intent parsing. Configuration is centralized and stored in **MemoryStore** (preference key `active_llm`).
-
-- **Config module:** `config/llm_config.py`  
-  - `get_active_llm()` / `set_active_llm()` read/write the active provider and model from MemoryStore.  
-  - Supports: Claude, GPT-4, Gemini, Ollama, HuggingFace, Kimi.  
-  - See `LLM_PROVIDERS`, `DEFAULT_MODELS`, `PROVIDER_DISPLAY_NAMES`, `HUGGINGFACE_MODES`.
-
-- **Where to set it:** **Admin → Configuration → AI Model Settings.** Choose provider and model, then **Save**. Optional **Test Connection** to verify.
-
-- **Requirements:** `trading.memory.get_memory_store()` (MemoryStore) and `config.llm_config.get_active_llm()` must be available. Ensure project root is on `sys.path` when loading Admin so `config` resolves to the root `config` package (see `config/CONFIG_README.md`).
-
----
-
-## Quick Start
-
-**Prerequisites:** Python 3.9+ (3.10 recommended), 8GB+ RAM. Optional: GPU for deep learning, Redis for caching.
+**Prerequisites:** Python 3.10+ recommended, 8GB+ RAM. Optional: GPU for
+deep-learning models, Redis for caching.
 
 ```bash
-# Clone and enter project
-git clone <repo-url>
-cd evolve_clean
+git clone https://github.com/Tcooper4/Evolve.git
+cd Evolve
 
-# Virtual environment
 python -m venv .venv
-.venv\Scripts\activate          # Windows
-# source .venv/bin/activate     # Linux/macOS
+source .venv/bin/activate        # Linux/macOS
+# .venv\Scripts\activate         # Windows
 
-# Dependencies (single-file install; includes streamlit, plotly, pandas, yfinance, reportlab, etc.)
 pip install -r requirements.txt
 
-# Environment (copy and edit)
-cp .env.example .env
-# Set ALPHA_VANTAGE_API_KEY, POLYGON_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.
+cp .env.example .env             # then set ANTHROPIC_API_KEY etc.
 
-# Run Streamlit app
 streamlit run app.py
-# Or: python main.py streamlit
 ```
 
-**Requirements files:** The repo provides:
+Open **http://localhost:8501**. Set the active LLM under **Settings**.
 
-- **`requirements.txt`** — Single-file install with all packages needed for the dashboard (Streamlit, Plotly, Pandas, YFinance, ReportLab, Anthropic, etc.). Use this for a full install.
-- **`requirements_core.txt`** — Minimal set to start the app (Streamlit, PyYAML, SQLAlchemy, NumPy, Pandas, jsonschema). Use if you want a minimal install first.
-- **`requirements_optional.txt`** — Feature-tier extras (Plotly, YFinance, ReportLab, requests, scikit-learn, scipy, schedule, Anthropic, etc.). Install after core for a complete setup: `pip install -r requirements_core.txt && pip install -r requirements_optional.txt`.
+**Windows with multiple Pythons:** install and run with the *same*
+interpreter, e.g. `py -3.10 -m pip install -r requirements.txt` then
+`py -3.10 -m streamlit run app.py`.
 
-**Windows, multiple Python versions:** If you have both Python 3.10 and 3.13 (or others), `pip` may install into the wrong one and the app will not see packages. Use the **same** Python that runs the app for all installs and for starting Streamlit:
+## LLM configuration
 
-```powershell
-# Confirm which Python runs the app (e.g. 3.10)
-py -3.10 -c "import sys; print(sys.executable)"
+One active LLM drives Chat, commentary, and intent parsing. Providers:
+Claude, GPT-4, Gemini, Ollama, HuggingFace, Kimi
+(`config/llm_config.py`; choice stored in MemoryStore via the Settings
+page). API keys come from the environment — see `.env.example`.
 
-# Install into that Python only
-py -3.10 -m pip install -r requirements.txt
+## MCP server (use Evolve from Claude)
 
-# Always start Streamlit with that Python
-py -3.10 -m streamlit run app.py
+```bash
+python -m trading.services.mcp_server
 ```
 
-If `py -3.10` is not available, use `py --list` to see versions, or the full path to the desired Python, e.g. `C:\...\Python310\python.exe -m pip install -r requirements.txt` and `...\python.exe -m streamlit run app.py`.
+exposes `get_ai_score`, `get_forecast`, `scan_universe`, `get_news`,
+`get_risk_metrics`, `get_pattern_analysis`, `run_backtest`,
+`get_options_sentiment`, `detect_market_regime`, and
+`optimize_strategy_params` to any MCP client. Read/analyze only — nothing
+executes trades. Setup for Claude Desktop/Code:
+[`docs/MCP_SERVER.md`](docs/MCP_SERVER.md).
 
-Open **http://localhost:8501**. Use **Admin → Configuration → AI Model Settings** to choose and save the LLM.
-
----
-
-## Configuration
-
-- **App config:** `config/app_config.py` and `get_config()` (YAML + env). See `config/CONFIG_README.md`.
-- **LLM config:** `config/llm_config.py` — API keys from env; active model from MemoryStore (Admin UI).
-- **Trading/DB:** `trading.config` for trading-specific settings; `trading.database.connection` for DB URL and shutdown.
-
----
-
-## Execution and Backtesting
-
-- **Backtest (historical):** `trading/backtesting/backtester.py` (and enhanced_backtester). Do not use execution modules for pure backtests.
-- **Paper / live execution:** `execution/live_trading_interface.py` (`mode="simulated"` | `"paper"` | `"live"`) or `execution/execution_agent.py` with broker adapter. See `docs/EXECUTION_AND_BACKTEST_FLOW.md`.
-
----
-
-## Key Directories
+## Key directories
 
 | Path | Purpose |
-|------|--------|
-| `app.py` | Streamlit entry point |
-| `pages/` | Streamlit pages (Home, Chat, Admin, etc.) |
-| `config/` | App and LLM config (`app_config`, `llm_config`) |
-| `agents/` | LLM agent, prompt routing, active LLM helpers |
-| `trading/` | Strategies, backtesting, agents, memory, portfolio, risk, models, report |
-| `execution/` | Execution agent, live trading interface, broker adapter |
-| `core/` | Orchestrator and shared utilities |
-| `docs/` | Execution flow, config, and other docs |
+|------|---------|
+| `app.py` / `pages/` | Streamlit entry point and the seven pages |
+| `components/` | Page components and the design system (`theme.py`) |
+| `trading/` | Strategies, models, backtesting, optimization, risk, data, memory, services |
+| `agents/llm/` | Chat agent, tool executor, LLM interfaces |
+| `skills/` | Agent skill playbooks loaded on demand by Chat |
+| `config/` | App and LLM configuration |
+| `tests/` | Test suites |
+| `docs/` | MCP server guide and design notes |
+| `_archive/` | Retired code kept for reference (not imported) |
 
----
+## Project docs
 
-## Environment Variables (summary)
-
-See `.env.example` for full list. Common:
-
-- **Data:** `ALPHA_VANTAGE_API_KEY`, `FINNHUB_API_KEY`, `POLYGON_API_KEY`
-- **LLMs:** `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` / `GEMINI_API_KEY`, `HUGGINGFACE_API_KEY`, `MOONSHOT_API_KEY` (Kimi)
-- **System:** `LOG_LEVEL`, `REDIS_URL`, `DB_*` / `SQLITE_PATH`
-
----
-
-## Documentation
-
-- **Config:** `config/CONFIG_README.md`
-- **Execution & backtest:** `docs/EXECUTION_AND_BACKTEST_FLOW.md`
-- **Trading module:** `trading/README.md`
-- **Execution module:** `execution/README.md`
-- **Production:** `README_PRODUCTION.md`
-
----
+- **Audit & session history:** [`AUDIT_TRACKER.md`](AUDIT_TRACKER.md) —
+  every verified bug fix (97 to date) and what each session did.
+- **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
+- **Known debt:** [`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md)
+- **Config:** [`config/CONFIG_README.md`](config/CONFIG_README.md)
+- **Trading module:** [`trading/README.md`](trading/README.md)
 
 ## License
 
-MIT. See [LICENSE](LICENSE) if present.
-
----
-
-**Evolve** — Streamlit-based AI trading platform with configurable LLM and MemoryStore-driven settings.
+MIT — see [LICENSE](LICENSE).
