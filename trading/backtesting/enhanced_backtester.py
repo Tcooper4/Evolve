@@ -23,7 +23,7 @@ import pandas as pd
 # Local imports
 from trading.backtesting.backtester import Backtester
 from trading.backtesting.performance_analysis import PerformanceAnalyzer
-from trading.backtesting.risk_metrics import RiskMetricsEngine
+from utils.risk_metrics import RiskMetricsEngine
 from trading.backtesting.trade_models import TradeType
 from trading.models.base_model import BaseModel
 from trading.report.unified_trade_reporter import UnifiedTradeReporter

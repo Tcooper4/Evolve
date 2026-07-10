@@ -369,6 +369,25 @@ def compute_performance_metrics(
     r = returns.dropna()
     daily_rf = risk_free_rate / trading_days
 
+    # BUG FIX (root cause of Sharpe values in the tens of millions): a
+    # flat return series (e.g. a strategy that never traded) has zero
+    # volatility, and the old epsilon-guarded division
+    # `excess.mean() / (excess.std() + 1e-10)` turned the risk-free drag
+    # into Sharpe ≈ -31,500,000 instead of an undefined/zero ratio.
+    # Verified by execution via the strategy optimizer's baseline
+    # evaluation. Ratios are now defined as 0.0 whenever volatility is
+    # effectively zero, and an empty series short-circuits to an
+    # all-zero result instead of propagating NaN through every field.
+    if len(r) == 0 or not np.isfinite(r).any():
+        return PerformanceMetrics(
+            total_return=0.0, annualized_return=0.0, sharpe_ratio=0.0,
+            sortino_ratio=0.0, calmar_ratio=0.0, max_drawdown=0.0,
+            max_drawdown_duration=0, volatility_annual=0.0,
+            downside_deviation=0.0, win_rate=0.0, profit_factor=1.0,
+            beta=0.0, alpha=0.0, information_ratio=0.0,
+            var_95=0.0, cvar_95=0.0,
+        )
+
     # Total and annualized return
     total_return = float((1 + r).prod() - 1)
     n_years = len(r) / trading_days
@@ -380,24 +399,33 @@ def compute_performance_metrics(
     vol_daily = float(r.std())
     vol_annual = vol_daily * np.sqrt(trading_days)
 
-    # Sharpe ratio
+    # Sharpe ratio (0.0 when volatility is effectively zero: the ratio is
+    # undefined and any epsilon-forced value is an artifact, not a signal)
     excess_returns = r - daily_rf
-    sharpe = float(
-        excess_returns.mean()
-        / (excess_returns.std() + 1e-10)
-        * np.sqrt(trading_days)
+    excess_std = float(excess_returns.std())
+    sharpe = (
+        float(excess_returns.mean() / excess_std * np.sqrt(trading_days))
+        if np.isfinite(excess_std) and excess_std > 1e-12
+        else 0.0
     )
 
     # Sortino ratio (MAR = risk-free rate variant)
     # Downside deviation = std of returns below rf (excess vs daily_rf)
     # Note: some implementations use MAR=0 (negative returns only). This uses MAR=rf.
-    downside = r[r < daily_rf] - daily_rf
-    downside_dev = float(
-        np.sqrt(np.mean(downside ** 2)) * np.sqrt(trading_days)
-    ) if len(downside) > 0 else vol_annual
-    sortino = float(
-        (annualized_return - risk_free_rate) / downside_dev
-    ) if downside_dev > 0 else 0.0
+    # Same zero-volatility rule as Sharpe: on a flat series the constant
+    # risk-free drag is not real downside risk, and the old code reported
+    # Sortino ≈ -15.9 for a strategy that never traded.
+    if vol_daily <= 1e-12:
+        downside_dev = 0.0
+        sortino = 0.0
+    else:
+        downside = r[r < daily_rf] - daily_rf
+        downside_dev = float(
+            np.sqrt(np.mean(downside ** 2)) * np.sqrt(trading_days)
+        ) if len(downside) > 0 else vol_annual
+        sortino = float(
+            (annualized_return - risk_free_rate) / downside_dev
+        ) if downside_dev > 0 else 0.0
 
     # Max drawdown
     cumulative = (1 + r).cumprod()
@@ -592,3 +620,165 @@ def render_risk_metrics_streamlit(
             st.caption(f"Risk metrics unavailable: {e}")
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# RiskMetric / RiskMetricsEngine
+# Consolidated here from trading/backtesting/risk_metrics.py (2026-07 Fable
+# session): the codebase carried two live "risk_metrics" modules. This file
+# is now the single canonical one - the dataclass pipeline
+# (compute_performance_metrics) for pages/services, and the dict-based
+# engine below for the backtester/reporter. Both share the same
+# degenerate-series semantics: zero-volatility inputs yield 0.0 ratios,
+# never epsilon-division artifacts.
+# ---------------------------------------------------------------------------
+from enum import Enum
+
+from utils.performance_metrics import (
+    calmar_ratio,
+    conditional_value_at_risk,
+    downside_deviation,
+    gain_loss_ratio,
+    max_drawdown,
+    omega_ratio,
+    profit_factor,
+    recovery_factor,
+    risk_reward_ratio,
+    sharpe_ratio,
+    sortino_ratio,
+    value_at_risk,
+)
+
+
+class RiskMetric(Enum):
+    """Risk metrics for analysis."""
+
+    VAR = "value_at_risk"
+    CVAR = "conditional_var"
+    DRAWDOWN = "drawdown"
+    VOLATILITY = "volatility"
+    BETA = "beta"
+    CORRELATION = "correlation"
+    SHARPE = "sharpe_ratio"
+    SORTINO = "sortino_ratio"
+    CALMAR = "calmar_ratio"
+    OMEGA = "omega_ratio"
+    MAX_DRAWDOWN = "max_drawdown"
+    DRAWDOWN_DURATION = "drawdown_duration"
+    TREYNOR = "treynor_ratio"
+    INFORMATION = "information_ratio"
+    JENSEN_ALPHA = "jensen_alpha"
+    ULGER = "ulger_ratio"
+    MODIGLIANI = "modigliani_ratio"
+    BURKE = "burke_ratio"
+    STERLING = "sterling_ratio"
+    KAPPA = "kappa_ratio"
+    GINI = "gini_coefficient"
+    SKEWNESS = "skewness"
+    KURTOSIS = "kurtosis"
+    VAR_RATIO = "var_ratio"
+    CONDITIONAL_SHARPE = "conditional_sharpe"
+    TAIL_RATIO = "tail_ratio"
+    PAIN_RATIO = "pain_ratio"
+    GAIN_LOSS_RATIO = "gain_loss_ratio"
+    PROFIT_FACTOR = "profit_factor"
+    EXPECTANCY = "expectancy"
+    RECOVERY_FACTOR = "recovery_factor"
+    RISK_REWARD_RATIO = "risk_reward_ratio"
+    OMEGA_SHARPE = "omega_sharpe"
+    CONDITIONAL_VAR = "conditional_var"
+    EXPECTED_SHORTFALL = "expected_shortfall"
+    SEMI_VARIANCE = "semi_variance"
+    DOWNSIDE_DEVIATION = "downside_deviation"
+    VALUE_AT_RISK = "value_at_risk"
+    CONDITIONAL_DRAWDOWN = "conditional_drawdown"
+    REGIME_RISK = "regime_risk"
+    FACTOR_RISK = "factor_risk"
+    LIQUIDITY_RISK = "liquidity_risk"
+    CONCENTRATION_RISK = "concentration_risk"
+    LEVERAGE_RISK = "leverage_risk"
+    CURRENCY_RISK = "currency_risk"
+    INTEREST_RATE_RISK = "interest_rate_risk"
+    INFLATION_RISK = "inflation_risk"
+    POLITICAL_RISK = "political_risk"
+    SYSTEMIC_RISK = "systemic_risk"
+    IDIOSYNCRATIC_RISK = "idiosyncratic_risk"
+
+
+class RiskMetricsEngine:
+    """Engine for calculating risk metrics."""
+
+    def __init__(self, risk_free_rate: float = 0.02, period: int = 252):
+        self.risk_free_rate = risk_free_rate
+        self.period = period
+
+    def calculate(self, returns: pd.Series) -> Dict[str, Any]:
+        """Calculate a comprehensive set of risk metrics for a return series.
+
+        NaN/Inf values are dropped before any metric is computed. Without this,
+        a single bad data point (e.g. a data-provider gap) silently propagates
+        through mean/std/etc. and produces a metrics dict full of NaN with no
+        error or warning — this previously happened silently. Filtering here
+        means every metric below is computed from clean data, and an
+        all-bad/empty series is caught explicitly instead of failing quietly
+        downstream.
+        """
+        metrics: Dict[str, Any] = {}
+
+        if returns is None:
+            logger.warning("Risk metric calculation skipped: returns is None")
+            return metrics
+
+        clean_returns = returns[np.isfinite(returns)]
+        n_dropped = len(returns) - len(clean_returns)
+        if n_dropped > 0:
+            logger.warning(
+                f"Risk metric calculation: dropped {n_dropped} NaN/Inf value(s) "
+                f"out of {len(returns)} before computing metrics."
+            )
+
+        if clean_returns.empty:
+            logger.warning(
+                "Risk metric calculation skipped: no finite return values available "
+                "after filtering NaN/Inf."
+            )
+            return metrics
+
+        returns = clean_returns
+
+        try:
+            metrics["sharpe_ratio"] = sharpe_ratio(
+                returns, risk_free=self.risk_free_rate, period=self.period
+            )
+            metrics["sortino_ratio"] = sortino_ratio(
+                returns, risk_free=self.risk_free_rate, period=self.period
+            )
+            metrics["max_drawdown"] = max_drawdown(returns)
+            metrics["calmar_ratio"] = calmar_ratio(
+                returns, risk_free=self.risk_free_rate, period=self.period
+            )
+            metrics["volatility"] = returns.std() * np.sqrt(self.period)
+            metrics["skewness"] = returns.skew()
+            metrics["kurtosis"] = returns.kurtosis()
+            metrics["mean_return"] = returns.mean() * self.period
+            metrics["std_return"] = returns.std() * np.sqrt(self.period)
+            metrics["min_return"] = returns.min()
+            metrics["max_return"] = returns.max()
+            metrics["value_at_risk"] = value_at_risk(returns, confidence_level=0.95)
+            metrics["conditional_var"] = conditional_value_at_risk(
+                returns, confidence_level=0.95
+            )
+            metrics["gain_loss_ratio"] = gain_loss_ratio(returns)
+            metrics["profit_factor"] = profit_factor(returns)
+            metrics["recovery_factor"] = recovery_factor(returns)
+            metrics["risk_reward_ratio"] = risk_reward_ratio(returns)
+            metrics["omega_ratio"] = omega_ratio(returns)
+            metrics["downside_deviation"] = downside_deviation(returns)
+        except Exception as e:
+            logger.warning(f"Risk metric calculation failed: {e}")
+        return metrics
+
+    def get_metric(self, returns: pd.Series, metric: RiskMetric) -> Optional[float]:
+        """Get a specific risk metric for a return series."""
+        metrics = self.calculate(returns)
+        return metrics.get(metric.value)

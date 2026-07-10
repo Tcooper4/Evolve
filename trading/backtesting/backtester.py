@@ -24,7 +24,7 @@ import pandas as pd
 from trading.backtesting.cost_model import CostModel, get_retail_cost_config
 from trading.backtesting.performance_analysis import PerformanceAnalyzer
 from trading.backtesting.position_sizing import PositionSizing, PositionSizingEngine
-from trading.backtesting.risk_metrics import RiskMetricsEngine
+from utils.risk_metrics import RiskMetricsEngine
 
 # Local imports
 from trading.backtesting.trade_models import Trade, TradeType

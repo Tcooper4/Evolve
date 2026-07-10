@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from trading.backtesting.performance_analysis import PerformanceAnalyzer
-from trading.backtesting.risk_metrics import RiskMetricsEngine
+from utils.risk_metrics import RiskMetricsEngine
 
 from .report_generator import ReportGenerator
 
