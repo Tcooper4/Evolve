@@ -3,7 +3,7 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **71 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **74 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
 
 ## Audit-the-auditor pass (in progress)
@@ -70,3 +70,23 @@ Continuing file-by-file through the High priority rows above.
 - performance_logger.py: verified working correctly (not currently called by any live path, but confirmed no bugs).
 - self_tuning_optimizer.py: confirmed live via agents/llm/agent.py, but its actual optimize_strategy() always returns None as currently wired - parameter_bounds is never configured, so the real optimization logic (parameter variation/evaluation) is currently unreachable. Not a math bug, a wiring/configuration gap. Documenting rather than guessing at a fix, since I don't know what bounds were intended for which strategies.
 - optuna_optimizer.py: confirmed live via pages/7_Settings.py, NOT YET reviewed.
+
+## Audit-the-auditor pass: COMPLETE
+All 12 original coverage gaps found by systematically enumerating actual live files against concrete review evidence have now been addressed:
+- trading/backtesting/enhanced_backtester.py - reviewed, sound (delegates to already-fixed components)
+- trading/backtesting/performance_analysis.py - FIXED (calmar_ratio always NaN, cross-method scoping bug)
+- trading/backtesting/position_sizing.py - core default-path methods (equal-weighted, Kelly, risk-based) verified correct; ~15 exotic non-default methods (Black-Litterman, martingale, etc.) still unverified
+- trading/optimization/optuna_optimizer.py - reviewed, verified correct (proper TimeSeriesSplit CV, no leakage)
+- trading/optimization/performance_logger.py - reviewed, verified correct
+- trading/optimization/self_tuning_optimizer.py - reviewed; confirmed dormant as currently wired (parameter_bounds never configured), documented rather than guessed at
+- trading/optimization/strategy_selection_agent.py - FIXED (2 missing methods: get_market_regime, get_strategy_confidence)
+- trading/feature_engineering/macro_feature_engineering.py - FIXED (real look-ahead bias: FRED data joined with no publication-lag adjustment)
+- trading/feature_engineering/utils.py - reviewed; surfaced a SECOND scaler-leakage instance in ml_score_trainer.py (fixed)
+- trading/memory/agent_logger.py - reviewed, imports cleanly
+- trading/memory/memory_store.py - reviewed, verified correct end-to-end
+- trading/memory/performance_memory.py - FIXED (missing store_model_metadata method)
+
+Bonus finds via cross-referencing during this pass (not in the original 12, found by following imports):
+- trading/portfolio/portfolio_manager.py - FIXED (3 missing methods: get_market_regime, get_strategy_confidence on StrategySelectionAgent, and _update_metrics on PortfolioManager itself) - confirms the earlier "trading/portfolio fully complete" claim was also wrong, not just trading/optimization
+
+Pattern observed: every previously-"complete" directory that got genuinely re-verified (enumerate actual files, don't trust memory) turned up at least one real, previously-uncaught bug. This strongly suggests the same gap likely exists in directories not yet re-checked this way.
