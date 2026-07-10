@@ -3,7 +3,7 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **68 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **71 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
 
 ## Audit-the-auditor pass (in progress)
@@ -63,3 +63,10 @@ Earlier this session, `strategy_comparison.py` was called "clean" based on readi
 
 ## Next up
 Continuing file-by-file through the High priority rows above.
+
+## Audit-the-auditor pass results (continued)
+- `trading/backtesting`: performance_analysis.py fixed (calmar_ratio bug). position_sizing.py: equal-weighted/Kelly/risk-based verified correct; ~15 exotic methods still unverified.
+- `trading/optimization`/`trading/portfolio` cross-gap: found and fixed a chain of 3 compounding missing-method crashes in the confirmed-live `PortfolioManager.update_positions()` path (get_market_regime, get_strategy_confidence never existed on StrategySelectionAgent; _update_metrics never existed on PortfolioManager itself). This means the earlier "trading/portfolio fully complete" claim was also wrong, not just trading/optimization - portfolio_manager.py instantiates two classes from unreviewed files in its own __init__.
+- performance_logger.py: verified working correctly (not currently called by any live path, but confirmed no bugs).
+- self_tuning_optimizer.py: confirmed live via agents/llm/agent.py, but its actual optimize_strategy() always returns None as currently wired - parameter_bounds is never configured, so the real optimization logic (parameter variation/evaluation) is currently unreachable. Not a math bug, a wiring/configuration gap. Documenting rather than guessing at a fix, since I don't know what bounds were intended for which strategies.
+- optuna_optimizer.py: confirmed live via pages/7_Settings.py, NOT YET reviewed.
