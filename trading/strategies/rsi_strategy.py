@@ -116,12 +116,27 @@ class RSIStrategy:
             if data.empty:
                 raise ValueError("Input data is empty")
 
-            if "Close" not in data.columns:
+            # BUG FIX: this previously checked only for 'Close' (title
+            # case), but generate_signals() lowercases all columns before
+            # calling this method (df_lower.columns = ...str.lower()),
+            # meaning this check ALWAYS failed when called from
+            # generate_signals - silently falling back to a flat,
+            # constant RSI of 50.0 for every row, every call. Verified
+            # concretely: RSI values were 50.0 with zero variance across
+            # a genuinely oscillating price series. Resolving the column
+            # name case-insensitively fixes this without assuming a
+            # specific casing convention from callers.
+            close_col = None
+            for col in data.columns:
+                if str(col).lower() == "close":
+                    close_col = col
+                    break
+            if close_col is None:
                 raise ValueError("Data must contain 'Close' column")
 
             # Handle NaN values
             # Only forward fill - never use backward fill in backtesting!
-            close_prices = data["Close"].ffill()
+            close_prices = data[close_col].ffill()
             
             # For any remaining leading NaNs, use first valid value
             # (This is acceptable as it doesn't use future data)
@@ -261,7 +276,10 @@ class RSIStrategy:
                     df_lower["close"] = df_lower["close"].fillna(first_valid_value)
 
             # Update parameters with kwargs if provided
-            _unused_var = rsi_period  # Placeholder, flake8 ignore: F841
+            _unused_var = self.rsi_period  # Placeholder, flake8 ignore: F841
+            # BUG FIX: previously referenced a bare, undefined name
+            # `rsi_period` (should be `self.rsi_period`), crashing with
+            # NameError on every single call to generate_signals.
             oversold_threshold = kwargs.get(
                 "oversold_threshold", self.oversold_threshold
             )
@@ -334,7 +352,21 @@ class RSIStrategy:
                         current_rsi < oversold_threshold
                         and previous_rsi >= oversold_threshold
                     ):
-                        signals.iloc[i]["signal"] = 1
+                        # BUG FIX: signals.iloc[i]["signal"] = 1 (chained
+                        # indexing assignment) is a well-known pandas
+                        # anti-pattern that does not reliably write back
+                        # to the original DataFrame - it can silently
+                        # operate on a copy. This meant every crossover
+                        # was correctly DETECTED (the logging calls fired
+                        # correctly, using separate parameters unaffected
+                        # by this bug) but the actual signal value was
+                        # never persisted, leaving signals["signal"] at 0
+                        # for every row regardless of real crossovers.
+                        # Verified concretely: RSI crossed both thresholds
+                        # (24.0 and 76.7 vs 30/70) with zero signals
+                        # produced before this fix. .loc with the real
+                        # index label is guaranteed to persist.
+                        signals.loc[signals.index[i], "signal"] = 1
                         if log_crossovers:
                             self.log_rsi_crossover(
                                 current_time,
@@ -349,7 +381,7 @@ class RSIStrategy:
                         current_rsi > overbought_threshold
                         and previous_rsi <= overbought_threshold
                     ):
-                        signals.iloc[i]["signal"] = -1
+                        signals.loc[signals.index[i], "signal"] = -1
                         if log_crossovers:
                             self.log_rsi_crossover(
                                 current_time,

@@ -108,7 +108,14 @@ def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
                 return data
             del _memory_cache[sym]
 
-    cache_path = CACHE_DIR / f"{symbol}.pkl"
+    cache_path = CACHE_DIR / f"{sym}.pkl"
+    # BUG FIX: this previously used the raw (unnormalized) `symbol`
+    # parameter for the file cache path, while the in-memory cache above
+    # correctly uses `sym = symbol.upper()`. Same ticker requested with
+    # different casing (e.g. "aapl" then "AAPL") would hit the memory
+    # cache correctly but create/read separate files for the file cache,
+    # silently missing it and causing redundant API calls across process
+    # restarts (when only the file cache survives).
     if not cache_path.exists():
         return None
 
@@ -143,7 +150,7 @@ def cache_data(symbol: str, data: pd.DataFrame) -> None:
         _memory_cache[sym] = (data.copy(), time.time() + CACHE_EXPIRY)
     try:
         payload = {"timestamp": time.time(), "data": data}
-        cache_path = CACHE_DIR / f"{symbol}.pkl"
+        cache_path = CACHE_DIR / f"{sym}.pkl"
         with open(cache_path, "wb") as f:
             pickle.dump(payload, f)
 
