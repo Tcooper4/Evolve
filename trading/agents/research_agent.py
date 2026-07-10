@@ -214,8 +214,16 @@ class ResearchAgent(BaseAgent):
                     "stars": item["stargazers_count"],
                     "language": item["language"],
                     "tag": (
+                        # BUG FIX: item["description"] is commonly None
+                        # for GitHub repos without a description set - a
+                        # very ordinary, realistic occurrence, not an
+                        # edge case. Calling .lower() on it directly
+                        # crashed this entire method (and thus the whole
+                        # research() pipeline) with AttributeError
+                        # whenever any repo in the search results had no
+                        # description. Verified concretely.
                         "model"
-                        if "model" in item["description"].lower()
+                        if "model" in (item["description"] or "").lower()
                         else "strategy"
                     ),
                 }
