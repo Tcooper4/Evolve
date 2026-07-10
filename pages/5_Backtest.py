@@ -88,10 +88,11 @@ st.caption(
     "Walk-forward validation, multi-model comparison, and historical strategy tests"
 )
 
-tab_wf, tab_compare, tab_backtest = st.tabs([
+tab_wf, tab_compare, tab_backtest, tab_optimizer = st.tabs([
     "Walk-forward validation",
     "Strategy comparison",
     "Backtest",
+    "Optimizer",
 ])
 
 with tab_wf:
@@ -381,8 +382,16 @@ with tab_backtest:
                             price_df = pd.DataFrame({bt_symbol: closes})
                             price_df = price_df.dropna()
 
+                            _opt_params = st.session_state.get(
+                                "evolve_optimized_params", {}
+                            ).get(bt_strategy)
+                            if _opt_params:
+                                st.caption(
+                                    f"Using optimized parameters from the "
+                                    f"Optimizer tab: `{_opt_params}`"
+                                )
                             strat_res = _reg.execute_strategy(
-                                bt_strategy, raw
+                                bt_strategy, raw, _opt_params
                             )
                             sig_series = _backtest_signal_series(
                                 strat_res.signals, price_df.index
@@ -631,6 +640,16 @@ with tab_backtest:
                             )
     except Exception as e:
         st.caption(f"Enhanced backtest unavailable: {e}")
+
+with tab_optimizer:
+    try:
+        from components.tabs.tab_strategy_optimizer import (
+            render as render_strategy_optimizer,
+        )
+
+        render_strategy_optimizer()
+    except Exception as e:
+        st.warning(f"Strategy optimizer unavailable: {e}")
 
 try:
     from ui.page_assistant import render_page_assistant
