@@ -31,7 +31,11 @@ Shifted from bug-hunting to feature work per the handoff mandate, holding the sa
 
 **Tests:** `tests/test_optimization/test_strategy_backtest_objective.py` — 30 execution-level tests, all passing. Pre-existing suite shows an identical pass/fail set with this session's changes stashed vs applied (zero regressions; its failures are stale tests/missing sandbox deps that predate this session).
 
-**Still open from the handoff checklist:** line-by-line depth pass on pages 2_Analyze / 3_Scanner / 6_Chat. (Everything else — position sizing, torch models, both duplicate consolidations, and the earnings_reaction d0 anomaly — is now closed; see Session 2 notes above.)
+**Handoff checklist: COMPLETE.** The pages 2/3/6 depth pass closed the last item:
+- **2_Analyze**: thin orchestrator traced call-by-call (render_price_chart, news strip, tabbed sections, get_history, resolve_ticker — all signatures match); exercised interactively via AppTest through the ticker gate to full section rendering. **Bug #96**: one try/except around eleven backend imports meant a single missing optional dependency (verified: statsmodels → ARIMAModel) bricked the whole page via st.stop(). New shared resilient loader (`trading/services/forecasting_backend.py`, also used by 5_Backtest, removing the duplicated loader) imports per-component and runs with whatever subset is available.
+- **6_Chat**: every backend call traced and executed — memory ingest/upsert, intent parse via EnhancedPromptRouterAgent, run_agent_action, context build, execute_with_tools (all page kwargs exist; all 8 offered tool names present in the executor's pattern registry; tool attempt + graceful failure caption verified offline), call_claude fallback, news fetch, MacroFactors. **Robustness fix**: agents/llm/__init__ eagerly imported LLMInterface → transformers, so the API-only tool-execution path silently degraded without the local-model stack; now lazy (PEP 562).
+- **3_Scanner**: full 916-line read; every contract verified by execution — scan_market/get_available_filters signatures match exactly, all six universe JSONs present, PairsTradingEngine and compute_ai_score signatures match, offline scan degrades cleanly (no crash), UI quick-filters/stylers/fragment paths sound. No changes needed.
+- **Bug count: 96.** Session tests: 57, all passing.
 
 ## Status summary
 - **84 real bugs found and fixed**, all verified with actual execution (not just code review)
