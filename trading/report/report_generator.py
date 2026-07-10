@@ -311,12 +311,15 @@ class ReportGenerator:
 
         except Exception as e:
             logger.error(f"Error calculating trade metrics: {e}")
-            return {
-                "success": True,
-                "result": TradeMetrics(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+            # BUG FIX: this previously returned a plain dict
+            # ({"success": True, "result": TradeMetrics(...), ...}) instead
+            # of a TradeMetrics object directly, even though the function
+            # is declared to return TradeMetrics and the success path above
+            # does exactly that. Callers using attribute access (e.g.
+            # trade_metrics.win_rate, matching the success path's return
+            # type) would crash with AttributeError on this fallback path,
+            # masking the original error with a more confusing one.
+            return TradeMetrics(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     def _calculate_model_metrics(self, model_data: Dict[str, Any]) -> ModelMetrics:
         """Calculate model performance metrics."""
@@ -392,14 +395,12 @@ class ReportGenerator:
 
         except Exception as e:
             logger.error(f"Error calculating model metrics: {e}")
-            return {
-                "success": True,
-                "result": ModelMetrics(
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-                ),
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+            # BUG FIX: same return-type mismatch as _calculate_trade_metrics
+            # above - this returned a plain dict instead of a ModelMetrics
+            # object, which callers using attribute access (matching the
+            # declared -> ModelMetrics return type and the success path)
+            # would crash on.
+            return ModelMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     def _generate_strategy_reasoning(
         self, strategy_data: Dict[str, Any]
