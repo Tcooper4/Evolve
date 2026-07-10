@@ -179,12 +179,14 @@ class NotificationSystem:
         low_performance = {k: v for k, v in metrics.items() if v < threshold}
 
         if not low_performance:
-            return {
-                "success": True,
-                "result": {"slack": False, "email": False},
-                "message": "Operation completed successfully",
-                "timestamp": datetime.now().isoformat(),
-            }
+            # BUG FIX: this previously returned a differently-shaped dict
+            # ({"success": True, "result": {...}, "message": ..., ...})
+            # than the alert-sent branch below (send_trading_alert's flat
+            # {"slack": bool, "email": bool}). The module-level
+            # send_model_alert() wrapper double-wraps whatever this
+            # returns, so callers got an inconsistent nesting depending
+            # on which branch fired. Matching the flat shape here.
+            return {"slack": False, "email": False}
 
         message = f"Model {model_name} performance below threshold ({threshold}):"
         for metric, value in low_performance.items():
