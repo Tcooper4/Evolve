@@ -150,10 +150,14 @@ class CostModel:
     ) -> float:
         if asset not in self.volatility_cache or timestamp is None:
             return price * self.config.spread_rate
-        vol_idx = self.volatility_cache[asset].index.get_loc(
-            timestamp, method="nearest"
-        )
-        volatility = self.volatility_cache[asset].iloc[vol_idx]
+        # BUG FIX: Index.get_loc(..., method=...) was removed in pandas 2.0+
+        # (this project pins pandas==2.0.3) and raises TypeError on every
+        # call. get_indexer is the still-supported modern equivalent.
+        vol_index = self.volatility_cache[asset].index
+        idx_pos = vol_index.get_indexer([timestamp], method="nearest")[0]
+        if idx_pos == -1:
+            return price * self.config.spread_rate
+        volatility = self.volatility_cache[asset].iloc[idx_pos]
         volatility_adjustment = 1 + (volatility * self.config.volatility_multiplier)
         return price * self.config.spread_rate * volatility_adjustment
 
@@ -198,10 +202,12 @@ class CostModel:
     ) -> float:
         if asset not in self.volatility_cache or timestamp is None:
             return price * self.config.slippage_rate
-        vol_idx = self.volatility_cache[asset].index.get_loc(
-            timestamp, method="nearest"
-        )
-        volatility = self.volatility_cache[asset].iloc[vol_idx]
+        # BUG FIX: same get_loc(method=) removal issue as _calculate_volatility_spread.
+        vol_index = self.volatility_cache[asset].index
+        idx_pos = vol_index.get_indexer([timestamp], method="nearest")[0]
+        if idx_pos == -1:
+            return price * self.config.slippage_rate
+        volatility = self.volatility_cache[asset].iloc[idx_pos]
         volatility_adjustment = 1 + (volatility * self.config.volatility_multiplier)
         return price * self.config.slippage_rate * volatility_adjustment
 

@@ -417,7 +417,11 @@ class RiskManager:
     def _calculate_metrics(self) -> None:
         """Calculate risk metrics."""
         if self.returns is None or self.returns.empty:
-            self.logger.warning("No returns data available for metric calculation")
+            self.logger.warning(
+                "No returns data available for metric calculation; "
+                "skipping metrics update and leaving prior metrics (if any) unchanged."
+            )
+            return
 
         # Calculate basic metrics
         volatility = self.returns.std() * np.sqrt(252)
@@ -496,9 +500,13 @@ class RiskManager:
             if len(self.returns[self.returns < 0]) > 0
             else 0
         )
+        # Note: avg_win == 0 is passed straight to safe_divide (rather than
+        # substituted with a near-zero epsilon) so its own zero-denominator
+        # guard returns the safe `default=0.0` instead of an inflated,
+        # nonsensical fraction from dividing by a near-zero number.
         kelly_fraction = safe_divide(
             (win_rate * avg_win - (1 - win_rate) * avg_loss),
-            avg_win if avg_win != 0 else 1e-10,
+            avg_win,
             default=0.0,
         )
 
@@ -807,7 +815,15 @@ class RiskManager:
 
         return pd.Series(result.x, index=expected_returns.index)
 
-    def plot_risk_metrics(self) -> go.Figure:
+    def plot_risk_metrics(self) -> "go.Figure":
+        # BUG FIX: this was previously a bare `-> go.Figure:` annotation,
+        # which Python evaluates at class-definition time. Since go is set
+        # to None when plotly isn't installed (see the try/except at the
+        # top of this file), the entire trading.risk package failed to
+        # import in any environment without plotly - defeating the
+        # PLOTLY_AVAILABLE graceful-degradation pattern this file
+        # otherwise implements correctly. A string annotation is a
+        # forward reference and isn't evaluated eagerly.
         if not PLOTLY_AVAILABLE:
             self.logger.warning(
                 "plotly not available. Cannot create interactive plots."

@@ -95,6 +95,15 @@ class ExecutionResult:
     failure_reason: Optional[str] = None
     orderbook_snapshot: Optional[OrderBook] = None  # Batch 9 enhancement
 
+    @property
+    def execution_price(self) -> float:
+        """Alias for `price`. agents/llm/agent.py (a live caller) reads
+        `execution_result.execution_price`, but this field has always been
+        named `price` - that call site would have raised AttributeError on
+        every invocation. Adding an alias rather than renaming `price`
+        since other internal code already depends on that name."""
+        return self.price
+
 
 class TradeExecutionSimulator:
     """
@@ -231,6 +240,53 @@ class TradeExecutionSimulator:
         except Exception as e:
             self.logger.error(f"Error placing order: {str(e)}")
             raise
+
+    def simulate_trade(
+        self,
+        symbol: str,
+        side: str,
+        quantity: float,
+        market_price: float,
+    ) -> ExecutionResult:
+        """Convenience wrapper: simulate a trade from a single current price.
+
+        This method was called by agents/llm/agent.py (a live, reachable
+        code path) but never existed on this class, causing an
+        AttributeError on every single invocation. Internally builds a
+        minimal one-row market_data frame from market_price and delegates
+        to the existing, tested place_order()/execute_order() flow rather
+        than duplicating their logic.
+
+        Args:
+            symbol: Asset symbol
+            side: 'buy' or 'sell'
+            quantity: Order quantity
+            market_price: Current market price to simulate execution against
+
+        Returns:
+            ExecutionResult, same as execute_order()
+        """
+        # Build a minimal single-row OHLCV frame. High/low are set to a
+        # tight +/-0.1% band around the price (a reasonable default absent
+        # real intraday range data) so spread/volatility calculations have
+        # something sane to work with instead of dividing by zero range.
+        now = datetime.now()
+        market_data = pd.DataFrame(
+            {
+                "close": [market_price],
+                "high": [market_price * 1.001],
+                "low": [market_price * 0.999],
+                "volume": [self.config.get("default_simulated_volume", 1_000_000.0)],
+            },
+            index=[now],
+        )
+        order_id = self.place_order(
+            symbol=symbol,
+            order_type=OrderType.MARKET,
+            side=side,
+            quantity=quantity,
+        )
+        return self.execute_order(order_id, market_data)
 
     def execute_order(
         self,
@@ -426,9 +482,23 @@ class TradeExecutionSimulator:
             current_price = market_data["close"].iloc[-1]
 
             # Check market hours
+            # BUG FIX: previously used order.timestamp.hour directly, which
+            # is naive server-local time (datetime.now()) - on a server not
+            # running in US/Eastern, this checks the wrong hours entirely
+            # (e.g. this sandbox is UTC, so "9-16" was checking 9am-4pm UTC,
+            # which is 4am-11am Eastern - rejecting orders during actual US
+            # market hours and accepting them outside real market hours).
             if self.market_hours_only:
-                current_hour = order.timestamp.hour
-                if current_hour < 9 or current_hour > 16:  # Simplified market hours
+                try:
+                    from zoneinfo import ZoneInfo
+                    eastern_hour = order.timestamp.astimezone(
+                        ZoneInfo("America/New_York")
+                    ).hour if order.timestamp.tzinfo else datetime.now(
+                        ZoneInfo("America/New_York")
+                    ).hour
+                except Exception:
+                    eastern_hour = order.timestamp.hour  # fallback: old behavior
+                if eastern_hour < 9 or eastern_hour > 16:  # Simplified market hours
                     return False
 
             # Check order type specific conditions

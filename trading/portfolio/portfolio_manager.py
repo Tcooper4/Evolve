@@ -341,8 +341,15 @@ class PortfolioManager:
         # Update state
         self.state.open_positions.remove(position)
         self.state.closed_positions.append(position)
-        self.state.cash += position.size * price
-        self.state.available_capital += position.size * price
+        # BUG FIX: previously credited the full gross exit value
+        # (position.size * price) without subtracting slippage/fees, even
+        # though `pnl` above IS fee-adjusted. This meant self.state.cash
+        # (and therefore self.state.equity and the cash allocation
+        # percentage in get_portfolio_allocation) silently overstated the
+        # true balance by the accumulated fee/slippage amount on every
+        # closed position. Net proceeds = gross exit value - costs.
+        self.state.cash += (position.size * price) - (slippage + fees)
+        self.state.available_capital += (position.size * price) - (slippage + fees)
         self.state.total_pnl += pnl
 
         # Update strategy weights

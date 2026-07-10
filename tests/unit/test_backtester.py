@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 # Import backtester modules
 try:
     from trading.backtesting.backtester import Backtester
-    from trading.backtesting.performance_analyzer import PerformanceAnalyzer
+    from trading.backtesting.performance_analysis import PerformanceAnalyzer
 
     BACKTESTER_AVAILABLE = True
 except ImportError:
