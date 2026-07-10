@@ -69,6 +69,21 @@ class PerformanceAnalyzer:
             # Risk metrics
             metrics.update(self._calculate_risk_metrics(df))
 
+            # BUG FIX: calmar_ratio must be computed here, after
+            # annualized_return (from _calculate_basic_returns) and
+            # max_drawdown (also from _calculate_basic_returns) have
+            # actually been merged into this shared dict - see the fix
+            # note in _calculate_risk_metrics above for why it can't be
+            # computed there.
+            _ar = metrics.get("annualized_return")
+            _mdd = metrics.get("max_drawdown")
+            if _ar is not None and _mdd not in (None, 0) and not (
+                isinstance(_mdd, float) and np.isnan(_mdd)
+            ):
+                metrics["calmar_ratio"] = _ar / abs(_mdd)
+            else:
+                metrics["calmar_ratio"] = np.nan
+
             # Trade analysis
             metrics.update(self._calculate_trade_metrics(trade_log))
 
@@ -266,13 +281,17 @@ class PerformanceAnalyzer:
                 else np.nan
             )
 
-            # Calmar ratio
-            metrics["calmar_ratio"] = (
-                metrics.get("annualized_return", 0)
-                / abs(metrics.get("max_drawdown", 1))
-                if metrics.get("max_drawdown", 0) != 0
-                else np.nan
-            )
+            # BUG FIX: calmar_ratio previously used metrics.get(...) on
+            # THIS method's own fresh local dict, which never contains
+            # annualized_return/max_drawdown - those are computed in the
+            # separate _calculate_basic_returns method, into a DIFFERENT
+            # local dict. metrics.get() always hit the default value
+            # here, making calmar_ratio always NaN regardless of the
+            # actual, correctly-computed values sitting in the other
+            # method's scope. Verified concretely: a real backtest with
+            # a genuine +26% annualized return and -8.5% max drawdown
+            # still produced calmar_ratio=nan. Moved to compute_metrics()
+            # below, after both dicts are actually merged together.
 
         return metrics
 
