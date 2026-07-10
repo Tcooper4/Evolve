@@ -130,7 +130,23 @@ class RewardFunction:
         )
 
         # Adaptive weight adjustments
-        if regime == "high_volatility":
+        if regime == "crisis":
+            # BUG FIX: this regime (high volatility AND low prediction
+            # confidence simultaneously) was classified by
+            # _classify_market_regime but never handled here - it fell
+            # through to the `else: unknown regime` branch below, using
+            # unadjusted base weights during the single worst-case
+            # scenario, exactly when protective weighting matters most.
+            # Applying an adjustment at least as protective as either
+            # individual regime, combined: heavily reduce raw-return
+            # weight, further boost consistency beyond either regime
+            # alone.
+            self.weights = {
+                "return": self.base_weights["return"] * 0.5,
+                "sharpe": self.base_weights["sharpe"] * 1.3,
+                "consistency": self.base_weights["consistency"] * 1.8,
+            }
+        elif regime == "high_volatility":
             # In high volatility, prioritize consistency and Sharpe over raw returns
             self.weights = {
                 "return": self.base_weights["return"] * 0.7,
