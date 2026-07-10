@@ -263,10 +263,20 @@ class BaseModel(ABC):
         self.scheduler = None
         self.criterion = None
 
-        if SKLEARN_AVAILABLE:
-            self.scaler = StandardScaler()
-        else:
-            self.scaler = None
+        # BUG FIX: this previously initialized self.scaler to a fresh,
+        # UNFITTED StandardScaler() instance when sklearn is available,
+        # rather than None. TimeSeriesDataset.__init__ treats a non-None
+        # scaler as "already fitted, just call .transform()" (see its
+        # `if scaler is None: fit_transform else: transform` branching) -
+        # but calling .transform() on a genuinely unfitted StandardScaler
+        # raises sklearn.exceptions.NotFittedError immediately. Verified
+        # concretely. This broke prepare_data() - used by any BaseModel
+        # subclass, including the already-reviewed TransformerForecaster -
+        # on its very first call, since prepare_data() passes self.scaler
+        # directly into TimeSeriesDataset's constructor for the training
+        # split. None correctly signals "not yet fitted, please fit
+        # during data preparation."
+        self.scaler = None
 
         # Training state
         self.train_losses = []
