@@ -81,6 +81,20 @@ class AdvancedRiskAnalyzer:
         confidence_levels: List[float] = None,
     ) -> RiskMetrics:
         """Calculate comprehensive risk metrics."""
+        # BUG FIX: no guard existed for None/empty returns, same class of
+        # issue found and fixed in trading/backtesting/risk_metrics.py -
+        # would silently produce a RiskMetrics object full of NaN rather
+        # than failing clearly.
+        if returns is None or returns.empty:
+            raise ValueError(
+                "calculate_comprehensive_risk requires a non-empty returns series"
+            )
+        returns = returns[np.isfinite(returns)]
+        if returns.empty:
+            raise ValueError(
+                "calculate_comprehensive_risk: returns series had no finite "
+                "values after dropping NaN/Inf"
+            )
 
         if confidence_levels is None:
             confidence_levels = [0.95, 0.99]

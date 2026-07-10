@@ -815,7 +815,15 @@ class RiskManager:
 
         return pd.Series(result.x, index=expected_returns.index)
 
-    def plot_risk_metrics(self) -> go.Figure:
+    def plot_risk_metrics(self) -> "go.Figure":
+        # BUG FIX: this was previously a bare `-> go.Figure:` annotation,
+        # which Python evaluates at class-definition time. Since go is set
+        # to None when plotly isn't installed (see the try/except at the
+        # top of this file), the entire trading.risk package failed to
+        # import in any environment without plotly - defeating the
+        # PLOTLY_AVAILABLE graceful-degradation pattern this file
+        # otherwise implements correctly. A string annotation is a
+        # forward reference and isn't evaluated eagerly.
         if not PLOTLY_AVAILABLE:
             self.logger.warning(
                 "plotly not available. Cannot create interactive plots."
