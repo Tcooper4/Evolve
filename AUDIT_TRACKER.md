@@ -3,7 +3,7 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **74 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **78 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
 
 ## Audit-the-auditor pass (in progress)
@@ -95,3 +95,8 @@ Pattern observed: every previously-"complete" directory that got genuinely re-ve
 Re-ran the full gap-check across all 18 previously-"complete" directories (trading/risk, trading/backtesting, trading/portfolio, trading/execution, trading/analysis, trading/strategies, trading/data, trading/optimization, utils, trading/utils, trading/models, trading/nlp, trading/feature_engineering, trading/services, trading/memory, trading/database, trading/report, trading/market) against the fully updated review record. Result: 129 live files, 0 remaining gaps. This is now genuinely, mechanically verified - not asserted from memory. These 18 directories can be trusted as complete going forward.
 
 Note: trading/agents is intentionally NOT included in this "complete" set - it remains actively in progress (5 of 7 files done, performance_critic_agent.py partially done). pages/ and config/ are also not yet claimed complete - only 1 of 7 pages files (4_Trade.py) and 3 of 4 config files have been reviewed.
+
+## trading/agents: COMPLETE (all 8 live files)
+Closed out with a major finding: PerformanceCriticAgent could not be instantiated at all (missing 4 abstract methods, missing __init__/config default, a crashing dead Backtester() call in _setup()) - meaning the confirmed-live critique_backtest chat tool has likely never worked in its entire history. Fixed all 3 compounding issues plus 12 separate instances of unformatted warning message strings across 4 detection methods. Verified the complete chain end-to-end.
+
+19 directories now fully, mechanically verified complete: the original 18 plus trading/agents.
