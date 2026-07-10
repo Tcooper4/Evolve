@@ -81,6 +81,23 @@ class MacroFeatureEngineer:
             "unemployment_wb": "SL.UEM.TOTL.ZS",  # Unemployment
         }
 
+        # BUG FIX (part 2 of the enrich_trading_data fix above): default
+        # conservative publication lag applied to FRED data before
+        # joining, to avoid look-ahead bias. Most of the monthly US
+        # government economic releases in self.fred_series below (CPI,
+        # unemployment, retail sales, industrial production, housing
+        # starts) are typically published within roughly 2-4 weeks of
+        # the reference period ending; GDP's "advance" estimate is
+        # usually released about a month after quarter-end. 30 days is a
+        # reasonable, conservative default that favors avoiding leakage
+        # over precision. Note this is NOT accurate for every series -
+        # VIX in particular is a real-time market series with
+        # essentially no publication lag, so this default makes it
+        # artificially stale. A fully correct implementation would use
+        # a per-series lag lookup; this default errs toward safety for
+        # the majority of slower-published series in this set.
+        self.default_publication_lag_days = 30
+
         logger.info("Macro feature engineer initialized")
 
     def get_fred_data(
@@ -207,6 +224,31 @@ class MacroFeatureEngineer:
             if not fred_data.empty:
                 # Resample to match trading data frequency
                 fred_resampled = fred_data.resample("D").ffill()
+
+                # BUG FIX: joining fred_resampled directly by calendar
+                # date (as this previously did) is a real look-ahead
+                # bias. fredapi's get_series() indexes each observation
+                # by the REFERENCE PERIOD it describes (e.g.
+                # "unemployment rate for March"), not the date that
+                # figure was actually published/publicly available -
+                # which for most US economic data is weeks later (and
+                # for series like GDP, over a month, often with later
+                # revisions). Joining this directly onto the same
+                # calendar date in trading data meant a model would have
+                # access to economic figures that weren't actually known
+                # yet on that historical date. _add_lagged_features()
+                # below does add explicitly-lagged variants, but the raw,
+                # unlagged base columns stayed in the dataset too, so
+                # nothing prevented a downstream model from using the
+                # leaky ones directly. Applying a conservative default
+                # publication lag to the base join itself; precise
+                # per-series lag (which varies significantly - weekly
+                # jobless claims are near-immediate, GDP has 30+ day lags
+                # with revisions) isn't something that can be determined
+                # with confidence for every series generically here.
+                fred_resampled = fred_resampled.shift(
+                    self.default_publication_lag_days
+                )
                 enriched_df = enriched_df.join(fred_resampled, how="left")
 
                 # Forward fill missing values
