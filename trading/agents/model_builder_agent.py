@@ -531,12 +531,21 @@ class ModelBuilderAgent(BaseAgent):
         xgb_result = self._build_xgboost_model(xgb_request, (X, y), f"{request_id}_xgb")
 
         # Create ensemble
+        # BUG FIX: previously indexed hyperparams["voting_method"]
+        # directly - if a caller provides partial custom hyperparameters
+        # (e.g. {"models": [...]} without "voting_method"), this would
+        # crash with KeyError, since request.hyperparameters, when
+        # truthy, completely replaces the default dict above rather than
+        # merging with it. Not currently triggered by the one confirmed
+        # live caller (agent.py never passes custom hyperparameters
+        # here), but a real robustness gap for any future caller that
+        # does. Using .get() with the same default value instead.
         ensemble_config = {
             "models": [
                 {"type": "lstm", "path": lstm_result.model_path, "weight": 0.5},
                 {"type": "xgboost", "path": xgb_result.model_path, "weight": 0.5},
             ],
-            "voting_method": hyperparams["voting_method"],
+            "voting_method": hyperparams.get("voting_method", "weighted_average"),
         }
 
         # Save ensemble configuration
