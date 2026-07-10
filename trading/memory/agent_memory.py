@@ -511,8 +511,28 @@ class AgentMemory:
             # Get TTL for memory type
             ttl_seconds = self.default_ttls.get(memory_type)
 
-            # Create memory key
-            memory_key = f"{agent}:{run_type}:{outcome.get('model_id', 'unknown')}"
+            # BUG FIX: memory_key previously had no per-call unique
+            # component (just agent:run_type:model_id). Since
+            # self.memory_manager.chunks is a plain dict keyed by this
+            # string, and MemoryManager.add() does a bare dict assignment
+            # (self.chunks[key] = chunk - an overwrite, not an append),
+            # every repeated log_outcome() call for the same agent +
+            # run_type + model_id silently overwrote the previous entry in
+            # short/medium-term memory. Only a single outcome per unique
+            # combination ever survived there. This directly undermined
+            # is_improving()/get_recent_performance(), which expect a
+            # window of multiple historical values to compute a trend -
+            # the method name ("log_outcome", implying an append-only log)
+            # and that trend-analysis code both signal the real intent was
+            # history accumulation. Appending a timestamp preserves
+            # get_history()'s existing key-matching logic (which uses
+            # substring checks like f":{model_id}" not in key - still
+            # matches with a timestamp suffix) while letting each call
+            # keep its own entry.
+            memory_key = (
+                f"{agent}:{run_type}:{outcome.get('model_id', 'unknown')}"
+                f":{datetime.now().isoformat()}"
+            )
 
             # Add to memory manager for short-term storage
             if memory_type in ["short_term", "medium_term"]:
