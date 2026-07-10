@@ -240,10 +240,21 @@ class ForecastExplainability:
 
                     return {"lower": lower_bound, "upper": upper_bound}
             # Fallback
-            return {"lower": forecast_value * 0.95, "upper": forecast_value * 1.05}
+            # BUG FIX: previously forecast_value * 0.95 / forecast_value
+            # * 1.05 were assigned directly to "lower"/"upper" - correct
+            # only when forecast_value is positive. If negative (e.g. a
+            # negative return/change forecast), the multiplication
+            # reverses which one is actually larger (-10*1.05=-10.5 is
+            # SMALLER than -10*0.95=-9.5), making "upper" the smaller
+            # bound. min/max guarantees correct ordering regardless of
+            # sign, without needing to know which this caller's
+            # forecast_value represents.
+            _lo, _hi = forecast_value * 0.95, forecast_value * 1.05
+            return {"lower": min(_lo, _hi), "upper": max(_lo, _hi)}
         except Exception as e:
             logger.error(f"Error calculating confidence intervals: {e}")
-            return {"lower": forecast_value * 0.95, "upper": forecast_value * 1.05}
+            _lo, _hi = forecast_value * 0.95, forecast_value * 1.05
+            return {"lower": min(_lo, _hi), "upper": max(_lo, _hi)}
 
     def _calculate_feature_importance(
         self, model: Any, features: pd.DataFrame, method: str = "shap"
@@ -503,13 +514,17 @@ class ForecastExplainability:
         Returns:
             Default explanation
         """
+        # BUG FIX: same fix as _calculate_confidence_intervals above -
+        # min/max guarantees correct lower/upper ordering regardless of
+        # forecast_value's sign.
+        _lo, _hi = forecast_value * 0.95, forecast_value * 1.05
         return ForecastExplanation(
             forecast_id=forecast_id,
             symbol=symbol,
             forecast_date=datetime.now(),
             forecast_value=forecast_value,
-            confidence_interval_lower=forecast_value * 0.95,
-            confidence_interval_upper=forecast_value * 1.05,
+            confidence_interval_lower=min(_lo, _hi),
+            confidence_interval_upper=max(_lo, _hi),
             confidence_level=0.95,
             feature_importance={},
             model_metadata=self._extract_model_metadata(None),
