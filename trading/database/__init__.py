@@ -5,7 +5,7 @@ Provides SQLAlchemy-based database backend for the Evolve trading system.
 Replaces JSON/Pickle file-based persistence with proper database storage.
 """
 
-from trading.database.connection import get_db_session, init_database
+from trading.database.connection import get_db_session, get_engine, init_database
 from trading.database.models import (
     PortfolioStateModel,
     PositionModel,
@@ -17,6 +17,7 @@ from trading.database.models import (
 
 __all__ = [
     "get_db_session",
+    "get_engine",
     "init_database",
     "PortfolioStateModel",
     "PositionModel",
