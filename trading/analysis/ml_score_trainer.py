@@ -270,14 +270,29 @@ class MLScoreTrainer:
         y = pd.Series(y_list)
 
         try:
-            from trading.feature_engineering.utils import (
-                create_lag_features,
-                normalize_features,
-            )
+            from trading.feature_engineering.utils import create_lag_features
 
+            # BUG FIX: this previously also called normalize_features(X)
+            # here, BEFORE any train/test split exists. normalize_features
+            # (via safe_normalize) computes each feature's mean/std/median/
+            # IQR from the ENTIRE dataset passed in - no train/test
+            # awareness at all. Since this method (build_training_dataset)
+            # is called as train_model()'s default path whenever X/y
+            # aren't pre-supplied (the typical usage), this meant the
+            # properly-split RobustScaler fix already made in train_model()
+            # (see the BUG FIX comment there) was operating on data that
+            # had ALREADY been globally normalized using statistics that
+            # included what would later become the validation portion -
+            # a second, earlier instance of the same scaler-leakage
+            # pattern, undermining the earlier fix's effectiveness.
+            # Removed the redundant, leaky global normalization entirely;
+            # train_model()'s RobustScaler already correctly handles all
+            # necessary scaling with proper train-only fitting after the
+            # split. create_lag_features is kept - it's correctly
+            # backward-looking (uses positive .shift(), no leakage risk)
+            # and adds genuinely useful features independent of scaling.
             _base_cols = [c for c in X.columns if c != "symbol_hash"]
             if _base_cols:
-                X = normalize_features(X)
                 X = create_lag_features(X, _base_cols, [1, 2])
                 X = X.fillna(0)
         except Exception as _fe:
