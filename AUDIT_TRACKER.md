@@ -3,15 +3,16 @@
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
 ## Status summary
-- **61 real bugs found and fixed**, all verified with actual execution (not just code review)
+- **63 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
-- Fully complete directories: `trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis`, `trading/strategies`, `trading/data`, `trading/optimization`, `utils/`, `trading/utils/`, `trading/models/` (all 19 files complete, including lstm_model.py - a significant scaler-leakage bug found in the main LSTMForecaster.fit() training path, verified via isolated pandas/numpy/sklearn testing since torch is unavailable in this sandbox)
+- Fully complete directories: `trading/risk`, `trading/backtesting`, `trading/portfolio`, `trading/execution`, `trading/analysis`, `trading/strategies`, `trading/data`, `trading/optimization`, `utils/`, `trading/utils/`, `trading/models/`
+- `trading/agents/`: 3 of 7 remaining files done (market_regime_agent.py - severe unfitted-scaler-after-cache-load bug fixed, enhanced_prompt_router.py - confirmed clean, model_selector_agent.py - bounded-score bug fixed). Still remain: model_builder_agent.py, performance_critic_agent.py, prompt_templates.py, research_agent.py
 
 ## Process correction on the record (condensed)
 Earlier this session, `strategy_comparison.py` was called "clean" based on reading its formulas without ever actually importing/running it - the module couldn't be imported at all (wrong class names). Fixed, and a systematic import-check across all 110 modules touched this session found this was isolated (all other failures traced to missing sandbox dependencies, since resolved). Lesson: "the formula is correct" and "the code runs" are different claims, both need checking - now doing both going forward, including for the torch-dependent files where full execution isn't possible in this sandbox (targeted isolated testing of the specific bug mechanism instead, as done for the BaseModel scaler bug and others).
 
-## Remaining ~73 live files
-`components`/`components/tabs` (27, largest remaining block), `trading/agents` (7), `pages` (7), `config` (4), `trading/forecasting` (3), `trading/memory` (3), `agents/llm` (3), and smaller pockets (~13 more)
+## Remaining ~69 live files
+`components`/`components/tabs` (27, largest remaining block), `trading/agents` (4 left), `pages` (7), `config` (4), `trading/ui`/`trading/forecasting`/`trading/memory`/`agents/llm` (3 each), and smaller pockets (~13 more)
 
 ## Flagged anomaly, not fixed (needs human judgment, not a guess)
 `trading/data/earnings_reaction.py::_compute_earnings_reactions` — computes `d0`/`d0_price` (price on the first trading day on/after the earnings date) but never uses either. The actual `move_1d/3d/5d` calculations index `future_dates[1]/[3]/[5]` instead, skipping over `d0` entirely. Two possible explanations: (a) a real bug — "1-day move" is actually measuring closer to a 2-day move, an incomplete refactor left `d0_price` behind; or (b) intentional — the convention is "N trading days after the pre-earnings close," and `d0_price` is simply vestigial. Could not determine which from the code alone. Not fixed, since guessing wrong would silently corrupt a real analytics output rather than fix it.
