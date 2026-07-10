@@ -128,7 +128,15 @@ class TimeSeriesDataset(Dataset):
         """Get dataset length."""
         return len(self.sequences)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) -> Tuple["torch.Tensor", "torch.Tensor"]:
+        # BUG FIX: bare (non-string) torch.Tensor annotations are evaluated
+        # at class-definition time. Since torch=None when PyTorch isn't
+        # installed (see TORCH_AVAILABLE above), this crashed the entire
+        # trading.models package import - the same bug class found in
+        # risk_manager.py's `-> go.Figure` annotation earlier this session,
+        # and it defeated this file's own TORCH_AVAILABLE runtime check at
+        # __init__. String annotations are forward references and aren't
+        # evaluated eagerly.
         """Get dataset item.
 
         Args:
