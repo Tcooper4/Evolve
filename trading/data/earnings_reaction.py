@@ -30,6 +30,94 @@ def get_earnings_reactions(symbol: str, num_quarters: int = 8) -> Dict[str, Any]
     return result
 
 
+def _reaction_windows(price_hist: pd.DataFrame, date_ts: pd.Timestamp) -> Dict[str, Any]:
+    """Measure the earnings reaction for one announcement date.
+
+    RESOLUTION OF THE FLAGGED d0 ANOMALY (audit tracker): the old code
+    computed ``d0``/``d0_price`` (first trading day on/after the earnings
+    date) but never used them - every move was measured from the
+    pre-earnings close to ``future_dates[1]/[3]/[5]``. That was not an
+    off-by-one so much as a "guarantee the announcement is inside the
+    window" convention, made necessary because yfinance's earnings dates
+    don't say whether a company reports before the open (BMO) or after
+    the close (AMC): for an AMC reporter, d0's close PRE-dates the
+    announcement and would measure none of the reaction. The cost was
+    that BMO reporters got a full extra day of unrelated drift folded
+    into their "1-day" move, inflating avg_move_1d / typical_range.
+
+    This version infers the timing from the data itself: the reaction
+    arrives as an overnight gap, either into d0's open (BMO) or into
+    d1's open (AMC). Whichever gap dominates identifies the true
+    reaction day, and the 1/3/5-day moves are then measured from the
+    close immediately before that day - so d0's close finally has a real
+    job (it is the AMC baseline). When the gaps are inconclusive (both
+    small, or nearly equal, or Open data is missing) the old conservative
+    window is kept as the fallback, labeled timing="unknown".
+
+    Returns a dict with move_1d/move_3d/move_5d (percent, or None),
+    timing ("BMO"/"AMC"/"unknown"), and reaction_date, or {} if there is
+    not enough surrounding price history.
+    """
+    future_dates = price_hist.index[price_hist.index >= date_ts]
+    past_dates = price_hist.index[price_hist.index < date_ts]
+    # >= 6 forward sessions keeps every branch's 5-day window in range
+    # (matches the old guard, so quarter coverage is unchanged).
+    if len(future_dates) < 6 or len(past_dates) == 0:
+        return {}
+
+    closes = price_hist["Close"]
+    d_minus1 = past_dates[-1]
+    d0, d1 = future_dates[0], future_dates[1]
+    d_minus1_price = float(closes.loc[d_minus1])
+    d0_price = float(closes.loc[d0])
+
+    timing = "unknown"
+    opens = price_hist["Open"] if "Open" in price_hist.columns else None
+    if opens is not None and d_minus1_price > 0 and d0_price > 0:
+        try:
+            gap_bmo = abs(float(opens.loc[d0]) / d_minus1_price - 1.0)
+            gap_amc = abs(float(opens.loc[d1]) / d0_price - 1.0)
+            # Require one gap to be both meaningful (>0.5%) and clearly
+            # dominant (1.5x the other) before trusting the inference.
+            if max(gap_bmo, gap_amc) >= 0.005:
+                if gap_amc > gap_bmo * 1.5:
+                    timing = "AMC"
+                elif gap_bmo > gap_amc * 1.5:
+                    timing = "BMO"
+        except (KeyError, ValueError, ZeroDivisionError):
+            timing = "unknown"
+
+    if timing == "BMO":
+        # Reaction day is d0; baseline is the close before it.
+        baseline = d_minus1_price
+        idx_1d, idx_3d, idx_5d = 0, 2, 4
+        reaction_date = d0
+    elif timing == "AMC":
+        # Reaction day is d1; baseline is d0's close (the last close
+        # before the announcement hit).
+        baseline = d0_price
+        idx_1d, idx_3d, idx_5d = 1, 3, 5
+        reaction_date = d1
+    else:
+        # Conservative legacy window: announcement guaranteed inside.
+        baseline = d_minus1_price
+        idx_1d, idx_3d, idx_5d = 1, 3, 5
+        reaction_date = d1
+
+    def _move(idx: int):
+        if len(future_dates) <= idx or baseline <= 0:
+            return None
+        return (float(closes.loc[future_dates[idx]]) / baseline - 1.0) * 100
+
+    return {
+        "move_1d": _move(idx_1d),
+        "move_3d": _move(idx_3d),
+        "move_5d": _move(idx_5d),
+        "timing": timing,
+        "reaction_date": str(pd.Timestamp(reaction_date).date()),
+    }
+
+
 def _compute_earnings_reactions(symbol: str, num_quarters: int = 8) -> Dict[str, Any]:
     """
     Fetch historical earnings dates and measure the price reaction
@@ -82,36 +170,12 @@ def _compute_earnings_reactions(symbol: str, num_quarters: int = 8) -> Dict[str,
                     date = date.replace(tzinfo=None)
                 date_ts = pd.Timestamp(date)
 
-                future_dates = price_hist.index[price_hist.index >= date_ts]
-                if len(future_dates) < 6:
+                windows = _reaction_windows(price_hist, date_ts)
+                if not windows:
                     continue
-
-                d0 = future_dates[0]
-                d0_price = float(price_hist.loc[d0, "Close"])
-
-                past_dates = price_hist.index[price_hist.index < date_ts]
-                if len(past_dates) == 0:
-                    continue
-                d_minus1_price = float(price_hist.loc[past_dates[-1], "Close"])
-
-                move_1d = (
-                    (float(price_hist.loc[future_dates[1], "Close"]) / d_minus1_price - 1)
-                    * 100
-                    if len(future_dates) > 1
-                    else None
-                )
-                move_3d = (
-                    (float(price_hist.loc[future_dates[3], "Close"]) / d_minus1_price - 1)
-                    * 100
-                    if len(future_dates) > 3
-                    else None
-                )
-                move_5d = (
-                    (float(price_hist.loc[future_dates[5], "Close"]) / d_minus1_price - 1)
-                    * 100
-                    if len(future_dates) > 5
-                    else None
-                )
+                move_1d = windows["move_1d"]
+                move_3d = windows["move_3d"]
+                move_5d = windows["move_5d"]
 
                 row = hist_earnings.loc[date]
                 if hasattr(row, "to_dict"):
@@ -131,6 +195,8 @@ def _compute_earnings_reactions(symbol: str, num_quarters: int = 8) -> Dict[str,
                         "move_1d": round(move_1d, 2) if move_1d is not None else None,
                         "move_3d": round(move_3d, 2) if move_3d is not None else None,
                         "move_5d": round(move_5d, 2) if move_5d is not None else None,
+                        "timing": windows["timing"],
+                        "reaction_date": windows["reaction_date"],
                         "direction": "UP" if (move_1d or 0) > 0 else "DOWN",
                         "beat": eps_actual > eps_est,
                     }

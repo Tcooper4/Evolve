@@ -123,13 +123,18 @@ def render(
                             normalize_for_display(
                                 df_r[
                                     [
-                                        "date",
-                                        "eps_estimate",
-                                        "eps_actual",
-                                        "surprise_pct",
-                                        "move_1d",
-                                        "move_3d",
-                                        "move_5d",
+                                        c
+                                        for c in [
+                                            "date",
+                                            "timing",
+                                            "eps_estimate",
+                                            "eps_actual",
+                                            "surprise_pct",
+                                            "move_1d",
+                                            "move_3d",
+                                            "move_5d",
+                                        ]
+                                        if c in df_r.columns
                                     ]
                                 ]
                             ),

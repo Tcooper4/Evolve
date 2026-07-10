@@ -22,7 +22,7 @@ Shifted from bug-hunting to feature work per the handoff mandate, holding the sa
 
 **Tests:** `tests/test_optimization/test_strategy_backtest_objective.py` — 30 execution-level tests, all passing. Pre-existing suite shows an identical pass/fail set with this session's changes stashed vs applied (zero regressions; its failures are stale tests/missing sandbox deps that predate this session).
 
-**Still open from the handoff checklist (untouched this session):** position_sizing exotic methods depth pass; line-by-line depth on pages 2/3/6; torch models end-to-end (torch still not installed here); the `earnings_reaction.py` d0 anomaly (still needs Thomas's call, see below); `llm_interface.py` and `risk_metrics.py` duplicate consolidation.
+**Still open from the handoff checklist:** position_sizing exotic methods depth pass; line-by-line depth on pages 2/3/6; torch models end-to-end (torch still not installed here); `llm_interface.py` and `risk_metrics.py` duplicate consolidation. (The earnings_reaction d0 anomaly is now resolved — see below.)
 
 ## Status summary
 - **84 real bugs found and fixed**, all verified with actual execution (not just code review)
@@ -46,8 +46,8 @@ Earlier this session, `strategy_comparison.py` was called "clean" based on readi
 ## Remaining ~68 live files
 `components`/`components/tabs` (27, largest remaining block), `pages` (7), `config` (4), `trading/ui`/`trading/forecasting`/`trading/memory`/`agents/llm` (3 each), and smaller pockets (~13 more)
 
-## Flagged anomaly, not fixed (needs human judgment, not a guess)
-`trading/data/earnings_reaction.py::_compute_earnings_reactions` — computes `d0`/`d0_price` (price on the first trading day on/after the earnings date) but never uses either. The actual `move_1d/3d/5d` calculations index `future_dates[1]/[3]/[5]` instead, skipping over `d0` entirely. Two possible explanations: (a) a real bug — "1-day move" is actually measuring closer to a 2-day move, an incomplete refactor left `d0_price` behind; or (b) intentional — the convention is "N trading days after the pre-earnings close," and `d0_price` is simply vestigial. Could not determine which from the code alone. Not fixed, since guessing wrong would silently corrupt a real analytics output rather than fix it.
+## Flagged anomaly — RESOLVED (2026-07-10, decision delegated by Thomas)
+`trading/data/earnings_reaction.py::_compute_earnings_reactions` — the unused `d0`/`d0_price` was not an off-by-one but a side effect of a "guarantee the announcement is inside the window" convention, needed because yfinance earnings dates don't distinguish before-open (BMO) from after-close (AMC) reporting: for AMC names, d0's close pre-dates the announcement. The cost was a full extra day of unrelated drift folded into every BMO reporter's "1-day" move, inflating `avg_move_1d`/`typical_range`. Resolution: infer timing from the data itself — the reaction arrives as an overnight gap, either into d0's open (BMO) or d1's open (AMC); whichever gap is meaningful (>0.5%) and dominant (1.5x) identifies the reaction day, and moves are measured from the close immediately before it (d0's close is now the AMC baseline — the vestigial variable has a real job). Inconclusive gaps fall back to the legacy conservative window, labeled `timing="unknown"`; each quarter's inferred timing and reaction date are surfaced in the output and the earnings tab. Extracted as a pure helper (`_reaction_windows`) and execution-verified with 6 synthetic-history tests covering AMC, BMO, inconclusive-equals-legacy, weekend announcement dates, missing Open data, and insufficient history.
 
 ## Minor notes (not bugs, not fixed)
 - `trading/data/short_interest.py` uses unlimited-duration `@lru_cache` (no TTL) while every other file in this directory uses TTL-based caching — an inconsistency, not a correctness issue given short interest data changes slowly.
