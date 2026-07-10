@@ -211,7 +211,21 @@ def get_model_confidence(val_losses: list) -> Dict[str, float]:
         best_val_loss = min(val_losses)
 
         # Confidence decreases as validation loss increases
-        confidence = max(0.0, 1.0 - (latest_val_loss - best_val_loss) / best_val_loss)
+        # BUG FIX: this previously divided by best_val_loss with no
+        # guard, crashing with ZeroDivisionError whenever a model
+        # achieved a perfect (zero) validation loss - a real, reachable
+        # edge case, not merely theoretical. The crash was silently
+        # caught by this function's outer try/except, which fell back to
+        # confidence=0.0 - the worst possible score, exactly backwards
+        # from what a zero-loss achievement should indicate. The
+        # loss_ratio calculation just below already guards against this
+        # same scenario; confidence needed the same protection.
+        if best_val_loss <= 0:
+            confidence = 1.0 if latest_val_loss <= 0 else 0.0
+        else:
+            confidence = max(
+                0.0, 1.0 - (latest_val_loss - best_val_loss) / best_val_loss
+            )
 
         return {
             "confidence": confidence,
