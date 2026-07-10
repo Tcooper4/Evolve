@@ -11,6 +11,12 @@ Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not 
 - **Position-sizing depth pass complete (bugs #91–95)** — all 22 methods executed directly (the dispatcher's silent equal-weighted fallback had masked every failure): risk_parity was inverted AND unreachable (#91); black_litterman's daily-vs-annual rf mismatch returned 0.0 unconditionally (#92); the same unit bug inverted mean_variance into a volatility-maximizer (#93); all four scipy sizers crashed into fallback for any already-held asset via duplicate names (#94); momentum_weighted/regime_based used daily-return scale where window returns belong — inert tilt + dead branch (#95). 14 new tests. Noted-not-changed: optimal_f duplicates the kelly formula; ML sizer's feature ordering is fragile but inert in practice.
 - **Bug count: 95.** New tests this session: 30 (optimizer) + 6 (earnings) + 7 (risk metrics/transformer) + 14 (sizing) = 57, all passing.
 
+**Session 2 features (beyond the checklist):**
+- **Out-of-sample validation in the optimizer** — `optimize_strategy_validated()` optimizes on the first 75% of history and judges the winner on the held-out remainder; Optimizer tab toggle (on by default) with three honest outcomes (generalizes / partial overfit / classic overfit signature). Demonstrated deflating an in-sample Sharpe of +1.96 to a realistic +0.21.
+- **Evolve MCP server** (`trading/services/mcp_server.py`, docs/MCP_SERVER.md) — all ten platform tools over the standard protocol for Claude Desktop/Code/any MCP client; read/analyze only by design; same agent_tools implementations as in-app chat. **Bug #97 found while verifying through the protocol**: PSO/genetic ignored the evaluation budget (a 30-eval request burned 3000); schedules now derived from the budget.
+- **Agent Skills** (`skills/`, `trading/services/skill_loader.py`) — versioned playbooks matched per chat turn and injected via `platform_context_suffix`: signal-interpretation, position-sizing-and-risk, optimizer-results-review. Lands the handoff's "MCP hands / Skills judgment" modernization pair as working code.
+- **Bug count: 97.** Session test total: 99 new tests, all passing.
+
 **Session 1:**
 
 Shifted from bug-hunting to feature work per the handoff mandate, holding the same execution-verification standard. Everything below was verified by actually running the code path (synthetic OHLCV where the sandbox blocks Yahoo; streamlit AppTest for pages).

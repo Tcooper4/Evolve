@@ -2,6 +2,14 @@
 
 ## Fable session (2026-07)
 
+- **Out-of-sample validation** for the strategy optimizer (75/25 chronological split, overfit-signature callouts); evaluation budgets now honored per method
+- **Evolve MCP server**: ten platform tools over the Model Context Protocol for Claude Desktop/Code and other agents (read/analyze only); see docs/MCP_SERVER.md
+- **Agent Skills**: on-demand trading playbooks (signal interpretation, sizing & risk, optimizer review) loaded into chat turns
+- Position-sizing depth pass: risk parity, Black-Litterman, mean-variance, scipy-sizer dedupe, momentum/regime scale — 5 verified bug fixes
+- risk_metrics consolidated to one module; flat-series Sharpe/Sortino blowup root-fixed
+- Torch models verified end-to-end (Transformer encoder crash + shared-weights bug fixed); earnings-reaction timing now gap-inferred (BMO/AMC)
+- Resilient forecasting-backend loader (one missing dep no longer bricks Analyze); lazy agents.llm init
+
 - **Strategy Optimizer tab** on Backtest page: grid search / genetic / PSO / Bayesian parameter search for all six strategies against real history, with baseline comparison, convergence chart, and one-click apply into the strategy backtest
 - Canonical per-strategy parameter spaces (`strategy_param_spaces.py`) with cross-parameter constraints; SelfTuningOptimizer now wired with real bounds (was inert)
 - Fixed CCI signal generation (crashed on every call), SMA silent zero-signals on lowercase input, registry parameter path (3 breakages), grid-search premature early stopping
