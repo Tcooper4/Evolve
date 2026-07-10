@@ -445,9 +445,21 @@ class MarketRegimeAgent(BaseAgent):
 
             # Volume trend
             volume_ma = data["Volume"].rolling(20).mean()
-            volume_trend = (
-                data["Volume"].iloc[-1] - volume_ma.iloc[-1]
-            ) / volume_ma.iloc[-1]
+            # BUG FIX: this previously divided directly by
+            # volume_ma.iloc[-1] with no zero-guard, unlike every other
+            # calculation in this method (which all use safe_divide or
+            # safe_price_momentum). For an all-zero-volume edge case
+            # (e.g. an extremely illiquid or delisted ticker), this
+            # produced NaN via a 0/0 division rather than crashing
+            # outright - verified concretely - but that NaN then
+            # silently propagates into regime_confidence and the
+            # classifier's feature vector, producing wrong results
+            # rather than a clean, catchable error.
+            volume_trend = safe_divide(
+                data["Volume"].iloc[-1] - volume_ma.iloc[-1],
+                volume_ma.iloc[-1],
+                default=0.0,
+            )
 
             # Correlation with market (using SPY as proxy)
             try:
