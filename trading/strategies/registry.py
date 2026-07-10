@@ -213,9 +213,27 @@ class StrategyRegistry:
         strategy = self.get_strategy(strategy_name)
         if not strategy:
             raise ValueError(f"Strategy '{strategy_name}' not found")
+        # BUG FIX (verified by execution): the previous implementation
+        # called strategy.set_parameters(parameters) positionally and then
+        # generate_signals(data, **parameters). That broke three ways:
+        # RSIStrategy.set_parameters takes **kwargs only (TypeError when
+        # handed a positional dict); ATR/CCI generate_signals accept no
+        # **kwargs (TypeError the moment parameters were supplied); and
+        # ATR/CCI require lowercase OHLCV columns, so the capitalized
+        # frames yfinance returns (what pages/5_Backtest.py passes in)
+        # raised ValueError before any signal was generated. The shared
+        # adapter below applies parameters onto a FRESH instance (so the
+        # registry's singletons are never mutated by a parameterized run)
+        # and normalizes column casing for every strategy uniformly.
+        from trading.optimization.strategy_backtest_objective import (
+            apply_parameters,
+            normalize_ohlcv,
+        )
+
         if parameters:
-            strategy.set_parameters(parameters)
-        signals = strategy.generate_signals(data, **(parameters or {}))
+            strategy = type(strategy)()
+            apply_parameters(strategy, parameters)
+        signals = strategy.generate_signals(normalize_ohlcv(data))
         performance_metrics = self._calculate_performance_metrics(data, signals)
         return StrategyResult(
             signals=signals,
