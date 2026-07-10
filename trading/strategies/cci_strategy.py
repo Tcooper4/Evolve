@@ -71,10 +71,22 @@ class CCIStrategy:
         denominator = self.config.constant * mean_deviation
         
         # Safely calculate CCI with division-by-zero protection
-        cci = np.where(
-            np.abs(denominator) > 1e-10,
-            (typical_price - sma_tp) / denominator,
-            0  # Default to 0 when denominator is too small
+        # BUG FIX: np.where returns a bare numpy ndarray, but this method
+        # is typed -> pd.Series and generate_signals() immediately calls
+        # cci.shift(1) on the result. ndarray has no .shift, so signal
+        # generation crashed with AttributeError on EVERY call - CCI had
+        # never produced a signal. Verified by execution: any valid OHLCV
+        # input raised "'numpy.ndarray' object has no attribute 'shift'".
+        # Wrapping back into a Series on the typical-price index restores
+        # the declared contract (and index alignment for .loc masks).
+        cci = pd.Series(
+            np.where(
+                np.abs(denominator) > 1e-10,
+                (typical_price - sma_tp) / denominator,
+                0,  # Default to 0 when denominator is too small
+            ),
+            index=typical_price.index,
+            name="cci",
         )
 
         return cci
