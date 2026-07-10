@@ -99,6 +99,18 @@ def render() -> None:
             format_func=lambda y: f"{y}y", key="opt_lookback",
         )
 
+    validate = st.toggle(
+        "Hold out a test window (recommended)",
+        value=True,
+        key="opt_validate",
+        help=(
+            "Optimize on the first 75% of history, then judge the winning "
+            "parameters on the last 25% the search never saw. Out-of-sample "
+            "results are the trustworthy ones; a big train→test drop is the "
+            "classic overfit signature."
+        ),
+    )
+
     specs = get_param_specs(strat)
     with st.expander("Parameter space", expanded=False):
         space_df = pd.DataFrame(
@@ -149,15 +161,31 @@ def render() -> None:
                 f"Optimizing {strat} via {method_label.lower()} "
                 f"({budget} evaluation budget)…"
             ):
-                run = optimize_strategy(
-                    strat,
-                    raw,
-                    method=method,
-                    metric=metric,
-                    selected_params=selected or None,
-                    max_evaluations=int(budget),
-                    cost_bps=float(cost_bps),
-                )
+                if validate:
+                    from trading.optimization.strategy_backtest_objective import (
+                        optimize_strategy_validated,
+                    )
+
+                    run = optimize_strategy_validated(
+                        strat,
+                        raw,
+                        train_fraction=0.75,
+                        method=method,
+                        metric=metric,
+                        selected_params=selected or None,
+                        max_evaluations=int(budget),
+                        cost_bps=float(cost_bps),
+                    )
+                else:
+                    run = optimize_strategy(
+                        strat,
+                        raw,
+                        method=method,
+                        metric=metric,
+                        selected_params=selected or None,
+                        max_evaluations=int(budget),
+                        cost_bps=float(cost_bps),
+                    )
             st.session_state["opt_last_run"] = run
             st.session_state["opt_last_symbol"] = symbol
         except Exception:
@@ -222,6 +250,59 @@ def render() -> None:
             "sit near this space's optimum for this symbol and window, or the "
             "budget may be too small."
         )
+
+    if run.oos_best_metrics is not None:
+        st.markdown("##### Out-of-sample validation")
+        st.caption(
+            f"Optimized on {run.train_range} · judged on unseen "
+            f"{run.test_range}. These are the numbers to trust."
+        )
+        oos_best = run.oos_best_metrics.get(run.metric, 0.0)
+        oos_base = run.oos_baseline_metrics.get(run.metric, 0.0)
+        o1, o2, o3 = st.columns(3)
+        with o1:
+            st.metric(
+                f"{METRIC_CHOICES.get(run.metric, run.metric)} (test, optimized)",
+                _fmt_metric(run.metric, oos_best),
+            )
+        with o2:
+            st.metric(
+                f"{METRIC_CHOICES.get(run.metric, run.metric)} (test, defaults)",
+                _fmt_metric(run.metric, oos_base),
+            )
+        with o3:
+            st.metric(
+                "Train → test change (optimized)",
+                f"{oos_best - best_v:+.2f}"
+                if run.metric not in ("total_return", "max_drawdown")
+                else f"{(oos_best - best_v) * 100:+.1f}pp",
+            )
+        oos_holds = (oos_best > oos_base) if run.metric != "max_drawdown" else (
+            abs(oos_best) < abs(oos_base)
+        )
+        degraded = (
+            run.metric not in ("total_return", "max_drawdown")
+            and best_v > 0
+            and oos_best < best_v * 0.4
+        )
+        if oos_holds and not degraded:
+            st.success(
+                "The optimized parameters also beat the defaults on data the "
+                "search never saw — the edge generalizes on this window."
+            )
+        elif oos_holds and degraded:
+            st.warning(
+                "Optimized still beats defaults out-of-sample, but performance "
+                "dropped sharply from the training window — partial overfit. "
+                "Treat the test-window numbers as the realistic expectation."
+            )
+        else:
+            st.warning(
+                "The optimized parameters did NOT hold up on the unseen test "
+                "window — the classic overfit signature. Don't trade these; "
+                "consider a bigger training window, fewer tuned parameters, "
+                "or accepting the defaults."
+            )
 
     left, right = st.columns([1, 1.2])
     with left:

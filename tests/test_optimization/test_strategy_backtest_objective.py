@@ -298,3 +298,37 @@ class TestSelfTuningWiring:
         # ("No parameter bounds defined").
         assert res is not None
         assert res.new_parameters != params
+
+
+# ------------------------------------------------- walk-forward validation
+
+class TestValidatedOptimization:
+    def test_train_test_split_and_oos_fields(self, ohlcv):
+        from trading.optimization.strategy_backtest_objective import (
+            optimize_strategy_validated,
+        )
+
+        run = optimize_strategy_validated(
+            "RSIStrategy", ohlcv, train_fraction=0.75, method="pso",
+            max_evaluations=25, n_particles=6, n_iterations=4,
+        )
+        assert run.oos_best_metrics is not None
+        assert run.oos_baseline_metrics is not None
+        assert "sharpe_ratio" in run.oos_best_metrics
+        assert run.train_range and run.test_range
+        # The train window must end before the test window begins.
+        train_end = run.train_range.split("→")[1].strip()
+        test_start = run.test_range.split("→")[0].strip()
+        assert train_end < test_start
+
+    def test_rejects_bad_fraction_and_short_history(self, ohlcv):
+        from trading.optimization.strategy_backtest_objective import (
+            optimize_strategy_validated,
+        )
+
+        with pytest.raises(ValueError):
+            optimize_strategy_validated("RSIStrategy", ohlcv, train_fraction=0.3)
+        with pytest.raises(ValueError):
+            optimize_strategy_validated(
+                "RSIStrategy", ohlcv.iloc[:80], train_fraction=0.75
+            )

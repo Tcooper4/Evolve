@@ -287,6 +287,55 @@ class StrategyOptimizationRun:
     n_evaluations: int
     optimization_time: float
     convergence_history: List[float] = field(default_factory=list)
+    # Out-of-sample validation (populated by optimize_strategy_validated).
+    oos_best_metrics: Optional[Dict[str, float]] = None
+    oos_baseline_metrics: Optional[Dict[str, float]] = None
+    train_range: Optional[str] = None
+    test_range: Optional[str] = None
+
+
+def optimize_strategy_validated(
+    strategy_name: str,
+    data: pd.DataFrame,
+    train_fraction: float = 0.75,
+    **kwargs: Any,
+) -> StrategyOptimizationRun:
+    """Optimize on a training window, then evaluate the winning parameters
+    on a held-out test window the search never saw.
+
+    In-sample optimization results systematically overstate performance
+    (the search selects for whatever fit the sample, signal or noise).
+    This wrapper splits the history chronologically, runs
+    :func:`optimize_strategy` on the first ``train_fraction``, then
+    re-evaluates both the optimized and the default parameters on the
+    remainder. The out-of-sample comparison is the number that deserves
+    trust; a large train->test degradation is the classic overfit
+    signature and the UI surfaces it as such.
+    """
+    if not 0.5 <= train_fraction <= 0.9:
+        raise ValueError("train_fraction must be between 0.5 and 0.9")
+    ndata = normalize_ohlcv(data)
+    if len(ndata) < 120:
+        raise ValueError(
+            "Need at least 120 bars for a meaningful train/test split"
+        )
+    split = int(len(ndata) * train_fraction)
+    train, test = data.iloc[:split], data.iloc[split:]
+
+    cost_bps = kwargs.get("cost_bps", 5.0)
+    run = optimize_strategy(strategy_name, train, **kwargs)
+
+    run.oos_baseline_metrics = evaluate_params(
+        strategy_name, test, run.baseline_params, cost_bps
+    )
+    run.oos_best_metrics = (
+        evaluate_params(strategy_name, test, run.best_params, cost_bps)
+        if run.best_params
+        else dict(run.oos_baseline_metrics)
+    )
+    run.train_range = f"{ndata.index[0].date()} → {ndata.index[split - 1].date()}"
+    run.test_range = f"{ndata.index[split].date()} → {ndata.index[-1].date()}"
+    return run
 
 
 def optimize_strategy(
