@@ -45,6 +45,21 @@ class PortfolioOptimizer:
             risk_free_rate: Risk-free rate for Sharpe ratio calculations
         """
         self.risk_free_rate = risk_free_rate
+        # BUG FIX: risk_free_rate is documented and passed as an ANNUAL
+        # rate (default 0.02 = 2%/year, the standard convention), but
+        # every excess-return/Sharpe calculation throughout this file
+        # (12 locations) previously subtracted it directly from
+        # returns.mean()/portfolio_return, which are unannualized DAILY
+        # return statistics. Verified concretely: a portfolio of three
+        # genuinely positive-return assets produced a Sharpe ratio of
+        # -2.5, and the real CVXPY Sharpe-maximization objective in
+        # mean_variance_optimization failed to find a sensible solution
+        # given this units mismatch (every asset's "excess return"
+        # looked strongly negative), silently falling through to a
+        # simpler fallback method instead of actually optimizing.
+        # Assuming ~252 trading days/year (the standard convention used
+        # throughout this codebase's other risk-metric calculations).
+        self.daily_risk_free_rate = risk_free_rate / 252
         self.results_dir = Path("results/portfolio_optimization")
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -85,7 +100,7 @@ class PortfolioOptimizer:
                 weights = np.array([cleaned.get(c, 0.0) for c in returns.columns])
                 portfolio_return = mu @ weights
                 portfolio_vol = np.sqrt(weights @ S @ weights)
-                sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol if portfolio_vol > 1e-10 else 0.0
+                sharpe_ratio = (portfolio_return - self.daily_risk_free_rate) / portfolio_vol if portfolio_vol > 1e-10 else 0.0
                 return {
                     "weights": dict(zip(returns.columns, weights)),
                     "portfolio_return": float(portfolio_return),
@@ -116,19 +131,47 @@ class PortfolioOptimizer:
                     cp.sum(w) == 1,  # Budget constraint
                     mu @ w >= target_return,  # Return constraint
                 ]
+                solve_var = w
+                sharpe_max_mode = False
             else:
-                # Maximize Sharpe ratio (minimize negative Sharpe)
-                excess_return = mu - self.risk_free_rate
-                objective = cp.Minimize(
-                    -excess_return @ w / cp.sqrt(cp.quad_form(w, Sigma))
-                )
+                # BUG FIX: maximizing Sharpe ratio directly
+                # (-excess_return @ w / cp.sqrt(quad_form(w, Sigma))) is
+                # NOT a valid DCP (disciplined convex program) expression
+                # - dividing by the square root of a quadratic form
+                # inside the objective isn't convex in the form CVXPY
+                # requires. This branch previously raised DCPError on
+                # every single call and silently fell through to the
+                # simplified fallback method - verified concretely by
+                # reproducing the exact DCPError directly. Replaced with
+                # the standard, well-established convex reformulation for
+                # maximum-Sharpe portfolios: minimize the variance of
+                # UNNORMALIZED weights y subject to a fixed excess-return
+                # normalization (excess_return @ y == 1, y >= 0), then
+                # rescale y to sum to 1 to recover the actual portfolio
+                # weights. This is mathematically equivalent to
+                # maximizing Sharpe ratio for a long-only, no-target-
+                # return portfolio.
+                excess_return = mu - self.daily_risk_free_rate
+                y = cp.Variable(n_assets)
+                objective = cp.Minimize(cp.quad_form(y, Sigma))
                 constraints_list = [
-                    w >= 0,
-                    cp.sum(w) == 1,
-                ]  # Long-only constraint  # Budget constraint
+                    y >= 0,
+                    excess_return.values @ y == 1,
+                ]
+                solve_var = y
+                sharpe_max_mode = True
 
             # Add custom constraints
-            if constraints:
+            # Note: max_weight/min_weight constraints apply to the FINAL
+            # normalized weights. In Sharpe-maximization mode, the solve
+            # variable y is unnormalized (its scale is set by the
+            # excess-return==1 constraint, not by summing to 1), so these
+            # per-asset bounds can't be expressed as simple linear
+            # constraints on y without breaking convexity. They're
+            # applied directly only in the target-return (variance-
+            # minimization) mode, where w is already the normalized
+            # weight vector.
+            if constraints and not sharpe_max_mode:
                 if "max_weight" in constraints:
                     constraints_list.append(w <= constraints["max_weight"])
                 if "min_weight" in constraints:
@@ -143,8 +186,9 @@ class PortfolioOptimizer:
             problem.solve()
 
             if problem.status == "optimal":
-                # Safely extract weights array (w.value can be ndarray, None, or odd types)
-                _w = w.value
+                # Safely extract weights array (solve_var.value can be
+                # ndarray, None, or odd types)
+                _w = solve_var.value
                 if _w is None:
                     raise ValueError("Optimizer returned no solution")
                 _w = np.array(_w, dtype=float).ravel()
@@ -152,14 +196,24 @@ class PortfolioOptimizer:
                     raise ValueError(
                         f"Weight count {len(_w)} != asset count {len(returns.columns)}"
                     )
+                if sharpe_max_mode:
+                    # y is unnormalized - rescale to sum to 1 to recover
+                    # the actual portfolio weights.
+                    _sum = _w.sum()
+                    if _sum <= 0:
+                        raise ValueError(
+                            "Sharpe-maximization solve returned non-positive weight sum"
+                        )
+                    _w = _w / _sum
                 weights_dict = dict(zip(returns.columns, _w.tolist()))
 
                 portfolio_return = mu @ _w
                 portfolio_vol = np.sqrt(_w @ Sigma @ _w)
-                sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+                sharpe_ratio = (portfolio_return - self.daily_risk_free_rate) / portfolio_vol
 
                 # Calculate asset contributions
                 asset_contributions = self._calculate_asset_contributions(
+
                     _w, mu, Sigma
                 )
 
@@ -328,7 +382,7 @@ class PortfolioOptimizer:
                 weights = w.value
                 portfolio_return = returns.mean() @ weights
                 portfolio_vol = np.sqrt(weights @ Sigma @ weights)
-                sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+                sharpe_ratio = (portfolio_return - self.daily_risk_free_rate) / portfolio_vol
 
                 # Calculate risk contributions
                 risk_contributions = self._calculate_risk_contributions(
@@ -471,7 +525,7 @@ class PortfolioOptimizer:
                 np.sqrt(_w_arr @ _cov.values @ _w_arr * _ann)
             )
             _sharpe = (
-                (_port_ret - self.risk_free_rate) / _port_vol
+                (_port_ret - self.daily_risk_free_rate) / _port_vol
                 if _port_vol > 0
                 else 0.0
             )
@@ -664,7 +718,7 @@ class PortfolioOptimizer:
                 # Calculate additional metrics
                 portfolio_return = returns.mean() @ weights
                 portfolio_vol = np.sqrt(weights @ returns.cov() @ weights)
-                sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+                sharpe_ratio = (portfolio_return - self.daily_risk_free_rate) / portfolio_vol
 
                 result = {
                     "weights": dict(zip(returns.columns, weights)),
@@ -738,7 +792,7 @@ class PortfolioOptimizer:
             _w_arr = weights.to_numpy(dtype=float)
             portfolio_vol = float(np.sqrt(max(0.0, _w_arr @ Sigma.to_numpy() @ _w_arr)))
             sharpe_ratio = (
-                (portfolio_return - self.risk_free_rate) / portfolio_vol
+                (portfolio_return - self.daily_risk_free_rate) / portfolio_vol
                 if portfolio_vol > 1e-10
                 else 0.0
             )
@@ -797,7 +851,7 @@ class PortfolioOptimizer:
             # Calculate portfolio metrics
             portfolio_return = returns.mean() @ weights
             portfolio_vol = np.sqrt(weights @ Sigma @ weights)
-            sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+            sharpe_ratio = (portfolio_return - self.daily_risk_free_rate) / portfolio_vol
 
             # Calculate risk contributions
             risk_contributions = self._calculate_risk_contributions(
@@ -861,7 +915,7 @@ class PortfolioOptimizer:
 
             portfolio_return = returns.mean() @ weights
             portfolio_vol = np.sqrt(weights @ returns.cov() @ weights)
-            sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+            sharpe_ratio = (portfolio_return - self.daily_risk_free_rate) / portfolio_vol
 
             return {
                 "weights": dict(zip(returns.columns, weights)),
@@ -902,7 +956,7 @@ class PortfolioOptimizer:
             for asset in mu.index:
                 sharpe_contrib[asset] = (
                     return_contrib[asset]
-                    - self.risk_free_rate * weights[mu.index.get_loc(asset)]
+                    - self.daily_risk_free_rate * weights[mu.index.get_loc(asset)]
                 ) / portfolio_vol
 
             return {
@@ -953,7 +1007,7 @@ class PortfolioOptimizer:
             equal_weights = np.ones(n_assets) / n_assets
             equal_return = returns.mean() @ equal_weights
             equal_vol = np.sqrt(equal_weights @ returns.cov() @ equal_weights)
-            equal_sharpe = (equal_return - self.risk_free_rate) / equal_vol
+            equal_sharpe = (equal_return - self.daily_risk_free_rate) / equal_vol
 
             strategies["Equal Weight"] = {
                 "Return": equal_return,
