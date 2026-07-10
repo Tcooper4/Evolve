@@ -621,6 +621,26 @@ class PortfolioManager:
             "portfolio_beta": portfolio_beta,
         }
 
+    def _update_metrics(self) -> None:
+        """Placeholder for portfolio-level metric updates.
+
+        BUG FIX: this method was called from two places (close_position
+        and update_positions) but never existed on this class at all -
+        every call crashed with AttributeError. Verified concretely. Its
+        original intended implementation is unclear: it's called
+        separately from _update_strategy_weights() (which already runs
+        immediately before it in close_position, ruling out a simple
+        duplicate-name explanation) and from _update_risk_metrics()
+        (which takes different required arguments not available at
+        these call sites). Rather than guess at unknown intended
+        behavior, this is an explicit no-op that stops the crash without
+        pretending to know what metrics were meant to be recomputed
+        here. If this class's design does need additional portfolio-
+        level metrics (e.g. total value, allocation percentages)
+        recalculated at these two points, that logic belongs here.
+        """
+        pass
+
     def _update_strategy_weights(self) -> None:
         """Update strategy weights based on performance."""
         # Calculate strategy PnL

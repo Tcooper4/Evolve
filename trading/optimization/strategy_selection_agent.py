@@ -143,6 +143,69 @@ class StrategySelectionAgent:
 
         logger.info("Initialized StrategySelectionAgent")
 
+    def get_market_regime(self, data: pd.DataFrame) -> str:
+        """Get the current market regime as a string.
+
+        BUG FIX: this method was called by trading/portfolio/portfolio_manager.py
+        (self.strategy_agent.get_market_regime(market_data)) but never
+        existed on this class - every call crashed with AttributeError.
+        Verified concretely. Wraps the existing MarketRegime.from_data()
+        classmethod and returns just the regime string, matching how
+        portfolio_manager.py uses the result (assigned directly to
+        self.state.market_regime, then compared against string literals
+        like "trending"/"ranging").
+
+        Args:
+            data: DataFrame with 'price' and 'volume' columns (see
+                MarketRegime.from_data for the exact feature calculation)
+
+        Returns:
+            Regime string: one of "volatile", "trending", "accumulation",
+            "ranging"
+        """
+        try:
+            regime = MarketRegime.from_data(data)
+            self.regime_history.append(regime)
+            return regime.regime
+        except Exception as e:
+            logger.error(f"Error classifying market regime: {e}")
+            return "ranging"
+
+    def get_strategy_confidence(
+        self, strategy: str, market_data: pd.DataFrame
+    ) -> float:
+        """Get confidence score for a specific, already-chosen strategy.
+
+        BUG FIX: this method was called by
+        trading/portfolio/portfolio_manager.py
+        (self.strategy_agent.get_strategy_confidence(strategy, market_data))
+        but never existed on this class - every call crashed with
+        AttributeError. Verified concretely. Unlike select_strategy()
+        (which chooses the BEST strategy among a list and returns that
+        choice's confidence), this looks up confidence for one specific,
+        externally-chosen strategy, using the same underlying
+        recent-performance/scoring machinery.
+
+        Args:
+            strategy: Name of the strategy to score
+            market_data: DataFrame with 'price' and 'volume' columns
+
+        Returns:
+            Confidence score (0-1), or 0.5 (neutral) if insufficient data
+        """
+        try:
+            current_regime = MarketRegime.from_data(market_data)
+            recent_performance = self._get_recent_performance(
+                [strategy], current_regime.regime
+            )
+            if not recent_performance or strategy not in recent_performance:
+                return 0.5
+            scores = self._score_strategies(recent_performance)
+            return float(scores.get(strategy, 0.5))
+        except Exception as e:
+            logger.error(f"Error scoring strategy confidence for {strategy}: {e}")
+            return 0.5
+
     def select_strategy(
         self, data: pd.DataFrame, available_strategies: List[str]
     ) -> Tuple[str, float, str]:
