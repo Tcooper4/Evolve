@@ -157,16 +157,38 @@ class SMAStrategy:
         long_sma: pd.Series,
         trend_type: str,
     ) -> pd.Series:
-        """Confirm trend change over multiple periods."""
-        confirmed_points = crossover_points.copy()
+        """Confirm trend change over multiple periods.
+
+        BUG FIX: this previously used short_sma.shift(-i)/long_sma.shift(-i)
+        (negative shift = FUTURE values) to decide whether to mark a
+        crossover as "confirmed" at its ORIGINAL timestamp - genuine
+        look-ahead bias, using data that would not exist yet in real
+        trading, active by default (confirmation_periods=3). Verified the
+        general pattern earlier in macd_strategy.py's smoothing bug.
+
+        The correct, no-look-ahead behavior for "wait N periods for a
+        crossover to be confirmed" is for the confirmed signal to fire N
+        periods AFTER the original crossover, once the SMA relationship
+        has actually been observed (using only past data) to hold for
+        that long - not backdated onto the original crossover bar.
+        """
+        # Delay the raw crossover so the confirmed signal appears
+        # confirmation_periods bars later, once confirmation is genuinely
+        # observable rather than assumed from the future.
+        confirmed_points = (
+            crossover_points.shift(self.config.confirmation_periods)
+            .fillna(False)
+            .astype(bool)
+        )
 
         for i in range(1, self.config.confirmation_periods + 1):
             if trend_type == "bullish":
-                # Check if short SMA remains above long SMA
-                confirmed_points &= short_sma.shift(-i) > long_sma.shift(-i)
+                # Check the relationship held over the PAST i periods
+                # leading up to (and including) the confirmation point -
+                # all real, already-observed data as of "now".
+                confirmed_points &= short_sma.shift(i) > long_sma.shift(i)
             else:  # bearish
-                # Check if short SMA remains below long SMA
-                confirmed_points &= short_sma.shift(-i) < long_sma.shift(-i)
+                confirmed_points &= short_sma.shift(i) < long_sma.shift(i)
 
         return confirmed_points
 

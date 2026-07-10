@@ -996,10 +996,21 @@ def _compute_ai_score_impl(
                 regime_label=_regime_label,
                 vix_level=_vix_level,
             )
-        except Exception:
-            weights = dict(
-                SCORING_STYLE_WEIGHTS["Balanced (default)"],
+        except Exception as _weights_exc:
+            # BUG FIX: previously hardcoded SCORING_STYLE_WEIGHTS["Balanced
+            # (default)"] here regardless of what scoring_style was actually
+            # requested - a user with e.g. "Technical-heavy" selected would
+            # silently get Balanced weights instead whenever
+            # _compute_ic_weights raised any exception, with no logging to
+            # indicate this happened. _resolve_style_weights already
+            # correctly falls back to Balanced only when scoring_style is
+            # unset/unrecognized.
+            logger.debug(
+                "IC weight computation failed, falling back to static "
+                "style weights for scoring_style=%r: %s",
+                scoring_style, _weights_exc,
             )
+            weights = _resolve_style_weights(scoring_style)
             try:
                 if _regime_label:
                     weights = _apply_regime_tilt(
