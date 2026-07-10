@@ -844,21 +844,21 @@ class SentimentProcessor:
                         [
                             r.readability_score
                             for r in quality_results
-                            if r.readability_score
+                            if r.readability_score is not None
                         ]
                     ),
                     "min_readability": np.min(
                         [
                             r.readability_score
                             for r in quality_results
-                            if r.readability_score
+                            if r.readability_score is not None
                         ]
                     ),
                     "max_readability": np.max(
                         [
                             r.readability_score
                             for r in quality_results
-                            if r.readability_score
+                            if r.readability_score is not None
                         ]
                     ),
                 },
