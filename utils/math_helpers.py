@@ -502,6 +502,17 @@ def calculate_sortino_ratio(
     if isinstance(returns, np.ndarray):
         returns = pd.Series(returns)
 
+    # BUG FIX: pandas' .rolling(window).apply(custom_func) requires the
+    # ENTIRE window to be non-NaN by default - a single NaN anywhere in
+    # `returns` silently NaNs out every window that contains it (up to
+    # `window` periods forward, ~1 year of rolling Sortino values at the
+    # default window=252, from just one bad/missing data point). Verified
+    # concretely: a single NaN at index 50 in a 300-point series left
+    # every subsequent rolling value NaN. Filling with 0 (treating a
+    # missing day as "no return") before the rolling calculation
+    # preserves index alignment while preventing this cascading failure.
+    returns = returns.fillna(0.0)
+
     # Calculate excess returns
     excess_returns = returns - (risk_free_rate / 252)
 
@@ -540,6 +551,16 @@ def calculate_calmar_ratio(
     """
     if isinstance(equity_curve, np.ndarray):
         equity_curve = pd.Series(equity_curve)
+
+    # BUG FIX: same rolling-window NaN propagation issue as
+    # calculate_sortino_ratio above - .rolling(window).apply(custom_func)
+    # requires the entire window to be non-NaN, so a single gap in the
+    # equity curve would silently NaN out up to a full window's worth of
+    # subsequent Calmar values. Forward-filling (appropriate for an
+    # equity curve - carrying the last known value forward through a gap,
+    # unlike a return series where 0 is the natural fill) before the
+    # rolling calculation prevents this cascading failure.
+    equity_curve = equity_curve.ffill()
 
     def rolling_calmar(x):
         if len(x) < 2:
