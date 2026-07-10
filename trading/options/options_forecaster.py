@@ -474,10 +474,31 @@ class OptionsForecaster:
                 * norm.cdf(d1)
             )
 
+            # BUG FIX: both branches of this if/else previously computed
+            # the IDENTICAL expression (theta_term1 - theta_term2 +
+            # theta_term3), making the conditional completely vacuous -
+            # put theta was silently using the call theta formula.
+            # Verified numerically against the standard Black-Scholes-
+            # Merton theta formulas: on a standard at-the-money example
+            # (S=K=100, T=1, sigma=0.2, r=0.05), the old code produced
+            # -6.41 for BOTH call and put theta, but the mathematically
+            # correct put theta is -1.66. The put formula needs N(-d2)
+            # and N(-d1) (not N(d2) and N(d1)), with correspondingly
+            # different signs on the rate and dividend terms.
             if option_type == "call":
                 theta = theta_term1 - theta_term2 + theta_term3
             else:
-                theta = theta_term1 - theta_term2 + theta_term3
+                theta = (
+                    theta_term1
+                    + self.risk_free_rate
+                    * strike
+                    * np.exp(-self.risk_free_rate * time_to_expiry)
+                    * norm.cdf(-d2)
+                    - self.dividend_yield
+                    * underlying_price
+                    * np.exp(-self.dividend_yield * time_to_expiry)
+                    * norm.cdf(-d1)
+                )
 
             # Vega
             vega = (
