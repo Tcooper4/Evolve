@@ -1,5 +1,13 @@
 # Changelog
 
+## Fable session (2026-07)
+
+- **Strategy Optimizer tab** on Backtest page: grid search / genetic / PSO / Bayesian parameter search for all six strategies against real history, with baseline comparison, convergence chart, and one-click apply into the strategy backtest
+- Canonical per-strategy parameter spaces (`strategy_param_spaces.py`) with cross-parameter constraints; SelfTuningOptimizer now wired with real bounds (was inert)
+- Fixed CCI signal generation (crashed on every call), SMA silent zero-signals on lowercase input, registry parameter path (3 breakages), grid-search premature early stopping
+- Theme overhaul: design tokens, Inter + JetBrains Mono tabular numerals, layered surfaces, interaction transitions, reduced-motion support
+- 30 new execution-level tests
+
 ## v3.40.0 (2026-04)
 
 - Consistency audit fixes: Home chat eight tools, `sp100` loads `data/universes/sp100.json`, consensus default ten models with per-model timeouts, dead “Model Lab” / “Forecasting” strings → Analyze, `filelock` / `cvxpy` in requirements, Transformer smoke test, aligned option/social/scanner caches to 300s, model comparison + quick forecast lists, `CHANGELOG` / `TECHNICAL_DEBT` / manifest update

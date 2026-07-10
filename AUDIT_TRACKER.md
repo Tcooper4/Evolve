@@ -2,6 +2,28 @@
 
 Branch: `codebase-audit-consolidated` (single branch, all fixes merged in). Not to be merged into `main` until the full audit is complete.
 
+## Fable session — upgrade & build pass (2026-07-10)
+
+Shifted from bug-hunting to feature work per the handoff mandate, holding the same execution-verification standard. Everything below was verified by actually running the code path (synthetic OHLCV where the sandbox blocks Yahoo; streamlit AppTest for pages).
+
+**Features shipped:**
+- **Strategy Optimizer tab** (`pages/5_Backtest.py` + `components/tabs/tab_strategy_optimizer.py`) — first live wiring of the audited grid/genetic/PSO/Bayesian cluster. Strategy + objective metric + method + budget + transaction cost in; optimized-vs-default comparison, parameter table, convergence chart out. One-click apply feeds `st.session_state["evolve_optimized_params"]`, which the Strategy backtest tab now consumes and labels. Resolves the "cluster verified but unwired" open decision.
+- **Canonical parameter spaces** (`trading/optimization/strategy_param_spaces.py`) — bounds/steps/types/defaults + cross-parameter constraints for all six built-in strategies. Deliberately excludes `min_volume`/`min_price` (tuning data filters = overfitting by changing the universe). Single source of truth.
+- **Runner/objective bridge** (`trading/optimization/strategy_backtest_objective.py`) — parameterized strategy runner (fresh instance per run, column normalization, config/attr adapter), signal→net-return conversion with one-bar delay (no lookahead, test-proven) and per-side bps costs, objective factory with finite constraint penalty (skopt GP can't fit inf), `optimize_strategy()` high-level API.
+- **SelfTuningOptimizer un-inerted** (`agents/llm/agent.py`) — was constructed with no config everywhere, so `parameter_bounds` was always empty and `optimize_strategy()` always returned None. Now fed real bounds/steps from the canonical spaces; verified producing real bounded parameter proposals.
+- **Theme overhaul** (`components/theme.py`, `.streamlit/config.toml`) — token-based design system: layered surfaces, Inter UI + JetBrains Mono tabular numerals on all data, 140ms interaction transitions, semantic up/down/warn, focus rings, reduced-motion support. Same identity (navy + cyan, matching existing Plotly traces), same public API. All 7 pages AppTest-clean after.
+
+**New bugs found & fixed while building (execution-verified, count now 89):**
+- **#85 `cci_strategy.py`**: `calculate_cci` returned a bare ndarray (typed `-> pd.Series`); `generate_signals` crashed on `cci.shift(1)` on **every call — CCI had never produced a signal**.
+- **#86 `sma_strategy.py`**: all-NaN early-exit checked only capitalized `"Close"` while the rest of the method is case-insensitive → lowercase OHLCV input silently returned **all-zero signals** with no error.
+- **#87 `registry.py::execute_strategy`**: parameter path broken three ways — RSI's `set_parameters(**kwargs)` called with a positional dict (TypeError); ATR/CCI `generate_signals` receive no `**kwargs` but got `**parameters` (TypeError); ATR/CCI require lowercase columns and raised on yfinance's capitalized frames, failing in the live Backtest tab. Now routes through the shared adapter; singletons never mutated.
+- **#88 `grid_search_optimizer.py`**: ignored configured early-stopping patience (hardcoded 5) → searches died within ~8 evaluations of a 40-eval budget on noisy objectives and returned worse-than-default "bests".
+- **#89 `strategy_backtest_objective.py` guard for pre-existing metrics degeneracy**: `compute_performance_metrics` on an all-zero return series reports Sharpe ≈ -31.5M (rf drag / ~zero vol). Guarded at the evaluation layer; the shared metrics function itself was left untouched (other callers depend on its exact behavior — worth a look in a future pass).
+
+**Tests:** `tests/test_optimization/test_strategy_backtest_objective.py` — 30 execution-level tests, all passing. Pre-existing suite shows an identical pass/fail set with this session's changes stashed vs applied (zero regressions; its failures are stale tests/missing sandbox deps that predate this session).
+
+**Still open from the handoff checklist (untouched this session):** position_sizing exotic methods depth pass; line-by-line depth on pages 2/3/6; torch models end-to-end (torch still not installed here); the `earnings_reaction.py` d0 anomaly (still needs Thomas's call, see below); `llm_interface.py` and `risk_metrics.py` duplicate consolidation.
+
 ## Status summary
 - **84 real bugs found and fixed**, all verified with actual execution (not just code review)
 - **168,704 lines** total live codebase
