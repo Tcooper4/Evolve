@@ -44,6 +44,15 @@ class Trade:
     pnl: Optional[float] = None
     pnl_pct: Optional[float] = None
     metadata: Optional[Dict[str, Any]] = None
+    # total_cost/effective_price: populated from the CostModel's actual
+    # (potentially volume/tier-aware) breakdown at execution time. These
+    # were referenced by callers (backtester.py's execute_trade and
+    # _calculate_equity_curve) but never declared here, causing a
+    # TypeError on every single trade. total_cost is direction-agnostic
+    # (trade_value + costs); callers must subtract costs twice on the
+    # SELL side to get net proceeds rather than adding this value directly.
+    total_cost: Optional[float] = None
+    effective_price: Optional[float] = None
 
     def __post_init__(self):
         """Post-initialization validation."""
@@ -65,12 +74,20 @@ class Trade:
             raise ValueError("Position size cannot be negative")
 
     def calculate_total_cost(self) -> float:
-        """Calculate total cost including slippage, transaction cost, and spread."""
+        """Calculate total cost including slippage, transaction cost, and spread.
+
+        BUG FIX: this previously multiplied base_cost by self.slippage /
+        self.transaction_cost / self.spread, treating them as fractional
+        rates (e.g. 0.001 = 0.1%). But everywhere a Trade is actually
+        constructed (backtester.py's execute_trade), these fields are
+        populated with real DOLLAR amounts straight from CostModel's
+        breakdown (fees in dollars, spread_per_share*quantity, etc.) — not
+        rates. Multiplying a ~$10 dollar fee by a ~$10,000 base_cost as if
+        it were a rate inflated total_cost by orders of magnitude. They are
+        dollar costs already, so they should be summed, not multiplied in.
+        """
         base_cost = self.quantity * self.price
-        slippage_cost = base_cost * self.slippage
-        transaction_cost = base_cost * self.transaction_cost
-        spread_cost = base_cost * self.spread
-        return base_cost + slippage_cost + transaction_cost + spread_cost
+        return base_cost + self.slippage + self.transaction_cost + self.spread
 
     def calculate_net_pnl(self) -> float:
         """Calculate net PnL including all costs."""

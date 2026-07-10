@@ -107,7 +107,12 @@ class Backtester:
 
         # Simulated broker ledger
         self.cash_account = initial_cash
-        self.equity_account = initial_cash
+        self.equity_account = 0.0  # BUG FIX: no positions held at start, so
+        # position-value (equity) starts at zero, not initial_cash. It was
+        # previously set to initial_cash, meaning every backtest started by
+        # double-counting starting capital (cash + equity = 2x initial_cash
+        # before a single trade occurred), corrupting every portfolio value,
+        # return, and performance metric derived from these two accounts.
         self.leverage_used = 0.0
         self.margin_used = 0.0
         self.account_history = []
@@ -222,6 +227,16 @@ class Backtester:
             # Round to whole shares
             return int(base_size)
 
+    def _calculate_portfolio_value(self) -> float:
+        """Calculate current total portfolio value (cash + position value).
+
+        This method was referenced by execute_trade() but never defined,
+        causing an AttributeError on every single trade execution. Formula
+        matches the total_value calculation already used consistently in
+        _update_account_ledger()'s account_state snapshot.
+        """
+        return self.cash_account + self.equity_account
+
     def execute_trade(
         self,
         timestamp: datetime,
@@ -265,7 +280,7 @@ class Backtester:
             )
         except Exception as e:
             # Don't fail if parity checker not available
-            logger.debug(f"Could not log backtest decision for parity: {e}")
+            self.logger.debug(f"Could not log backtest decision for parity: {e}")
         
         position_size = self._calculate_position_size(asset, price, strategy, signal)
 
@@ -359,8 +374,18 @@ class Backtester:
                     )
                     self.leverage_used = min(self.max_leverage, leverage_ratio)
             else:  # SELL
-                # Credit cash account
-                self.cash_account += total_cost
+                # Credit cash account with proceeds NET of costs.
+                # BUG FIX: `total_cost` from Trade.calculate_total_cost() is
+                # direction-agnostic — it always returns
+                # trade_value + slippage + fees + spread (a BUY-style "amount
+                # paid"). Crediting cash by that full amount on a SELL added
+                # fees to the account instead of subtracting them, inflating
+                # every backtest's apparent profitability by ~2x the fee
+                # amount on every sell. The correct credit is
+                # trade_value MINUS costs (what you actually receive after
+                # paying to execute the sell).
+                cost_only = total_cost - trade_value
+                self.cash_account += trade_value - cost_only
                 # Debit equity account
                 self.equity_account -= trade_value
                 # Update leverage
@@ -432,26 +457,30 @@ class Backtester:
 
         for trade in self.trades:
             trade_date = trade.timestamp.date()
+            trade_value = trade.price * trade.quantity
+            # trade.total_cost is fees/slippage/spread only (dollars,
+            # excludes trade_value) - see CostModel.calculate_total_cost().
+            # Using calculate_total_cost() as a fallback here would double
+            # count trade_value, so always derive fees this way rather than
+            # branching on hasattr (which is always True now that total_cost
+            # is a declared dataclass field, even when it's None).
+            fees = (
+                trade.total_cost
+                if trade.total_cost is not None
+                else max(0.0, trade.calculate_total_cost() - trade_value)
+            )
 
             # Update positions
             if trade.type == TradeType.BUY:
                 current_positions[trade.asset] = (
                     current_positions.get(trade.asset, 0) + trade.quantity
                 )
-                current_cash -= (
-                    trade.total_cost
-                    if hasattr(trade, "total_cost")
-                    else trade.calculate_total_cost()
-                )
+                current_cash -= trade_value + fees
             elif trade.type == TradeType.SELL:
                 current_positions[trade.asset] = (
                     current_positions.get(trade.asset, 0) - trade.quantity
                 )
-                current_cash += (
-                    trade.total_cost
-                    if hasattr(trade, "total_cost")
-                    else trade.calculate_total_cost()
-                )
+                current_cash += trade_value - fees
 
             # Calculate portfolio value
             portfolio_value = current_cash
@@ -464,7 +493,11 @@ class Backtester:
                     price = asset_data.loc[closest_date]
                     portfolio_value += quantity * price
 
-            mask = equity_curve.index >= trade_date
+            # BUG FIX: trade_date is a plain Python date (from .timestamp.date()),
+            # but equity_curve.index is a pandas DatetimeIndex (datetime64).
+            # Comparing them directly raises TypeError on current pandas.
+            # Wrapping in pd.Timestamp makes the comparison valid.
+            mask = equity_curve.index >= pd.Timestamp(trade_date)
             equity_curve.loc[mask, "equity_curve"] = portfolio_value
 
         equity_curve["returns"] = equity_curve["equity_curve"].pct_change()

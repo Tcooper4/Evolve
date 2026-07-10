@@ -94,8 +94,39 @@ class RiskMetricsEngine:
         self.period = period
 
     def calculate(self, returns: pd.Series) -> Dict[str, Any]:
-        """Calculate a comprehensive set of risk metrics for a return series."""
-        metrics = {}
+        """Calculate a comprehensive set of risk metrics for a return series.
+
+        NaN/Inf values are dropped before any metric is computed. Without this,
+        a single bad data point (e.g. a data-provider gap) silently propagates
+        through mean/std/etc. and produces a metrics dict full of NaN with no
+        error or warning — this previously happened silently. Filtering here
+        means every metric below is computed from clean data, and an
+        all-bad/empty series is caught explicitly instead of failing quietly
+        downstream.
+        """
+        metrics: Dict[str, Any] = {}
+
+        if returns is None:
+            logger.warning("Risk metric calculation skipped: returns is None")
+            return metrics
+
+        clean_returns = returns[np.isfinite(returns)]
+        n_dropped = len(returns) - len(clean_returns)
+        if n_dropped > 0:
+            logger.warning(
+                f"Risk metric calculation: dropped {n_dropped} NaN/Inf value(s) "
+                f"out of {len(returns)} before computing metrics."
+            )
+
+        if clean_returns.empty:
+            logger.warning(
+                "Risk metric calculation skipped: no finite return values available "
+                "after filtering NaN/Inf."
+            )
+            return metrics
+
+        returns = clean_returns
+
         try:
             metrics["sharpe_ratio"] = sharpe_ratio(
                 returns, risk_free=self.risk_free_rate, period=self.period
