@@ -375,6 +375,30 @@ def optimize_strategy(
     if method == "grid_search":
         # Grid search subsamples via max_points; align it with the budget.
         method_kwargs.setdefault("max_points", max_evaluations)
+    elif method == "pso":
+        # BUG FIX (verified by execution): without an explicit schedule,
+        # PSO ran its internal default (thousands of evaluations) and the
+        # budget wrapper merely returned the penalty for everything past
+        # max_evaluations - a 30-eval request burned 3000 evaluations, most
+        # of them worthless penalty stubs polluting the convergence
+        # history. Derive particles x iterations from the budget so the
+        # budget is the actual amount of work done.
+        n_particles = method_kwargs.setdefault(
+            "n_particles", int(min(20, max(6, max_evaluations // 8)))
+        )
+        method_kwargs.setdefault(
+            "n_iterations", int(max(2, max_evaluations // max(n_particles, 1)))
+        )
+    elif method == "genetic":
+        # Same budget-derivation as PSO, for the same reason.
+        population = method_kwargs.setdefault(
+            "population_size", int(min(24, max(8, max_evaluations // 6)))
+        )
+        method_kwargs.setdefault(
+            "n_generations", int(max(2, max_evaluations // max(population, 1)))
+        )
+    elif method == "bayesian":
+        method_kwargs.setdefault("n_calls", int(max_evaluations))
     # Strategy backtest objectives are noisy; the cluster's default
     # patience of 5-10 kills searches almost immediately. Let a run use a
     # meaningful share of its budget before giving up.

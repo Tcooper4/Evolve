@@ -332,3 +332,41 @@ class TestValidatedOptimization:
             optimize_strategy_validated(
                 "RSIStrategy", ohlcv.iloc[:80], train_fraction=0.75
             )
+
+
+# ----------------------------------------------------------- MCP server
+
+class TestMcpServer:
+    def test_tools_registered_and_callable(self, ohlcv):
+        pytest.importorskip("mcp")
+        import asyncio
+        import json as _json
+
+        from trading.services.mcp_server import mcp as server
+
+        async def _run():
+            tools = await server.list_tools()
+            names = {t.name for t in tools}
+            expected = {
+                "get_ai_score", "get_forecast", "scan_universe", "get_news",
+                "get_risk_metrics", "get_pattern_analysis", "run_backtest",
+                "get_options_sentiment", "detect_market_regime",
+                "optimize_strategy_params",
+            }
+            assert expected <= names
+            # Round-trip one call through the protocol layer; offline it
+            # must come back as a graceful error dict, not a raised error.
+            res = await server.call_tool("get_ai_score", {"symbol": "SPY"})
+            body = res[0][0].text if isinstance(res, tuple) else res[0].text
+            parsed = _json.loads(body)
+            assert "success" in parsed or "score" in parsed
+
+        asyncio.run(_run())
+
+    def test_budget_is_honored_per_method(self, ohlcv):
+        """PSO previously burned ~100x the requested budget on penalty
+        stubs; schedules are now derived from max_evaluations."""
+        run = optimize_strategy(
+            "RSIStrategy", ohlcv, method="pso", max_evaluations=30
+        )
+        assert run.n_evaluations <= 40

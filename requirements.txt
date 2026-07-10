@@ -103,3 +103,6 @@ tiktoken
 
 # Model explainability — conditional import, shows install message if missing
 shap
+
+# MCP server (expose Evolve tools to Claude Desktop/Code and other agents)
+mcp>=1.2
