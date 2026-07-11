@@ -520,37 +520,51 @@ class MarketRegimeAgent(BaseAgent):
             )
 
     def classify_regime(self, metrics: RegimeMetrics) -> Tuple[MarketRegime, float]:
-        """Classify market regime based on metrics."""
+        """Classify market regime from the computed features.
+
+        HONESTY FIX (verified by execution): the previous implementation
+        fed the features to a RandomForest trained on SYNTHETIC RANDOM
+        data - uniformly random labels with hand-injected N(0,1) shifts,
+        including a rule that labeled SIDEWAYS as high-volatility (the
+        opposite of market reality). Real feature vectors (annualized vol
+        ~0.1-0.5, relative trend, MA-gap momentum) live nowhere near that
+        training distribution, so the classifier's output on real data
+        was essentially arbitrary, and any exception fell back to
+        SIDEWAYS/0.5. Replaced with transparent, finance-consistent rules
+        on the features' actual scales; confidence reflects distance from
+        the decision thresholds. Deterministic, explainable, and testable.
+
+        Thresholds (annualized where applicable):
+          volatility > 0.35            -> VOLATILE (crisis-level vol dominates)
+          trend > +0.10 & momentum > 0 -> BULL
+          trend < -0.10 & momentum < 0 -> BEAR
+          |trend| > 0.10, mixed signs  -> TRENDING (transition)
+          otherwise                    -> SIDEWAYS
+        """
         try:
-            # Prepare features for classification
-            features = np.array(
-                [
-                    metrics.volatility,
-                    metrics.trend_strength,
-                    metrics.momentum,
-                    metrics.volume_trend,
-                    metrics.correlation,
-                    metrics.regime_confidence,
-                ]
-            ).reshape(1, -1)
+            vol = float(metrics.volatility or 0.0)
+            trend = float(metrics.trend_strength or 0.0)
+            mom = float(metrics.momentum or 0.0)
 
-            # Scale features
-            features_scaled = self.scaler.transform(features)
+            VOL_EXTREME = 0.35
+            TREND_MIN = 0.10
 
-            # Predict regime
-            regime_idx = self.classifier.predict(features_scaled)[0]
-            confidence = np.max(self.classifier.predict_proba(features_scaled))
+            def _conf(margin: float, scale: float) -> float:
+                # 0.55 at the threshold, approaching 0.95 with distance.
+                return float(min(0.95, 0.55 + 0.40 * min(1.0, abs(margin) / scale)))
 
-            # Map index to regime
-            regime_map = {
-                0: MarketRegime.BULL,
-                1: MarketRegime.BEAR,
-                2: MarketRegime.SIDEWAYS,
-                3: MarketRegime.VOLATILE,
-                4: MarketRegime.TRENDING,
-            }
+            if vol > VOL_EXTREME:
+                return MarketRegime.VOLATILE, _conf(vol - VOL_EXTREME, 0.20)
 
-            return regime_map[regime_idx], confidence
+            if trend > TREND_MIN and mom > 0:
+                return MarketRegime.BULL, _conf(trend - TREND_MIN, 0.20)
+            if trend < -TREND_MIN and mom < 0:
+                return MarketRegime.BEAR, _conf(-trend - TREND_MIN, 0.20)
+            if abs(trend) > TREND_MIN:
+                # Strong trend but momentum disagrees: transition phase.
+                return MarketRegime.TRENDING, _conf(abs(trend) - TREND_MIN, 0.20)
+
+            return MarketRegime.SIDEWAYS, _conf(TREND_MIN - abs(trend), 0.10)
 
         except Exception as e:
             logger.error(f"Error classifying regime: {e}")

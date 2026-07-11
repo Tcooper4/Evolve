@@ -351,7 +351,21 @@ class ModelSelectorAgent(BaseAgent):
             logger.error(f"Error updating performance for model {model_id}: {e}")
 
     def detect_market_regime(self, price_data: pd.DataFrame) -> MarketRegime:
-        """Detect current market regime from price data."""
+        """Detect current market regime from price data.
+
+        BUG FIX (three compounding issues, verified by execution):
+        (1) TRENDING_DOWN was unreachable - the branch required
+            trend_strength > 0.7 and then checked > 0 (always true there),
+            while negative trends never entered the branch at all;
+        (2) the 0.7 threshold was applied to a PER-BAR relative slope,
+            where 0.7 means a 70%-per-day move - so TRENDING_UP was dead
+            code too and directional regimes never fired; the slope is now
+            annualized (x252) and compared against a reachable 15%/yr;
+        (3) mean reversion used abs(autocorrelation), which classified
+            strongly TRENDING series (large POSITIVE lag-1 autocorr) as
+            mean-reverting - backwards. Mean reversion is negative
+            autocorrelation; the strength is now max(0, -autocorr).
+        """
         try:
             if len(price_data) < 50:
                 return MarketRegime.VOLATILE
@@ -361,19 +375,19 @@ class ModelSelectorAgent(BaseAgent):
             # Calculate regime indicators
             volatility = returns.std() * np.sqrt(252)
             trend_strength = self._calculate_trend_strength(price_data["close"])
+            annualized_trend = trend_strength * 252
             mean_reversion_strength = self._calculate_mean_reversion_strength(returns)
 
-            # Determine regime based on indicators
-            if volatility > 0.3:  # High volatility
+            if volatility > 0.3:  # High volatility dominates
                 return MarketRegime.VOLATILE
-            elif trend_strength > 0.7:  # Strong trend
-                if trend_strength > 0:  # Upward trend
+            elif abs(annualized_trend) > 0.15:  # >15%/yr drift
+                if annualized_trend > 0:
                     return MarketRegime.TRENDING_UP
-                else:  # Downward trend
+                else:
                     return MarketRegime.TRENDING_DOWN
-            elif mean_reversion_strength > 0.6:  # Mean reverting
+            elif mean_reversion_strength > 0.15:  # negative lag-1 autocorr
                 return MarketRegime.MEAN_REVERTING
-            else:  # Sideways
+            else:
                 return MarketRegime.SIDEWAYS
 
         except Exception as e:
@@ -392,10 +406,15 @@ class ModelSelectorAgent(BaseAgent):
             return 0.0
 
     def _calculate_mean_reversion_strength(self, returns: pd.Series) -> float:
-        """Calculate mean reversion strength using autocorrelation."""
+        """Mean-reversion strength: NEGATIVE lag-1 autocorrelation only.
+
+        Positive autocorrelation is momentum/trending evidence, not mean
+        reversion; taking abs() (the previous behavior) conflated the two."""
         try:
             autocorr = returns.autocorr(lag=1)
-            return abs(autocorr) if not pd.isna(autocorr) else 0.0
+            if pd.isna(autocorr):
+                return 0.0
+            return max(0.0, -float(autocorr))
         except (ValueError, TypeError, AttributeError) as e:
             logger.warning(f"Error calculating mean reversion strength: {e}")
             return 0.0
