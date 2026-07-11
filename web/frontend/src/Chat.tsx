@@ -5,7 +5,7 @@ interface Msg { role: "user" | "bot"; text: string; tools?: string[]; }
 
 export default function Chat() {
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "bot", text: "Hey — I'm Evolve's assistant, with the full toolkit: I can scan the market, score a symbol, pull forecasts and news, check risk, and run backtests. Try \"score NVDA\" or \"scan for momentum setups\"." },
+    { role: "bot", text: "Hey — I'm Evolve's assistant. Ask me anything about the market in plain language: I'll do the research (scans, scores, news, risk) and explain it clearly. No finance background needed." },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,6 +49,21 @@ export default function Chat() {
           ))}
           {busy && <div className="msg bot dim">thinking…</div>}
         </div>
+        {msgs.length <= 1 && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "0 18px 12px" }}>
+            {[
+              "What stocks should I consider buying today?",
+              "Is now a good time to buy?",
+              "Explain what's happening in the market like I'm new",
+              "Check the risk on my watchlist",
+            ].map((q) => (
+              <button key={q} className="ghost" style={{ fontSize: 12.5, border: "1px solid var(--border)" }}
+                onClick={() => { setInput(q); }}>
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="chat-input">
           <input value={input} placeholder="Ask anything…"
             onChange={(e) => setInput(e.target.value)}
