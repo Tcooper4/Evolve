@@ -289,7 +289,7 @@ class ReportGenerator:
             total_gains = sum(gains) if gains else 0.0
             total_losses = sum(losses) if losses else 0.0
             profit_factor = (
-                total_gains / total_losses if total_losses > 0 else float("inf")
+                min(total_gains / total_losses, 999.0) if total_losses > 0 else (999.0 if total_gains > 0 else 0.0)
             )
 
             # Calculate average trade duration

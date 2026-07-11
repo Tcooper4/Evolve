@@ -270,7 +270,7 @@ class UnifiedTradeReporter:
 
             avg_gain = np.mean(gains) if gains else 0.0
             avg_loss = np.mean(losses) if losses else 0.0
-            avg_win_loss_ratio = avg_gain / avg_loss if avg_loss > 0 else float("inf")
+            avg_win_loss_ratio = min(avg_gain / avg_loss, 999.0) if avg_loss > 0 else (999.0 if avg_gain > 0 else 0.0)
 
             # Trade duration
             durations = [t.get("duration", 0) for t in trades if t.get("duration")]
@@ -328,12 +328,12 @@ class UnifiedTradeReporter:
                 total_gains = sum(gains) if gains else 0.0
                 total_losses = sum(losses) if losses else 0.0
                 profit_factor = (
-                    total_gains / total_losses if total_losses > 0 else float("inf")
+                    min(total_gains / total_losses, 999.0) if total_losses > 0 else (999.0 if total_gains > 0 else 0.0)
                 )
 
                 # Risk-reward ratio
                 risk_reward_ratio = (
-                    avg_gain / avg_loss if avg_loss > 0 else float("inf")
+                    min(avg_gain / avg_loss, 999.0) if avg_loss > 0 else (999.0 if avg_gain > 0 else 0.0)
                 )
 
             else:
