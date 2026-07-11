@@ -103,8 +103,9 @@ class TestFullSurfaceParity:
         from trading.services.agent_tools import get_position_size
         r = get_position_size(0.6, 1.5, 10_000)
         assert abs(r["full_kelly_fraction"] - (0.6 - 0.4 / 1.5)) < 1e-4
-        assert r["half_kelly_dollars"] == round(
-            r["half_kelly_fraction"] * 10_000, 2)
+        # dollars are computed from the UNROUNDED fraction
+        expected = (0.6 - 0.4 / 1.5) / 2 * 10_000
+        assert abs(r["half_kelly_dollars"] - expected) < 0.01
         assert get_position_size(0.4, 1.0)["full_kelly_fraction"] == 0.0
 
     def test_run_backtest_consults_adopted_params(self):
