@@ -51,75 +51,93 @@ matters.
 | **Chat** | LLM chat with platform tools, news panel, macro context |
 | **Settings** | Preferences, API keys, LLM selection |
 
-## Quick start
-
-**Prerequisites:** Python 3.10+ recommended, 8GB+ RAM. Optional: GPU for
-deep-learning models, Redis for caching.
+## Quick start (personal mode — free, local)
 
 ```bash
-git clone https://github.com/Tcooper4/Evolve.git
+git clone -b codebase-audit-consolidated https://github.com/Tcooper4/Evolve.git
 cd Evolve
-
-python -m venv .venv
-source .venv/bin/activate        # Linux/macOS
-# .venv\Scripts\activate         # Windows
-
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+cp .env.example .env    # add ANTHROPIC_API_KEY (chat) and any data keys
+streamlit run app.py    # open http://localhost:8501
+```
 
-cp .env.example .env             # then set ANTHROPIC_API_KEY etc.
+That's the whole thing: no login screen, no hosting cost, all data local.
+Requires Python 3.10+. First launch downloads models/data lazily, so the
+first page render is slower than every one after.
 
+## Multi-user mode (host it for friends & family)
+
+The same codebase becomes a gated multi-user site with one env flag —
+see **docs/DEPLOYMENT.md** for the full VPS + HTTPS guide. Short version:
+
+```bash
+export EVOLVE_REQUIRE_LOGIN=1
+export EVOLVE_AUTH_SECRET=$(python3 -c "import secrets;print(secrets.token_hex(32))")
+python scripts/manage_users.py add thomas --name "Thomas" --admin
 streamlit run app.py
 ```
 
-Open **http://localhost:8501**. Set the active LLM under **Settings**.
+Every account gets its own isolated, persistent workspace: watchlist,
+memory/chat learning, preferences, and API keys are all per-user.
+Users enter their own API keys under **Settings → API keys** (encrypted
+at rest); set `EVOLVE_SHARED_KEYS=0` to require it so nobody spends the
+host's quota.
 
-**Windows with multiple Pythons:** install and run with the *same*
-interpreter, e.g. `py -3.10 -m pip install -r requirements.txt` then
-`py -3.10 -m streamlit run app.py`.
+## React frontend (in-progress rewrite — optional)
 
-## LLM configuration
-
-One active LLM drives Chat, commentary, and intent parsing. Providers:
-Claude, GPT-4, Gemini, Ollama, HuggingFace, Kimi
-(`config/llm_config.py`; choice stored in MemoryStore via the Settings
-page). API keys come from the environment — see `.env.example`.
-
-## MCP server (use Evolve from Claude)
+A modern React + FastAPI interface is being built alongside Streamlit
+(same accounts, same backend). Currently: login, dashboard, candlestick
+chart with volume, KPI strip, sparkline watchlist.
 
 ```bash
-python -m trading.services.mcp_server
+# terminal 1 — API
+uvicorn web.backend.main:app --port 8000
+# terminal 2 — frontend
+cd web/frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
-exposes `get_ai_score`, `get_forecast`, `scan_universe`, `get_news`,
-`get_risk_metrics`, `get_pattern_analysis`, `run_backtest`,
-`get_options_sentiment`, `detect_market_regime`, and
-`optimize_strategy_params` to any MCP client. Read/analyze only — nothing
-executes trades. Setup for Claude Desktop/Code:
-[`docs/MCP_SERVER.md`](docs/MCP_SERVER.md).
+## Where your data lives (and persistence)
 
-## Key directories
+Everything persists on disk between sessions, in plain SQLite/JSON under
+the repo — no external services:
 
-| Path | Purpose |
-|------|---------|
-| `app.py` / `pages/` | Streamlit entry point and the seven pages |
-| `components/` | Page components and the design system (`theme.py`) |
-| `trading/` | Strategies, models, backtesting, optimization, risk, data, memory, services |
-| `agents/llm/` | Chat agent, tool executor, LLM interfaces |
-| `skills/` | Agent skill playbooks loaded on demand by Chat |
-| `config/` | App and LLM configuration |
-| `tests/` | Test suites |
-| `docs/` | MCP server guide and design notes |
-| `_archive/` | Retired code kept for reference (not imported) |
+| Path | Contents |
+|---|---|
+| `data/accounts.db` | login accounts (bcrypt hashes only) |
+| `data/users.db` | per-user API keys (Fernet-encrypted) and preferences |
+| `data/memory_store.db` | chat learning, long-term memories, preferences — per-user |
+| `data/watchlist.db` | per-user watchlists + alert history |
+| `data/leaderboard/` | model/agent performance history |
+| `.cache/` / `data/*cache*` | market-data caches (TTL-expired, safe to delete) |
+| `.env` | your API keys + `EVOLVE_ENCRYPTION_KEY` — **never commit** |
 
-## Project docs
+**Backup = copy `data/` and `.env`.** Deleting `.cache/` only forces
+re-fetch. In multi-user mode all of the above is keyed per account.
 
-- **Audit & session history:** [`AUDIT_TRACKER.md`](AUDIT_TRACKER.md) —
-  every verified bug fix (97 to date) and what each session did.
-- **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
-- **Known debt:** [`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md)
-- **Config:** [`config/CONFIG_README.md`](config/CONFIG_README.md)
-- **Trading module:** [`trading/README.md`](trading/README.md)
+## Performance (measured)
 
-## License
+Compute is not the bottleneck; benchmarks on 1y daily data (single CPU):
+feature engineering ~30 ms, regime detection ~24 ms, one strategy
+backtest ~50 ms, a default 30-evaluation optimizer run ~1.4 s, a heavy
+300-evaluation optimization ~14 s, sentiment scoring 50 headlines ~3 ms.
+Perceived latency is dominated by **network fetches** (0.3–2 s per
+symbol from Yahoo), which the caching layers absorb: 15 s quote / 60 s
+history in-memory caches plus a TTL disk cache. The genuinely slow path
+is deep-model training (LSTM/Transformer — minutes by nature); it shows
+progress in the UI.
 
-MIT — see [LICENSE](LICENSE).
+## Tests
+
+```bash
+pip install pytest
+python -m pytest tests/test_auth tests/test_data tests/test_nlp_depth \
+  tests/test_report_depth.py tests/test_agents_depth.py tests/test_web_api.py -q
+```
+
+## Honest scope
+
+All execution is **paper/simulated**; there is no live order routing.
+Multi-user mode is appropriate for trusted friends and family, not the
+public internet (no rate limiting or 2FA — see DEPLOYMENT.md). Nothing
+here is financial advice; predictive accuracy is never promised.
