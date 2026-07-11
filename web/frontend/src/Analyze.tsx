@@ -64,6 +64,13 @@ export default function Analyze() {
           {loading ? "Scoring…" : "Score"}
         </button>
       </div>
+      {!loading && !res && (
+        <div className="card card-pad empty">
+          Enter any symbol and hit Score — you'll get a 1–10 composite from 16
+          signals (momentum, sentiment, options flow, insider activity…) with
+          the full breakdown, so you can see <i>why</i>, not just the number.
+        </div>
+      )}
       {loading && <div className="skeleton" style={{ height: 220 }} />}
       {!loading && res && res.score != null && (
         <div className="card card-pad ring-wrap fade-in">
@@ -84,6 +91,11 @@ export default function Analyze() {
             {signals.length === 0 && (
               <div className="dim">Signal breakdown appears when data is available.</div>
             )}
+            <div className="dim" style={{ marginTop: 12, fontSize: 12.5, lineHeight: 1.5 }}>
+              {res.score >= 7.5 ? "Strong composite — multiple signals agree. Worth a closer look, not an auto-buy."
+                : res.score >= 5.5 ? "Mixed picture — some signals agree, others don't. The breakdown above shows which side is stronger."
+                : "Weak composite — most signals lean against. If you're bullish here, know you're going against the model."}
+            </div>
           </div>
         </div>
       )}

@@ -1,0 +1,129 @@
+# -*- coding: utf-8 -*-
+"""Shared, frontend-agnostic chat turn: ONE tool-calling brain.
+
+Both the Streamlit chat page and the React /api/chat endpoint call this,
+so whichever frontend the user picks, chat behaves identically: memory
+context + Agent Skills + the platform tool loop (scan, score, forecast,
+news, risk, patterns, backtests, options sentiment), with a plain-LLM
+fallback when tools fail. Extracted from pages/6_Chat.py's orchestration
+so the logic can never drift between frontends.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+STANDARD_TOOLS = [
+    "scan_universe",
+    "get_ai_score",
+    "get_forecast",
+    "get_news",
+    "get_risk_metrics",
+    "get_pattern_analysis",
+    "run_backtest",
+    "get_options_sentiment",
+]
+
+
+def run_chat_turn(
+    user_message: str,
+    conversation_messages: Optional[List[Dict[str, str]]] = None,
+    focus_symbol: Optional[str] = None,
+    max_tokens: int = 2048,
+) -> Dict[str, Any]:
+    """Run one full chat turn. Returns
+    {"success", "reply", "tool_captions", "error"}.
+
+    Never raises: every failure degrades to the next-simplest path and
+    ultimately to a clean error dict.
+    """
+    conv = conversation_messages or []
+
+    # 1) Memory context (per-user via the ambient identity)
+    context_block = ""
+    try:
+        from trading.memory.memory_store import get_memory_store
+        from trading.services import chat_nl_service
+
+        store = get_memory_store()
+        try:
+            memory_ctx = chat_nl_service.get_memory_context(store)
+        except Exception:
+            memory_ctx = ""
+        try:
+            context_block = chat_nl_service.build_context_block(
+                memory_ctx, {}, intent=None, store=store
+            )
+        except Exception:
+            context_block = memory_ctx or ""
+    except Exception as e:  # noqa: BLE001
+        logger.warning("chat_turn: context build failed: %s", e)
+
+    # 2) Agent Skills (playbooks matched to the message; '' when none)
+    skills_ctx = ""
+    try:
+        from trading.services.skill_loader import render_skills_context
+
+        skills_ctx = render_skills_context(user_message) or ""
+    except Exception as e:  # noqa: BLE001
+        logger.warning("chat_turn: skill loading failed: %s", e)
+
+    # 3) Tool loop, then plain-chat fallback
+    from trading.services import chat_nl_service
+
+    system_prompt = getattr(chat_nl_service, "EVOLVE_CHAT_SYSTEM_PROMPT", "")
+    try:
+        from agents.llm.tool_executor import execute_with_tools
+
+        res = execute_with_tools(
+            user_message=user_message,
+            context_block=context_block,
+            conversation_messages=conv,
+            system_prompt=system_prompt,
+            platform_context_suffix=skills_ctx,
+            focus_symbol=focus_symbol,
+            available_tools=STANDARD_TOOLS,
+            max_tokens=max_tokens,
+        )
+        reply = (getattr(res, "text", "") or "").strip()
+        # The executor emits literal placeholders when no LLM answered;
+        # treating them as success would show users "No response." as if
+        # it were an answer. Fall through to the next path instead.
+        if reply.lower() in {"no response.", "no response",
+                             "i didn't get a response. please try again."}:
+            reply = ""
+        if reply:
+            return {
+                "success": True,
+                "reply": reply,
+                "tool_captions": list(getattr(res, "tool_captions", None) or []),
+                "error": None,
+            }
+        logger.warning("chat_turn: tool loop returned empty text; falling back")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("chat_turn: tool loop failed, fallback: %s", e)
+
+    try:
+        from agents.llm.active_llm_calls import call_active_llm_chat
+
+        reply = (call_active_llm_chat(
+            system_prompt, context_block, conv, user_message,
+            max_tokens=max_tokens,
+        ) or "").strip()
+        if reply.lower() in {"no response.", "no response"}:
+            reply = ""
+        if reply:
+            return {"success": True, "reply": reply,
+                    "tool_captions": [], "error": None}
+    except Exception as e:  # noqa: BLE001
+        logger.warning("chat_turn: plain chat fallback failed: %s", e)
+
+    return {
+        "success": False,
+        "reply": None,
+        "tool_captions": [],
+        "error": "No LLM responded - add an API key in Settings.",
+    }

@@ -29,6 +29,13 @@ change) -> chart card with 1M/3M/6M/1Y segmented control, candlesticks +
 volume histogram, crosshair with live OHLC legend. Keyboard: "/" focuses
 symbol search.
 
+## One chat brain, two frontends
+Chat now runs through trading/services/chat_turn.py in BOTH frontends:
+memory context + Agent Skills + the platform tool loop (scan, score,
+forecast, news, risk, patterns, backtests, options sentiment) with
+graceful fallbacks. Whichever UI you open, chat behaves identically,
+and tool usage renders as chips above the reply in React.
+
 ## What works in this slice
 - JWT login against the shared accounts DB (same bcrypt hashes)
 - Candlestick chart (lightweight-charts) with the Evolve theme
@@ -39,6 +46,7 @@ symbol search.
   scopes to the JWT user
 
 ## Not yet built (next sessions)
-Analyze/forecast views, backtest UI, scanner, chat, settings,
-websocket streaming quotes (the kept streaming_pipeline becomes
-relevant), production build serving via FastAPI StaticFiles + Caddy.
+True-push quote streaming when a paid feed key (Polygon/Finnhub)
+exists - data/streaming_pipeline.py is the ready infrastructure; the
+current websocket polls free yfinance every 5s, which is correct for
+delayed data. Remaining deep-audit scope lives in docs/NEXT_SESSIONS.md.

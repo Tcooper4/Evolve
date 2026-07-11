@@ -111,7 +111,7 @@ export const runBacktest = (symbol: string, strategy: string,
   });
 
 export const sendChat = (message: string) =>
-  req<{ success: boolean; reply?: string; error?: string }>("/api/chat", {
+  req<{ success: boolean; reply?: string; error?: string; tool_captions?: string[] }>("/api/chat", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
   });

@@ -25,7 +25,14 @@ after re-checking importers with the web/ backend now in the graph:
   paths; received the per-user API-key reroute this session — archiving
   a file that just got a correctness patch would be self-contradictory;
   revisit after the live-data session shows whether its outputs surface).
-- **prompt_response_validator** → already gone from the live tree
-  (archived by an earlier sweep); no action.
+- **trading/agents/prompt_response_validator.py** → ARCHIVED here.
+  20 functions of schema validation with ZERO importers; wiring unused
+  validation into the (working, tested) shared chat loop would add risk
+  without a driver. Revive if tool-output validation becomes a need.
+- **data/streaming_pipeline.py** keep UPGRADED to evidence-based: it is
+  real push infrastructure (Polygon wss + Finnhub/Alpaca provider
+  abstraction, in-memory cache), not another poller - it becomes the
+  true-push source for /ws/quote when a paid feed key exists; the
+  current 5s polling websocket is correct for free yfinance data.
 
 Restore any file with: git mv _archive/orphans-2026-07-b/<file> <original path>

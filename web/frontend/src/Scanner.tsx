@@ -53,7 +53,7 @@ export default function Scanner() {
           </table>
         )}
         {!loading && rows.length === 0 && (
-          <div className="empty">{error || "Pick filters and run a scan."}</div>
+          <div className="empty">{error || "Pick one or more filters above, then Scan — you'll get the top matches across the S&P universe with their quick scores. Click any row's symbol on the Dashboard to chart it."}</div>
         )}
       </div>
     </div>

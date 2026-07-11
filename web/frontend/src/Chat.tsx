@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 import { sendChat } from "./api";
 
-interface Msg { role: "user" | "bot"; text: string; }
+interface Msg { role: "user" | "bot"; text: string; tools?: string[]; }
 
 export default function Chat() {
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "bot", text: "Hey — I'm Evolve's assistant. Ask about your watchlist, a symbol, or the market. (Tool-calling chat lives in the Streamlit app for now; this is the fast lane.)" },
+    { role: "bot", text: "Hey — I'm Evolve's assistant, with the full toolkit: I can scan the market, score a symbol, pull forecasts and news, check risk, and run backtests. Try \"score NVDA\" or \"scan for momentum setups\"." },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,7 +19,11 @@ export default function Chat() {
     setBusy(true);
     try {
       const r = await sendChat(text);
-      setMsgs((m) => [...m, { role: "bot", text: r.success ? (r.reply ?? "") : `⚠ ${r.error}` }]);
+      setMsgs((m) => [...m, {
+        role: "bot",
+        text: r.success ? (r.reply ?? "") : `⚠ ${r.error}`,
+        tools: r.tool_captions,
+      }]);
     } catch (e) {
       setMsgs((m) => [...m, { role: "bot", text: `⚠ ${e instanceof Error ? e.message : "failed"}` }]);
     } finally {
@@ -33,7 +37,16 @@ export default function Chat() {
       <div className="greeting">Chat <small>your assistant, your memory, your API key</small></div>
       <div className="card">
         <div className="chat-box" ref={box}>
-          {msgs.map((m, i) => <div key={i} className={`msg ${m.role} fade-in`}>{m.text}</div>)}
+          {msgs.map((m, i) => (
+            <div key={i} className={`msg ${m.role} fade-in`}>
+              {m.tools && m.tools.length > 0 && (
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                  {m.tools.map((t, j) => <span key={j} className="pill mid">{t}</span>)}
+                </div>
+              )}
+              {m.text}
+            </div>
+          ))}
           {busy && <div className="msg bot dim">thinking…</div>}
         </div>
         <div className="chat-input">

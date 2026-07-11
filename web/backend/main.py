@@ -333,28 +333,15 @@ class ChatRequest(BaseModel):
 
 @app.post("/api/chat")
 def chat(req: ChatRequest, user: str = Depends(current_user)) -> Dict[str, Any]:
-    """v1 chat: the user's own memory context + their own LLM key.
-    (The full tool-calling agent loop stays in the Streamlit chat for now;
-    noted in web/README.md.)"""
+    """Full chat turn through the SHARED tool-calling brain
+    (trading/services/chat_turn.py) - the same loop the Streamlit chat
+    uses: memory context + Agent Skills + platform tools (scan, score,
+    forecast, news, risk, patterns, backtests, options sentiment), with
+    graceful fallbacks. Both frontends now behave identically."""
     try:
-        from trading.memory.memory_store import get_memory_store
-        from trading.services.chat_nl_service import get_memory_context
-        from agents.llm.active_llm_calls import call_active_llm_simple
+        from trading.services.chat_turn import run_chat_turn
 
-        store = get_memory_store()
-        try:
-            ctx = get_memory_context(store)
-        except Exception:
-            ctx = ""
-        prompt = (
-            f"{ctx}\n\nUser: {req.message}\nAssistant:"
-            if ctx else req.message
-        )
-        reply = call_active_llm_simple(prompt, max_tokens=800) or ""
-        if not reply:
-            return {"success": False,
-                    "error": "No LLM configured - add an API key in Settings."}
-        return {"success": True, "reply": reply}
+        return run_chat_turn(req.message)
     except Exception as e:  # noqa: BLE001
         logger.warning("chat failed: %s", e)
         return {"success": False, "error": str(e)}
