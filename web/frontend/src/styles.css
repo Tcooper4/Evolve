@@ -172,3 +172,65 @@ button.ghost:hover { color: var(--text); border-color: var(--border); }
 .error { color: var(--down); font-size: 13px; background: var(--down-soft); border-radius: var(--radius-sm); padding: 8px 12px; }
 .fade-in { animation: fadeIn 0.35s ease both; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Alinea-inspired warmth layer ---------- */
+:root {
+  --grad: linear-gradient(120deg, #00d4ff 0%, #7b6cff 55%, #ff7ad9 100%);
+  --violet: #7b6cff;
+  --violet-soft: rgba(123, 108, 255, 0.14);
+}
+.grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand .dot { background: var(--grad); box-shadow: 0 0 14px rgba(123,108,255,0.8); }
+button.primary { background: var(--grad); box-shadow: 0 4px 20px rgba(123,108,255,0.35); }
+button.primary:hover { box-shadow: 0 6px 26px rgba(123,108,255,0.5); }
+.card { position: relative; overflow: hidden; }
+.card::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(123,108,255,0.5), transparent);
+  opacity: 0; transition: opacity 0.25s;
+}
+.card:hover::before { opacity: 1; }
+.greeting { font-size: 22px; font-weight: 750; margin: 2px 0 16px; }
+.greeting small { display: block; color: var(--text-3); font-size: 13px; font-weight: 450; margin-top: 3px; }
+
+/* nav */
+.nav { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.nav button {
+  display: flex; align-items: center; gap: 10px; justify-content: flex-start;
+  background: transparent; border: none; color: var(--text-2);
+  padding: 9px 12px; border-radius: var(--radius-sm); font-size: 13.5px;
+}
+.nav button:hover { background: var(--surface-2); color: var(--text); transform: none; }
+.nav button.active { background: var(--violet-soft); color: var(--text); font-weight: 600; }
+.nav .ic { width: 18px; text-align: center; opacity: 0.9; }
+
+/* score ring */
+.ring-wrap { display: flex; align-items: center; gap: 22px; }
+.signal-row { display: grid; grid-template-columns: 150px 1fr 44px; gap: 10px; align-items: center; padding: 6px 0; font-size: 13px; }
+.signal-bar { height: 7px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.signal-fill { height: 100%; border-radius: 99px; background: var(--grad); transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* table */
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th { text-align: left; color: var(--text-3); font-weight: 550; font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.tbl td { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+.tbl tr:hover td { background: var(--surface-2); cursor: pointer; }
+.pill { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.pill.hi { color: var(--up); background: var(--up-soft); }
+.pill.mid { color: var(--violet); background: var(--violet-soft); }
+.pill.lo { color: var(--text-2); background: var(--surface-3); }
+
+/* chat */
+.chat-box { display: flex; flex-direction: column; gap: 12px; height: 520px; overflow-y: auto; padding: 18px; }
+.msg { max-width: 72%; padding: 12px 16px; border-radius: 16px; line-height: 1.5; font-size: 14px; }
+.msg.user { align-self: flex-end; background: var(--violet-soft); border: 1px solid rgba(123,108,255,0.3); border-bottom-right-radius: 5px; }
+.msg.bot { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 5px; white-space: pre-wrap; }
+.chat-input { display: flex; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--border); }
+.chat-input input { flex: 1; }
+
+/* forms */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field label { display: block; color: var(--text-3); font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.field input, .field select { width: 100%; }
+select { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; font-family: var(--font); }
+.saved-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--up); margin-left: 8px; box-shadow: 0 0 8px var(--up); }

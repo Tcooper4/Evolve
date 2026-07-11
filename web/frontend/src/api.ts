@@ -84,3 +84,54 @@ export const addToWatchlist = (symbol: string) =>
 
 export const removeFromWatchlist = (symbol: string) =>
   req<{ ok: boolean }>(`/api/watchlist/${symbol}`, { method: "DELETE" });
+
+// ---- page-parity endpoints ----
+export interface ScoreResult {
+  symbol: string;
+  score: number | null;
+  grade: string | null;
+  signals: Record<string, unknown>;
+  error?: string | null;
+}
+export const getScore = (symbol: string) =>
+  req<ScoreResult>(`/api/score/${symbol}`);
+
+export const runScan = (filters: string[], max_results = 15) =>
+  req<{ success: boolean; results?: Record<string, unknown>[]; error?: string }>(
+    "/api/scan",
+    { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filters, max_results }) },
+  );
+
+export const runBacktest = (symbol: string, strategy: string,
+                            params: Record<string, unknown>) =>
+  req<Record<string, unknown>>("/api/backtest", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ symbol, strategy, params }),
+  });
+
+export const sendChat = (message: string) =>
+  req<{ success: boolean; reply?: string; error?: string }>("/api/chat", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+
+export const getKeys = () =>
+  req<{ anthropic: boolean; openai: boolean; news: boolean }>(
+    "/api/settings/keys",
+  );
+
+export const saveKeys = (k: { anthropic?: string; openai?: string; news?: string }) =>
+  req<{ ok: boolean }>("/api/settings/keys", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(k),
+  });
+
+export function quoteSocket(symbol: string,
+                            onQuote: (q: { price: number | null; change_pct: number | null }) => void) {
+  const t = sessionStorage.getItem("evolve_token") ?? "";
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${proto}://${location.host}/ws/quote/${symbol}?token=${t}`);
+  ws.onmessage = (e) => { try { onQuote(JSON.parse(e.data)); } catch { /* skip */ } };
+  return ws;
+}

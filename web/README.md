@@ -17,6 +17,18 @@ npm install
 npm run dev        # http://localhost:5173 (proxies /api to :8000)
 ```
 
+## Design system (v2)
+Dark-first terminal aesthetic per current fintech practice: near-black
+layered surfaces with radial ambient glows; neutral foundation with the
+cyan brand accent used precisely; green/red reserved as signals (deltas,
+candles, sparklines) never decoration; tabular numerals for all prices;
+motion as functional feedback (price flash on change, skeleton loaders,
+hover lifts). Layout: watchlist rail with per-symbol sparkline cards ->
+KPI strip (hero price + delta pill, prev close, period range, period
+change) -> chart card with 1M/3M/6M/1Y segmented control, candlesticks +
+volume histogram, crosshair with live OHLC legend. Keyboard: "/" focuses
+symbol search.
+
 ## What works in this slice
 - JWT login against the shared accounts DB (same bcrypt hashes)
 - Candlestick chart (lightweight-charts) with the Evolve theme

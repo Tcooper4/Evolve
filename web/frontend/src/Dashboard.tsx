@@ -4,6 +4,7 @@ import {
   getHistory,
   getQuote,
   getWatchlist,
+  quoteSocket,
   removeFromWatchlist,
   type Candle,
   type Quote,
@@ -25,10 +26,8 @@ interface WlEntry {
 
 export default function Dashboard({
   displayName,
-  onLogout,
 }: {
   displayName: string;
-  onLogout: () => void;
 }) {
   const [symbol, setSymbol] = useState("SPY");
   const [input, setInput] = useState("SPY");
@@ -83,6 +82,15 @@ export default function Dashboard({
   useEffect(() => {
     load(symbol, period);
     refreshWatchlist();
+    const ws = quoteSocket(symbol, (q) => {
+      if (q.price == null) return;
+      setQuote((prev) => prev ? { ...prev, price: q.price, change_pct: q.change_pct } : prev);
+      if (prevPrice.current != null && q.price !== prevPrice.current) {
+        setFlash(q.price > prevPrice.current ? "flash-up" : "flash-down");
+        setTimeout(() => setFlash(""), 700);
+      }
+      prevPrice.current = q.price;
+    });
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
         e.preventDefault();
@@ -91,7 +99,10 @@ export default function Dashboard({
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      ws.close();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -103,51 +114,13 @@ export default function Dashboard({
     : null;
   const up = (quote?.change_pct ?? 0) >= 0;
 
-  return (
-    <div className="app">
-      <aside className="rail">
-        <div className="brand">
-          <span className="dot" /> EVOLVE <small>terminal</small>
-        </div>
-        <div className="user-chip">
-          <span>{displayName}</span>
-          <button className="ghost" onClick={onLogout}>Log out</button>
-        </div>
-        <div className="rail-label">Watchlist</div>
-        <div className="wl">
-          {watchlist.map((w) => (
-            <div
-              key={w.symbol}
-              className={`wl-card fade-in ${w.symbol === symbol ? "active" : ""}`}
-              onClick={() => load(w.symbol, period)}
-            >
-              <span className="wl-sym">{w.symbol}</span>
-              <Sparkline values={w.spark} />
-              <span className="wl-px num">
-                {w.last != null ? w.last.toFixed(2) : "—"}
-                <span
-                  className="wl-x"
-                  style={{ marginLeft: 8 }}
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await removeFromWatchlist(w.symbol);
-                    refreshWatchlist();
-                  }}
-                >
-                  ✕
-                </span>
-              </span>
-            </div>
-          ))}
-          {watchlist.length === 0 && (
-            <div className="empty" style={{ padding: "24px 0" }}>
-              No symbols yet
-            </div>
-          )}
-        </div>
-      </aside>
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-      <main className="main">
+  return (
+    <div className="fade-in">
+      <div className="greeting">{greet}, {displayName} <small>markets at a glance — live</small></div>
+
         <div className="topbar">
           <div className="search">
             <span className="icon">⌕</span>
@@ -250,7 +223,27 @@ export default function Dashboard({
             </div>
           )}
         </div>
-      </main>
+              <div className="rail-label" style={{ margin: "18px 0 8px" }}>Watchlist</div>
+        <div className="wl" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+          {watchlist.map((w) => (
+            <div key={w.symbol}
+              className={`wl-card fade-in ${w.symbol === symbol ? "active" : ""}`}
+              onClick={() => load(w.symbol, period)}>
+              <span className="wl-sym">{w.symbol}</span>
+              <Sparkline values={w.spark} />
+              <span className="wl-px num">
+                {w.last != null ? w.last.toFixed(2) : "—"}
+                <span className="wl-x" style={{ marginLeft: 8 }}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await removeFromWatchlist(w.symbol);
+                    refreshWatchlist();
+                  }}>✕</span>
+              </span>
+            </div>
+          ))}
+          {watchlist.length === 0 && <div className="dim">No symbols yet — search above and hit + Watch.</div>}
+        </div>
     </div>
   );
 }
