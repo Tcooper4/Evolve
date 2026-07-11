@@ -817,36 +817,42 @@ class PortfolioOptimizer:
             Sigma = returns.cov()
             n_assets = len(returns.columns)
 
-            # Equal weight starting point
-            weights = np.ones(n_assets) / n_assets
+            # ALGORITHM FIX (on top of the pandas-2 iloc fix that exposed
+            # it): the previous equal-weight-start multiplicative update
+            # skipped assets whose marginal risk went negative (sample
+            # covariances routinely produce this), so their weights froze
+            # while everything else shrank - the portfolio collapsed onto
+            # one asset and 'risk parity' returned wildly unequal, even
+            # negative, contributions. Verified on a heteroskedastic
+            # 4-asset case. Now: inverse-volatility seed (the textbook
+            # correlation-free risk-parity solution) refined by a DAMPED
+            # multiplicative iteration with a positive floor on marginal
+            # risk - converges to near-equal contributions and degrades
+            # gracefully to inverse-vol when correlations fight it.
+            Sigma_np = Sigma.to_numpy()
+            vols = np.sqrt(np.clip(np.diag(Sigma_np), 1e-12, None))
+            weights = (1.0 / vols) / np.sum(1.0 / vols)
 
-            # Iterative optimization to achieve risk parity
-            max_iter = 100
-            tolerance = 1e-6
+            max_iter = 200
+            tolerance = 1e-8
+            damp = 0.5  # exponent damping stabilizes the update
 
+            iteration = 0
             for iteration in range(max_iter):
-                # Calculate current risk contributions
-                portfolio_vol = np.sqrt(weights @ Sigma @ weights)
-                risk_contrib = []
+                portfolio_vol = float(np.sqrt(weights @ Sigma_np @ weights))
+                if portfolio_vol <= 0:
+                    break
+                marginal = (Sigma_np @ weights) / portfolio_vol
+                marginal = np.clip(marginal, 1e-12, None)  # positivity floor
+                risk_contrib = weights * marginal
+                target_contrib = portfolio_vol / n_assets
 
-                for i in range(n_assets):
-                    marginal_risk = (Sigma @ weights)[i] / portfolio_vol
-                    risk_contrib.append(weights[i] * marginal_risk)
-
-                risk_contrib = np.array(risk_contrib)
-                target_contrib = safe_divide(portfolio_vol, n_assets, default=0.0)
-
-                # Check convergence
                 if np.max(np.abs(risk_contrib - target_contrib)) < tolerance:
                     break
 
-                # Update weights to equalize risk contributions
-                for i in range(n_assets):
-                    if risk_contrib[i] > 0:
-                        weights[i] *= target_contrib / risk_contrib[i]
-
-                # Normalize weights
-                weights = safe_divide(weights, np.sum(weights), default=1.0 / len(weights))
+                weights = weights * (target_contrib / risk_contrib) ** damp
+                weights = np.clip(weights, 1e-9, None)
+                weights = weights / np.sum(weights)
 
             # Calculate portfolio metrics
             portfolio_return = returns.mean() @ weights
@@ -869,6 +875,8 @@ class PortfolioOptimizer:
                 "iterations": iteration + 1,
             }
 
+            self._save_optimization_results("risk_parity", result)
+
             return result
 
         except Exception as e:
@@ -885,7 +893,14 @@ class PortfolioOptimizer:
 
             for i, asset in enumerate(Sigma.columns):
                 if risk_measure == "volatility":
-                    marginal_risk = (Sigma @ weights)[i] / portfolio_vol
+                    # PANDAS-2 FIX: Sigma is a labeled DataFrame, so
+                    # (Sigma @ weights) is a Series indexed by TICKER
+                    # names - integer [i] raised KeyError: 0 on pandas 2.x
+                    # (positional int indexing on labeled Series removed),
+                    # which the broad except turned into {'error': '0'}.
+                    # Risk parity has therefore returned an error dict on
+                    # every call under current pandas. Use positional iloc.
+                    marginal_risk = (Sigma @ weights).iloc[i] / portfolio_vol
                     risk_contrib[asset] = weights[i] * marginal_risk
                 else:
                     # Simplified for other risk measures

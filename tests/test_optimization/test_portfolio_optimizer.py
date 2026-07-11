@@ -48,6 +48,11 @@ class TestPortfolioOptimizer:
         assert optimizer.results_dir.exists()
 
     @patch("trading.optimization.portfolio_optimizer.CVXPY_AVAILABLE", True)
+    @pytest.mark.skipif(
+        not hasattr(__import__("trading.optimization.portfolio_optimizer",
+                               fromlist=["cp"]), "cp"),
+        reason="mock target `cp` only exists when cvxpy is installed",
+    )
     @patch("trading.optimization.portfolio_optimizer.cp")
     def test_risk_parity_optimization(self, mock_cp, sample_returns):
         """Test risk parity optimization."""
