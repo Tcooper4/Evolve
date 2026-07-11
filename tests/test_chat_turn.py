@@ -22,7 +22,13 @@ class TestSharedChatTurn:
         # this list is the single source of truth for both.
         assert "get_ai_score" in STANDARD_TOOLS
         assert "run_backtest" in STANDARD_TOOLS
-        assert len(STANDARD_TOOLS) == 8
+        # registry-derived after the 2026-07 connection pass: the chat
+        # surface IS the platform registry (16 tools), so capabilities
+        # can never silently diverge between frontends again
+        assert "detect_market_regime" in STANDARD_TOOLS
+        assert "get_portfolio_allocation" in STANDARD_TOOLS
+        assert "retune_strategies" in STANDARD_TOOLS
+        assert len(STANDARD_TOOLS) >= 14
 
     def test_placeholder_never_surfaces_as_reply(self, monkeypatch):
         import trading.services.chat_turn as ct

@@ -251,3 +251,42 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------------------
+# Connection pass (2026-07): parity with the chat tool surface.
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def get_portfolio_allocation(symbols: str, period: str = "1y") -> dict:
+    """Risk-parity allocation across a comma-separated symbol list so each
+    holding contributes equal risk (verified engine)."""
+    from trading.services.agent_tools import get_portfolio_allocation as _f
+
+    return _f(symbols, period=period)
+
+
+@mcp.tool()
+def retune_strategies(symbols: str = "SPY", method: str = "pso") -> dict:
+    """One self-tuning cycle: re-optimize strategies on recent history and
+    adopt new parameters only if they beat current ones out-of-sample
+    (champion/challenger, journaled in data/self_tune.json)."""
+    from trading.services.agent_tools import retune_strategies as _f
+
+    return _f(symbols, method=method)
+
+
+@mcp.tool()
+def get_leaderboard(top_n: int = 10) -> dict:
+    """Recorded model/strategy performance on this platform, best first."""
+    from trading.services.agent_tools import get_leaderboard as _f
+
+    return _f(top_n=top_n)
+
+
+@mcp.tool()
+def market_research(topic: str, max_results: int = 3) -> dict:
+    """Search GitHub/arXiv for strategies, papers, and code on a topic."""
+    from trading.services.agent_tools import market_research as _f
+
+    return _f(topic, max_results=max_results)

@@ -36,3 +36,17 @@ after re-checking importers with the web/ backend now in the graph:
   current 5s polling websocket is correct for free yfinance data.
 
 Restore any file with: git mv _archive/orphans-2026-07-b/<file> <original path>
+
+## ExecutionAgent determination (2026-07, requested review)
+- **trading/agents/execution/execution_agent.py** (619L) → ARCHIVED to
+  `_archive/trading/agents/execution/`, REUNITING it with its own
+  dependencies: an earlier sweep (51a081a) archived
+  execution_providers.py and position_manager.py but stranded the agent
+  that imports them, leaving it permanently broken. Evidence for
+  archive over revive: (1) zero consumers besides lazy-loader entries;
+  (2) its purpose is LIVE broker order routing (ExecutionMode /
+  create_execution_provider adapters), which is explicitly outside the
+  platform's declared paper-only scope; (3) paper trading is served by
+  the Backtester + trade handler paths. Revival = restore all three
+  files together and add a broker key - a deliberate future decision,
+  not a default.

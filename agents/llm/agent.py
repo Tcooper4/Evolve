@@ -3001,6 +3001,126 @@ def get_evolve_platform_tool_registry():
                 "required": ["symbol"],
             },
         },
+        {
+            "name": "detect_market_regime",
+            "description": (
+                "Classify the current market regime for a symbol "
+                "(bull/bear/sideways/volatile/trending) from real recent "
+                "history. Run this FIRST for open 'what should I buy' "
+                "questions."
+            ),
+            "function": _agent_tools.detect_market_regime,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "period": {"type": "string", "description": "e.g. 1y"},
+                },
+            },
+        },
+        {
+            "name": "market_research",
+            "description": (
+                "Search GitHub/arXiv for strategies, papers, and code on a "
+                "topic; returns summarized findings."
+            ),
+            "function": _agent_tools.market_research,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {"type": "string"},
+                    "max_results": {"type": "integer"},
+                },
+                "required": ["topic"],
+            },
+        },
+        {
+            "name": "critique_backtest",
+            "description": (
+                "Critique backtest metrics: overfitting signals, robustness, "
+                "what to distrust. Pass the metrics dict from run_backtest."
+            ),
+            "function": _agent_tools.critique_backtest,
+            "parameters": {
+                "type": "object",
+                "properties": {"metrics": {"type": "object"}},
+                "required": ["metrics"],
+            },
+        },
+        {
+            "name": "optimize_strategy_params",
+            "description": (
+                "Search a strategy's parameter space on real history with "
+                "out-of-sample validation; returns best params plus "
+                "train/held-out metrics."
+            ),
+            "function": _agent_tools.optimize_strategy_params,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "strategy": {"type": "string"},
+                    "symbol": {"type": "string"},
+                    "method": {"type": "string",
+                               "description": "grid_search|genetic|pso|bayesian"},
+                    "metric": {"type": "string"},
+                },
+                "required": ["strategy"],
+            },
+        },
+        {
+            "name": "retune_strategies",
+            "description": (
+                "Run one self-tuning cycle: re-optimize strategies on recent "
+                "data and adopt new parameters ONLY if they beat current ones "
+                "out-of-sample. Journaled champion/challenger."
+            ),
+            "function": _agent_tools.retune_strategies,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbols": {"type": "string",
+                                "description": "comma-separated, e.g. SPY,QQQ"},
+                    "method": {"type": "string"},
+                },
+            },
+        },
+        {
+            "name": "get_portfolio_allocation",
+            "description": (
+                "Risk-parity split across symbols so each holding contributes "
+                "equal risk. Use for 'how should I divide my money between "
+                "these?'"
+            ),
+            "function": _agent_tools.get_portfolio_allocation,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbols": {"type": "string",
+                                "description": "comma-separated tickers"},
+                    "period": {"type": "string"},
+                },
+                "required": ["symbols"],
+            },
+        },
+        {
+            "name": "get_leaderboard",
+            "description": (
+                "What has performed best lately on this platform: recorded "
+                "model/strategy performance, best first."
+            ),
+            "function": _agent_tools.get_leaderboard,
+            "parameters": {
+                "type": "object",
+                "properties": {"top_n": {"type": "integer"}},
+            },
+        },
+        {
+            "name": "get_watchlist",
+            "description": "The user's own watchlist symbols.",
+            "function": _agent_tools.get_watchlist,
+            "parameters": {"type": "object", "properties": {}},
+        },
+
     ]
 
 

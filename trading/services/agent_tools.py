@@ -494,3 +494,147 @@ def get_evolve_platform_tool_registry():
     from agents.llm.agent import get_evolve_platform_tool_registry as _registry
 
     return _registry()
+
+
+# ---------------------------------------------------------------------------
+# Connection pass (2026-07): the guided analyst gets EVERYTHING.
+# ---------------------------------------------------------------------------
+
+def optimize_strategy_params(
+    strategy: str,
+    symbol: str = "SPY",
+    method: str = "pso",
+    metric: str = "sharpe_ratio",
+    max_evaluations: int = 60,
+) -> Dict[str, Any]:
+    """Optimize a strategy's parameters on real history with out-of-sample
+    validation (train on first 75%, report held-out metrics)."""
+    try:
+        import yfinance as yf
+
+        import trading.strategies  # noqa: F401
+        from trading.optimization.strategy_backtest_objective import (
+            optimize_strategy_validated,
+        )
+
+        raw = yf.Ticker(symbol).history(period="2y", interval="1d")
+        if raw is None or raw.empty:
+            return {"success": False, "error": f"no price data for {symbol}"}
+        if getattr(raw.index, "tz", None) is not None:
+            raw = raw.copy()
+            raw.index = raw.index.tz_convert(None)
+        run = optimize_strategy_validated(
+            strategy, raw, train_fraction=0.75, method=method, metric=metric,
+            max_evaluations=max_evaluations,
+        )
+        return {
+            "success": True,
+            "strategy": strategy,
+            "symbol": symbol,
+            "best_params": getattr(run, "best_params", {}),
+            "train_metrics": getattr(run, "best_metrics", {}),
+            "oos_metrics": getattr(run, "validation_metrics",
+                                   getattr(run, "test_metrics", {})),
+            "note": "trust the out-of-sample numbers; a large train->test "
+                    "drop is the overfit signature",
+        }
+    except Exception as e:  # noqa: BLE001
+        logger.exception("optimize_strategy_params failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def retune_strategies(symbols: str = "SPY",
+                      method: str = "pso") -> Dict[str, Any]:
+    """Run one champion/challenger self-tuning cycle: re-optimize each
+    strategy on recent history and ADOPT new parameters only if they beat
+    the current ones on held-out data. Fully journaled."""
+    try:
+        from trading.services.self_tune import tune_all
+
+        syms = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+        out = tune_all(symbols=syms or ["SPY"], method=method,
+                       max_evaluations=40)
+        return {
+            "success": True,
+            "cycles": out["cycles"],
+            "adoptions": out["adoptions"],
+            "details": [
+                {k: r.get(k) for k in ("strategy", "symbol", "adopted",
+                                       "champion_oos", "challenger_oos")}
+                for r in out["results"]
+            ],
+        }
+    except Exception as e:  # noqa: BLE001
+        logger.exception("retune_strategies failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_portfolio_allocation(symbols: str,
+                             period: str = "1y") -> Dict[str, Any]:
+    """Risk-parity allocation across a comma-separated symbol list: each
+    holding contributes EQUAL risk (verified engine). Answers 'how should
+    I split my money between these?'"""
+    try:
+        import yfinance as yf
+
+        from trading.optimization.portfolio_optimizer import PortfolioOptimizer
+
+        syms = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+        if len(syms) < 2:
+            return {"success": False,
+                    "error": "need at least two symbols to allocate"}
+        closes = {}
+        for s in syms:
+            h = yf.Ticker(s).history(period=period, interval="1d")
+            if h is not None and not h.empty:
+                closes[s] = h["Close"]
+        if len(closes) < 2:
+            return {"success": False, "error": "not enough price data"}
+        import pandas as pd
+
+        rets = pd.DataFrame(closes).pct_change().dropna()
+        r = PortfolioOptimizer().risk_parity_optimization(rets)
+        if "error" in r:
+            return {"success": False, "error": str(r["error"])}
+        return {
+            "success": True,
+            "weights": r.get("weights"),
+            "risk_contributions": r.get("risk_contributions"),
+            "note": "equal-risk weights: steadier names get more dollars, "
+                    "jumpier names get fewer, so no single holding "
+                    "dominates your swings",
+        }
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_portfolio_allocation failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_leaderboard(top_n: int = 10) -> Dict[str, Any]:
+    """What's been performing best lately: the platform's recorded
+    model/strategy/agent performance history, best first."""
+    try:
+        from trading.agents.agent_leaderboard import AgentLeaderboard
+
+        lb = AgentLeaderboard()
+        res = lb.get_leaderboard(top_n=top_n) if hasattr(lb, "get_leaderboard") else None
+        rows = (res or {}).get("result") if isinstance(res, dict) else res
+        return {"success": True, "leaderboard": rows or []}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_leaderboard failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_watchlist() -> Dict[str, Any]:
+    """The current user's watchlist (per-user; identity is ambient)."""
+    try:
+        import os
+
+        from trading.data.watchlist import WatchlistManager
+
+        uid = os.getenv("EVOLVE_SESSION_ID", "local")
+        rows = WatchlistManager(user_id=uid).get_all()
+        return {"success": True,
+                "symbols": [r.get("symbol") for r in rows], "rows": rows}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_watchlist failed: %s", e)
+        return {"success": False, "error": str(e)}

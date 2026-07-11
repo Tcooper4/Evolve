@@ -16,16 +16,24 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-STANDARD_TOOLS = [
-    "scan_universe",
-    "get_ai_score",
-    "get_forecast",
-    "get_news",
-    "get_risk_metrics",
-    "get_pattern_analysis",
-    "run_backtest",
-    "get_options_sentiment",
-]
+def _registry_tool_names() -> List[str]:
+    """Single source of truth: whatever the platform registry exposes,
+    the chat can use - in BOTH frontends. A hand-maintained subset here
+    is how the guided analyst ends up blind to capabilities that exist
+    (found 2026-07: chat had 8 of 13+ tools; the beginner-advisor skill
+    mandated detect_market_regime, which chat couldn't call)."""
+    try:
+        from agents.llm.agent import get_evolve_platform_tool_registry
+
+        return [t["name"] for t in get_evolve_platform_tool_registry()]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("tool registry unavailable, using fallback: %s", e)
+        return ["scan_universe", "get_ai_score", "get_forecast", "get_news",
+                "get_risk_metrics", "get_pattern_analysis", "run_backtest",
+                "get_options_sentiment"]
+
+
+STANDARD_TOOLS = _registry_tool_names()
 
 
 def run_chat_turn(

@@ -2034,11 +2034,11 @@
   },
   "agent2": {
     "agent_name": "agent2",
-    "sharpe_ratio": 1.5,
-    "max_drawdown": 0.1,
-    "win_rate": 0.7,
-    "total_return": 0.3,
-    "calmar_ratio": 2.9999999999999996,
+    "sharpe_ratio": 0.3,
+    "max_drawdown": 0.15,
+    "win_rate": 0.65,
+    "total_return": 0.25,
+    "calmar_ratio": 1.6666666666666667,
     "sortino_ratio": 0.0,
     "profit_factor": 0.0,
     "volatility": 0.0,
@@ -2046,7 +2046,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2025-07-17T00:26:42.968496",
+    "last_updated": "2025-07-17T00:26:46.465039",
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
@@ -2391,6 +2391,28 @@
     "last_updated": "2025-07-17T00:26:43.882513",
     "status": "deprecated",
     "extra_metrics": {},
+    "metadata": {}
+  },
+  "RSIStrategy:TEST": {
+    "agent_name": "RSIStrategy:TEST",
+    "sharpe_ratio": -2.428,
+    "max_drawdown": 0.0,
+    "win_rate": 0.0,
+    "total_return": 0.0,
+    "calmar_ratio": 0.0,
+    "sortino_ratio": 0.0,
+    "profit_factor": 0.0,
+    "volatility": 0.0,
+    "beta": 0.0,
+    "alpha": 0.0,
+    "information_ratio": 0.0,
+    "treynor_ratio": 0.0,
+    "last_updated": "2026-07-11T16:09:47.758853",
+    "status": "deprecated",
+    "extra_metrics": {
+      "self_tune": true,
+      "adopted": true
+    },
     "metadata": {}
   }
 }

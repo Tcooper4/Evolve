@@ -66,4 +66,5 @@ class TestMCPServerSurface:
         names = {t.name for t in tools}
         assert {"get_ai_score", "run_backtest", "scan_universe",
                 "optimize_strategy_params"} <= names
-        assert len(names) == 10
+        # 14 after the 2026-07 connection pass (parity with chat surface)
+        assert len(names) >= 14

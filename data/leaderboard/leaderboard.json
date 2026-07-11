@@ -2392,5 +2392,27 @@
     "status": "deprecated",
     "extra_metrics": {},
     "metadata": {}
+  },
+  "RSIStrategy:TEST": {
+    "agent_name": "RSIStrategy:TEST",
+    "sharpe_ratio": -2.428,
+    "max_drawdown": 0.0,
+    "win_rate": 0.0,
+    "total_return": 0.0,
+    "calmar_ratio": 0.0,
+    "sortino_ratio": 0.0,
+    "profit_factor": 0.0,
+    "volatility": 0.0,
+    "beta": 0.0,
+    "alpha": 0.0,
+    "information_ratio": 0.0,
+    "treynor_ratio": 0.0,
+    "last_updated": "2026-07-11T16:09:49.049064",
+    "status": "deprecated",
+    "extra_metrics": {
+      "self_tune": true,
+      "adopted": false
+    },
+    "metadata": {}
   }
 }
