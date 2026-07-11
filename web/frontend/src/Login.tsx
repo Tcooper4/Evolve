@@ -8,11 +8,11 @@ export default function Login({ onLogin }: { onLogin: (name: string) => void }) 
   const [busy, setBusy] = useState(false);
 
   async function submit() {
+    if (!username || !password) return;
     setBusy(true);
     setError("");
     try {
-      const name = await login(username, password);
-      onLogin(name);
+      onLogin(await login(username, password));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
     } finally {
@@ -22,9 +22,11 @@ export default function Login({ onLogin }: { onLogin: (name: string) => void }) 
 
   return (
     <div className="login-wrap">
-      <div className="card login-card">
-        <div className="brand">EVOLVE</div>
-        <div className="dim">Sign in to your workspace</div>
+      <div className="card login-card fade-in">
+        <div className="brand">
+          <span className="dot" /> EVOLVE <small>terminal</small>
+        </div>
+        <div className="login-sub">Your research workspace. Sign in to continue.</div>
         <input
           placeholder="Username"
           value={username}
