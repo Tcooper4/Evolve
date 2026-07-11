@@ -111,3 +111,8 @@ textstat>=0.7  # readability scoring in trading/nlp/sentiment_processor
 # Multi-user live mode (login gate)
 streamlit-authenticator>=0.4.2
 bcrypt>=4.0
+
+# Web API (React migration vertical slice - web/)
+fastapi>=0.110
+uvicorn>=0.29
+python-jose[cryptography]>=3.3
