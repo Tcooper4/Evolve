@@ -133,12 +133,23 @@ class DataQualityAgent(BaseAgent):
         self.memory = AgentMemory()
         self.data_loader = DataLoader()
 
-        # Data providers
-        self.primary_provider = AlphaVantageProvider()
-        self.backup_providers = {
-            "yfinance": YFinanceProvider(),
-            "alpha_vantage": AlphaVantageProvider(),
-        }
+        # Data providers - OPTIONAL (2026-07 fix): these were hard
+        # constructor calls, and AlphaVantageProvider raises without an
+        # API key, so quality-checking a dataframe the caller ALREADY
+        # HAS required an unrelated vendor key. Providers are only used
+        # for cross-source validation; degrade to None when unavailable.
+        try:
+            self.primary_provider = AlphaVantageProvider()
+        except Exception as _pe:
+            self.logger.debug("AlphaVantage unavailable: %s", _pe)
+            self.primary_provider = None
+        self.backup_providers = {}
+        for _name, _ctor in (("yfinance", YFinanceProvider),
+                             ("alpha_vantage", AlphaVantageProvider)):
+            try:
+                self.backup_providers[_name] = _ctor()
+            except Exception:
+                pass
 
         # Configuration
         self.anomaly_thresholds = self.config_dict.get(
@@ -158,12 +169,21 @@ class DataQualityAgent(BaseAgent):
             {"excellent": 0.9, "good": 0.8, "fair": 0.7, "poor": 0.6},
         )
 
-        # Anomaly detection methods
+        # Anomaly detection methods. FIX (2026-07): this registry
+        # referenced _detect_rolling_std_anomalies and
+        # _detect_statistical_anomalies, which have NEVER existed on the
+        # class - construction crashed with AttributeError, so the agent
+        # was unbuildable for a third independent reason. Register only
+        # detectors that exist.
         self.detection_methods = {
-            "z_score": self._detect_z_score_anomalies,
-            "iqr": self._detect_iqr_anomalies,
-            "rolling_std": self._detect_rolling_std_anomalies,
-            "statistical": self._detect_statistical_anomalies,
+            name: getattr(self, attr)
+            for name, attr in (
+                ("z_score", "_detect_z_score_anomalies"),
+                ("iqr", "_detect_iqr_anomalies"),
+                ("rolling_std", "_detect_rolling_std_anomalies"),
+                ("statistical", "_detect_statistical_anomalies"),
+            )
+            if hasattr(self, attr)
         }
 
         # Quality tracking
@@ -174,12 +194,15 @@ class DataQualityAgent(BaseAgent):
         self._load_quality_history()
 
     def _setup(self):
-        # Not yet implemented — raises so
-        # failures are visible, not silent
-        raise NotImplementedError(
-            f"{self.__class__.__name__}._setup() "
-            f"is not yet implemented."
-        )
+        """Initialize runtime state.
+
+        IMPLEMENTED (2026-07): raised NotImplementedError, making the
+        agent unconstructible even though __init__ already builds the
+        thresholds - the checks below only need mutable history state.
+        """
+        self.data_history = {}
+        self.quality_reports = []
+        self.anomaly_history = []
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the data quality assessment logic.
@@ -340,6 +363,16 @@ class DataQualityAgent(BaseAgent):
         try:
             anomalies = []
 
+            # COLUMN-CASE FIX (2026-07, verified by execution): every
+            # detector below reads lowercase column names ("close",
+            # "volume"), but the platform's dataframes are Title-case
+            # ("Close", "Volume") - so each `if column in data.columns`
+            # check failed and EVERY detector silently no-opped on all
+            # real data. Planted anomalies (NaN close, +50% price spike,
+            # 300x volume spike) all went undetected. Normalize once
+            # here so the detectors see the schema they were written for.
+            data = data.rename(columns=lambda c: str(c).lower())
+
             # Check for missing data
             missing_anomalies = self._detect_missing_data(data, symbol)
             anomalies.extend(missing_anomalies)
@@ -365,6 +398,42 @@ class DataQualityAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error detecting anomalies: {str(e)}")
             return []
+
+
+    # ------------------------------------------------------------------
+    # BaseAgent abstract contract. BUG FIX (2026-07, close-out pass):
+    # BaseAgent grew five abstract methods after this agent was written,
+    # silently making the class UNINSTANTIABLE - DataQualityAgent() raised
+    # TypeError at construction, so every caller (including the lazy
+    # loader in trading/agents/__init__.py) crashed before any logic
+    # ran. Same drift class already found and fixed on
+    # PerformanceCriticAgent; implemented following that pattern.
+    # ------------------------------------------------------------------
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration."""
+        return bool(self.config and getattr(self.config, "name", None))
+
+    def handle_error(self, error: Exception) -> AgentResult:
+        """Handle errors with consistent logging/result shape."""
+        self.logger.error("DataQualityAgent error: %s", error)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            metadata={"agent": getattr(self.config, "name", "DataQualityAgent")},
+        )
+
+    def get_capabilities(self) -> List[str]:
+        """Return the capabilities this agent provides."""
+        return ["assess_data_quality", "detect_missing_data", "detect_price_anomalies", "detect_volume_anomalies", "quality_scoring"]
+
+    def get_requirements(self) -> Dict[str, Any]:
+        """Return this agent's dependencies/requirements."""
+        return {"packages": ["numpy", "pandas"]}
+
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters minimally (request object present)."""
+        return bool(kwargs.get("request") is not None or kwargs)
 
     def _detect_missing_data(
         self, data: pd.DataFrame, symbol: str

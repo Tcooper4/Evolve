@@ -11,8 +11,20 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import redis
-from redis.exceptions import RedisError
+# OPTIONAL DEPENDENCY FIX (2026-07): a hard top-level `import redis`
+# made this module - and everything importing it, including
+# ExecutionAgent and therefore EnhancedAgentManager's construction -
+# crash on any machine without redis installed, even though the code
+# below already handles self.redis=None gracefully (it is only a
+# cache/pubsub enhancement). Import lazily and degrade.
+try:
+    import redis
+    from redis.exceptions import RedisError
+except ImportError:  # pragma: no cover - environment dependent
+    redis = None
+
+    class RedisError(Exception):
+        """Placeholder when redis isn't installed."""
 
 from trading.optimization.performance_logger import PerformanceLogger
 from trading.optimization.strategy_selection_agent import StrategySelectionAgent
@@ -170,6 +182,8 @@ class PortfolioManager:
         self.redis = None
         self.pubsub = None
         try:
+            if redis is None:
+                raise RedisError("redis not installed")
             self.redis = redis.Redis(
                 host=self.config.get("redis_host", "localhost"),
                 port=self.config.get("redis_port", 6379),

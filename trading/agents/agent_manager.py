@@ -34,9 +34,18 @@ from trading.agents.base_agent_interface import (
     AgentStatus,
     BaseAgent,
 )
-from trading.agents.execution.execution_agent import ExecutionAgent
-from trading.agents.model_builder_agent import ModelBuilderAgent
-from trading.agents.performance_critic_agent import PerformanceCriticAgent
+# (2026-07) moved to lazy import inside _register_default_agents -
+# a module-level import here meant one broken agent dependency
+# chain made the entire manager unimportable:
+# from trading.agents.execution.execution_agent import ExecutionAgent
+# (2026-07) moved to lazy import inside _register_default_agents -
+# a module-level import here meant one broken agent dependency
+# chain made the entire manager unimportable:
+# from trading.agents.model_builder_agent import ModelBuilderAgent
+# (2026-07) moved to lazy import inside _register_default_agents -
+# a module-level import here meant one broken agent dependency
+# chain made the entire manager unimportable:
+# from trading.agents.performance_critic_agent import PerformanceCriticAgent
 from trading.agents.updater_agent import UpdaterAgent
 
 
@@ -805,11 +814,27 @@ class EnhancedAgentManager:
 
     def _register_default_agents(self) -> None:
         """Register the default agents. UpdaterAgent not auto-registered (recommendation-only)."""
-        default_agents = {
-            "model_builder": ModelBuilderAgent,
-            "performance_critic": PerformanceCriticAgent,
-            "execution_agent": ExecutionAgent,
-        }
+        # LAZY IMPORTS (2026-07 fix): these classes were imported at
+        # module level, so ONE unimportable agent (ExecutionAgent's
+        # dependency chain used to hard-require redis) crashed the whole
+        # manager before the per-agent try/except below could isolate it.
+        default_agents = {}
+        for _name, _mod, _cls in (
+            ("model_builder", ".model_builder_agent", "ModelBuilderAgent"),
+            ("performance_critic", ".performance_critic_agent",
+             "PerformanceCriticAgent"),
+            ("execution_agent", ".execution.execution_agent",
+             "ExecutionAgent"),
+        ):
+            try:
+                import importlib
+
+                _m = importlib.import_module(_mod, package=__package__)
+                default_agents[_name] = getattr(_m, _cls)
+            except Exception as _ie:
+                self.logger.warning(
+                    "Default agent %s unavailable: %s", _name, _ie
+                )
 
         registered_count = 0
         for agent_name, agent_class in default_agents.items():
@@ -1188,15 +1213,30 @@ class EnhancedAgentManager:
             metrics["total_execution_time"] / metrics["total_executions"]
         )
 
-        # Update leaderboard
-        self.leaderboard.update_performance(
-            agent_name=agent_name,
-            sharpe_ratio=result.sharpe_ratio,
-            max_drawdown=result.max_drawdown,
-            win_rate=result.win_rate,
-            total_return=result.total_return,
-            extra_metrics=result.extra_metrics,
-        )
+        # Update leaderboard. CRITICAL FIX (2026-07, verified live):
+        # this read result.sharpe_ratio etc. as ATTRIBUTES, but
+        # AgentResult has no such fields - _record_execution raised
+        # AttributeError on EVERY SUCCESSFUL RUN, the caller's broad
+        # except converted the success into a failure, and the retry
+        # loop burned all attempts re-running agents that had already
+        # succeeded. The manager has never completed a run. Performance
+        # numbers, when an agent reports them, live in result.data;
+        # update the leaderboard only when they exist.
+        try:
+            perf = result.data or {}
+            if isinstance(perf, dict) and "sharpe_ratio" in perf:
+                self.leaderboard.update_performance(
+                    agent_name=agent_name,
+                    sharpe_ratio=perf.get("sharpe_ratio", 0.0),
+                    max_drawdown=perf.get("max_drawdown", 0.0),
+                    win_rate=perf.get("win_rate", 0.0),
+                    total_return=perf.get("total_return", 0.0),
+                    extra_metrics=perf.get("extra_metrics", {}),
+                )
+        except Exception as _lb_e:
+            # Bookkeeping must NEVER convert a successful execution into
+            # a failure.
+            self.logger.warning("Leaderboard update failed: %s", _lb_e)
 
     def get_agent_status(self, name: str) -> Optional[AgentStatus]:
         """Get the status of an agent.

@@ -298,6 +298,13 @@ class PerformanceCriticAgent(BaseAgent):
             )
 
             # Calculate performance metrics
+            # COLUMN-CASE FIX (2026-07): the calculators read lowercase
+            # column names ("close") but platform dataframes are
+            # Title-case ("Close") - every real evaluation raised
+            # KeyError. Same disease found on DataQualityAgent; normalize
+            # once at the dispatch point.
+            test_data = test_data.rename(columns=lambda c: str(c).lower())
+
             performance_metrics = self._calculate_performance_metrics(
                 predictions, test_data
             )
@@ -479,6 +486,16 @@ class PerformanceCriticAgent(BaseAgent):
             # Generate predictions from single model
             return pd.Series(model.predict(test_data), index=test_data.index)
 
+    @staticmethod
+    def _information_ratio_impl(actual, predicted):
+        import numpy as _np
+
+        active = actual - predicted
+        te = active.std()
+        if te is None or te < 1e-12:
+            return 0.0
+        return float(active.mean() / te * _np.sqrt(252))
+
     def _calculate_performance_metrics(
         self, predictions: pd.Series, test_data: pd.DataFrame
     ) -> Dict[str, float]:
@@ -510,8 +527,13 @@ class PerformanceCriticAgent(BaseAgent):
             "total_return": total_return,
             "annualized_return": annualized_return,
             "volatility": actual_returns.std() * np.sqrt(252),
-            "information_ratio": (actual_returns.mean() - predicted_returns.mean())
-            / actual_returns.std(),
+            # MATH FIX (2026-07): IR was (mean(actual)-mean(pred)) /
+            # std(ACTUAL) - the denominator must be the TRACKING ERROR
+            # (std of the active-return differences), and the ratio
+            # should be annualized like the sharpe/vol beside it.
+            "information_ratio": self._information_ratio_impl(
+                actual_returns, predicted_returns
+            ),
         }
 
     def _calculate_risk_metrics(
@@ -539,7 +561,11 @@ class PerformanceCriticAgent(BaseAgent):
         downside_deviation = downside_returns.std() if len(downside_returns) > 0 else 0
 
         # Calculate Sortino ratio with safe division
-        risk_free_rate = self.config.get("risk_free_rate", 0.02) / 252
+        # FIX (2026-07): self.config is an AgentConfig dataclass with no
+        # .get - this line raised AttributeError on every call. Read from
+        # custom_config with a sane default.
+        _cc = getattr(self.config, "custom_config", None) or {}
+        risk_free_rate = float(_cc.get("risk_free_rate", 0.02)) / 252
         if downside_deviation > 1e-10:
             sortino_ratio = (
                 (actual_returns.mean() - risk_free_rate) / downside_deviation

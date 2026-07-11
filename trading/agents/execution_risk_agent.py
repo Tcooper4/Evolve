@@ -159,12 +159,44 @@ class ExecutionRiskAgent(BaseAgent):
         logger.info("Execution Risk Agent initialized")
 
     def _setup(self):
-        # Not yet implemented — raises so
-        # failures are visible, not silent
-        raise NotImplementedError(
-            f"{self.__class__.__name__}._setup() "
-            f"is not yet implemented."
-        )
+        """Initialize risk limits and portfolio state.
+
+        IMPLEMENTED (2026-07, close-out pass): this raised
+        NotImplementedError, so the agent could never be constructed
+        even after the abstract-contract fix. The keys below are exactly
+        the ones the approval checks read (enumerated from the code, not
+        invented); limits are conservative retail-paper defaults and can
+        be overridden via config.custom_config["risk_limits"].
+        """
+        defaults = {
+            "max_position_size": 0.10,   # fraction of portfolio per symbol
+            "max_portfolio_risk": 1.0,   # total exposure cap (1.0 = 100%)
+            "max_sector_exposure": 0.30,
+            "max_daily_loss": 0.03,      # 3% daily loss halts new risk
+            "max_drawdown": 0.15,
+            "max_leverage": 1.0,         # paper: no leverage
+            "min_liquidity": 100_000,    # min avg dollar volume
+        }
+        overrides = {}
+        try:
+            overrides = (getattr(self.config, "custom_config", None) or {}).get(
+                "risk_limits", {}
+            )
+        except Exception:
+            overrides = {}
+        self.risk_limits = {**defaults, **overrides}
+
+        self.portfolio_state = {
+            "current_positions": {},
+            "sector_exposures": {},
+            "total_exposure": 0.0,
+            "portfolio_exposure": 0.0,
+            "current_drawdown": 0.0,
+            "daily_pnl": 0.0,
+        }
+        self.cooling_periods = {"major_loss_hours": 24}
+        self.cooling_periods_active = {}
+        self.trade_history = []
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the risk agent logic.
@@ -209,6 +241,42 @@ class ExecutionRiskAgent(BaseAgent):
                 )
         except Exception as e:
             return self.handle_error(e)
+
+
+    # ------------------------------------------------------------------
+    # BaseAgent abstract contract. BUG FIX (2026-07, close-out pass):
+    # BaseAgent grew five abstract methods after this agent was written,
+    # silently making the class UNINSTANTIABLE - ExecutionRiskAgent() raised
+    # TypeError at construction, so every caller (including the lazy
+    # loader in trading/agents/__init__.py) crashed before any logic
+    # ran. Same drift class already found and fixed on
+    # PerformanceCriticAgent; implemented following that pattern.
+    # ------------------------------------------------------------------
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration."""
+        return bool(self.config and getattr(self.config, "name", None))
+
+    def handle_error(self, error: Exception) -> AgentResult:
+        """Handle errors with consistent logging/result shape."""
+        self.logger.error("ExecutionRiskAgent error: %s", error)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            metadata={"agent": getattr(self.config, "name", "ExecutionRiskAgent")},
+        )
+
+    def get_capabilities(self) -> List[str]:
+        """Return the capabilities this agent provides."""
+        return ["approve_trade", "position_size_checks", "cooling_period", "portfolio_risk_limits"]
+
+    def get_requirements(self) -> Dict[str, Any]:
+        """Return this agent's dependencies/requirements."""
+        return {"packages": ["numpy", "pandas"]}
+
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters minimally (request object present)."""
+        return bool(kwargs.get("request") is not None or kwargs)
 
     def approve_trade(
         self,

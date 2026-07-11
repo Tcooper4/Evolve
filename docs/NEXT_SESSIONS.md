@@ -40,16 +40,39 @@ platform on real markets, in priority order:
 
 ## SESSION B: remaining depth + wire-or-archive decisions
 
-- `agents/llm/agent.py` (2,901L) line-by-line — the chat brain. STATUS
-  after the close-out pass: consumers mapped (chat_nl_service, agent_tools,
-  tab_quick_forecast); decision-critical extractors execution-verified with
-  two bugs FIXED (symbol extraction returned function words like 'TO' as
-  tickers — stoplist extended, lowercase recall preserved; sanitize_prompt
-  exceeded its own max_length by 3 after truncation). Noted, not churned:
-  process_prompt returns a dict on some fallback paths where AgentResponse
-  is the nominal type — the one consumer handles both shapes. REMAINING:
-  the ~2,400 lines of few-shot example management, token accounting, and
-  routing internals have had targeted reads only, not line-by-line.
+- `agents/llm/agent.py` — COMPLETE (Session B, 2026-07). Full-depth
+  pass: routing fallback fixed (substring intent matching where 'test'
+  fired inside 'latest'; generic intents shadowing specific ones;
+  domain words RSI/BANDS/LAST/MODEL/PRICE returned as tickers); few-shot
+  cluster fixed (numpy-truthiness crash that fired the moment a real
+  encoder existed, dot-product mislabeled as cosine, single malformed
+  stored example silently disabling ALL retrieval/saving); optimization
+  handler truth-fixed (hardcoded fake baseline metrics now replaced by a
+  real measured baseline with honest disclosure offline); all seven
+  handlers smoke-verified to fail honestly offline. Token accounting
+  verified correct.
+- CRITIC AGENTS — COMPLETE (Session B). DataQualityAgent was
+  unbuildable for THREE independent reasons (abstract-method drift,
+  hard AlphaVantage key requirement, registry referencing detectors
+  that never existed) and, once built, detected NOTHING: every detector
+  read lowercase column names against the platform's Title-case data.
+  Now detects planted anomalies and scores dirty<clean, verified.
+  ExecutionRiskAgent: abstract drift + NotImplementedError _setup ->
+  implemented with the exact state keys the checks read; scenario
+  battery verified (oversize rejection, drawdown halt, cooling period).
+  PerformanceCriticAgent: column-case fix, information-ratio math
+  corrected (tracking-error denominator, annualized), config.get crash
+  fixed; metrics hand-verified.
+- AGENT MANAGER — COMPLETE (Session B). Was unconstructible (hard redis
+  import via ExecutionAgent chain + module-level agent imports defeating
+  its own per-agent isolation); worse, success bookkeeping read
+  result.sharpe_ratio (nonexistent on AgentResult), converting EVERY
+  successful agent run into a failure and burning all retries - the
+  retry loop had never completed a run. Fixed; verified fail-fail-recover
+  end-to-end with metrics. Note: trading/agents/execution/ imports a
+  missing execution_providers module - ExecutionAgent is independently
+  broken and now degrades gracefully; revive or archive in a future
+  session.
 - `execution_risk_agent`, `data_quality_agent`, `performance_critic_agent`
   bodies; `agent_manager` loop mechanics.
 - The kept-but-flagged five (TECHNICAL_DEBT.md): wire or archive

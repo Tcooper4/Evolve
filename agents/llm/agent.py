@@ -546,15 +546,31 @@ class PromptAgent:
             self.example_embeddings = self._compute_example_embeddings()
         enc = self.sentence_transformer or _get_sentence_transformer_encoder()
         self.sentence_transformer = enc
-        if not enc or not self.example_embeddings:
+        # LATENT-BUG FIX: `not self.example_embeddings` on a numpy array
+        # raises "truth value of an array is ambiguous" the moment the
+        # encoder is actually available - the whole few-shot path would
+        # crash in production while passing in encoder-less test envs.
+        if (
+            not enc
+            or self.example_embeddings is None
+            or len(self.example_embeddings) == 0
+        ):
             return []
 
         try:
             # Encode the input prompt
             prompt_embedding = enc.encode([prompt])
 
-            # Compute cosine similarities
-            similarities = np.dot(self.example_embeddings, prompt_embedding.T).flatten()
+            # Compute cosine similarities. FIX: this was a raw dot product
+            # labeled "cosine" - without normalization, examples with
+            # longer/denser embeddings dominate regardless of relevance.
+            ex_norms = np.linalg.norm(self.example_embeddings, axis=1, keepdims=True)
+            ex_norms[ex_norms == 0] = 1.0
+            p_norm = np.linalg.norm(prompt_embedding) or 1.0
+            similarities = np.dot(
+                self.example_embeddings / ex_norms,
+                (prompt_embedding / p_norm).T,
+            ).flatten()
 
             # Get top-k similar examples
             top_indices = np.argsort(similarities)[::-1][:top_k]
@@ -565,6 +581,16 @@ class PromptAgent:
             for idx in top_indices:
                 if idx < len(examples):
                     example = examples[idx]
+                    # ROBUSTNESS FIX: hard ["prompt"]/["parsed_output"]
+                    # access meant ONE malformed stored example raised
+                    # KeyError inside this try and the broad except
+                    # returned [] - a single bad row silently disabled
+                    # ALL few-shot retrieval. Skip malformed rows instead.
+                    if "prompt" not in example or "parsed_output" not in example:
+                        self.logger.warning(
+                            "Skipping malformed prompt example at index %s", idx
+                        )
+                        continue
                     similar_examples.append(
                         {
                             "example": example,
@@ -654,9 +680,12 @@ class PromptAgent:
             }
 
             # Add to examples
-            self.prompt_examples["examples"].append(new_example)
+            self.prompt_examples.setdefault("examples", []).append(new_example)
 
-            # Update metadata
+            # Update metadata (setdefault: a store missing "metadata"
+            # raised KeyError into the broad except and silently disabled
+            # example-saving forever - same poisoning class as retrieval)
+            self.prompt_examples.setdefault("metadata", {})
             self.prompt_examples["metadata"]["total_examples"] = len(
                 self.prompt_examples["examples"]
             )
@@ -682,6 +711,18 @@ class PromptAgent:
 
     # Common English words that must not be treated as tickers (1-5 letters)
     _TICKER_STOPWORDS = frozenset({
+        # (added 2026-07, close-out pass) DOMAIN vocabulary the resolver
+        # was returning as tickers - "rsi strategy" routed to ticker RSI,
+        # "bollinger bands" to BANDS, "my last backtest" to LAST, "which
+        # model" to MODEL, "forecast price" to PRICE (all verified live).
+        # Tradeoff, documented: RSI/ATR/CCI are real listed tickers, but
+        # in a trading chat the indicator reading dominates overwhelmingly;
+        # use the company name for the stock (company-name mapping runs
+        # FIRST and still wins).
+        "rsi", "macd", "sma", "ema", "atr", "cci", "adx", "obv", "vwap",
+        "bands", "band", "model", "last", "best", "price", "tune", "risk",
+        "chart", "trade", "buy", "sell", "long", "short", "stop", "limit",
+        "entry", "exit", "score", "scan", "news", "since", "over", "under",
         # (added 2026-07) short function words the uppercase-recall
         # strategy was returning as tickers ("compare TO msft" -> 'TO'):
         "to", "and", "or", "for", "the", "a", "an", "in", "on", "at",
@@ -1104,28 +1145,46 @@ class PromptAgent:
             if timeframe_match:
                 timeframe = f"{int(timeframe_match.group(1)) * 30}d"
 
-        # Determine intent
-        if any(
-            word in prompt_lower
-            for word in ["create model", "build model", "new model", "custom model"]
-        ):
+        # Determine intent.
+        # FIXED (2026-07, verified live): (a) the old chain used SUBSTRING
+        # matching, so "test" matched inside "latest" and routed casual
+        # messages to backtest - now word-boundary matching; (b) priority
+        # was ordered by generality, so "critique my last backtest" hit
+        # the "backtest" branch before the critique branch ever ran, and
+        # "optimize my rsi strategy" hit "strategy" before "optimize" -
+        # specific intents now run BEFORE the generic words they contain.
+        def _has(*words: str) -> bool:
+            return any(
+                re.search(r"\b" + re.escape(w) + r"\b", prompt_lower)
+                for w in words
+            )
+
+        if _has("create model", "build model", "new model", "custom model"):
             intent = "create_model"
-        elif any(word in prompt_lower for word in ["forecast", "predict", "price"]):
-            intent = "forecast"
-        elif any(word in prompt_lower for word in ["strategy", "strategy", "signal"]):
-            intent = "strategy"
-        elif any(word in prompt_lower for word in ["backtest", "test", "simulate"]):
-            intent = "backtest"
-        elif any(word in prompt_lower for word in ["trade", "buy", "sell", "execute"]):
-            intent = "trade"
-        elif any(word in prompt_lower for word in ["optimize", "improve", "tune"]):
-            intent = "optimize"
-        elif any(word in prompt_lower for word in ["analyze", "analysis", "report"]):
-            intent = "analyze"
-        elif any(word in prompt_lower for word in ["critique", "critic", "review"]) and ("backtest" in prompt_lower or "last" in prompt_lower or "result" in prompt_lower):
+        elif _has("critique", "critic", "review") and _has(
+            "backtest", "last", "result", "results"
+        ):
             intent = "critique_backtest"
-        elif any(phrase in prompt_lower for phrase in ["what model", "which model", "model should i use", "model for", "best model"]):
+        elif any(
+            phrase in prompt_lower
+            for phrase in [
+                "what model", "which model", "model should i use",
+                "model for", "best model",
+            ]
+        ):
             intent = "recommend_model"
+        elif _has("optimize", "optimise", "improve", "tune"):
+            intent = "optimize"
+        elif _has("backtest", "simulate", "simulation"):
+            intent = "backtest"
+        elif _has("forecast", "predict", "prediction", "price target"):
+            intent = "forecast"
+        elif _has("strategy", "strategies", "signal", "signals"):
+            intent = "strategy"
+        elif _has("trade", "buy", "sell", "execute"):
+            intent = "trade"
+        elif _has("analyze", "analysis", "report"):
+            intent = "analyze"
         else:
             intent = "general"
 
@@ -1793,13 +1852,60 @@ class PromptAgent:
         try:
             strategy = params["strategy"]
 
-            # Get current performance metrics
-            current_metrics = {
-                "sharpe_ratio": 0.8,  # Mock metrics
-                "total_return": 0.15,
-                "max_drawdown": 0.12,
-                "win_rate": 0.55,
-            }
+            # TRUTH FIX: this handler fed HARDCODED metrics (sharpe 0.8,
+            # 15% return...) into the optimizer and presented the output
+            # as real analysis with no disclosure. Now: compute actual
+            # baseline metrics for the user's symbol via the
+            # execution-verified backtest bridge; only if that's
+            # impossible fall back to neutral placeholders AND say so.
+            current_metrics = None
+            metrics_note = ""
+            try:
+                import yfinance as yf
+
+                import trading.strategies  # noqa: F401 - registry discovery
+                from trading.optimization.strategy_backtest_objective import (
+                    evaluate_params,
+                )
+
+                sym = params.get("symbol") or "SPY"
+                hist = yf.Ticker(sym).history(period="1y", interval="1d")
+                if hist is not None and not hist.empty:
+                    if getattr(hist.index, "tz", None) is not None:
+                        hist = hist.copy()
+                        hist.index = hist.index.tz_convert(None)
+                    reg_name = {
+                        "RSI Mean Reversion": "RSIStrategy",
+                        "Bollinger Bands": "BollingerStrategy",
+                        "Moving Average Crossover": "SMAStrategy",
+                    }.get(strategy, "RSIStrategy")
+                    bt = evaluate_params(reg_name, hist, {})
+                    if isinstance(bt, dict) and "error" not in bt:
+                        current_metrics = {
+                            "sharpe_ratio": float(bt.get("sharpe_ratio", 0.0)),
+                            "total_return": float(bt.get("total_return", 0.0)),
+                            "max_drawdown": float(bt.get("max_drawdown", 0.0)),
+                            "win_rate": float(bt.get("win_rate", 0.5)),
+                        }
+                        metrics_note = (
+                            f"(baseline measured on {sym}, 1y daily)"
+                        )
+            except Exception as _me:
+                self.logger.warning(
+                    "optimization baseline metrics failed: %s", _me
+                )
+            metrics_real = current_metrics is not None
+            if current_metrics is None:
+                current_metrics = {
+                    "sharpe_ratio": 0.0,
+                    "total_return": 0.0,
+                    "max_drawdown": 0.0,
+                    "win_rate": 0.5,
+                }
+                metrics_note = (
+                    "(live data unavailable - baseline metrics are neutral "
+                    "placeholders, treat improvements as directional only)"
+                )
 
             # Run optimization
             optimization_result = self.optimizer.optimize_strategy(
@@ -1809,7 +1915,7 @@ class PromptAgent:
             )
 
             if optimization_result:
-                message = f"Optimization Results for {strategy}:\n"
+                message = f"Optimization Results for {strategy} {metrics_note}:\n"
                 message += f"Confidence: {optimization_result.confidence:.2%}\n"
                 message += f"Improvements: {optimization_result.improvement}\n"
 
@@ -1820,7 +1926,14 @@ class PromptAgent:
                     "Monitor performance improvement",
                 ]
             else:
-                message = f"No optimization needed for {strategy}"
+                if metrics_real:
+                    message = f"No optimization needed for {strategy} {metrics_note}"
+                else:
+                    message = (
+                        f"Couldn't assess {strategy} - live market data is "
+                        "unavailable, so there's no real baseline to optimize "
+                        "against. Try again with data access."
+                    )
                 recommendations = ["Continue monitoring performance"]
                 next_actions = ["Run periodic optimization checks"]
 
