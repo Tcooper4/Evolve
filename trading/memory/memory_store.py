@@ -150,6 +150,31 @@ class MemoryStore:
             updated_at=entry.updated_at.isoformat() if entry.updated_at else "",
         )
 
+    def _user_scope(self) -> str:
+        """Durable per-user identity for LONG_TERM and PREFERENCE entries.
+
+        MULTI-USER FIX: long-term memories and preferences were written
+        with session_id=None (global) - a deliberate single-user-era
+        choice so they'd persist across restarts (the run-session id
+        changes every launch). In multi-user mode that design leaked
+        everything personal: Bob's chat context included Alice's trades,
+        and one user changing a preference (e.g. the active LLM) changed
+        it for everyone. This resolves a DURABLE identity per call:
+        the logged-in user in live mode, 'local' in personal mode (which
+        is stable across restarts, unlike the run-session id). Resolution
+        is per-call, not per-construction, because the store is a
+        process-wide singleton serving every user.
+        """
+        try:
+            import streamlit as st
+
+            sid = st.session_state.get("evolve_session_id")
+            if sid:
+                return str(sid)
+        except Exception:
+            pass
+        return os.getenv("EVOLVE_SESSION_ID") or "local"
+
     def upsert(
         self,
         memory_type: MemoryType,
@@ -162,7 +187,14 @@ class MemoryStore:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Insert or update an entry by (memory_type, namespace, session_id, key). Returns entry id."""
-        sid = session_id if session_id is not None else (self.session_id if memory_type == MemoryType.SHORT_TERM else None)
+        # SHORT_TERM keeps run-session semantics; LONG_TERM and PREFERENCE
+        # are scoped to the durable per-user identity (see _user_scope).
+        if session_id is not None:
+            sid = session_id
+        elif memory_type == MemoryType.SHORT_TERM:
+            sid = self.session_id
+        else:
+            sid = self._user_scope()
         meta = metadata or {}
         now = datetime.utcnow()
         entry_id = str(uuid.uuid4())
@@ -222,7 +254,14 @@ class MemoryStore:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Insert a new entry (no upsert). Returns entry id."""
-        sid = session_id if session_id is not None else (self.session_id if memory_type == MemoryType.SHORT_TERM else None)
+        # SHORT_TERM keeps run-session semantics; LONG_TERM and PREFERENCE
+        # are scoped to the durable per-user identity (see _user_scope).
+        if session_id is not None:
+            sid = session_id
+        elif memory_type == MemoryType.SHORT_TERM:
+            sid = self.session_id
+        else:
+            sid = self._user_scope()
         meta = metadata or {}
         now = datetime.utcnow()
         entry_id = str(uuid.uuid4())
@@ -268,6 +307,15 @@ class MemoryStore:
             if memory_type == MemoryType.SHORT_TERM:
                 sid = session_id if session_id is not None else self.session_id
                 q = q.filter(MemoryEntry.session_id == sid)
+            else:
+                # LONG_TERM / PREFERENCE: the caller's own entries plus
+                # legacy global rows (session_id NULL, written before
+                # multi-user scoping) so existing history stays readable.
+                sid = session_id if session_id is not None else self._user_scope()
+                q = q.filter(
+                    (MemoryEntry.session_id == sid)
+                    | (MemoryEntry.session_id.is_(None))
+                )
             if newest_first:
                 q = q.order_by(MemoryEntry.created_at.desc())
             else:
@@ -342,17 +390,21 @@ class MemoryStore:
     # --- Preference helpers ---
 
     def get_preference(self, key: str) -> Optional[Any]:
-        """Return the value for a preference key, or None if not set."""
+        """Return the CURRENT USER's value for a preference key, falling
+        back to the legacy global row (session_id NULL, written before
+        multi-user scoping), or None. Previously this had no session
+        filter at all, so every account shared one preference row per
+        key - one user switching the active LLM switched it for everyone."""
+        scope = self._user_scope()
         with self.SessionLocal() as db:
-            row = (
-                db.query(MemoryEntry)
-                .filter(
-                    MemoryEntry.memory_type == MemoryType.PREFERENCE.value,
-                    MemoryEntry.namespace == "global",
-                    MemoryEntry.key == key,
-                )
-                .one_or_none()
+            base = db.query(MemoryEntry).filter(
+                MemoryEntry.memory_type == MemoryType.PREFERENCE.value,
+                MemoryEntry.namespace == "global",
+                MemoryEntry.key == key,
             )
+            row = base.filter(MemoryEntry.session_id == scope).one_or_none()
+            if row is None:
+                row = base.filter(MemoryEntry.session_id.is_(None)).first()
             if not row:
                 return None
             return self._deserialize(row.value_json)
