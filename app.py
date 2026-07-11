@@ -308,6 +308,12 @@ except Exception:
 try:
     from components.theme import inject_theme
     inject_theme()
+    try:
+        from trading.auth.gate import require_login
+
+        require_login()
+    except ImportError:
+        pass
 except Exception:
     pass
 

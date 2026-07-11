@@ -7,6 +7,7 @@ checking for triggered alerts based on live market data.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -29,17 +30,51 @@ def _init_db() -> None:
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS watchlist (
-                symbol TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL DEFAULT 'local',
+                symbol TEXT NOT NULL,
                 added_at TEXT NOT NULL,
                 alert_price_above REAL,
                 alert_price_below REAL,
                 alert_rsi_below REAL,
                 alert_rsi_above REAL,
                 note TEXT,
-                last_triggered TEXT
+                last_triggered TEXT,
+                PRIMARY KEY (user_id, symbol)
             )
             """
         )
+        # MIGRATION (multi-user mode, 2026-07): earlier schema had symbol as
+        # the sole primary key - one shared watchlist for everyone. Existing
+        # rows are preserved under user_id='local' (the personal-mode
+        # identity), so a single-user install keeps its watchlist untouched.
+        cols = [r[1] for r in cur.execute("PRAGMA table_info(watchlist)")]
+        if "user_id" not in cols:
+            cur.execute("ALTER TABLE watchlist RENAME TO watchlist_v1")
+            cur.execute(
+                """
+                CREATE TABLE watchlist (
+                    user_id TEXT NOT NULL DEFAULT 'local',
+                    symbol TEXT NOT NULL,
+                    added_at TEXT NOT NULL,
+                    alert_price_above REAL,
+                    alert_price_below REAL,
+                    alert_rsi_below REAL,
+                    alert_rsi_above REAL,
+                    note TEXT,
+                    last_triggered TEXT,
+                    PRIMARY KEY (user_id, symbol)
+                )
+                """
+            )
+            cur.execute(
+                "INSERT INTO watchlist (user_id, symbol, added_at,"
+                " alert_price_above, alert_price_below, alert_rsi_below,"
+                " alert_rsi_above, note, last_triggered)"
+                " SELECT 'local', symbol, added_at, alert_price_above,"
+                " alert_price_below, alert_rsi_below, alert_rsi_above,"
+                " note, last_triggered FROM watchlist_v1"
+            )
+            cur.execute("DROP TABLE watchlist_v1")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS watchlist_alerts_log (
@@ -73,8 +108,28 @@ class WatchlistEntry:
 class WatchlistManager:
     """Manage persistent watchlist entries and price/RSI alerts."""
 
-    def __init__(self, db_path: Path = DB_PATH):
+    def __init__(self, db_path: Path = DB_PATH, user_id: Optional[str] = None):
         self.db_path = db_path
+        self._user_id = user_id
+
+    @property
+    def user_id(self) -> str:
+        """The identity this manager operates for. Resolution order:
+        explicit constructor arg > the logged-in user's platform id
+        (st.session_state['evolve_session_id'] / EVOLVE_SESSION_ID, set by
+        the login gate) > 'local' (personal mode). Keeping resolution here
+        means no call site needed to change for multi-user scoping."""
+        if self._user_id:
+            return self._user_id
+        try:
+            import streamlit as st
+
+            sid = st.session_state.get("evolve_session_id")
+            if sid:
+                return str(sid)
+        except Exception:
+            pass
+        return os.getenv("EVOLVE_SESSION_ID") or "local"
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -108,10 +163,10 @@ class WatchlistManager:
             cur.execute(
                 """
                 INSERT INTO watchlist (
-                    symbol, added_at, alert_price_above, alert_price_below,
+                    user_id, symbol, added_at, alert_price_above, alert_price_below,
                     alert_rsi_below, alert_rsi_above, note, last_triggered
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(symbol) DO UPDATE SET
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, symbol) DO UPDATE SET
                     alert_price_above=excluded.alert_price_above,
                     alert_price_below=excluded.alert_price_below,
                     alert_rsi_below=excluded.alert_rsi_below,
@@ -119,6 +174,7 @@ class WatchlistManager:
                     note=excluded.note
                 """,
                 (
+                    self.user_id,
                     entry.symbol,
                     entry.added_at,
                     entry.alert_price_above,
@@ -137,10 +193,10 @@ class WatchlistManager:
             return
         with self._conn() as conn:
             cur = conn.cursor()
-            cur.execute("DELETE FROM watchlist WHERE symbol = ?", (symbol,))
+            cur.execute("DELETE FROM watchlist WHERE user_id = ? AND symbol = ?", (self.user_id, symbol))
             conn.commit()
 
-    def update_alert(self, symbol: str, **kwargs: Any) -> None:
+    def update_alert(self, symbol: str, _owner: 'Optional[str]' = None, **kwargs: Any) -> None:
         symbol = (symbol or "").strip().upper()
         if not symbol or not kwargs:
             return
@@ -160,15 +216,29 @@ class WatchlistManager:
         values.append(symbol)
         with self._conn() as conn:
             cur = conn.cursor()
-            cur.execute(f"UPDATE watchlist SET {sets} WHERE symbol = ?", values)
+            values.append(_owner or self.user_id)
+            cur.execute(f"UPDATE watchlist SET {sets} WHERE symbol = ? AND user_id = ?", values)
             conn.commit()
 
     def get_all(self) -> List[Dict[str, Any]]:
+        """Entries for the CURRENT user only."""
         with self._conn() as conn:
             cur = conn.cursor()
-            cur.execute("SELECT * FROM watchlist ORDER BY symbol ASC")
+            cur.execute(
+                "SELECT * FROM watchlist WHERE user_id = ? ORDER BY symbol ASC",
+                (self.user_id,),
+            )
             rows = cur.fetchall()
             return [dict(row) for row in rows]
+
+    def get_all_users(self) -> List[Dict[str, Any]]:
+        """Entries across EVERY user - for the background alert checker,
+        which must evaluate all accounts' alerts, not just the current
+        session's."""
+        with self._conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM watchlist ORDER BY user_id, symbol ASC")
+            return [dict(row) for row in cur.fetchall()]
 
     def _log_alert(
         self,
@@ -205,7 +275,7 @@ class WatchlistManager:
         Returns list of triggered alert dicts.
         """
         alerts: List[Dict[str, Any]] = []
-        entries = self.get_all()
+        entries = self.get_all_users()
         if not entries:
             return alerts
 
@@ -274,7 +344,14 @@ class WatchlistManager:
                 )
 
             # Update last_triggered timestamp when any alert fires
-            self.update_alert(symbol, last_triggered=datetime.utcnow().isoformat())
+            # Mark the OWNING user's row - check_alerts sweeps every
+            # account, so scoping this to the current session would
+            # stamp (or miss) the wrong user's alert state.
+            self.update_alert(
+                symbol,
+                _owner=row.get("user_id") or self.user_id,
+                last_triggered=datetime.utcnow().isoformat(),
+            )
 
         return alerts
 

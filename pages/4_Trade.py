@@ -24,6 +24,16 @@ try:
 except Exception:
     pass
 inject_theme()
+
+# Multi-user live-site gate: no-op in personal mode (EVOLVE_REQUIRE_LOGIN
+# unset); in live mode, unauthenticated visitors see only the login form
+# and the signed-in username becomes the platform-wide user id.
+try:
+    from trading.auth.gate import require_login
+
+    require_login()
+except ImportError:
+    pass
 render_top_bar()
 
 logger = logging.getLogger(__name__)
