@@ -26,14 +26,16 @@ class GeneticOptimizer:
     """Simple genetic optimizer stub."""
 
     def __init__(self):
-        raise NotImplementedError(
-            "GeneticOptimizer is not yet implemented."
-        )
+        # (2026-07) was raise-on-construct, which made every AGENT that
+        # instantiates this shim in __init__ unconstructible. Construction
+        # is now harmless; only USE raises, with a pointer to the real,
+        # execution-verified optimization cluster.
+        pass
 
     def optimize(self):
         raise NotImplementedError(
-            "GeneticOptimizer.optimize() is not "
-            "yet implemented."
+            "GeneticOptimizer.optimize() is a legacy shim - use "
+            "trading/optimization (grid/genetic/PSO/Bayesian, verified)."
         )
 
 
@@ -138,14 +140,55 @@ class ModelOptimizerAgent(BaseAgent):
         # Load existing data
         self._load_optimization_history()
 
-    def _setup(self) -> None:
-        """Setup the agent. Called by BaseAgent constructor."""
-        # Not yet implemented — raises so
-        # failures are visible, not silent
-        raise NotImplementedError(
-            f"{self.__class__.__name__}._setup() "
-            f"is not yet implemented."
+    def _setup(self):
+        """Initialize mutable runtime state.
+
+        IMPLEMENTED (2026-07 stub sweep): raised NotImplementedError,
+        making the class unconstructible. __init__ builds the real
+        configuration; _setup provides mutable containers without
+        clobbering (it runs FIRST via BaseAgent.__init__).
+        """
+        for attr, default in (
+            ("optimization_history", []),
+            ("active_optimizations", {}),
+            ("current_optimization_id", None),
+        ):
+            if not hasattr(self, attr):
+                setattr(self, attr, default)
+
+
+    # ------------------------------------------------------------------
+    # BaseAgent abstract contract (2026-07 stub sweep): same drift class
+    # fixed on the critic agents - BaseAgent grew these five abstract
+    # methods after this class was written, making it UNINSTANTIABLE.
+    # ------------------------------------------------------------------
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration."""
+        return bool(self.config and getattr(self.config, "name", None))
+
+    def handle_error(self, error: Exception):
+        """Handle errors with consistent logging/result shape."""
+        from trading.agents.base_agent_interface import AgentResult
+
+        self.logger.error("%s error: %s", type(self).__name__, error)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            metadata={"agent": getattr(self.config, "name", type(self).__name__)},
         )
+
+    def get_capabilities(self):
+        """Return the capabilities this agent provides."""
+        return ["optimize_model_hyperparameters", "optimization_history"]
+
+    def get_requirements(self):
+        """Return this agent's dependencies/requirements."""
+        return {"packages": ["numpy", "pandas"]}
+
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters minimally."""
+        return bool(kwargs)
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the model optimization logic.

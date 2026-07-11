@@ -26,9 +26,11 @@ class BayesianOptimizer:
     """Simple Bayesian optimizer stub."""
 
     def __init__(self):
-        raise NotImplementedError(
-            "BayesianOptimizer is not yet implemented."
-        )
+        # (2026-07) was raise-on-construct, which made every AGENT that
+        # instantiates this shim in __init__ unconstructible. Construction
+        # is now harmless; only USE raises, with a pointer to the real,
+        # execution-verified optimization cluster.
+        pass
 
     def optimize(self):
         raise NotImplementedError(
@@ -41,14 +43,13 @@ class GeneticOptimizer:
     """Simple genetic optimizer stub."""
 
     def __init__(self):
-        raise NotImplementedError(
-            "GeneticOptimizer is not yet implemented."
-        )
+        # (2026-07) see BayesianOptimization note above.
+        pass
 
     def optimize(self):
         raise NotImplementedError(
-            "GeneticOptimizer.optimize() is not "
-            "yet implemented."
+            "GeneticOptimizer.optimize() is a legacy shim - use "
+            "trading/optimization (grid/genetic/PSO/Bayesian, verified)."
         )
 
 
@@ -107,7 +108,15 @@ class ModelImproverAgent(BaseAgent):
             name: Agent name
             config: Configuration dictionary
         """
-        super().__init__(name, config)
+        # SIGNATURE-DRIFT FIX (2026-07 stub sweep): this called
+        # super().__init__(name, config) - a PREVIOUS BaseAgent
+        # signature. The current BaseAgent takes a single AgentConfig,
+        # so construction raised TypeError. Adapt the (name, dict)
+        # interface this class exposes onto the current contract.
+        from trading.agents.base_agent_interface import AgentConfig
+
+        config = config or {}
+        super().__init__(AgentConfig(name=name, custom_config=config))
 
         # Initialize components
         self.model_registry = ModelRegistry()
@@ -144,6 +153,53 @@ class ModelImproverAgent(BaseAgent):
         logger.info(
             f"Initialized ModelImproverAgent with {self.optimization_method} optimization"
         )
+
+    def _setup(self):
+        """Initialize mutable runtime state (2026-07 stub sweep: this
+        abstract method was never implemented at all)."""
+        for attr, default in (
+            ("improvement_history", []),
+            ("last_improvement", {}),
+            ("performance_thresholds",
+             {"sharpe_ratio": 0.5, "max_drawdown": 0.25, "win_rate": 0.45}),
+            ("optimization_method", "bayesian"),
+            ("improvement_interval", 7),
+        ):
+            if not hasattr(self, attr):
+                setattr(self, attr, default)
+
+    # ------------------------------------------------------------------
+    # BaseAgent abstract contract (2026-07 stub sweep): same drift class
+    # fixed on the critic agents - BaseAgent grew these five abstract
+    # methods after this class was written, making it UNINSTANTIABLE.
+    # ------------------------------------------------------------------
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration."""
+        return bool(self.config and getattr(self.config, "name", None))
+
+    def handle_error(self, error: Exception):
+        """Handle errors with consistent logging/result shape."""
+        from trading.agents.base_agent_interface import AgentResult
+
+        self.logger.error("%s error: %s", type(self).__name__, error)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            metadata={"agent": getattr(self.config, "name", type(self).__name__)},
+        )
+
+    def get_capabilities(self):
+        """Return the capabilities this agent provides."""
+        return ["improve_underperforming_models", "threshold_based_retraining"]
+
+    def get_requirements(self):
+        """Return this agent's dependencies/requirements."""
+        return {"packages": ["numpy", "pandas"]}
+
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters minimally."""
+        return bool(kwargs)
 
     async def execute(self, **kwargs) -> AgentResult:
         """

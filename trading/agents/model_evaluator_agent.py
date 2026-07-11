@@ -148,12 +148,56 @@ class ModelEvaluatorAgent(BaseAgent):
         self._load_evaluation_history()
 
     def _setup(self):
-        # Not yet implemented — raises so
-        # failures are visible, not silent
-        raise NotImplementedError(
-            f"{self.__class__.__name__}._setup() "
-            f"is not yet implemented."
+        """Initialize mutable runtime state.
+
+        IMPLEMENTED (2026-07 stub sweep): this raised
+        NotImplementedError, making the class unconstructible - the
+        same drift class fixed on the critic agents. __init__ already
+        builds the real configuration/state; _setup only provides the
+        mutable containers the methods read, without clobbering anything
+        __init__ sets (it runs first via BaseAgent.__init__).
+        """
+        for attr, default in (
+            ("evaluation_history", []),
+            ("model_performance_cache", {}),
+            ("current_evaluation_id", None),
+        ):
+            if not hasattr(self, attr):
+                setattr(self, attr, default)
+
+
+    # ------------------------------------------------------------------
+    # BaseAgent abstract contract (2026-07 stub sweep): same drift class
+    # fixed on the critic agents - BaseAgent grew these five abstract
+    # methods after this class was written, making it UNINSTANTIABLE.
+    # ------------------------------------------------------------------
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration."""
+        return bool(self.config and getattr(self.config, "name", None))
+
+    def handle_error(self, error: Exception):
+        """Handle errors with consistent logging/result shape."""
+        from trading.agents.base_agent_interface import AgentResult
+
+        self.logger.error("%s error: %s", type(self).__name__, error)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            metadata={"agent": getattr(self.config, "name", type(self).__name__)},
         )
+
+    def get_capabilities(self):
+        """Return the capabilities this agent provides."""
+        return ["evaluate_model", "performance_metrics", "model_status_thresholds"]
+
+    def get_requirements(self):
+        """Return this agent's dependencies/requirements."""
+        return {"packages": ["numpy", "pandas"]}
+
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters minimally."""
+        return bool(kwargs)
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the model evaluation logic.

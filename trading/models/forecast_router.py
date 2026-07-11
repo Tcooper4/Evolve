@@ -507,9 +507,19 @@ class ForecastRouter:
         Returns:
             True if seasonality is detected
         """
-        # TODO: implement seasonality detection
-        # Currently defaults to False so auto selection uses XGBoost/Ridge path
-        return False
+        # IMPLEMENTED (2026-07 stub sweep): autocorrelation test at the
+        # weekly lag (5 trading days) on returns; conservative threshold
+        # so the auto-selector only prefers seasonal models (Prophet)
+        # when the signal is clear.
+        try:
+            close = data["Close"] if "Close" in data.columns else data.iloc[:, 0]
+            rets = close.pct_change().dropna()
+            if len(rets) < 30:
+                return False
+            ac5 = rets.autocorr(lag=5)
+            return bool(ac5 is not None and abs(ac5) > 0.30)
+        except Exception:
+            return False
 
     def _check_trend(self, data: pd.DataFrame) -> bool:
         """Check for trend in time series.
@@ -520,9 +530,27 @@ class ForecastRouter:
         Returns:
             True if trend is detected
         """
-        # TODO: implement trend detection
-        # Currently defaults to False so auto selection uses XGBoost/Ridge path
-        return False
+        # IMPLEMENTED (2026-07 stub sweep): annualized log-price slope
+        # with an R^2 quality gate, mirroring the verified regime-agent
+        # approach: a trend must be both steep (>10%/yr) and clean
+        # (R^2 > 0.4) before trend-aware models are preferred.
+        try:
+            import numpy as np
+
+            close = data["Close"] if "Close" in data.columns else data.iloc[:, 0]
+            y = np.log(close.dropna().to_numpy())
+            if len(y) < 30:
+                return False
+            x = np.arange(len(y), dtype=float)
+            slope, intercept = np.polyfit(x, y, 1)
+            pred = slope * x + intercept
+            ss_res = float(np.sum((y - pred) ** 2))
+            ss_tot = float(np.sum((y - y.mean()) ** 2)) or 1e-12
+            r2 = 1.0 - ss_res / ss_tot
+            annualized = slope * 252
+            return bool(abs(annualized) > 0.10 and r2 > 0.40)
+        except Exception:
+            return False
 
     def _prepare_data_safely(self, data: pd.DataFrame, normalize_close: bool = False) -> pd.DataFrame:
         """Prepare data: add forecast features. Do not normalize close for non-neural models (they predict raw prices)."""

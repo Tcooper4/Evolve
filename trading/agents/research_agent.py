@@ -93,12 +93,51 @@ class ResearchAgent(BaseAgent):
             self.log_path.write_text(json.dumps([]))
 
     def _setup(self):
-        # Not yet implemented — raises so
-        # failures are visible, not silent
-        raise NotImplementedError(
-            f"{self.__class__.__name__}._setup() "
-            f"is not yet implemented."
+        """Initialize mutable runtime state.
+
+        IMPLEMENTED (2026-07 stub sweep): this raised
+        NotImplementedError, making the class unconstructible - the
+        same drift class fixed on the critic agents. __init__ already
+        builds the real configuration/state; _setup only provides the
+        mutable containers the methods read, without clobbering anything
+        __init__ sets (it runs first via BaseAgent.__init__).
+        """
+        # All required state (api keys, log_path) is set in __init__.
+        return None
+
+
+    # ------------------------------------------------------------------
+    # BaseAgent abstract contract (2026-07 stub sweep): same drift class
+    # fixed on the critic agents - BaseAgent grew these five abstract
+    # methods after this class was written, making it UNINSTANTIABLE.
+    # ------------------------------------------------------------------
+    def validate_config(self) -> bool:
+        """Validate the agent's configuration."""
+        return bool(self.config and getattr(self.config, "name", None))
+
+    def handle_error(self, error: Exception):
+        """Handle errors with consistent logging/result shape."""
+        from trading.agents.base_agent_interface import AgentResult
+
+        self.logger.error("%s error: %s", type(self).__name__, error)
+        return AgentResult(
+            success=False,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            metadata={"agent": getattr(self.config, "name", type(self).__name__)},
         )
+
+    def get_capabilities(self):
+        """Return the capabilities this agent provides."""
+        return ["search_github", "search_arxiv", "summarize_findings", "code_suggestions"]
+
+    def get_requirements(self):
+        """Return this agent's dependencies/requirements."""
+        return {"packages": ["numpy", "pandas"]}
+
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters minimally."""
+        return bool(kwargs)
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the research logic. Blocking HTTP/LLM run in executor. AGENT_UPGRADE."""
