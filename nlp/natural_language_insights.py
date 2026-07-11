@@ -70,11 +70,27 @@ class NaturalLanguageInsights:
         self._initialize_models()
 
         # Ticker patterns for extraction
+        # (pattern, case_sensitive) - the bare-uppercase pattern relies on
+        # CASE as its entire signal; matching it case-insensitively (the
+        # old behavior) made every 1-5 letter word in the text a "ticker".
         self.ticker_patterns = [
-            r"\$[A-Z]{1,5}",  # $AAPL, $TSLA
-            r"\b[A-Z]{1,5}\b",  # AAPL, TSLA (context dependent)
-            r"\b[A-Z]{1,5}\.[A-Z]{2,3}\b",  # AAPL.US, TSLA.NASDAQ
+            (r"\$[A-Za-z]{1,5}\b", False),        # $AAPL, $tsla
+            (r"\b[A-Z]{1,5}\b", True),            # AAPL, TSLA (case IS the signal)
+            (r"\b[A-Z]{1,5}\.[A-Z]{2,3}\b", True),  # AAPL.US, TSLA.NASDAQ
         ]
+
+        # Common all-caps words/abbreviations that are almost never meant
+        # as tickers in prose. $-prefixed mentions bypass this list
+        # ($AI is clearly intentional; bare "AI" in a sentence is not).
+        self.ticker_stopwords = {
+            "A", "I", "THE", "AND", "OR", "OF", "IN", "ON", "AT", "TO",
+            "AS", "BY", "AN", "IS", "IT", "BE", "ARE", "FOR", "NOT", "SO",
+            "UP", "OUT", "NEW", "NOW", "BUY", "SELL", "HOLD",
+            "CEO", "CFO", "CTO", "COO", "AI", "US", "USA", "UK", "EU",
+            "IPO", "ETF", "GDP", "CPI", "PPI", "FED", "SEC", "NYSE",
+            "EPS", "PE", "AM", "PM", "Q", "YOY", "QOQ", "ATH", "IMO",
+            "PS", "EDIT", "TLDR", "DD", "FOMC", "NFP",
+        }
 
         # Financial keywords for context
         self.financial_keywords = {
@@ -195,10 +211,17 @@ class NaturalLanguageInsights:
             tickers = []
 
             # Extract tickers using patterns
-            for pattern in self.ticker_patterns:
-                matches = re.finditer(pattern, text, re.IGNORECASE)
+            for pattern, case_sensitive in self.ticker_patterns:
+                flags = 0 if case_sensitive else re.IGNORECASE
+                matches = re.finditer(pattern, text, flags)
                 for match in matches:
-                    ticker = match.group()
+                    raw = match.group()
+                    is_cashtag = raw.startswith("$")
+                    ticker = raw.lstrip("$").upper()
+                    # Stopword filter applies only to bare mentions -
+                    # a cashtag is an explicit ticker reference.
+                    if not is_cashtag and ticker in self.ticker_stopwords:
+                        continue
 
                     # Get context around ticker
                     start = max(0, match.start() - 100)
@@ -222,8 +245,10 @@ class NaturalLanguageInsights:
             seen = set()
             unique_tickers = []
             for ticker in tickers:
-                if ticker["ticker"] not in seen:
-                    seen.add(ticker["ticker"])
+                key = ticker["ticker"].lstrip("$").upper()
+                if key not in seen:
+                    seen.add(key)
+                    ticker["ticker"] = key
                     unique_tickers.append(ticker)
 
             logger.info(f"Extracted {len(unique_tickers)} unique tickers")
