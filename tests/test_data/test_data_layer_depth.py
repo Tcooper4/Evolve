@@ -104,3 +104,44 @@ class TestOptionsFlowMath:
         uc, up = _unusual_for_expiry(calls, puts, "2026-07-17", 5)
         assert len(up) == 1 and up[0]["strike"] == 110.0
         assert len(uc) == 1 and uc[0]["strike"] == 90.0
+
+
+class TestSentimentTokenization:
+    """Plain .split() left punctuation attached, so 'gains,' and 'up.'
+    never matched the keyword sets - most real headlines scored 0.0."""
+
+    def test_punctuated_and_plural_headlines_score(self):
+        import asyncio
+        from trading.data.external_signals import NewsSentimentCollector
+
+        c = NewsSentimentCollector()
+
+        async def run():
+            pos = await c._analyze_text_sentiment(
+                "Stock gains, surges after earnings beat expectations!"
+            )
+            neg = await c._analyze_text_sentiment(
+                "Shares plunge as company misses estimates."
+            )
+            neutral = await c._analyze_text_sentiment(
+                "The company reported quarterly figures."
+            )
+            return pos, neg, neutral
+
+        pos, neg, neutral = asyncio.run(run())
+        assert pos > 0
+        assert neg < 0
+        assert neutral == 0.0
+
+    def test_score_bounded(self):
+        import asyncio
+        from trading.data.external_signals import NewsSentimentCollector
+
+        c = NewsSentimentCollector()
+
+        async def run():
+            return await c._analyze_text_sentiment(
+                "buy buy strong rally surge gain profit growth"
+            )
+
+        assert -1.0 <= asyncio.run(run()) <= 1.0

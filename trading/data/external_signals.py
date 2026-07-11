@@ -8,6 +8,7 @@ insider trading, and options flow data.
 
 import asyncio
 import logging
+import re
 import time
 import warnings
 from dataclasses import asdict, dataclass
@@ -414,7 +415,13 @@ class NewsSentimentCollector:
                 "plunge",
             }
 
-            words = set(text.lower().split())
+            # TOKENIZATION FIX: plain .split() left punctuation attached
+            # ("gains," / "up." never matched "gain" / "up"), silently
+            # dropping most matches in real headlines. Extract word tokens.
+            words = set(re.findall(r"[a-z']+", text.lower()))
+            # Light plural folding: headlines use "gains"/"surges"/"plunges"
+            # far more than the singular forms in the keyword sets.
+            words |= {w[:-1] for w in words if w.endswith("s") and len(w) > 3}
 
             positive_count = len(words.intersection(positive_words))
             negative_count = len(words.intersection(negative_words))
@@ -557,7 +564,13 @@ class TwitterSentimentCollector:
                 "ðŸ”¥",
             }
 
-            words = set(text.lower().split())
+            # TOKENIZATION FIX: plain .split() left punctuation attached
+            # ("gains," / "up." never matched "gain" / "up"), silently
+            # dropping most matches in real headlines. Extract word tokens.
+            words = set(re.findall(r"[a-z']+", text.lower()))
+            # Light plural folding: headlines use "gains"/"surges"/"plunges"
+            # far more than the singular forms in the keyword sets.
+            words |= {w[:-1] for w in words if w.endswith("s") and len(w) > 3}
 
             positive_count = len(words.intersection(positive_words))
             negative_count = len(words.intersection(negative_words))
@@ -695,7 +708,13 @@ class RedditSentimentCollector:
                 "risky",
             }
 
-            words = set(text.lower().split())
+            # TOKENIZATION FIX: plain .split() left punctuation attached
+            # ("gains," / "up." never matched "gain" / "up"), silently
+            # dropping most matches in real headlines. Extract word tokens.
+            words = set(re.findall(r"[a-z']+", text.lower()))
+            # Light plural folding: headlines use "gains"/"surges"/"plunges"
+            # far more than the singular forms in the keyword sets.
+            words |= {w[:-1] for w in words if w.endswith("s") and len(w) > 3}
 
             positive_count = len(words.intersection(positive_words))
             negative_count = len(words.intersection(negative_words))
