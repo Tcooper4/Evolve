@@ -122,9 +122,21 @@ def get_macro_history(
     period: str = "1mo",
     interval: str = "1d",
 ) -> pd.DataFrame:
-    """Macro / index series — 1h TTL bucket for SPY, VIX, yields, etc."""
+    """Macro / index series — 1h TTL bucket for SPY, VIX, yields, etc.
+
+    CONSISTENCY FIX: get_history strips timezone info from the index but
+    this function did not, so aligning a symbol's history against a macro
+    series raised pandas' "Cannot join tz-naive with tz-aware" (or worse,
+    silently misaligned after a manual reset). Both now return tz-naive
+    indexes.
+    """
     try:
-        return yf.Ticker(ticker).history(period=period, interval=interval)
+        df = yf.Ticker(ticker).history(period=period, interval=interval)
+        if isinstance(df, pd.DataFrame) and len(df.index) > 0:
+            if hasattr(df.index, "tz") and df.index.tz is not None:
+                df = df.copy()
+                df.index = df.index.tz_convert(None)
+        return df
     except Exception:
         return pd.DataFrame()
 

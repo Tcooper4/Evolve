@@ -553,18 +553,54 @@ class FeatureEngineering:
         return result
 
     def calculate_fourier_features(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Calculate Fourier transform features."""
+        """Calculate causal Fourier (cyclicality) features.
+
+        BUG FIX (two compounding problems, verified by execution):
+        (1) DATA LEAKAGE: the previous implementation ran np.fft.fft over
+            the ENTIRE Close series - so the value assigned to every row
+            was computed using prices from that row's future. Any model
+            trained with Fourier_* features had seen the future; this is
+            the same leakage class the audit removed from three training
+            pipelines.
+        (2) CONSTANT COLUMN: np.abs(fft[period]) is a single scalar, so
+            the "feature" was one number broadcast down the whole column -
+            zero per-row information, and a constant that SHIFTS between
+            the training window and any later inference window,
+            systematically biasing a model that learned a weight on it.
+
+        Now: for each row t, the DFT coefficient at the requested cycle
+        length is computed over a TRAILING window of 2*period bars only
+        (a causal rolling correlation with the period's sin/cos basis,
+        via convolution). Rows without a full trailing window are NaN.
+        The magnitude is normalized by the window mean price so the
+        feature measures cycle STRENGTH rather than price level.
+        """
         self._validate_input(data)
         result = pd.DataFrame(index=data.index)
+        close = data["Close"].astype(float).values
 
         for period in self.fourier_periods:
-            if period > len(data):
+            window = 2 * period
+            if window > len(data):
                 continue
-            # Calculate Fourier transform
-            fft = np.fft.fft(data["Close"].values)
-            # Get the magnitude of the first period
-            magnitude = np.abs(fft[period])
-            result[f"Fourier_{period}"] = magnitude
+            k = np.arange(window)
+            # Basis for the frequency completing `window/period` = 2 cycles
+            # across the window; kernels are reversed so convolution at t
+            # weights the TRAILING window ending at t.
+            cos_kernel = np.cos(2 * np.pi * k / period)[::-1]
+            sin_kernel = np.sin(2 * np.pi * k / period)[::-1]
+            real = np.convolve(close, cos_kernel, mode="valid")
+            imag = np.convolve(close, sin_kernel, mode="valid")
+            magnitude = np.sqrt(real**2 + imag**2)
+            # Normalize by trailing mean price (scale invariance).
+            mean_kernel = np.full(window, 1.0 / window)
+            trailing_mean = np.convolve(close, mean_kernel, mode="valid")
+            with np.errstate(divide="ignore", invalid="ignore"):
+                magnitude = np.where(trailing_mean > 1e-10,
+                                     magnitude / trailing_mean, 0.0)
+            col = np.full(len(close), np.nan)
+            col[window - 1:] = magnitude
+            result[f"Fourier_{period}"] = col
 
         return result
 
