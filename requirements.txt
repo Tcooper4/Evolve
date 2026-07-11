@@ -106,3 +106,4 @@ shap
 
 # MCP server (expose Evolve tools to Claude Desktop/Code and other agents)
 mcp>=1.2
+textstat>=0.7  # readability scoring in trading/nlp/sentiment_processor

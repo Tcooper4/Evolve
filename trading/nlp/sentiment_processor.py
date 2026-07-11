@@ -16,7 +16,20 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-from textstat import textstat
+
+# BUG FIX: textstat was a hard module-level import but is absent from
+# requirements.txt, so a fresh install-per-requirements could not import
+# this module at all - and with it lost the whole social-sentiment path
+# (trading/data/social_sentiment.py). textstat is only used for the
+# readability component of quality filtering; it is now optional with a
+# neutral fallback, and has been added to requirements.txt as well.
+try:
+    from textstat import textstat
+
+    TEXTSTAT_AVAILABLE = True
+except ImportError:
+    textstat = None
+    TEXTSTAT_AVAILABLE = False
 
 # Try to import sentence_transformers (optional; guarded for version conflicts)
 try:
@@ -339,6 +352,8 @@ class SentimentProcessor:
             if len(clean_text.split()) < 10:  # Too short for reliable scoring
                 return 50.0
 
+            if not TEXTSTAT_AVAILABLE:
+                return 50.0  # neutral readability when textstat is absent
             score = textstat.flesch_reading_ease(clean_text)
             return max(0.0, min(100.0, score))
         except Exception as e:
@@ -624,8 +639,84 @@ class SentimentProcessor:
             logger.warning(f"Error in soft-matching for word '{word}': {e}")
             return []
 
+    # Finance-domain valence overlay for VADER (VADER's general-English
+    # lexicon reads "beats" as neutral-to-negative and misses most market
+    # jargon entirely). Values are on VADER's -4..+4 valence scale.
+    _FINANCE_VADER_VALENCES = {
+        "surge": 2.5, "surges": 2.5, "surged": 2.5, "soar": 2.8,
+        "soars": 2.8, "soared": 2.8, "rally": 2.2, "rallies": 2.2,
+        "rallied": 2.2, "beat": 2.0, "beats": 2.0, "outperform": 2.2,
+        "outperforms": 2.2, "outperformed": 2.2, "upgrade": 2.0,
+        "upgraded": 2.0, "bullish": 2.5, "breakout": 1.8, "record": 1.5,
+        "jump": 1.8, "jumps": 1.8, "jumped": 1.8, "guidance": 0.0,
+        "plunge": -2.8, "plunges": -2.8, "plunged": -2.8, "crash": -3.2,
+        "crashes": -3.2, "crashed": -3.2, "tumble": -2.4, "tumbles": -2.4,
+        "tumbled": -2.4, "slump": -2.2, "slumps": -2.2, "slumped": -2.2,
+        "sink": -2.0, "sinks": -2.0, "sank": -2.0, "miss": -2.0,
+        "misses": -2.0, "missed": -2.0, "downgrade": -2.2,
+        "downgraded": -2.2, "bearish": -2.5, "layoff": -2.0,
+        "layoffs": -2.0, "warn": -1.8, "warns": -1.8, "warned": -1.8,
+        "headwind": -1.5, "headwinds": -1.5, "selloff": -2.4,
+        "underperform": -2.0, "underperforms": -2.0,
+    }
+
+    def _get_vader(self):
+        """Lazily build a VADER analyzer with the finance valence overlay."""
+        if getattr(self, "_vader", None) is None:
+            try:
+                from vaderSentiment.vaderSentiment import (
+                    SentimentIntensityAnalyzer,
+                )
+
+                analyzer = SentimentIntensityAnalyzer()
+                analyzer.lexicon.update(self._FINANCE_VADER_VALENCES)
+                self._vader = analyzer
+            except Exception as e:  # pragma: no cover - optional dep path
+                logger.warning("VADER unavailable for sentiment blend: %s", e)
+                self._vader = False
+        return self._vader or None
+
+    def _lexicon_lookup(self, word: str) -> Optional[float]:
+        """Exact lookup with light inflection stripping.
+
+        BUG FIX (verified by execution): the lexicon stores base forms
+        ("surge", "beat", "miss") but matching was exact-only, so
+        headline-typical inflections ("surges", "beats", "misses",
+        "plunged") matched NOTHING - "AAPL beats earnings, stock surges on
+        record revenue" scored 0.0, dead neutral. Common suffixes are now
+        stripped before lookup.
+        """
+        lex = self.sentiment_lexicons["basic"]
+        if word in lex:
+            return lex[word]
+        for suffix in ("ies", "es", "s", "ed", "ing"):
+            if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+                stem = word[: -len(suffix)]
+                if suffix == "ies" and (stem + "y") in lex:
+                    return lex[stem + "y"]
+                if stem in lex:
+                    return lex[stem]
+                # e-restoration: "plunged" -> "plung" -> "plunge"
+                if (stem + "e") in lex:
+                    return lex[stem + "e"]
+                # doubled final consonant: "planning" -> "plan"
+                if len(stem) >= 2 and stem[-1] == stem[-2] and stem[:-1] in lex:
+                    return lex[stem[:-1]]
+        return None
+
     def _calculate_base_sentiment(self, text: str) -> float:
-        """Calculate base sentiment score using lexicon with soft-matching."""
+        """Base sentiment: finance-augmented VADER blended with the domain
+        lexicon.
+
+        UPGRADE (with the inflection fix above, verified by execution):
+        the previous implementation was lexicon-only over ~39 base-form
+        words, so most real headlines scored 0.0 and negation ("not
+        strong") was invisible. Now: VADER's compound score - with a
+        finance valence overlay so market jargon reads correctly - is
+        blended 50/50 with the domain-lexicon average when domain words
+        are present, and used alone otherwise. Soft matching is retained
+        as the fallback tier for words neither system knows.
+        """
         try:
             words = re.findall(r"\b\w+\b", text.lower())
             if not words:
@@ -635,10 +726,29 @@ class SentimentProcessor:
             matched_words = 0
             soft_matches_used = 0
 
-            for word in words:
-                # Try exact match first
-                if word in self.sentiment_lexicons["basic"]:
-                    total_score += self.sentiment_lexicons["basic"][word]
+            # Negation handling for the domain-lexicon pass: a sentiment
+            # word within two tokens of a negator contributes its flipped
+            # value ("not strong", "no growth", "never beats"). Without
+            # this, the negation-blind lexicon (+1 for "strong") overrode
+            # VADER's correct negative read in the blend - verified:
+            # "The results were not strong and growth stalled" netted
+            # positive.
+            _negators = {
+                "not", "no", "never", "without", "isnt", "wasnt", "arent",
+                "werent", "dont", "doesnt", "didnt", "cant", "cannot",
+                "wont", "couldnt", "wouldnt", "hasnt", "havent", "lacks",
+                "lacking", "hardly", "barely",
+            }
+
+            for idx, word in enumerate(words):
+                negated = any(
+                    words[j] in _negators
+                    for j in range(max(0, idx - 2), idx)
+                )
+                sign = -1.0 if negated else 1.0
+                exact = self._lexicon_lookup(word)
+                if exact is not None:
+                    total_score += sign * exact
                     matched_words += 1
                 elif self.enable_soft_matching:
                     # Try soft-matching for rare words
@@ -647,7 +757,7 @@ class SentimentProcessor:
                         # Use the best match
                         best_match_word, similarity, sentiment_score = soft_matches[0]
                         # Weight the score by similarity
-                        weighted_score = sentiment_score * similarity
+                        weighted_score = sign * sentiment_score * similarity
                         total_score += weighted_score
                         matched_words += 1
                         soft_matches_used += 1
@@ -656,21 +766,35 @@ class SentimentProcessor:
                             f"Soft match: '{word}' -> '{best_match_word}' (similarity: {similarity:.3f})"
                         )
 
-            if matched_words == 0:
-                return 0.0
-
             # Log soft-matching usage
             if soft_matches_used > 0:
                 logger.info(
                     f"Used {soft_matches_used} soft matches out of {matched_words} total matches"
                 )
 
-            # Normalize score to [-1, 1] range with safe division
-            if matched_words > 0:
-                avg_score = total_score / matched_words
-                return max(-1.0, min(1.0, avg_score))
-            else:
-                return 0.0  # Neutral sentiment if no matches
+            lexicon_score = (
+                max(-1.0, min(1.0, total_score / matched_words))
+                if matched_words > 0
+                else None
+            )
+
+            vader = self._get_vader()
+            vader_score = None
+            if vader is not None:
+                try:
+                    vader_score = float(
+                        vader.polarity_scores(text)["compound"]
+                    )
+                except Exception as e:
+                    logger.debug("VADER scoring failed: %s", e)
+
+            if lexicon_score is not None and vader_score is not None:
+                return max(-1.0, min(1.0, 0.5 * lexicon_score + 0.5 * vader_score))
+            if vader_score is not None:
+                return max(-1.0, min(1.0, vader_score))
+            if lexicon_score is not None:
+                return lexicon_score
+            return 0.0
 
         except Exception as e:
             logger.warning(f"Error calculating base sentiment: {e}")

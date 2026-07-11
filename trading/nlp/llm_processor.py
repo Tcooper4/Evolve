@@ -8,19 +8,12 @@ from typing import Any, Dict, Generator, Optional
 from openai import OpenAI
 
 # Setup logging
+# BUG FIX: this module previously created a logs/ directory and attached a
+# DEBUG FileHandler at IMPORT time - a side-effectful import that wrote to
+# disk on any import (including test collection) and stacked duplicate
+# handlers on re-import. Standard module logging only; callers configure
+# handlers.
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-# Add file handler for debug logs (create log dir at runtime for Community Cloud)
-_log_dir = os.path.join(os.path.dirname(__file__), "logs")
-os.makedirs(_log_dir, exist_ok=True)
-debug_handler = logging.FileHandler(os.path.join(_log_dir, "nlp_debug.log"))
-debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-debug_handler.setFormatter(debug_formatter)
-logger.addHandler(debug_handler)
 
 
 class LLMProcessor:
@@ -33,7 +26,15 @@ class LLMProcessor:
             config: Configuration dictionary
         """
         self.config = config or {}
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # BUG FIX (verified by execution): the OpenAI client was constructed
+        # eagerly here and raises OpenAIError when OPENAI_API_KEY is unset,
+        # so LLMProcessor() crashed at CONSTRUCTION for any non-OpenAI
+        # setup. app.py's try/except silently set the session component to
+        # None - on a Claude-configured install (the platform default) this
+        # component had never successfully initialized. The client is now
+        # created lazily on first use, and a missing key surfaces as a
+        # clear error from process()/moderation rather than a boot crash.
+        self._client: Optional[OpenAI] = None
 
         # Load moderation categories
         self.moderation_categories = {
@@ -53,6 +54,20 @@ class LLMProcessor:
         logger.info("LLMProcessor initialized with moderation categories")
 
         # Removed return statement - __init__ should not return values
+
+    @property
+    def client(self) -> OpenAI:
+        """Lazily-constructed OpenAI client (raises with a clear message
+        only when an OpenAI-backed call is actually attempted)."""
+        if self._client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise RuntimeError(
+                    "LLMProcessor requires OPENAI_API_KEY; the platform's "
+                    "active LLM is configured elsewhere (config/llm_config)."
+                )
+            self._client = OpenAI(api_key=api_key)
+        return self._client
 
     def process(self, prompt: str) -> str:
         """Process a prompt and get response.
@@ -155,6 +170,15 @@ class LLMProcessor:
 
             return False
 
+        except RuntimeError:
+            # BUG FIX: a missing/invalid API key previously fell into the
+            # generic fail-closed branch below, so every prompt was
+            # reported as "contains unsafe content" - a configuration
+            # error masquerading as a content violation (verified: "hi"
+            # was flagged unsafe with no key set). Configuration errors
+            # now propagate with their real message; genuine moderation
+            # API failures still fail closed.
+            raise
         except Exception as e:
             logger.error(f"Error checking content safety: {str(e)}", exc_info=True)
             return True  # Fail safe

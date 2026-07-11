@@ -25,6 +25,15 @@ Last updated: 2026-07-10 (Fable session)
 - tab_quick_forecast.py is 1623 lines — candidate for further modularization
 - agents/llm/agent.py is ~2800 lines — candidate for splitting
 
+### Kept-but-flagged (working code, zero live wiring — decide: wire or archive)
+
+- `data/streaming_pipeline.py` (1,166L websocket streaming) — self-contained, imports clean, unused; plausible future live-data feature
+- `trading/agents/prompt_response_validator.py` — schema validation for strategy/prompt responses; could be wired into the chat pipeline as a quality gate
+- `trading/risk/risk_analyzer.py` — test-covered; overlaps advanced_risk
+- `trading/nlp/prompt_processor.py` — superseded in the live chat path by EnhancedPromptRouterAgent
+- `trading/optimization/rsi_optimizer.py` — superseded by the general optimizer stack; kept because tests/strategies/test_rsi_strategy.py hard-imports it alongside live rsi_signals coverage
+- Stale tests importing nonexistent modules: tests/test_optimization/test_backtest_optimizer.py, test_hyperparameter_tuner.py (fail collection; pre-existing)
+
 ## Resolved (formerly in debt)
 
 - risk_metrics duplication: consolidated into utils/risk_metrics.py (backtesting copy removed); flat-series Sharpe/Sortino blowup root-fixed (Fable session)
