@@ -1,0 +1,52 @@
+name: tests
+on:
+  push:
+    branches: [main, codebase-audit-consolidated]
+  pull_request:
+
+jobs:
+  battery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Session battery
+        run: |
+          python -m pytest \
+            tests/test_auth \
+            tests/test_data/test_data_layer_depth.py \
+            tests/test_nlp_depth \
+            tests/test_report_depth.py \
+            tests/test_agents_depth.py \
+            tests/test_web_api.py \
+            tests/test_optimization \
+            tests/test_chat_turn.py \
+            tests/test_session_b_depth.py \
+            tests/test_stub_sweep.py \
+            tests/test_beginner_advisor.py \
+            tests/test_connection_pass.py \
+            -q --no-header
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/frontend/package-lock.json
+      - name: Build (strict TypeScript)
+        working-directory: web/frontend
+        run: |
+          npm ci
+          npm run build
