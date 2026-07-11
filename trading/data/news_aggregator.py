@@ -67,7 +67,8 @@ def _fetch_yfinance_news(symbol: str, max_items: int = 10) -> List[Dict]:
 # ── Source 2: NewsAPI (requires NEWSAPI_KEY env var) ────────────────────────
 def _fetch_newsapi(query: str, max_items: int = 10) -> List[Dict]:
     """Fetch news from NewsAPI.org when NEWSAPI_KEY is configured."""
-    api_key = os.getenv("NEWSAPI_KEY") or os.getenv("NEWS_API_KEY")
+    from config.api_keys import resolve_api_key
+    api_key = resolve_api_key("NEWSAPI_KEY")
     if not api_key:
         return []
 

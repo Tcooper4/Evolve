@@ -37,7 +37,8 @@ def fetch_recent_news(
         List of dicts with "title" and "description" (description may be None).
         Empty list if API key missing or request fails.
     """
-    api_key = os.getenv("NEWS_API_KEY")
+    from config.api_keys import resolve_api_key
+    api_key = resolve_api_key("NEWS_API_KEY")
     if not api_key or not api_key.strip():
         logger.debug("NEWS_API_KEY not set; skipping news fetch")
         return []

@@ -74,7 +74,8 @@ class ResearchAgent(BaseAgent):
 
         custom_config = config.custom_config or {}
         import os
-        self.openai_api_key = custom_config.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
+        from config.api_keys import resolve_api_key
+        self.openai_api_key = custom_config.get("openai_api_key") or resolve_api_key("OPENAI_API_KEY")
         self.anthropic_api_key = custom_config.get("anthropic_api_key")
         # AGENT_UPGRADE: Centralized LLM config
         try:

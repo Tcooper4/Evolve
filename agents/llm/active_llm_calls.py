@@ -510,9 +510,13 @@ def call_active_llm_simple(prompt: str, *, max_tokens: int = 2048) -> str:
             _is_cloud = (
                 os.environ.get("STREAMLIT_SHARING_MODE") or
                 os.environ.get("IS_STREAMLIT_CLOUD") or
+                os.environ.get("EVOLVE_REQUIRE_LOGIN", "0").strip() in ("1", "true", "yes") or
                 not os.path.exists(".env")
             )
             if _is_cloud:
+                # Session-state injection only: never touch the
+                # process-global environment when multiple users share
+                # the process (see config/api_keys.py for the resolver).
                 from config.user_store import inject_user_keys_to_session
                 inject_user_keys_to_session(str(session_id))
             else:
@@ -612,9 +616,13 @@ def call_active_llm_chat(
             _is_cloud = (
                 os.environ.get("STREAMLIT_SHARING_MODE") or
                 os.environ.get("IS_STREAMLIT_CLOUD") or
+                os.environ.get("EVOLVE_REQUIRE_LOGIN", "0").strip() in ("1", "true", "yes") or
                 not os.path.exists(".env")
             )
             if _is_cloud:
+                # Session-state injection only: never touch the
+                # process-global environment when multiple users share
+                # the process (see config/api_keys.py for the resolver).
                 from config.user_store import inject_user_keys_to_session
                 inject_user_keys_to_session(str(session_id))
             else:

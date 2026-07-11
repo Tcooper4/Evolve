@@ -60,7 +60,8 @@ class LLMProcessor:
         """Lazily-constructed OpenAI client (raises with a clear message
         only when an OpenAI-backed call is actually attempted)."""
         if self._client is None:
-            api_key = os.getenv("OPENAI_API_KEY")
+            from config.api_keys import resolve_api_key
+            api_key = resolve_api_key("OPENAI_API_KEY")
             if not api_key:
                 raise RuntimeError(
                     "LLMProcessor requires OPENAI_API_KEY; the platform's "

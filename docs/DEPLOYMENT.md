@@ -108,13 +108,28 @@ crontab -e
 0 3 * * * tar czf ~/evolve-backup-$(date +\%F).tgz -C ~/Evolve data/
 ```
 
+## Per-user API keys
+
+Each person enters their own API keys under **Settings → API keys** after
+signing in. Keys are encrypted at rest (Fernet; set `EVOLVE_ENCRYPTION_KEY`
+in `.env` and keep it out of version control) and every request resolves
+the **current user's** key — never another account's, and never via the
+process environment (which is shared).
+
+Fallback policy: if a user hasn't entered a key, the server's `.env` key
+is used by default. To require everyone to bring their own keys (so nobody
+can spend yours), set:
+
+```
+EVOLVE_SHARED_KEYS=0
+```
+
 ## Honest security notes
 
 This setup is appropriate for trusted friends and family, not the public
-internet at scale: passwords are bcrypt-hashed and sessions signed, TLS
+internet at scale: passwords are bcrypt-hashed, per-user API keys are
+encrypted at rest and resolved per-request, sessions are signed, TLS
 terminates at Caddy, and pages are fully gated — but there is no rate
 limiting, no 2FA, no audit logging, and Streamlit itself is not hardened
 for adversarial traffic. Don't post the URL publicly, keep the user list
 to people you trust, and keep the server patched (`unattended-upgrades`).
-API keys in `.env` are shared by the app, not per-user — anyone you give
-an account effectively uses your Anthropic/data keys.

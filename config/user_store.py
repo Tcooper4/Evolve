@@ -132,8 +132,22 @@ def inject_user_keys_to_env(session_id: str) -> None:
     Load stored API keys for the given session and set them in os.environ.
     Does not overwrite keys already set in the environment (env takes precedence).
     Idempotent; safe to call multiple times.
+
+    MULTI-USER GUARD: os.environ is process-global and Streamlit serves
+    every logged-in user from one process, so injecting one user's keys
+    into the environment would make everyone else's requests spend that
+    user's quota. In live-site mode (EVOLVE_REQUIRE_LOGIN=1) this is
+    therefore a hard no-op; per-request resolution happens in
+    config/api_keys.resolve_api_key instead. Personal mode (single user)
+    keeps the original behavior.
     """
     if not session_id:
+        return
+    if os.getenv("EVOLVE_REQUIRE_LOGIN", "0").strip() in ("1", "true", "yes"):
+        logger.debug(
+            "inject_user_keys_to_env skipped in multi-user mode (%s); "
+            "per-request resolver handles keys", session_id,
+        )
         return
     try:
         keys = {}

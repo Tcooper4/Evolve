@@ -120,7 +120,8 @@ class ReasoningLogger:
             host=redis_host, port=redis_port, db=redis_db, decode_responses=True
         )
 
-        self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        from config.api_keys import resolve_api_key
+        self.openai_api_key = openai_api_key or resolve_api_key("OPENAI_API_KEY")
         self.enable_gpt_explanations = enable_gpt_explanations
 
         # Initialize OpenAI client if available

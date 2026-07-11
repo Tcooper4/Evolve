@@ -106,7 +106,8 @@ class LLMInterface:
             llm = get_llm_config()
             api_key = llm.openai_api_key
         except Exception:
-            api_key = os.getenv("OPENAI_API_KEY")
+            from config.api_keys import resolve_api_key
+            api_key = resolve_api_key("OPENAI_API_KEY")
         if not api_key:
             logger.warning("OpenAI API key not found. LLM features will be disabled.")
             self.enabled = False

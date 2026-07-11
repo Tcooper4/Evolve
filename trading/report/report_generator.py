@@ -127,7 +127,8 @@ class ReportGenerator:
             llm = get_llm_config()
             self.openai_api_key = openai_api_key or llm.openai_api_key
         except Exception:
-            self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+            from config.api_keys import resolve_api_key
+            self.openai_api_key = openai_api_key or resolve_api_key("OPENAI_API_KEY")
         self.notion_token = notion_token or os.getenv("NOTION_TOKEN")
         self.slack_webhook = slack_webhook or os.getenv("SLACK_WEBHOOK")
         self.email_config = email_config or {}

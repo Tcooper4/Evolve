@@ -193,6 +193,13 @@ with tab_keys:
                 )
                 for k, v in keys_to_save.items():
                     st.session_state[f"user_key_{k}"] = v
+                # New keys take effect immediately for THIS user only.
+                try:
+                    from config.llm_config import reset_llm_config
+
+                    reset_llm_config(_uid)
+                except Exception:
+                    pass
                 _is_cloud = (
                     os.environ.get("STREAMLIT_SHARING_MODE")
                     or os.environ.get("IS_STREAMLIT_CLOUD")

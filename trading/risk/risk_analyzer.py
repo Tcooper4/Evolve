@@ -66,7 +66,8 @@ class RiskAnalyzer:
             openai_api_key: OpenAI API key (optional)
             memory_path: Path to store risk assessments
         """
-        self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        from config.api_keys import resolve_api_key
+        self.openai_api_key = openai_api_key or resolve_api_key("OPENAI_API_KEY")
         self.memory_path = memory_path
         self.last_assessment = None
 

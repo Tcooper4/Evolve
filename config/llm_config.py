@@ -129,6 +129,16 @@ class LLMConfig:
 _config: Optional[LLMConfig] = None
 
 
+def reset_llm_config(user_id: str = None) -> None:
+    """Invalidate the cached LLM config - for one user (e.g. right after
+    they save new API keys in Settings) or entirely."""
+    global _config
+    if isinstance(_config, dict) and user_id:
+        _config.pop(user_id, None)
+    else:
+        _config = None
+
+
 def _normalize_openai_key(raw: Optional[str]) -> Optional[str]:
     """Strip surrounding whitespace and quotes from OPENAI_API_KEY. Return None if empty."""
     if raw is None:
@@ -154,21 +164,34 @@ def _normalize_anthropic_key(raw: Optional[str]) -> Optional[str]:
 
 
 def get_llm_config() -> LLMConfig:
-    """Return LLM config from app config and env (single source of truth)."""
+    """Return the LLM config for the CURRENT USER (single source of truth).
+
+    MULTI-USER FIX: this previously read keys straight from os.environ and
+    cached one module-global _config - so in a multi-user deployment the
+    first user's keys were frozen into the process and used for everyone.
+    Keys now come from config.api_keys.resolve_api_key (per-user encrypted
+    store first, server env only when the shared-keys policy allows) and
+    the cache is keyed per user identity. Personal mode behaves exactly as
+    before: identity is 'local' and env keys resolve normally."""
+    from config.api_keys import current_user_id, resolve_api_key
+
     global _config
-    if _config is not None:
-        return _config
+    _uid = current_user_id()
+    if isinstance(_config, dict) and _uid in _config:
+        return _config[_uid]
+    if not isinstance(_config, dict):
+        _config = {}
     try:
         from config.app_config import get_config
 
         get_config()  # ensure config loaded
-        openai_key = _normalize_openai_key(os.getenv("OPENAI_API_KEY"))
-        anthropic_key = _normalize_anthropic_key(os.getenv("ANTHROPIC_API_KEY"))
-        google_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or None
-        hf_key = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HF_TOKEN") or None
-        moonshot_key = os.getenv("MOONSHOT_API_KEY") or None
+        openai_key = _normalize_openai_key(resolve_api_key("OPENAI_API_KEY"))
+        anthropic_key = _normalize_anthropic_key(resolve_api_key("ANTHROPIC_API_KEY"))
+        google_key = resolve_api_key("GOOGLE_API_KEY")
+        hf_key = resolve_api_key("HUGGINGFACE_API_KEY")
+        moonshot_key = resolve_api_key("MOONSHOT_API_KEY")
         primary = os.getenv("EVOLVE_PRIMARY_LLM_MODEL", CLAUDE_PRIMARY_MODEL)
-        _config = LLMConfig(
+        cfg = LLMConfig(
             openai_api_key=openai_key,
             anthropic_api_key=anthropic_key,
             primary_model=primary,
@@ -176,19 +199,20 @@ def get_llm_config() -> LLMConfig:
             huggingface_api_key=hf_key,
             moonshot_api_key=moonshot_key,
         )
-        return _config
+        _config[_uid] = cfg
+        return cfg
     except Exception as e:
         logger.warning(f"Could not load app config for LLM, using env only: {e}")
-        openai_key = _normalize_openai_key(os.getenv("OPENAI_API_KEY"))
-        _config = LLMConfig(
-            openai_api_key=openai_key,
-            anthropic_api_key=_normalize_anthropic_key(os.getenv("ANTHROPIC_API_KEY")),
+        cfg = LLMConfig(
+            openai_api_key=_normalize_openai_key(resolve_api_key("OPENAI_API_KEY")),
+            anthropic_api_key=_normalize_anthropic_key(resolve_api_key("ANTHROPIC_API_KEY")),
             primary_model=os.getenv("EVOLVE_PRIMARY_LLM_MODEL", CLAUDE_PRIMARY_MODEL),
-            google_api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or None,
-            huggingface_api_key=os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HF_TOKEN") or None,
-            moonshot_api_key=os.getenv("MOONSHOT_API_KEY") or None,
+            google_api_key=resolve_api_key("GOOGLE_API_KEY"),
+            huggingface_api_key=resolve_api_key("HUGGINGFACE_API_KEY"),
+            moonshot_api_key=resolve_api_key("MOONSHOT_API_KEY"),
         )
-        return _config
+        _config[_uid] = cfg
+        return cfg
 
 
 def get_active_llm() -> Tuple[str, str, Dict[str, Any]]:
