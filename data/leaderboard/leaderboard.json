@@ -2407,11 +2407,11 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2026-07-11T19:48:45.529736",
+    "last_updated": "2026-07-11T19:57:56.387559",
     "status": "deprecated",
     "extra_metrics": {
       "self_tune": true,
-      "adopted": true
+      "adopted": false
     },
     "metadata": {}
   }

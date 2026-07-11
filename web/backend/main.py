@@ -441,6 +441,60 @@ async def quote_stream(ws: WebSocket, symbol: str) -> None:
         pass
 
 
+# (frontend static mount moved to the END of this module - a
+# catch-all '/' mount registered mid-file swallows every route added
+# after it; found when /api/portfolio returned index.html.)
+
+
+# --------------------------------------------------------------------------
+# Paper portfolio
+# --------------------------------------------------------------------------
+
+class TradeRequest(BaseModel):
+    symbol: str
+    side: str  # buy | sell
+    quantity: float
+    price: Optional[float] = None
+
+
+@app.get("/api/portfolio")
+def portfolio(user: str = Depends(current_user)) -> Dict[str, Any]:
+    from trading.portfolio.paper_portfolio import PaperPortfolio
+
+    return PaperPortfolio(user_id=f"user:{user}").get_summary()
+
+
+@app.post("/api/portfolio/trade")
+def portfolio_trade(req: TradeRequest,
+                    user: str = Depends(current_user)) -> Dict[str, Any]:
+    from trading.portfolio.paper_portfolio import PaperPortfolio
+
+    price = req.price
+    if price is None:
+        try:
+            import yfinance as yf
+
+            from trading.data.ticker_resolver import normalize_ticker
+
+            p = yf.Ticker(normalize_ticker(req.symbol)).fast_info.last_price
+            price = float(p) if p else None
+        except Exception:
+            price = None
+        if price is None:
+            return {"success": False,
+                    "error": "no live price - provide one explicitly"}
+    return PaperPortfolio(user_id=f"user:{user}").record_trade(
+        req.symbol, req.side, req.quantity, price
+    )
+
+
+@app.get("/api/portfolio/trades")
+def portfolio_trades(user: str = Depends(current_user)) -> List[Dict[str, Any]]:
+    from trading.portfolio.paper_portfolio import PaperPortfolio
+
+    return PaperPortfolio(user_id=f"user:{user}").get_trades()
+
+
 # Serve the built frontend in production: uvicorn web.backend.main:app
 # then open http://localhost:8000 - no separate frontend server needed.
 _dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")

@@ -121,6 +121,7 @@ the repo — no external services:
 | `data/users.db` | per-user API keys (Fernet-encrypted) and preferences |
 | `data/memory_store.db` | chat learning, long-term memories, preferences — per-user |
 | `data/watchlist.db` | per-user watchlists + alert history |
+| `data/paper_portfolio.db` | per-user paper positions + trade ledger |
 | `data/leaderboard/` | model/agent performance history |
 | `.cache/` / `data/*cache*` | market-data caches (TTL-expired, safe to delete) |
 | `.env` | your API keys + `EVOLVE_ENCRYPTION_KEY` — **never commit** |

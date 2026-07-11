@@ -135,3 +135,31 @@ export function quoteSocket(symbol: string,
   ws.onmessage = (e) => { try { onQuote(JSON.parse(e.data)); } catch { /* skip */ } };
   return ws;
 }
+
+// ---- paper portfolio ----
+export interface Position {
+  symbol: string;
+  quantity: number;
+  avg_cost: number;
+  last_price: number | null;
+  market_value: number | null;
+  unrealized_pnl: number | null;
+  unrealized_pct: number | null;
+}
+export interface PortfolioSummary {
+  success: boolean;
+  positions: Position[];
+  total_cost_basis: number;
+  total_market_value: number;
+  total_unrealized_pnl: number;
+  realized_pnl: number;
+  all_prices_live: boolean;
+}
+export const getPortfolio = () => req<PortfolioSummary>("/api/portfolio");
+export const recordTrade = (symbol: string, side: "buy" | "sell",
+                            quantity: number, price?: number) =>
+  req<{ success: boolean; error?: string; realized_pnl?: number }>(
+    "/api/portfolio/trade",
+    { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol, side, quantity, price }) },
+  );

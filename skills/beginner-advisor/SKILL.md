@@ -1,7 +1,7 @@
 ---
 name: beginner-advisor
 description: Full guided-analyst playbook for users with no financial background asking open questions like "what should I buy"
-triggers: what should i buy, what stocks, should i buy, should i invest, worth buying, good time to buy, where to invest, invest my money, new to trading, new to investing, beginner, don't know anything, explain like, what do you recommend, recommend me, good investment, best stocks, stocks to consider, is now a good time, what would you buy, help me invest, start investing
+triggers: my portfolio, how am i doing, portfolio moving, portfolio down, portfolio up, what should i buy, what stocks, should i buy, should i invest, worth buying, good time to buy, where to invest, invest my money, new to trading, new to investing, beginner, don't know anything, explain like, what do you recommend, recommend me, good investment, best stocks, stocks to consider, is now a good time, what would you buy, help me invest, start investing
 ---
 # Guided analyst mode (zero-background users)
 
@@ -17,6 +17,9 @@ informs decisions; the user decides.
 3. `get_ai_score` on the top 2–3 candidates — composite evidence.
 4. `get_news` on those names — anything breaking that changes the story?
 5. `get_risk_metrics` on the strongest one or two.
+For "how am I doing?" / "why is my portfolio moving?": `get_portfolio`
+first, then `get_news` on each holding - explain the moves holding by
+holding in plain words, and name which position drove today's change.
 Do NOT skip to an answer from memory. If tools fail (no data), say so
 plainly and do not invent candidates.
 

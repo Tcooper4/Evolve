@@ -3166,6 +3166,35 @@ def get_evolve_platform_tool_registry():
             },
         },
 
+        {
+            "name": "get_portfolio",
+            "description": (
+                "The user's paper portfolio: positions, live unrealized P&L, "
+                "realized P&L, totals. For 'how am I doing?' / 'why is my "
+                "portfolio moving?' (pair with get_news on the holdings)."
+            ),
+            "function": _agent_tools.get_portfolio,
+            "parameters": {"type": "object", "properties": {}},
+        },
+        {
+            "name": "record_paper_trade",
+            "description": (
+                "Record a PAPER trade (never real money). side: buy|sell; "
+                "price optional (live price used if omitted). Long-only."
+            ),
+            "function": _agent_tools.record_paper_trade,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "side": {"type": "string", "description": "buy | sell"},
+                    "quantity": {"type": "number"},
+                    "price": {"type": "number"},
+                },
+                "required": ["symbol", "side", "quantity"],
+            },
+        },
+
     ]
 
 

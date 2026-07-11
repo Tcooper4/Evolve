@@ -5,6 +5,7 @@ import Backtest from "./Backtest";
 import Chat from "./Chat";
 import Dashboard from "./Dashboard";
 import Login from "./Login";
+import Portfolio from "./Portfolio";
 import Scanner from "./Scanner";
 import Settings from "./Settings";
 
@@ -12,6 +13,7 @@ const PAGES = [
   { id: "dashboard", label: "Dashboard", ic: "◧" },
   { id: "analyze", label: "Analyze", ic: "◎" },
   { id: "scanner", label: "Scanner", ic: "⌕" },
+  { id: "portfolio", label: "Portfolio", ic: "◫" },
   { id: "backtest", label: "Backtest", ic: "↺" },
   { id: "chat", label: "Chat", ic: "✦" },
   { id: "settings", label: "Settings", ic: "⚙" },
@@ -60,6 +62,7 @@ export default function App() {
         {page === "dashboard" && <Dashboard displayName={name} />}
         {page === "analyze" && <Analyze />}
         {page === "scanner" && <Scanner />}
+        {page === "portfolio" && <Portfolio />}
         {page === "backtest" && <Backtest />}
         {page === "chat" && <Chat />}
         {page === "settings" && <Settings />}

@@ -683,3 +683,42 @@ def get_position_size(
     except Exception as e:  # noqa: BLE001
         logger.exception("get_position_size failed: %s", e)
         return {"success": False, "error": str(e)}
+
+
+def get_portfolio() -> Dict[str, Any]:
+    """The user's paper portfolio: positions with live unrealized P&L,
+    realized P&L, cost basis, and total value. Use for 'how am I doing?'
+    and 'why is my portfolio moving?' (combine with get_news on the
+    holdings)."""
+    try:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        return PaperPortfolio().get_summary()
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_portfolio failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def record_paper_trade(symbol: str, side: str, quantity: float,
+                       price: Optional[float] = None) -> Dict[str, Any]:
+    """Record a PAPER trade (no real money, ever). side: buy|sell. If
+    price is omitted, uses the live market price. Average-cost
+    accounting; overselling is rejected (long-only v1)."""
+    try:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        if price is None:
+            import yfinance as yf
+
+            from trading.data.ticker_resolver import normalize_ticker
+
+            sym = normalize_ticker(symbol)
+            p = yf.Ticker(sym).fast_info.last_price
+            if not p:
+                return {"success": False,
+                        "error": "no live price - pass an explicit price"}
+            price = float(p)
+        return PaperPortfolio().record_trade(symbol, side, quantity, price)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("record_paper_trade failed: %s", e)
+        return {"success": False, "error": str(e)}

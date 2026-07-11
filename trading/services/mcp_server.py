@@ -335,3 +335,22 @@ def get_position_size(win_rate: float, avg_win_loss_ratio: float = 1.5,
 
     return _f(win_rate, avg_win_loss_ratio=avg_win_loss_ratio,
               account_size=account_size)
+
+
+@mcp.tool()
+def get_portfolio() -> dict:
+    """The user's paper portfolio: positions, unrealized/realized P&L,
+    totals."""
+    from trading.services.agent_tools import get_portfolio as _f
+
+    return _f()
+
+
+@mcp.tool()
+def record_paper_trade(symbol: str, side: str, quantity: float,
+                       price: float | None = None) -> dict:
+    """Record a PAPER trade (never real money). side: buy|sell; live price
+    used when price omitted. Long-only paper accounting."""
+    from trading.services.agent_tools import record_paper_trade as _f
+
+    return _f(symbol, side, quantity, price)
