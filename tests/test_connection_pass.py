@@ -114,3 +114,45 @@ class TestFullSurfaceParity:
         src = open("trading/services/agent_tools.py").read()
         assert "get_adopted_params" in src
         assert "parameters=_adopted" in src
+
+
+class TestDeflatedSharpe:
+    """Selection-bias correction (Bailey & Lopez de Prado 2014): the
+    optimizer must report the probability its best Sharpe survives the
+    number of trials it ran."""
+
+    def test_hand_verified_math(self):
+        from trading.optimization.deflated_sharpe import (
+            _phi_inv, expected_max_sharpe, probabilistic_sharpe)
+        assert abs(_phi_inv(0.975) - 1.959964) < 1e-4
+        # more trials -> higher null benchmark (harder to impress)
+        assert expected_max_sharpe(10, 1.0) < expected_max_sharpe(300, 1.0)
+        # clearly-above-benchmark SR over a long track -> near-certain
+        assert probabilistic_sharpe(0.25, 0.14, n_obs=504) > 0.95
+        # at-benchmark SR -> coin flip
+        assert abs(probabilistic_sharpe(0.14, 0.14, n_obs=504) - 0.5) < 1e-9
+
+    def test_attached_to_validated_runs_and_honest_on_noise(self):
+        import numpy as np
+        import pandas as pd
+
+        import trading.strategies  # noqa: F401
+        from trading.optimization.strategy_backtest_objective import (
+            optimize_strategy_validated)
+        rng = np.random.default_rng(7)
+        N = 504
+        idx = pd.date_range("2024-07-01", periods=N, freq="B")
+        close = 100 * np.exp(np.cumsum(rng.normal(0.0004, 0.011, N)))
+        df = pd.DataFrame({
+            "Open": close * 0.999, "High": close * 1.005,
+            "Low": close * 0.995, "Close": close,
+            "Volume": rng.integers(1e6, 3e6, N).astype(float)}, index=idx)
+        run = optimize_strategy_validated(
+            "RSIStrategy", df, train_fraction=0.75, method="grid_search",
+            metric="sharpe_ratio", max_evaluations=25)
+        d = run.deflated_sharpe
+        assert d is not None and d["n_trials"] >= 10
+        # on a random walk the best pick must NOT be certified as real
+        assert d["deflated_sharpe"] < 0.95
+        # sentinel filter: null benchmark must be a sane per-day Sharpe
+        assert abs(d["expected_max_sharpe_under_null"]) < 2.0

@@ -1,0 +1,13 @@
+# One command to run Evolve: `docker compose up -d`
+# React app + API on http://localhost:8000; all your data persists in ./data
+services:
+  evolve:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data          # accounts, keys, memory, watchlists survive restarts
+      - ./.env:/app/.env:ro       # your API keys
+    environment:
+      - EVOLVE_REQUIRE_LOGIN=${EVOLVE_REQUIRE_LOGIN:-0}
+    restart: unless-stopped

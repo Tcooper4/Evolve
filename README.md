@@ -97,6 +97,19 @@ uvicorn web.backend.main:app --port 8000
 cd web/frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
+## Docker (easiest way to run it)
+
+One command, everything included - Python, Node build, the React app:
+
+```bash
+docker compose up -d     # then open http://localhost:8000
+```
+
+Your data lives in `./data` on the host (mounted as a volume), so
+rebuilding or updating the container never touches your accounts, keys,
+memory, or watchlists. Set `EVOLVE_REQUIRE_LOGIN=1` in `.env` for
+multi-user mode. To update: `git pull && docker compose up -d --build`.
+
 ## Where your data lives (and persistence)
 
 Everything persists on disk between sessions, in plain SQLite/JSON under

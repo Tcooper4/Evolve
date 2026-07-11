@@ -234,3 +234,26 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .field input, .field select { width: 100%; }
 select { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; font-family: var(--font); }
 .saved-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--up); margin-left: 8px; box-shadow: 0 0 8px var(--up); }
+
+/* ---------- responsive (mobile is table stakes in 2026) ---------- */
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  .rail {
+    flex-direction: row; align-items: center; overflow-x: auto;
+    border-right: none; border-bottom: 1px solid var(--border);
+    padding: 10px 12px; gap: 10px;
+  }
+  .rail .nav { flex-direction: row; margin-top: 0; }
+  .rail .rail-label, .rail .wl { display: none; }
+  .main { padding: 14px; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .hero-price { font-size: 30px; }
+  #chart { height: 320px; }
+  .msg { max-width: 88%; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .kpis { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi .value { font-size: 17px; }
+  .topbar { flex-wrap: wrap; }
+}

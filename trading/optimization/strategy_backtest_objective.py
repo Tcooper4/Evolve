@@ -292,6 +292,33 @@ class StrategyOptimizationRun:
     oos_baseline_metrics: Optional[Dict[str, float]] = None
     train_range: Optional[str] = None
     test_range: Optional[str] = None
+    # Selection-bias correction (Bailey & Lopez de Prado): probability the
+    # best Sharpe is real given how many candidates the search tried.
+    deflated_sharpe: Optional[Dict[str, Any]] = None
+
+
+def _maybe_deflated_sharpe(run_train, metric: str, n_obs: int):
+    """Attach the Deflated Sharpe Ratio when the optimized metric is a
+    Sharpe: converts the ANNUALIZED best score and trial history to
+    per-day units (/ sqrt(252)) so PSR's track-length math is coherent."""
+    try:
+        if "sharpe" not in (metric or "").lower():
+            return None
+        from trading.optimization.deflated_sharpe import deflated_sharpe_ratio
+
+        ann = 252 ** 0.5
+        # Filter failed-evaluation penalty sentinels (huge negatives) that
+        # otherwise explode the trial variance and hence the null
+        # benchmark: |annualized Sharpe| > 20 is not a real trial result.
+        trials = [
+            (x / ann) for x in (run_train.convergence_history or [])
+            if x is not None and abs(x) < 20.0
+        ]
+        return deflated_sharpe_ratio(
+            (run_train.best_score or 0.0) / ann, trials, n_obs=n_obs
+        )
+    except Exception:  # noqa: BLE001 - reporting must never break the run
+        return None
 
 
 def optimize_strategy_validated(
@@ -334,6 +361,7 @@ def optimize_strategy_validated(
         else dict(run.oos_baseline_metrics)
     )
     run.train_range = f"{ndata.index[0].date()} → {ndata.index[split - 1].date()}"
+    run.deflated_sharpe = _maybe_deflated_sharpe(run, run.metric, split)
     run.test_range = f"{ndata.index[split].date()} → {ndata.index[-1].date()}"
     return run
 

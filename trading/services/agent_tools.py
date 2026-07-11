@@ -543,8 +543,8 @@ def optimize_strategy_params(
             "symbol": symbol,
             "best_params": getattr(run, "best_params", {}),
             "train_metrics": getattr(run, "best_metrics", {}),
-            "oos_metrics": getattr(run, "validation_metrics",
-                                   getattr(run, "test_metrics", {})),
+            "oos_metrics": getattr(run, "oos_best_metrics", {}) or {},
+            "deflated_sharpe": getattr(run, "deflated_sharpe", None),
             "note": "trust the out-of-sample numbers; a large train->test "
                     "drop is the overfit signature",
         }
