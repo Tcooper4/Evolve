@@ -1,13 +1,25 @@
 """Short interest and squeeze risk pipeline."""
 
-from functools import lru_cache
+import time
 
 import yfinance as yf
 
+# BUG FIX: this used @lru_cache with no TTL, so short-interest data was
+# frozen at first fetch for the LIFETIME of the process. Fine for a
+# short-lived local run; on a hosted site that runs for weeks it meant
+# permanently stale squeeze scores. Replaced with the same TTL cache
+# pattern the sibling data modules use (6h - the underlying FINRA data
+# updates biweekly, but a long-lived process must still refresh).
+_SI_CACHE: dict = {}
+_SI_TS: dict = {}
+_SI_TTL = 6 * 3600.0
 
-@lru_cache(maxsize=128)
+
 def get_short_interest(symbol: str) -> dict:
     """Return short interest metrics and a simple squeeze risk score."""
+    _now = time.time()
+    if symbol in _SI_CACHE and _now - _SI_TS.get(symbol, 0) < _SI_TTL:
+        return dict(_SI_CACHE[symbol])
     try:
         info = yf.Ticker(symbol).info or {}
 
@@ -22,7 +34,7 @@ def get_short_interest(symbol: str) -> dict:
             + min(50, (short_pct * 100 * 2) if short_pct else 0),
         )
 
-        return {
+        result = {
             "symbol": symbol,
             "short_ratio": short_ratio,
             "short_pct_float": round(short_pct * 100, 2) if short_pct else None,
@@ -35,6 +47,9 @@ def get_short_interest(symbol: str) -> dict:
                 else ("MODERATE" if score >= 30 else "LOW_SHORT")
             ),
         }
+        _SI_CACHE[symbol] = dict(result)
+        _SI_TS[symbol] = _now
+        return result
 
     except Exception as e:  # pragma: no cover - defensive fallback
         return {
