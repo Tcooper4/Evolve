@@ -76,3 +76,40 @@ class TestSelfTuneDiscipline:
                 second["challenger_oos"]
                 > (second["champion_oos"] or 0) + 0.05
             )
+
+
+class TestFullSurfaceParity:
+    """The gap-audit findings, locked in structurally so the class of
+    bug (hand-maintained capability subsets drifting) cannot recur."""
+
+    def test_registry_is_subset_of_mcp(self):
+        import asyncio
+
+        import trading.services.mcp_server as M
+        from agents.llm.agent import get_evolve_platform_tool_registry
+        reg = {t["name"] for t in get_evolve_platform_tool_registry()}
+        mcp_names = {t.name for t in asyncio.run(M.mcp.list_tools())}
+        assert reg <= mcp_names, sorted(reg - mcp_names)
+
+    def test_streamlit_chat_is_registry_derived(self):
+        # the page must not carry its own hardcoded tool list
+        src = open("pages/6_Chat.py").read()
+        assert "available_tools=_standard_tools()" in src
+        assert 'available_tools=[' not in src
+
+    def test_kelly_tool_exists_and_is_correct(self):
+        # the position-sizing skill references "Evolve's Kelly tool";
+        # it now exists. Hand check: p=0.6, b=1.5 -> f = 0.6-0.4/1.5
+        from trading.services.agent_tools import get_position_size
+        r = get_position_size(0.6, 1.5, 10_000)
+        assert abs(r["full_kelly_fraction"] - (0.6 - 0.4 / 1.5)) < 1e-4
+        assert r["half_kelly_dollars"] == round(
+            r["half_kelly_fraction"] * 10_000, 2)
+        assert get_position_size(0.4, 1.0)["full_kelly_fraction"] == 0.0
+
+    def test_run_backtest_consults_adopted_params(self):
+        # the learning loop must feed back: run_backtest passes adopted
+        # champion params into strategy execution
+        src = open("trading/services/agent_tools.py").read()
+        assert "get_adopted_params" in src
+        assert "parameters=_adopted" in src

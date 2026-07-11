@@ -212,6 +212,16 @@ with col_chat:
                         try:
                             from agents.llm.tool_executor import execute_with_tools
 
+                            def _standard_tools():
+                                # registry-derived: same single source of
+                                # truth as the React/API chat (chat_turn),
+                                # so the two frontends can never drift
+                                from trading.services.chat_turn import (
+                                    STANDARD_TOOLS,
+                                )
+
+                                return list(STANDARD_TOOLS)
+
                             # Agent Skills: load matched playbooks (e.g.
                             # signal interpretation, sizing discipline,
                             # optimizer-results review) into the turn via
@@ -236,16 +246,7 @@ with col_chat:
                                 system_prompt=chat_nl_service.EVOLVE_CHAT_SYSTEM_PROMPT,
                                 platform_context_suffix=_skills_ctx,
                                 focus_symbol=_focus_sym,
-                                available_tools=[
-                                    "scan_universe",
-                                    "get_ai_score",
-                                    "get_forecast",
-                                    "get_news",
-                                    "get_risk_metrics",
-                                    "get_pattern_analysis",
-                                    "run_backtest",
-                                    "get_options_sentiment",
-                                ],
+                                available_tools=_standard_tools(),
                                 max_tokens=2048,
                             )
                             reply = (_tres.text or "").strip() or (

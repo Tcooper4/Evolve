@@ -357,9 +357,19 @@ def run_backtest(symbol: str, days: int = 90) -> Dict[str, Any]:
             (n for n in names if "rsi" in n.lower()),
             names[0] if names else None,
         )
+        # SELF-TUNE FEEDBACK (2026-07): if a champion parameter set was
+        # adopted for this strategy+symbol by the self-tuning loop, apply
+        # it - otherwise the loop learns and nothing listens.
+        try:
+            from trading.services.self_tune import get_adopted_params
+
+            _adopted = get_adopted_params(strat_name, sym) if strat_name else None
+        except Exception:
+            _adopted = None
+
         if not strat_name:
             return {"success": False, "error": "No strategies in registry"}
-        strat_res = reg.execute_strategy(strat_name, raw)
+        strat_res = reg.execute_strategy(strat_name, raw, parameters=_adopted)
 
         def _sig_series(strat_signals, price_index: pd.Index):
             if strat_signals is None or strat_signals.empty:
@@ -637,4 +647,39 @@ def get_watchlist() -> Dict[str, Any]:
                 "symbols": [r.get("symbol") for r in rows], "rows": rows}
     except Exception as e:  # noqa: BLE001
         logger.exception("get_watchlist failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_position_size(
+    win_rate: float,
+    avg_win_loss_ratio: float = 1.5,
+    account_size: float = 10_000.0,
+) -> Dict[str, Any]:
+    """Kelly-criterion position sizing from a strategy's stats (the 'Kelly
+    tool' the position-sizing skill references). win_rate in [0,1] (or
+    0-100), avg_win_loss_ratio = average win / average loss. Returns full
+    Kelly, HALF Kelly (the practitioner reference - edge estimates are
+    noisy), and dollar amounts."""
+    try:
+        p = float(win_rate)
+        if p > 1.0:  # tolerate percentages
+            p = p / 100.0
+        b = float(avg_win_loss_ratio)
+        if not (0.0 < p < 1.0) or b <= 0:
+            return {"success": False,
+                    "error": "need 0<win_rate<1 and ratio>0"}
+        kelly = p - (1.0 - p) / b  # f* = p - q/b
+        kelly = max(0.0, kelly)
+        half = kelly / 2.0
+        return {
+            "success": True,
+            "full_kelly_fraction": round(kelly, 4),
+            "half_kelly_fraction": round(half, 4),
+            "half_kelly_dollars": round(half * float(account_size), 2),
+            "note": "half Kelly is the reference point, full Kelly the "
+                    "ceiling; zero means this edge doesn't justify a "
+                    "position at all",
+        }
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_position_size failed: %s", e)
         return {"success": False, "error": str(e)}

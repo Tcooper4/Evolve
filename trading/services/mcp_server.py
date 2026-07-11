@@ -290,3 +290,48 @@ def market_research(topic: str, max_results: int = 3) -> dict:
     from trading.services.agent_tools import market_research as _f
 
     return _f(topic, max_results=max_results)
+
+
+@mcp.tool()
+def critique_backtest(metrics: dict) -> dict:
+    """Critique backtest metrics: overfitting signals, robustness, what to
+    distrust."""
+    from trading.services.agent_tools import critique_backtest as _f
+
+    return _f(metrics)
+
+
+@mcp.tool()
+def get_watchlist() -> dict:
+    """The current (local) user's watchlist symbols."""
+    from trading.services.agent_tools import get_watchlist as _f
+
+    return _f()
+
+
+@mcp.tool()
+def recommend_strategy(symbol: str = "SPY",
+                       risk_tolerance: str = "medium") -> dict:
+    """Recommend a trading strategy for current conditions, with reasoning."""
+    from trading.services.agent_tools import recommend_strategy as _f
+
+    return _f(symbol=symbol, risk_tolerance=risk_tolerance)
+
+
+@mcp.tool()
+def recommend_model(symbol: str = "SPY", horizon: int = 7) -> dict:
+    """Recommend a forecasting model for a symbol/horizon, with reasoning."""
+    from trading.services.agent_tools import recommend_model as _f
+
+    return _f(symbol=symbol, horizon=horizon)
+
+
+@mcp.tool()
+def get_position_size(win_rate: float, avg_win_loss_ratio: float = 1.5,
+                      account_size: float = 10_000.0) -> dict:
+    """Kelly-criterion sizing: full and half Kelly (the practitioner
+    reference) with dollar amounts."""
+    from trading.services.agent_tools import get_position_size as _f
+
+    return _f(win_rate, avg_win_loss_ratio=avg_win_loss_ratio,
+              account_size=account_size)

@@ -3121,6 +3121,51 @@ def get_evolve_platform_tool_registry():
             "parameters": {"type": "object", "properties": {}},
         },
 
+        {
+            "name": "recommend_strategy",
+            "description": (
+                "Recommend a trading strategy suited to current conditions "
+                "for a symbol, with reasoning."
+            ),
+            "function": _agent_tools.recommend_strategy,
+            "parameters": {
+                "type": "object",
+                "properties": {"symbol": {"type": "string"},
+                                "risk_tolerance": {"type": "string"}},
+            },
+        },
+        {
+            "name": "recommend_model",
+            "description": (
+                "Recommend a forecasting model for a symbol/timeframe, with "
+                "reasoning."
+            ),
+            "function": _agent_tools.recommend_model,
+            "parameters": {
+                "type": "object",
+                "properties": {"symbol": {"type": "string"},
+                                "horizon": {"type": "integer"}},
+            },
+        },
+        {
+            "name": "get_position_size",
+            "description": (
+                "Kelly-criterion sizing from a strategy's win rate and "
+                "win/loss ratio; returns full and HALF Kelly (the reference) "
+                "plus dollar amounts. Use for 'how much should I put in?'"
+            ),
+            "function": _agent_tools.get_position_size,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "win_rate": {"type": "number"},
+                    "avg_win_loss_ratio": {"type": "number"},
+                    "account_size": {"type": "number"},
+                },
+                "required": ["win_rate"],
+            },
+        },
+
     ]
 
 

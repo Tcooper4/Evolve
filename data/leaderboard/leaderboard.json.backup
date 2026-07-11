@@ -2395,7 +2395,7 @@
   },
   "RSIStrategy:TEST": {
     "agent_name": "RSIStrategy:TEST",
-    "sharpe_ratio": -2.428,
+    "sharpe_ratio": -2.764,
     "max_drawdown": 0.0,
     "win_rate": 0.0,
     "total_return": 0.0,
@@ -2407,7 +2407,7 @@
     "alpha": 0.0,
     "information_ratio": 0.0,
     "treynor_ratio": 0.0,
-    "last_updated": "2026-07-11T16:09:47.758853",
+    "last_updated": "2026-07-11T19:19:06.832060",
     "status": "deprecated",
     "extra_metrics": {
       "self_tune": true,
