@@ -421,7 +421,10 @@ class PromptAgent:
 
             # Truncate if too long
             if len(sanitized) > max_length:
-                sanitized = sanitized[:max_length] + "..."
+                # CONTRACT FIX: appending "..." after slicing to max_length
+                # made the result EXCEED max_length by 3 - callers sizing
+                # requests to the declared cap got oversized prompts.
+                sanitized = sanitized[: max_length - 3] + "..."
                 self.logger.warning(
                     f"Prompt truncated from {len(prompt)} to {len(sanitized)} characters"
                 )
@@ -679,6 +682,12 @@ class PromptAgent:
 
     # Common English words that must not be treated as tickers (1-5 letters)
     _TICKER_STOPWORDS = frozenset({
+        # (added 2026-07) short function words the uppercase-recall
+        # strategy was returning as tickers ("compare TO msft" -> 'TO'):
+        "to", "and", "or", "for", "the", "a", "an", "in", "on", "at",
+        "is", "it", "of", "vs", "per", "this", "that", "next", "my",
+        "me", "we", "do", "was", "are", "be", "by", "as", "if", "so",
+        "up", "out", "now", "new", "get", "run", "week", "day", "days",
         "what", "why", "how", "when", "where", "which", "who", "whom", "whose",
         "this", "that", "these", "those", "them", "they", "the", "and", "are",
         "is", "it", "its", "for", "from", "with", "was", "were", "been", "being",

@@ -101,3 +101,28 @@ class TestSelectorRegimeDetection:
         rng = np.random.default_rng(2)
         wild = 100 * np.exp(np.cumsum(rng.normal(0, 0.03, n)))
         assert a.detect_market_regime(self._df(wild)) == MR.VOLATILE
+
+
+class TestPromptAgentDecisionPaths:
+    """Targeted execution checks on agents/llm/agent.py's live extractors
+    (full line-by-line of the 2,901-line module remains a Session B item)."""
+
+    @pytest.fixture()
+    def agent(self):
+        from agents.llm.agent import PromptAgent
+        return PromptAgent()
+
+    def test_symbol_extraction_no_function_words(self, agent):
+        out = agent._extract_symbols_from_prompt(
+            "forecast AAPL and compare to MSFT please")
+        assert sorted(out) == ["AAPL", "MSFT"]
+
+    def test_lowercase_ticker_recall_kept(self, agent):
+        assert agent._extract_symbols_from_prompt(
+            "forecast aapl this week") == ["AAPL"]
+
+    def test_sanitize_contract(self, agent):
+        san = agent.sanitize_prompt(
+            "hello <script>alert(1)</script> " + "x" * 5000)
+        assert len(san) <= 4000
+        assert "<script>" not in san

@@ -40,8 +40,16 @@ platform on real markets, in priority order:
 
 ## SESSION B: remaining depth + wire-or-archive decisions
 
-- `agents/llm/agent.py` (2,901L) line-by-line — the chat brain; its tool
-  path is execution-verified but the body has only had targeted reads.
+- `agents/llm/agent.py` (2,901L) line-by-line — the chat brain. STATUS
+  after the close-out pass: consumers mapped (chat_nl_service, agent_tools,
+  tab_quick_forecast); decision-critical extractors execution-verified with
+  two bugs FIXED (symbol extraction returned function words like 'TO' as
+  tickers — stoplist extended, lowercase recall preserved; sanitize_prompt
+  exceeded its own max_length by 3 after truncation). Noted, not churned:
+  process_prompt returns a dict on some fallback paths where AgentResponse
+  is the nominal type — the one consumer handles both shapes. REMAINING:
+  the ~2,400 lines of few-shot example management, token accounting, and
+  routing internals have had targeted reads only, not line-by-line.
 - `execution_risk_agent`, `data_quality_agent`, `performance_critic_agent`
   bodies; `agent_manager` loop mechanics.
 - The kept-but-flagged five (TECHNICAL_DEBT.md): wire or archive
