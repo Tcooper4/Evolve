@@ -1,9 +1,9 @@
 import { useState } from "react";
 import {
-  getCausal, getChartEvents, getEarnings, getForecast, getHistory, getNews,
-  getOptions, getPatterns, getPlaybook, getRisk, getScore, getSignalIc,
-  runGnn, runMonteCarlo,
-  type Candle, type ChartEvent, type ScoreResult,
+  getCausal, getChartEvents, getEarnings, getEdgar, getForecast, getHistory,
+  getNews, getOptions, getPatterns, getPlaybook, getRisk, getScore,
+  getSignalIc, runGnn, runMonteCarlo, trackRec,
+  type Candle, type ChartEvent, type EdgarFiling, type ScoreResult,
 } from "./api";
 import Chart, { type ChartMarker } from "./Chart";
 import Sparkline from "./Sparkline";
@@ -71,7 +71,7 @@ function impactRank(impact?: string): number {
 
 
 type Mode = "long" | "short";
-type ToolTab = "main" | "monte" | "options" | "labs";
+type ToolTab = "main" | "monte" | "options" | "labs" | "filings";
 type LabTab = "ic" | "causal" | "patterns" | "gnn";
 
 export default function Analyze({
@@ -103,6 +103,8 @@ export default function Analyze({
   const [candles, setCandles] = useState<Candle[]>([]);
   const [events, setEvents] = useState<ChartEvent[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
+  const [edgar, setEdgar] = useState<{ filings?: EdgarFiling[]; signal?: Record<string, unknown> | null; note?: string; success?: boolean; error?: string } | null>(null);
+  const [tracked, setTracked] = useState<"idle" | "saving" | "done">("idle");
 
   async function run() {
     setLoading(true);
@@ -120,6 +122,8 @@ export default function Analyze({
     setTool("main");
     setCandles([]);
     setEvents([]);
+    setEdgar(null);
+    setTracked("idle");
     try {
       const score = await getScore(input, mode);
       setRes(score);
@@ -183,6 +187,24 @@ export default function Analyze({
     try { setCausal(await getCausal(input)); }
     catch (e) { setCausal({ success: false, error: String(e) }); }
     finally { setToolBusy(false); }
+  }
+
+  async function loadFilings() {
+    setToolBusy(true);
+    try { setEdgar(await getEdgar(input)); }
+    catch (e) { setEdgar({ success: false, error: String(e) }); }
+    finally { setToolBusy(false); }
+  }
+
+  async function trackIdea() {
+    if (!res || tracked === "saving") return;
+    setTracked("saving");
+    try {
+      const r = await trackRec(res.symbol, res.score != null ? Number(res.score) : null,
+                               res.last_price != null ? Number(res.last_price) : null,
+                               "", "analyze");
+      setTracked(r.success ? "done" : "idle");
+    } catch { setTracked("idle"); }
   }
 
   async function loadPatterns() {
@@ -311,7 +333,14 @@ export default function Analyze({
             <div style={{ display: "flex", gap: 28, alignItems: "center", flexWrap: "wrap" }}>
               <ScoreRing score={Number(res.score)} />
               <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ fontSize: 22, fontWeight: 700 }}>{res.symbol}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 22, fontWeight: 700 }}>{res.symbol}</div>
+                  <button className="ghost" style={{ fontSize: 12, border: "1px solid var(--border)" }}
+                    onClick={trackIdea} disabled={tracked !== "idle"}
+                    title="Save this idea (no purchase) — snapshots today's price so you can see how it does">
+                    {tracked === "done" ? "✓ Tracking" : tracked === "saving" ? "Saving…" : "☆ Track idea"}
+                  </button>
+                </div>
                 <div className="dim" style={{ marginTop: 4 }}>
                   Grade {res.grade ?? "—"}
                   {res.last_price != null && <> · ${Number(res.last_price).toFixed(2)}</>}
@@ -474,6 +503,7 @@ export default function Analyze({
             <button className={tool === "main" ? "active" : ""} onClick={() => setTool("main")}>Overview</button>
             <button className={tool === "monte" ? "active" : ""} onClick={() => { setTool("monte"); if (!mc) void loadMonte(); }}>Monte Carlo</button>
             <button className={tool === "options" ? "active" : ""} onClick={() => { setTool("options"); if (!opts) void loadOptions(); }}>Options</button>
+            <button className={tool === "filings" ? "active" : ""} onClick={() => { setTool("filings"); if (!edgar) void loadFilings(); }}>Filings</button>
             <button className={tool === "labs" ? "active" : ""} onClick={() => openLab(lab)}>Labs</button>
           </div>
 
@@ -590,6 +620,48 @@ export default function Analyze({
             </div>
           )}
 
+          {tool === "filings" && (
+            <div className="card card-pad" style={{ marginBottom: 16 }}>
+              <div className="rail-label" style={{ marginTop: 0 }}>SEC filings · {res.symbol}</div>
+              {toolBusy && !edgar && <div className="skeleton" style={{ height: 100 }} />}
+              {edgar?.success === false && (
+                <div className="dim">Couldn't reach SEC EDGAR right now{edgar.error ? ` — ${edgar.error}` : ""}.</div>
+              )}
+              {edgar?.success && (edgar.filings?.length ?? 0) === 0 && (
+                <div className="dim">No recent filings found — common for ETFs and non-US listings.</div>
+              )}
+              {edgar?.success && (edgar.filings?.length ?? 0) > 0 && (
+                <>
+                  <table className="tbl">
+                    <thead><tr><th>What it is</th><th>Filed</th><th /></tr></thead>
+                    <tbody>
+                      {edgar.filings!.map((f) => (
+                        <tr key={f.form}>
+                          <td>
+                            <b>{f.form}</b>
+                            <div className="dim" style={{ fontSize: 12 }}>{f.label}</div>
+                          </td>
+                          <td className="num">{f.date ?? "—"}</td>
+                          <td>
+                            {f.url && (
+                              <a href={f.url} target="_blank" rel="noreferrer" className="ghost"
+                                style={{ fontSize: 12.5 }}>Read on sec.gov ↗</a>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {edgar.signal != null && (edgar.signal as Record<string, unknown>).summary != null && (
+                    <div className="dim" style={{ fontSize: 12.5, marginTop: 10 }}>
+                      Filing tone: {String((edgar.signal as Record<string, unknown>).summary)}
+                    </div>
+                  )}
+                  {edgar.note && <div className="dim" style={{ fontSize: 11.5, marginTop: 8 }}>{edgar.note}</div>}
+                </>
+              )}
+            </div>
+          )}
           {tool === "labs" && (
             <div className="card card-pad">
               <div className="seg" style={{ marginBottom: 12, flexWrap: "wrap" }}>

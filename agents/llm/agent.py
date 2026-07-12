@@ -3195,6 +3195,48 @@ def get_evolve_platform_tool_registry():
             },
         },
 
+        {
+            "name": "track_recommendation",
+            "description": (
+                "Save an idea to the user's tracked list WITHOUT buying, so "
+                "they can later see how it performed. Use when they say "
+                "'track this', 'keep an eye on it', or 'remember this idea'."
+            ),
+            "function": _agent_tools.track_recommendation,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "score": {"type": "number"},
+                    "note": {"type": "string"},
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
+            "name": "get_recommendations",
+            "description": (
+                "The user's tracked ideas with performance since tracked. "
+                "Use for 'how are my tracked ideas doing?'"
+            ),
+            "function": _agent_tools.get_recommendations,
+            "parameters": {"type": "object", "properties": {}},
+        },
+        {
+            "name": "get_sec_filings",
+            "description": (
+                "Latest SEC filings (annual/quarterly/material-event) for a "
+                "symbol with plain-language labels and the filing-tone "
+                "signal."
+            ),
+            "function": _agent_tools.get_sec_filings,
+            "parameters": {
+                "type": "object",
+                "properties": {"symbol": {"type": "string"}},
+                "required": ["symbol"],
+            },
+        },
+
     ]
 
 

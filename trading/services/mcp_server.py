@@ -354,3 +354,29 @@ def record_paper_trade(symbol: str, side: str, quantity: float,
     from trading.services.agent_tools import record_paper_trade as _f
 
     return _f(symbol, side, quantity, price)
+
+
+@mcp.tool()
+def track_recommendation(symbol: str, score: float | None = None,
+                         note: str = "") -> dict:
+    """Save an idea to the tracked list without buying; captures current
+    price for honest performance-since measurement."""
+    from trading.services.agent_tools import track_recommendation as _f
+
+    return _f(symbol, score=score, note=note, source="mcp")
+
+
+@mcp.tool()
+def get_recommendations() -> dict:
+    """Tracked ideas with performance since each was tracked."""
+    from trading.services.agent_tools import get_recommendations as _f
+
+    return _f()
+
+
+@mcp.tool()
+def get_sec_filings(symbol: str) -> dict:
+    """Latest SEC filings for a symbol with plain-language labels."""
+    from trading.services.agent_tools import get_sec_filings as _f
+
+    return _f(symbol)

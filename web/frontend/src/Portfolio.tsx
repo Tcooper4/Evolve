@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  adjustCash, cancelLimit, deleteAlert, getAlerts, getCashbook, getPortfolio,
-  getPortfolioTrades, getRisk, placeLimit, recordTrade, runAllocate, upsertAlert,
-  type PortfolioSummary,
+  adjustCash, cancelLimit, deleteAlert, deleteRec, getAccountRisk, getAlerts,
+  getCashbook, getPortfolio, getPortfolioTrades, getRecs, getRisk, placeLimit,
+  recordTrade, runAllocate, upsertAlert,
+  type AccountRisk, type PortfolioSummary, type TrackedRec,
 } from "./api";
 
 export default function Portfolio() {
@@ -15,7 +16,11 @@ export default function Portfolio() {
   const [price, setPrice] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"positions" | "trades" | "risk" | "alerts" | "allocate" | "cash">("positions");
+  const [tab, setTab] = useState<"positions" | "trades" | "risk" | "alerts" | "allocate" | "cash" | "tracked">("positions");
+  const [acctRisk, setAcctRisk] = useState<AccountRisk | null>(null);
+  const [acctRiskLoading, setAcctRiskLoading] = useState(false);
+  const [recs, setRecs] = useState<TrackedRec[]>([]);
+  const [recsLoading, setRecsLoading] = useState(false);
   const [alerts, setAlerts] = useState<Record<string, unknown>[]>([]);
   const [triggered, setTriggered] = useState<Record<string, unknown>[]>([]);
   const [alertSym, setAlertSym] = useState("");
@@ -62,6 +67,25 @@ export default function Portfolio() {
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "risk failed");
     }
+  }
+
+  async function loadAcctRisk() {
+    setAcctRiskLoading(true);
+    try { setAcctRisk(await getAccountRisk()); }
+    catch { setAcctRisk(null); }
+    finally { setAcctRiskLoading(false); }
+  }
+
+  async function loadRecs() {
+    setRecsLoading(true);
+    try { setRecs((await getRecs()).recommendations ?? []); }
+    catch { setRecs([]); }
+    finally { setRecsLoading(false); }
+  }
+
+  async function removeRec(id: string) {
+    await deleteRec(id);
+    await loadRecs();
   }
 
   async function loadAlerts() {
@@ -164,7 +188,8 @@ export default function Portfolio() {
         <button className={tab === "positions" ? "active" : ""} onClick={() => setTab("positions")}>Positions</button>
         <button className={tab === "trades" ? "active" : ""} onClick={() => setTab("trades")}>Trade ledger</button>
         <button className={tab === "cash" ? "active" : ""} onClick={() => { setTab("cash"); void loadCash(); }}>Cash / limits</button>
-        <button className={tab === "risk" ? "active" : ""} onClick={() => setTab("risk")}>Symbol risk</button>
+        <button className={tab === "risk" ? "active" : ""} onClick={() => { setTab("risk"); if (!acctRisk) void loadAcctRisk(); }}>Risk</button>
+        <button className={tab === "tracked" ? "active" : ""} onClick={() => { setTab("tracked"); void loadRecs(); }}>Tracked ideas</button>
         <button className={tab === "alerts" ? "active" : ""} onClick={() => { setTab("alerts"); void loadAlerts(); }}>Alerts</button>
         <button className={tab === "allocate" ? "active" : ""} onClick={() => setTab("allocate")}>Allocate</button>
       </div>
@@ -275,6 +300,66 @@ export default function Portfolio() {
         )}
         {!loading && tab === "risk" && (
           <div className="card-pad">
+            <div className="rail-label" style={{ marginTop: 0 }}>Your account</div>
+            {acctRiskLoading && <div className="skeleton" style={{ height: 120, marginBottom: 14 }} />}
+            {!acctRiskLoading && acctRisk?.success && (
+              <>
+                <div className="kpis" style={{ marginBottom: 12 }}>
+                  <div className="card kpi">
+                    <div className="label">Sizing guide (half Kelly)</div>
+                    <div className="value num" style={{ fontSize: 18 }}>
+                      {acctRisk.kelly?.half_kelly_dollars != null
+                        ? `$${acctRisk.kelly.half_kelly_dollars.toLocaleString()}`
+                        : "—"}
+                    </div>
+                    <div className="sub">
+                      {acctRisk.kelly?.half_kelly_dollars != null
+                        ? `from your ${acctRisk.trade_stats?.closed_trades ?? 0} closed paper trades`
+                        : (acctRisk.trade_stats?.closed_trades ?? 0) < 5
+                          ? "close a few more paper trades and this fills in from your real stats"
+                          : "needs both wins and losses to size from"}
+                    </div>
+                  </div>
+                  {acctRisk.trade_stats?.win_rate != null && (
+                    <div className="card kpi">
+                      <div className="label">Your win rate</div>
+                      <div className="value num" style={{ fontSize: 18 }}>
+                        {(acctRisk.trade_stats.win_rate * 100).toFixed(0)}%
+                      </div>
+                      <div className="sub">closed trades only</div>
+                    </div>
+                  )}
+                  {acctRisk.stress && Object.entries(acctRisk.stress).map(([k, v]) => (
+                    <div className="card kpi" key={k}>
+                      <div className="label">{k.replace("stress_", "").replace("sd", "σ")} down day</div>
+                      <div className="value num down" style={{ fontSize: 18 }}>
+                        {v.dollar_impact != null ? `$${Math.abs(v.dollar_impact).toLocaleString()}` : "—"}
+                      </div>
+                      <div className="sub">{v.daily_return_pct}% on this mix</div>
+                    </div>
+                  ))}
+                </div>
+                {acctRisk.stress_note && (
+                  <div className="dim" style={{ fontSize: 12, marginBottom: 10 }}>{acctRisk.stress_note}</div>
+                )}
+                {acctRisk.portfolio_metrics && (
+                  <div className="kpis" style={{ marginBottom: 14 }}>
+                    {Object.entries(acctRisk.portfolio_metrics).slice(0, 8).map(([k, v]) => (
+                      <div className="card kpi" key={k}>
+                        <div className="label">{k.replace(/_/g, " ")}</div>
+                        <div className="value num" style={{ fontSize: 16 }}>{String(v)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {acctRisk.positions === 0 && (
+                  <div className="dim" style={{ marginBottom: 14 }}>
+                    No positions yet — account-level risk fills in once you hold something.
+                  </div>
+                )}
+              </>
+            )}
+            <div className="rail-label">Single symbol</div>
             <div className="row" style={{ marginBottom: 14 }}>
               <input placeholder="Symbol" value={riskSym} style={{ width: 120 }}
                 onChange={(e) => setRiskSym(e.target.value.toUpperCase())} />
@@ -291,6 +376,44 @@ export default function Portfolio() {
               </div>
             ) : (
               <div className="dim">Enter a symbol to see Sharpe, drawdown, volatility, and more.</div>
+            )}
+          </div>
+        )}
+        {!loading && tab === "tracked" && (
+          <div className="card-pad">
+            <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>
+              Ideas you saved without buying — so you can see how your picks
+              would have done. Track from Analyze, or tell the chat "track NVDA".
+            </div>
+            {recsLoading && <div className="skeleton" style={{ height: 120 }} />}
+            {!recsLoading && recs.length === 0 && (
+              <div className="empty" style={{ padding: "30px 0" }}>
+                Nothing tracked yet. On Analyze, hit "Track idea" after scoring
+                a symbol — it snapshots the price so the scoreboard is honest.
+              </div>
+            )}
+            {!recsLoading && recs.length > 0 && (
+              <table className="tbl">
+                <thead><tr>
+                  <th>Symbol</th><th>Tracked</th><th>Score then</th>
+                  <th>Price then</th><th>Now</th><th>Since</th><th />
+                </tr></thead>
+                <tbody>
+                  {recs.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 650 }}>{r.symbol}</td>
+                      <td className="dim">{r.created_at?.slice(0, 10)}</td>
+                      <td className="num">{r.score != null ? r.score.toFixed(1) : "—"}</td>
+                      <td className="num">{r.price_at_rec != null ? r.price_at_rec.toFixed(2) : "—"}</td>
+                      <td className="num">{r.last_price != null ? r.last_price.toFixed(2) : "—"}</td>
+                      <td className={`num ${r.change_pct != null ? (r.change_pct >= 0 ? "up" : "down") : ""}`}>
+                        {r.change_pct != null ? `${r.change_pct >= 0 ? "+" : ""}${r.change_pct.toFixed(2)}%` : "—"}
+                      </td>
+                      <td><button className="ghost" onClick={() => removeRec(r.id)}>Remove</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         )}

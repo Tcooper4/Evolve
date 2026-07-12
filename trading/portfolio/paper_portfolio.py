@@ -75,6 +75,18 @@ def _connect() -> sqlite3.Connection:
            )"""
     )
     conn.execute(
+        """CREATE TABLE IF NOT EXISTS recommendations (
+               id TEXT PRIMARY KEY,
+               user_id TEXT NOT NULL,
+               symbol TEXT NOT NULL,
+               source TEXT NOT NULL DEFAULT 'analyze',
+               score REAL,
+               price_at_rec REAL,
+               note TEXT,
+               created_at TEXT NOT NULL
+           )"""
+    )
+    conn.execute(
         """CREATE TABLE IF NOT EXISTS limit_orders (
                id TEXT PRIMARY KEY,
                user_id TEXT NOT NULL,
@@ -398,6 +410,126 @@ class PaperPortfolio:
                 conn.close()
             filled.append({**order, "status": "filled", "filled_price": last})
         return filled
+
+    # ---------------------------------------------------- recommendations
+    def track_recommendation(self, symbol: str, source: str = "analyze",
+                             score: Optional[float] = None,
+                             price_at_rec: Optional[float] = None,
+                             note: str = "") -> Dict[str, Any]:
+        """Save an idea to watch WITHOUT buying - closes the learning loop
+        ('how do the ideas I liked actually perform?'). Price at rec time
+        is captured so performance-since can be computed honestly later."""
+        import uuid
+
+        symbol = (symbol or "").strip().upper()
+        if not symbol:
+            return {"success": False, "error": "symbol required"}
+        rid = str(uuid.uuid4())[:8]
+        conn = _connect()
+        try:
+            # one live rec per symbol per user: re-tracking replaces
+            conn.execute(
+                "DELETE FROM recommendations WHERE user_id=? AND symbol=?",
+                (self.user_id, symbol),
+            )
+            conn.execute(
+                "INSERT INTO recommendations (id, user_id, symbol, source,"
+                " score, price_at_rec, note, created_at)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (rid, self.user_id, symbol, source,
+                 float(score) if score is not None else None,
+                 float(price_at_rec) if price_at_rec is not None else None,
+                 note or "", datetime.now(timezone.utc).isoformat()),
+            )
+            conn.commit()
+            return {"success": True, "id": rid, "symbol": symbol}
+        finally:
+            conn.close()
+
+    def delete_recommendation(self, rec_id: str) -> Dict[str, Any]:
+        conn = _connect()
+        try:
+            cur = conn.execute(
+                "DELETE FROM recommendations WHERE id=? AND user_id=?",
+                (rec_id, self.user_id),
+            )
+            conn.commit()
+            return {"success": cur.rowcount > 0}
+        finally:
+            conn.close()
+
+    def get_recommendations(
+        self,
+        price_fn: Optional[Callable[[str], Optional[float]]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Tracked ideas with performance-since-tracked, computed from the
+        captured rec-time price vs current price (None-safe offline)."""
+        if price_fn is None:
+            def price_fn(sym: str) -> Optional[float]:  # noqa: ANN001
+                try:
+                    import yfinance as yf
+
+                    p = yf.Ticker(sym).fast_info.last_price
+                    return float(p) if p else None
+                except Exception:
+                    return None
+
+        conn = _connect()
+        try:
+            rows = conn.execute(
+                "SELECT id, symbol, source, score, price_at_rec, note,"
+                " created_at FROM recommendations WHERE user_id=?"
+                " ORDER BY created_at DESC",
+                (self.user_id,),
+            ).fetchall()
+        finally:
+            conn.close()
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            rec = {"id": r[0], "symbol": r[1], "source": r[2], "score": r[3],
+                   "price_at_rec": r[4], "note": r[5], "created_at": r[6],
+                   "last_price": None, "change_pct": None}
+            last = price_fn(rec["symbol"])
+            if last is not None:
+                rec["last_price"] = round(float(last), 4)
+                if rec["price_at_rec"]:
+                    rec["change_pct"] = round(
+                        (float(last) / float(rec["price_at_rec"]) - 1) * 100, 2
+                    )
+            out.append(rec)
+        return out
+
+    # -------------------------------------------------------- trade stats
+    def get_trade_stats(self) -> Dict[str, Any]:
+        """Win rate + average win/loss ratio from CLOSED (realized) paper
+        trades - the honest inputs to Kelly sizing. Only sells realize
+        P&L, so only sells count; needs a handful before the numbers
+        mean anything."""
+        conn = _connect()
+        try:
+            rows = conn.execute(
+                "SELECT realized_pnl FROM trades WHERE user_id=?"
+                " AND side='sell'",
+                (self.user_id,),
+            ).fetchall()
+        finally:
+            conn.close()
+        pnls = [float(r[0]) for r in rows]
+        wins = [p for p in pnls if p > 0]
+        losses = [-p for p in pnls if p < 0]
+        n = len(pnls)
+        out: Dict[str, Any] = {"closed_trades": n}
+        if n == 0:
+            out.update({"win_rate": None, "avg_win_loss_ratio": None})
+            return out
+        out["win_rate"] = round(len(wins) / n, 4)
+        if wins and losses:
+            out["avg_win_loss_ratio"] = round(
+                (sum(wins) / len(wins)) / (sum(losses) / len(losses)), 4
+            )
+        else:
+            out["avg_win_loss_ratio"] = None  # one-sided history: not usable
+        return out
 
     # ------------------------------------------------------------ summary
     def get_summary(

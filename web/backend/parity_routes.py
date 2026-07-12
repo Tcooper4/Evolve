@@ -80,6 +80,14 @@ class AllocateRequest(BaseModel):
     period: str = "1y"
 
 
+class TrackRecRequest(BaseModel):
+    symbol: str
+    source: str = "analyze"
+    score: Optional[float] = None
+    price_at_rec: Optional[float] = None
+    note: str = ""
+
+
 class GnnRequest(BaseModel):
     symbols: List[str] = Field(default_factory=list)
     period: str = "1y"
@@ -963,6 +971,170 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
         if not syms:
             return {"success": False, "error": "symbols required"}
         return agent_tools.get_portfolio_allocation(syms, period=req.period or "1y")
+
+    @router.get("/api/portfolio/risk")
+    def portfolio_risk(user: str = Depends(current_user)) -> Dict[str, Any]:
+        """Whole-account risk: the CURRENT holdings' weighted daily-return
+        history run through the verified risk engine (VaR/CVaR/vol/
+        drawdown), plus stress scenarios and Kelly sizing derived from
+        the user's OWN closed paper trades - not generic numbers."""
+        try:
+            import pandas as pd
+
+            from trading.data.price_cache import get_history
+            from trading.portfolio.paper_portfolio import PaperPortfolio
+
+            pp = PaperPortfolio(user_id=f"user:{user}")
+            positions = pp.get_positions()
+            out: Dict[str, Any] = {"success": True, "positions": len(positions)}
+
+            # Kelly from the user's own realized trades
+            stats = pp.get_trade_stats()
+            out["trade_stats"] = stats
+            kelly = None
+            if stats.get("win_rate") is not None and stats.get(
+                "avg_win_loss_ratio"
+            ):
+                from trading.services.agent_tools import get_position_size
+
+                kelly = get_position_size(
+                    stats["win_rate"], stats["avg_win_loss_ratio"],
+                    account_size=pp.get_cash() + sum(
+                        p["quantity"] * p["avg_cost"] for p in positions
+                    ),
+                )
+            out["kelly"] = kelly
+
+            if not positions:
+                out["portfolio_metrics"] = None
+                out["stress"] = None
+                return out
+
+            # Weighted portfolio return series from current holdings
+            frames = {}
+            weights = {}
+            total_cost = sum(p["quantity"] * p["avg_cost"] for p in positions)
+            for p in positions:
+                h = get_history(p["symbol"], period="1y")
+                if h is None or h.empty:
+                    continue
+                cm = {str(c).lower(): c for c in h.columns}
+                closes = h[cm.get("close", h.columns[0])].astype(float)
+                frames[p["symbol"]] = closes.pct_change()
+                weights[p["symbol"]] = (
+                    p["quantity"] * p["avg_cost"] / total_cost
+                    if total_cost else 0.0
+                )
+            if not frames:
+                out["portfolio_metrics"] = None
+                out["stress"] = None
+                out["note"] = "no price history available offline"
+                return out
+            rets = pd.DataFrame(frames).dropna()
+            port = (rets * pd.Series(weights)).sum(axis=1)
+
+            from utils.risk_metrics import compute_performance_metrics
+            out["portfolio_metrics"] = compute_performance_metrics(port).to_dict()
+
+            from trading.risk.advanced_risk import AdvancedRiskAnalyzer
+            stress_daily = AdvancedRiskAnalyzer().calculate_stress_test_metrics(port)
+            equity = pp.get_cash() + sum(
+                (p["quantity"] * p["avg_cost"]) for p in positions
+            )
+            # translate sigma-shock daily returns into plain dollars
+            out["stress"] = {
+                k: {
+                    "daily_return_pct": round(float(v) * 100, 2),
+                    "dollar_impact": round(float(v) * equity, 2),
+                }
+                for k, v in stress_daily.items()
+            }
+            out["stress_note"] = (
+                "What a bad day looks like for THIS mix of holdings: a 1/2/3 "
+                "standard-deviation down move, in dollars on your account."
+            )
+            return out
+        except Exception as e:
+            logger.warning("portfolio risk failed: %s", e)
+            return {"success": False, "error": str(e)}
+
+    @router.get("/api/recs")
+    def list_recs(user: str = Depends(current_user)) -> Dict[str, Any]:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        recs = PaperPortfolio(user_id=f"user:{user}").get_recommendations()
+        return {"success": True, "recommendations": recs}
+
+    @router.post("/api/recs")
+    def track_rec(req: TrackRecRequest,
+                  user: str = Depends(current_user)) -> Dict[str, Any]:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        pp = PaperPortfolio(user_id=f"user:{user}")
+        price = req.price_at_rec
+        if price is None:
+            try:
+                import yfinance as yf
+
+                p = yf.Ticker(req.symbol.strip().upper()).fast_info.last_price
+                price = float(p) if p else None
+            except Exception:
+                price = None
+        return pp.track_recommendation(
+            req.symbol, source=req.source, score=req.score,
+            price_at_rec=price, note=req.note,
+        )
+
+    @router.delete("/api/recs/{rec_id}")
+    def delete_rec(rec_id: str,
+                   user: str = Depends(current_user)) -> Dict[str, Any]:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        return PaperPortfolio(user_id=f"user:{user}").delete_recommendation(rec_id)
+
+    @router.get("/api/edgar/{symbol}")
+    def edgar_filings(symbol: str,
+                      user: str = Depends(current_user)) -> Dict[str, Any]:
+        """Recent SEC filings, labeled in plain language. The EDGAR module
+        already feeds the AI Score; this surfaces the documents themselves."""
+        try:
+            from trading.data.sec_edgar import get_latest_filing, get_sec_signal
+
+            sym = (symbol or "").strip().upper()
+            labels = {
+                "10-K": "Annual report - the company's full yearly picture",
+                "10-Q": "Quarterly report - the latest three months",
+                "8-K": "Material event - something big enough to disclose now",
+            }
+            filings = []
+            for form, label in labels.items():
+                try:
+                    f = get_latest_filing(sym, form_type=form)
+                except Exception:
+                    f = None
+                if f:
+                    filings.append({
+                        "form": form,
+                        "label": label,
+                        "date": f.get("date"),
+                        "url": f.get("url"),
+                    })
+            signal = None
+            try:
+                signal = get_sec_signal(sym)
+            except Exception as e:
+                logger.debug("sec signal skipped: %s", e)
+            return {
+                "success": True,
+                "symbol": sym,
+                "filings": filings,
+                "signal": signal,
+                "note": ("Filings straight from SEC EDGAR. The tone signal "
+                         "below already feeds this symbol's AI Score."),
+            }
+        except Exception as e:
+            logger.warning("edgar failed: %s", e)
+            return {"success": False, "error": str(e)}
 
     @router.get("/api/cashbook")
     def cashbook(user: str = Depends(current_user)) -> Dict[str, Any]:

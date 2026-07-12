@@ -276,6 +276,9 @@ PARITY_GET_ROUTES = [
     "/api/ic/SPY",
     "/api/cashbook",
     "/api/alerts",
+    "/api/portfolio/risk",
+    "/api/recs",
+    "/api/edgar/SPY",
 ]
 
 PARITY_POST_ROUTES = [
@@ -293,6 +296,7 @@ PARITY_POST_ROUTES = [
     ("/api/alerts", {"symbol": "SPY", "condition": "price_above",
                      "threshold": 100.0}),
     ("/api/settings/prefs", {"scoring_style": "balanced"}),
+    ("/api/recs", {"symbol": "SPY", "score": 7.0, "price_at_rec": 100.0}),
 ]
 
 
@@ -389,3 +393,146 @@ class TestStructuredPatternData:
             assert {"name", "type", "confidence", "start_date",
                    "end_date", "description"} <= set(p0)
             assert p0["start_date"] is not None  # chartable, not just prose
+
+
+class TestRecommendationTracker:
+    """Tracked ideas: save without buying, capture rec-time price, compute
+    honest performance-since; one live rec per symbol; per-user."""
+
+    def test_lifecycle_and_performance_math(self, pp):
+        p = pp.PaperPortfolio(user_id="user:t")
+        r = p.track_recommendation("NVDA", score=8.2, price_at_rec=100.0)
+        assert r["success"]
+        recs = p.get_recommendations(price_fn=lambda _: 112.0)
+        assert recs[0]["change_pct"] == 12.0
+        assert recs[0]["score"] == 8.2
+        # re-track replaces (one live rec per symbol)
+        p.track_recommendation("NVDA", score=6.0, price_at_rec=112.0)
+        assert len(p.get_recommendations(price_fn=lambda _: None)) == 1
+        rid = p.get_recommendations(price_fn=lambda _: None)[0]["id"]
+        assert p.delete_recommendation(rid)["success"]
+
+    def test_offline_prices_none_safe(self, pp):
+        p = pp.PaperPortfolio(user_id="user:t")
+        p.track_recommendation("SPY", price_at_rec=500.0)
+        recs = p.get_recommendations(price_fn=lambda _: None)
+        assert recs[0]["last_price"] is None and recs[0]["change_pct"] is None
+
+    def test_isolated_per_user(self, pp):
+        pp.PaperPortfolio(user_id="user:a").track_recommendation("SPY")
+        assert pp.PaperPortfolio(user_id="user:b").get_recommendations(
+            price_fn=lambda _: None) == []
+
+
+class TestTradeStatsAndAccountRisk:
+    """Kelly inputs come from the user's OWN closed paper trades - not
+    generic numbers. Hand math: 2 wins avg $100, 1 loss $50 ->
+    win rate 2/3, ratio 2.0 -> full Kelly 0.5, half 0.25."""
+
+    def test_trade_stats_hand_math(self, pp):
+        p = pp.PaperPortfolio(user_id="user:t")
+        for sym, sell in (("A", 20), ("B", 20), ("C", 5)):
+            p.record_trade(sym, "buy", 10, 10)
+            p.record_trade(sym, "sell", 10, sell)
+        st = p.get_trade_stats()
+        assert st["closed_trades"] == 3
+        assert abs(st["win_rate"] - 2 / 3) < 1e-3
+        assert abs(st["avg_win_loss_ratio"] - 2.0) < 1e-9
+
+    def test_one_sided_history_not_usable(self, pp):
+        p = pp.PaperPortfolio(user_id="user:t")
+        p.record_trade("A", "buy", 10, 10)
+        p.record_trade("A", "sell", 10, 20)  # only wins
+        st = p.get_trade_stats()
+        assert st["win_rate"] == 1.0
+        assert st["avg_win_loss_ratio"] is None  # can't size from wins alone
+
+    def test_account_risk_endpoint_kelly_from_ledger(self, parity_client,
+                                                     monkeypatch, tmp_path):
+        c, H = parity_client
+        for sym, sell in (("A", 20), ("B", 20), ("C", 5)):
+            c.post("/api/portfolio/trade",
+                   json={"symbol": sym, "side": "buy", "quantity": 10,
+                         "price": 10}, headers=H)
+            c.post("/api/portfolio/trade",
+                   json={"symbol": sym, "side": "sell", "quantity": 10,
+                         "price": sell}, headers=H)
+        r = c.get("/api/portfolio/risk", headers=H).json()
+        assert r["success"] and r["trade_stats"]["closed_trades"] == 3
+        assert abs(r["kelly"]["half_kelly_fraction"] - 0.25) < 1e-3
+
+    def test_account_risk_open_position_offline_graceful(self, parity_client):
+        c, H = parity_client
+        c.post("/api/portfolio/trade",
+               json={"symbol": "AAPL", "side": "buy", "quantity": 5,
+                     "price": 100}, headers=H)
+        r = c.get("/api/portfolio/risk", headers=H)
+        assert r.status_code == 200
+        body = r.json()
+        assert body["success"] and body["positions"] == 1
+        # offline: metrics may be None but never a crash or fake numbers
+
+
+class TestWalkForwardFolds:
+    """Per-window results were computed then aggregated away; the route
+    now exposes each fold so the UI can show stability across time."""
+
+    def test_folds_in_model_backtest_response(self, parity_client, monkeypatch):
+        import numpy as np
+        import pandas as pd
+
+        c, H = parity_client
+
+        rng = np.random.default_rng(3)
+        idx = pd.date_range("2024-01-01", periods=300, freq="B")
+        close = 100 * np.exp(np.cumsum(rng.normal(0.0004, 0.011, 300)))
+        hist = pd.DataFrame({"Close": close}, index=idx)
+
+        class FakeTicker:
+            def __init__(self, *a, **k):
+                pass
+
+            def history(self, **k):
+                return hist
+
+        monkeypatch.setattr("yfinance.Ticker", FakeTicker)
+
+        class FakeWindow:
+            def __init__(self, i):
+                self.window_index = i
+                self.train_start = idx[0]
+                self.train_end = idx[100 + i]
+                self.test_start = idx[101 + i]
+                self.test_end = idx[120 + i]
+                self.predictions = [1.0, 2.0, 3.0]
+                self.actuals = [1.0, 2.1, 2.9]
+                self.mae = 0.1
+                self.mse = 0.02
+                self.mape = 3.2
+                self.directional_accuracy = 0.62
+
+        class FakeResult:
+            windows = [FakeWindow(0), FakeWindow(1)]
+            model_performance = {"n_windows": 2, "mean_mae": 0.1,
+                                 "mean_mape": 3.2,
+                                 "mean_directional_accuracy": 0.62}
+
+        class FakeValidator:
+            def __init__(self, *a, **k):
+                pass
+
+            def run(self, *a, **k):
+                return FakeResult()
+
+        import trading.validation.walk_forward_utils as WF
+        monkeypatch.setattr(WF, "WalkForwardValidator", FakeValidator)
+
+        r = c.post("/api/backtest/model",
+                   json={"symbol": "SPY", "model": "xgboost",
+                         "period": "1y"}, headers=H).json()
+        assert r["success"] is True
+        assert len(r["folds"]) == 2
+        f0 = r["folds"][0]
+        assert {"window", "train_start", "test_end", "mae", "mape",
+               "directional_accuracy"} <= set(f0)
+        assert f0["directional_accuracy"] == 0.62

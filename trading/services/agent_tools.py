@@ -856,3 +856,75 @@ def record_paper_trade(symbol: str, side: str, quantity: float,
     except Exception as e:  # noqa: BLE001
         logger.exception("record_paper_trade failed: %s", e)
         return {"success": False, "error": str(e)}
+
+
+def track_recommendation(symbol: str, score: Optional[float] = None,
+                         note: str = "", source: str = "chat") -> Dict[str, Any]:
+    """Save an idea to the user's tracked list WITHOUT buying - so they can
+    later see how ideas they liked actually performed. Captures the
+    current price for honest performance-since measurement."""
+    try:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        price = None
+        try:
+            import yfinance as yf
+
+            p = yf.Ticker((symbol or "").strip().upper()).fast_info.last_price
+            price = float(p) if p else None
+        except Exception:
+            price = None
+        return PaperPortfolio().track_recommendation(
+            symbol, source=source, score=score, price_at_rec=price, note=note,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.exception("track_recommendation failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_recommendations() -> Dict[str, Any]:
+    """The user's tracked ideas with performance since each was tracked."""
+    try:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        return {"success": True,
+                "recommendations": PaperPortfolio().get_recommendations()}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_recommendations failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_sec_filings(symbol: str) -> Dict[str, Any]:
+    """Latest SEC filings (annual/quarterly/material-event) for a symbol
+    with plain-language labels, plus the filing-tone signal that already
+    feeds the AI Score."""
+    try:
+        from trading.data.sec_edgar import get_latest_filing, get_sec_signal
+
+        sym = (symbol or "").strip().upper()
+        if not sym:
+            return {"success": False, "error": "symbol required"}
+        labels = {
+            "10-K": "Annual report",
+            "10-Q": "Quarterly report",
+            "8-K": "Material event",
+        }
+        filings = []
+        for form, label in labels.items():
+            try:
+                f = get_latest_filing(sym, form_type=form)
+            except Exception:
+                f = None
+            if f:
+                filings.append({"form": form, "label": label,
+                                "date": f.get("date"), "url": f.get("url")})
+        signal = None
+        try:
+            signal = get_sec_signal(sym)
+        except Exception:
+            signal = None
+        return {"success": True, "symbol": sym, "filings": filings,
+                "signal": signal}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_sec_filings failed: %s", e)
+        return {"success": False, "error": str(e)}

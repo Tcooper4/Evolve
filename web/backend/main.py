@@ -718,9 +718,34 @@ def backtest_model(req: ModelBacktestRequest,
 
         da = perf.get("mean_directional_accuracy")
         equity = _downsample(equity, 400) if equity else []
+
+        # FOLD VISIBILITY (2026-07): per-window results were computed and
+        # then aggregated away - stability ACROSS time is the whole point
+        # of walk-forward, so expose each fold for the UI to show.
+        folds: List[Dict[str, Any]] = []
+        try:
+            for w in result.windows:
+                folds.append({
+                    "window": int(w.window_index),
+                    "train_start": str(w.train_start)[:10],
+                    "train_end": str(w.train_end)[:10],
+                    "test_start": str(w.test_start)[:10],
+                    "test_end": str(w.test_end)[:10],
+                    "mae": float(w.mae) if w.mae == w.mae else None,
+                    "mape": float(w.mape) if w.mape == w.mape else None,
+                    "directional_accuracy": (
+                        float(w.directional_accuracy)
+                        if w.directional_accuracy == w.directional_accuracy
+                        else None
+                    ),
+                })
+        except Exception as e:
+            logger.debug("folds skipped: %s", e)
+
         return {
             "success": True,
             "kind": "model",
+            "folds": folds,
             "symbol": sym,
             "model": model,
             "period": period,

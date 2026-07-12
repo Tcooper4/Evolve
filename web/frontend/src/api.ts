@@ -433,3 +433,50 @@ export const recordTrade = (symbol: string, side: "buy" | "sell",
   );
 export const getPortfolioTrades = () =>
   req<Record<string, unknown>[]>("/api/portfolio/trades");
+
+// ---- account risk / tracked ideas / filings (2026-07 depth pass) ----
+export interface StressEntry { daily_return_pct: number; dollar_impact: number }
+export interface AccountRisk {
+  success: boolean;
+  positions: number;
+  trade_stats?: { closed_trades: number; win_rate: number | null; avg_win_loss_ratio: number | null };
+  kelly?: {
+    success: boolean; full_kelly_fraction?: number; half_kelly_fraction?: number;
+    half_kelly_dollars?: number; note?: string;
+  } | null;
+  portfolio_metrics?: Record<string, string | number> | null;
+  stress?: Record<string, StressEntry> | null;
+  stress_note?: string;
+  error?: string;
+}
+export const getAccountRisk = () => req<AccountRisk>("/api/portfolio/risk");
+
+export interface TrackedRec {
+  id: string; symbol: string; source: string; score: number | null;
+  price_at_rec: number | null; note: string; created_at: string;
+  last_price: number | null; change_pct: number | null;
+}
+export const getRecs = () =>
+  req<{ success: boolean; recommendations: TrackedRec[] }>("/api/recs");
+export const trackRec = (symbol: string, score?: number | null,
+                         price_at_rec?: number | null, note = "",
+                         source = "analyze") =>
+  req<{ success: boolean; id?: string; error?: string }>("/api/recs", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ symbol, score, price_at_rec, note, source }),
+  });
+export const deleteRec = (id: string) =>
+  req<{ success: boolean }>(`/api/recs/${encodeURIComponent(id)}`, { method: "DELETE" });
+
+export interface EdgarFiling { form: string; label: string; date: string | null; url: string | null }
+export const getEdgar = (symbol: string) =>
+  req<{ success: boolean; symbol?: string; filings?: EdgarFiling[];
+        signal?: Record<string, unknown> | null; note?: string; error?: string }>(
+    `/api/edgar/${encodeURIComponent(symbol)}`,
+  );
+
+export interface WalkForwardFold {
+  window: number; train_start: string; train_end: string;
+  test_start: string; test_end: string;
+  mae: number | null; mape: number | null; directional_accuracy: number | null;
+}

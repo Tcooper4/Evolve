@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   getStrategies, runBacktest, runModelBacktest, runOptimize, runTuneModels,
+  type WalkForwardFold,
 } from "./api";
 import Sparkline from "./Sparkline";
 
@@ -190,6 +191,14 @@ export default function Backtest() {
     })
     : [];
 
+  const folds: WalkForwardFold[] = Array.isArray(res?.folds)
+    ? (res!.folds as WalkForwardFold[])
+    : [];
+  const foldDAs = folds.map((f) => f.directional_accuracy).filter((v): v is number => v != null);
+  const foldStability = foldDAs.length >= 2
+    ? foldDAs.filter((v) => v >= 0.5).length / foldDAs.length
+    : null;
+
   const equityRaw = Array.isArray(res?.equity)
     ? (res!.equity as { time: string; value?: number | null }[])
     : [];
@@ -318,6 +327,48 @@ export default function Backtest() {
               </div>
             ))}
           </div>
+
+          {isModel && folds.length > 0 && (
+            <div className="card card-pad fade-in" style={{ marginTop: 16 }}>
+              <div className="rail-label" style={{ marginTop: 0 }}>
+                Fold by fold — does it hold up across time?
+              </div>
+              <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>
+                Each chip is one out-of-sample window. Green = called direction
+                right more often than a coin flip; red = worse than one. A model
+                that's only green in one era isn't a model, it's a memory.
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {folds.map((f) => {
+                  const da = f.directional_accuracy;
+                  const col = da == null ? "var(--text-3)"
+                    : da >= 0.55 ? "var(--up)"
+                      : da <= 0.45 ? "var(--down)" : "var(--text-2)";
+                  return (
+                    <div key={f.window} className="card" style={{ padding: "8px 12px", minWidth: 118 }}
+                      title={`train ${f.train_start} → ${f.train_end}${f.mape != null ? ` · MAPE ${f.mape.toFixed(1)}%` : ""}`}>
+                      <div className="dim" style={{ fontSize: 10.5 }}>
+                        {f.test_start} → {f.test_end}
+                      </div>
+                      <div className="num" style={{ fontSize: 16, fontWeight: 700, color: col }}>
+                        {da != null ? `${(da * 100).toFixed(0)}%` : "—"}
+                      </div>
+                      <div className="dim" style={{ fontSize: 10.5 }}>direction right</div>
+                    </div>
+                  );
+                })}
+              </div>
+              {foldStability != null && (
+                <div className="dim" style={{ fontSize: 12.5, marginTop: 10 }}>
+                  {foldStability >= 0.75
+                    ? `Consistent: beat a coin flip in ${Math.round(foldStability * foldDAs.length)} of ${foldDAs.length} windows.`
+                    : foldStability >= 0.5
+                      ? `Mixed: beat a coin flip in only ${Math.round(foldStability * foldDAs.length)} of ${foldDAs.length} windows — treat the average with suspicion.`
+                      : `Unstable: worse than a coin flip in most windows. The headline average is hiding this.`}
+                </div>
+              )}
+            </div>
+          )}
 
           {(showEquity || showCompare || equity.filter((v) => v != null).length > 1 || cmpA.length > 1) && (
             <div className="card card-pad fade-in" style={{ marginTop: 16 }}>
