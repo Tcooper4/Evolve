@@ -415,8 +415,10 @@ export interface Position {
 export interface PortfolioSummary {
   success: boolean;
   positions: Position[];
+  cash: number;
   total_cost_basis: number;
   total_market_value: number;
+  total_equity: number;
   total_unrealized_pnl: number;
   realized_pnl: number;
   all_prices_live: boolean;

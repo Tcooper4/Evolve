@@ -966,56 +966,52 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
 
     @router.get("/api/cashbook")
     def cashbook(user: str = Depends(current_user)) -> Dict[str, Any]:
-        from config.user_store import load_user_preferences
-        prefs = load_user_preferences(f"user:{user}") or {}
-        cash = float(prefs.get("paper_cash", 100_000.0) or 100_000.0)
-        orders = prefs.get("limit_orders") or []
-        return {"success": True, "cash": cash, "limit_orders": orders}
+        # CASH INTEGRATION (2026-07): cashbook and the paper portfolio
+        # used to be two disconnected ledgers - buying shares never
+        # moved the displayed cash balance. Now backed by the SAME
+        # per-user store as positions/trades, so cash + market value is
+        # real account equity. Checking here also runs the limit-order
+        # executor, mirroring how viewing alerts checks alerts.
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        pp = PaperPortfolio(user_id=f"user:{user}")
+        newly_filled = pp.check_limit_orders()
+        return {
+            "success": True,
+            "cash": pp.get_cash(),
+            "limit_orders": pp.get_limit_orders(),
+            "newly_filled": newly_filled,
+        }
 
     @router.post("/api/cashbook/adjust")
     def cash_adjust(req: CashAdjustRequest,
                     user: str = Depends(current_user)) -> Dict[str, Any]:
-        from config.user_store import load_user_preferences, save_user_preferences
-        uid = f"user:{user}"
-        prefs = dict(load_user_preferences(uid) or {})
-        cash = float(prefs.get("paper_cash", 100_000.0) or 100_000.0) + float(req.amount)
-        prefs["paper_cash"] = round(cash, 2)
-        save_user_preferences(uid, prefs)
-        return {"success": True, "cash": prefs["paper_cash"]}
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        return PaperPortfolio(user_id=f"user:{user}").adjust_cash(
+            req.amount, note=req.note
+        )
 
     @router.post("/api/cashbook/limit")
     def place_limit(req: LimitOrderRequest,
                     user: str = Depends(current_user)) -> Dict[str, Any]:
-        import uuid
-        from config.user_store import load_user_preferences, save_user_preferences
-        uid = f"user:{user}"
-        prefs = dict(load_user_preferences(uid) or {})
-        orders = list(prefs.get("limit_orders") or [])
-        row = {
-            "id": req.id or str(uuid.uuid4())[:8],
-            "symbol": req.symbol.strip().upper(),
-            "side": req.side.strip().lower(),
-            "quantity": float(req.quantity),
-            "limit_price": float(req.limit_price),
-            "status": "open",
-        }
-        orders.append(row)
-        prefs["limit_orders"] = orders[-40:]
-        save_user_preferences(uid, prefs)
-        return {"success": True, "limit_orders": prefs["limit_orders"]}
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        pp = PaperPortfolio(user_id=f"user:{user}")
+        r = pp.place_limit_order(req.symbol, req.side, req.quantity,
+                                 req.limit_price, order_id=req.id)
+        if r.get("success"):
+            r["limit_orders"] = pp.get_limit_orders()
+        return r
 
     @router.delete("/api/cashbook/limit/{order_id}")
     def cancel_limit(order_id: str, user: str = Depends(current_user)) -> Dict[str, Any]:
-        from config.user_store import load_user_preferences, save_user_preferences
-        uid = f"user:{user}"
-        prefs = dict(load_user_preferences(uid) or {})
-        orders = [
-            o for o in (prefs.get("limit_orders") or [])
-            if isinstance(o, dict) and o.get("id") != order_id
-        ]
-        prefs["limit_orders"] = orders
-        save_user_preferences(uid, prefs)
-        return {"success": True, "limit_orders": orders}
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        pp = PaperPortfolio(user_id=f"user:{user}")
+        r = pp.cancel_limit_order(order_id)
+        r["limit_orders"] = pp.get_limit_orders()
+        return r
 
     @router.get("/api/alerts")
     def list_alerts(user: str = Depends(current_user)) -> Dict[str, Any]:

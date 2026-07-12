@@ -127,12 +127,14 @@ export default function Portfolio() {
 
       {data && (
         <div className="kpis">
-          <div className="card kpi"><div className="label">Market value</div>
-            <div className="value num">${data.total_market_value.toLocaleString()}</div>
+          <div className="card kpi"><div className="label">Total equity</div>
+            <div className="value num">${data.total_equity.toLocaleString()}</div>
+            <div className="sub">cash + market value</div>
+          </div>
+          <div className="card kpi"><div className="label">Cash available</div>
+            <div className="value num">${data.cash.toLocaleString()}</div>
             {!data.all_prices_live && <div className="sub">some prices unavailable — showing cost</div>}
           </div>
-          <div className="card kpi"><div className="label">Cost basis</div>
-            <div className="value num">${data.total_cost_basis.toLocaleString()}</div></div>
           <div className="card kpi"><div className="label">Unrealized P&L</div>
             <div className={`value num ${pnlCls(data.total_unrealized_pnl)}`}>
               {data.total_unrealized_pnl >= 0 ? "+" : ""}${data.total_unrealized_pnl.toLocaleString()}

@@ -33,6 +33,11 @@ logger = logging.getLogger(__name__)
 
 DB_PATH = Path("data/paper_portfolio.db")
 
+# Every account starts with this much paper cash. Matches the figure the
+# cashbook UI has shown since it was first built, so existing users see
+# no surprise change in their displayed balance on first migration.
+DEFAULT_STARTING_CASH = 100_000.0
+
 
 def _resolve_user(user_id: Optional[str]) -> str:
     return user_id or os.getenv("EVOLVE_SESSION_ID") or "local"
@@ -61,6 +66,26 @@ def _connect() -> sqlite3.Connection:
                price REAL NOT NULL,
                realized_pnl REAL NOT NULL DEFAULT 0,
                executed_at TEXT NOT NULL
+           )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS cash (
+               user_id TEXT PRIMARY KEY,
+               balance REAL NOT NULL
+           )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS limit_orders (
+               id TEXT PRIMARY KEY,
+               user_id TEXT NOT NULL,
+               symbol TEXT NOT NULL,
+               side TEXT NOT NULL,
+               quantity REAL NOT NULL,
+               limit_price REAL NOT NULL,
+               status TEXT NOT NULL DEFAULT 'open',
+               created_at TEXT NOT NULL,
+               filled_at TEXT,
+               filled_price REAL
            )"""
     )
     return conn
@@ -97,8 +122,29 @@ class PaperPortfolio:
                 " WHERE user_id=? AND symbol=?",
                 (self.user_id, symbol),
             ).fetchone()
+            cash_row = conn.execute(
+                "SELECT balance FROM cash WHERE user_id=?", (self.user_id,)
+            ).fetchone()
+            cash = float(cash_row[0]) if cash_row else DEFAULT_STARTING_CASH
+            trade_value = quantity * price
+
             realized = 0.0
             if side == "buy":
+                # CASH INTEGRATION (2026-07): buys used to be free - the
+                # cash book and positions were two disconnected ledgers,
+                # so buying $1,000 of AAPL left the displayed cash
+                # balance untouched at the full $100,000. A buy must
+                # actually cost cash, and an account can't spend money it
+                # doesn't have (paper trading should still teach real
+                # constraints).
+                if trade_value > cash + 1e-6:
+                    conn.close()
+                    return {
+                        "success": False,
+                        "error": f"insufficient paper cash: have "
+                                 f"${cash:,.2f}, need ${trade_value:,.2f}",
+                    }
+                cash -= trade_value
                 if row:
                     qty, avg = float(row[0]), float(row[1])
                     new_qty = qty + quantity
@@ -116,6 +162,7 @@ class PaperPortfolio:
             else:  # sell
                 if not row or float(row[0]) < quantity - 1e-9:
                     held = float(row[0]) if row else 0.0
+                    conn.close()
                     return {
                         "success": False,
                         "error": f"can't sell {quantity:g} {symbol}: "
@@ -123,6 +170,7 @@ class PaperPortfolio:
                     }
                 qty, avg = float(row[0]), float(row[1])
                 realized = quantity * (price - avg)
+                cash += trade_value
                 new_qty = qty - quantity
                 if new_qty <= 1e-9:
                     conn.execute(
@@ -136,13 +184,19 @@ class PaperPortfolio:
                         (new_qty, self.user_id, symbol),
                     )
             conn.execute(
+                "INSERT INTO cash (user_id, balance) VALUES (?,?)"
+                " ON CONFLICT(user_id) DO UPDATE SET balance=excluded.balance",
+                (self.user_id, round(cash, 2)),
+            )
+            conn.execute(
                 "INSERT INTO trades (user_id, symbol, side, quantity, price,"
                 " realized_pnl, executed_at) VALUES (?,?,?,?,?,?,?)",
                 (self.user_id, symbol, side, quantity, price, realized, now),
             )
             conn.commit()
             out = {"success": True, "symbol": symbol, "side": side,
-                   "quantity": quantity, "price": price}
+                   "quantity": quantity, "price": price,
+                   "cash_balance": round(cash, 2)}
             if side == "sell":
                 out["realized_pnl"] = round(realized, 2)
             return out
@@ -195,6 +249,156 @@ class PaperPortfolio:
         finally:
             conn.close()
 
+    # ----------------------------------------------------------------- cash
+    def get_cash(self) -> float:
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT balance FROM cash WHERE user_id=?", (self.user_id,)
+            ).fetchone()
+            return float(row[0]) if row else DEFAULT_STARTING_CASH
+        finally:
+            conn.close()
+
+    def adjust_cash(self, amount: float, note: str = "") -> Dict[str, Any]:
+        """Manual deposit/withdrawal (not a trade). Negative amounts
+        withdraw; balance is floored at 0 (no paper margin/debt)."""
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT balance FROM cash WHERE user_id=?", (self.user_id,)
+            ).fetchone()
+            cash = float(row[0]) if row else DEFAULT_STARTING_CASH
+            cash = max(0.0, cash + float(amount))
+            conn.execute(
+                "INSERT INTO cash (user_id, balance) VALUES (?,?)"
+                " ON CONFLICT(user_id) DO UPDATE SET balance=excluded.balance",
+                (self.user_id, round(cash, 2)),
+            )
+            conn.commit()
+            return {"success": True, "cash": round(cash, 2), "note": note}
+        finally:
+            conn.close()
+
+    # ------------------------------------------------------------ limit orders
+    def place_limit_order(self, symbol: str, side: str, quantity: float,
+                          limit_price: float,
+                          order_id: Optional[str] = None) -> Dict[str, Any]:
+        import uuid
+
+        symbol = (symbol or "").strip().upper()
+        side = (side or "").strip().lower()
+        try:
+            quantity = float(quantity)
+            limit_price = float(limit_price)
+        except (TypeError, ValueError):
+            return {"success": False, "error": "quantity and limit_price must be numbers"}
+        if side not in ("buy", "sell"):
+            return {"success": False, "error": "side must be 'buy' or 'sell'"}
+        if quantity <= 0 or limit_price <= 0:
+            return {"success": False, "error": "quantity and limit_price must be positive"}
+        if side == "sell":
+            held = next((p["quantity"] for p in self.get_positions()
+                        if p["symbol"] == symbol), 0.0)
+            if held < quantity - 1e-9:
+                return {"success": False,
+                       "error": f"can't place sell limit for {quantity:g} "
+                                f"{symbol}: you hold {held:g}"}
+        oid = order_id or str(uuid.uuid4())[:8]
+        conn = _connect()
+        try:
+            conn.execute(
+                "INSERT INTO limit_orders (id, user_id, symbol, side,"
+                " quantity, limit_price, status, created_at)"
+                " VALUES (?,?,?,?,?,?, 'open', ?)",
+                (oid, self.user_id, symbol, side, quantity, limit_price,
+                 datetime.now(timezone.utc).isoformat()),
+            )
+            conn.commit()
+            return {"success": True, "id": oid}
+        finally:
+            conn.close()
+
+    def cancel_limit_order(self, order_id: str) -> Dict[str, Any]:
+        conn = _connect()
+        try:
+            cur = conn.execute(
+                "DELETE FROM limit_orders WHERE id=? AND user_id=?"
+                " AND status='open'",
+                (order_id, self.user_id),
+            )
+            conn.commit()
+            return {"success": cur.rowcount > 0}
+        finally:
+            conn.close()
+
+    def get_limit_orders(self, include_filled: bool = True) -> List[Dict[str, Any]]:
+        conn = _connect()
+        try:
+            q = ("SELECT id, symbol, side, quantity, limit_price, status,"
+                 " created_at, filled_at, filled_price FROM limit_orders"
+                 " WHERE user_id=?")
+            if not include_filled:
+                q += " AND status='open'"
+            rows = conn.execute(q + " ORDER BY created_at DESC",
+                                (self.user_id,)).fetchall()
+            return [
+                {"id": r[0], "symbol": r[1], "side": r[2], "quantity": r[3],
+                 "limit_price": r[4], "status": r[5], "created_at": r[6],
+                 "filled_at": r[7], "filled_price": r[8]}
+                for r in rows
+            ]
+        finally:
+            conn.close()
+
+    def check_limit_orders(
+        self,
+        price_fn: Optional[Callable[[str], Optional[float]]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Check open limit orders against the current price and FILL any
+        that cross - mirrors the existing alert checker pattern. Buys fill
+        at or below the limit; sells fill at or above. A fill that can't
+        execute (insufficient cash, position closed elsewhere) is left
+        open rather than silently dropped, and reported back."""
+        if price_fn is None:
+            def price_fn(sym: str) -> Optional[float]:  # noqa: ANN001
+                try:
+                    import yfinance as yf
+
+                    p = yf.Ticker(sym).fast_info.last_price
+                    return float(p) if p else None
+                except Exception:
+                    return None
+
+        filled: List[Dict[str, Any]] = []
+        for order in self.get_limit_orders(include_filled=False):
+            last = price_fn(order["symbol"])
+            if last is None:
+                continue
+            crosses = (
+                (order["side"] == "buy" and last <= order["limit_price"])
+                or (order["side"] == "sell" and last >= order["limit_price"])
+            )
+            if not crosses:
+                continue
+            result = self.record_trade(order["symbol"], order["side"],
+                                       order["quantity"], last)
+            if not result.get("success"):
+                continue  # left open (e.g. insufficient cash); reported next check
+            conn = _connect()
+            try:
+                conn.execute(
+                    "UPDATE limit_orders SET status='filled', filled_at=?,"
+                    " filled_price=? WHERE id=? AND user_id=?",
+                    (datetime.now(timezone.utc).isoformat(), last,
+                     order["id"], self.user_id),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+            filled.append({**order, "status": "filled", "filled_price": last})
+        return filled
+
     # ------------------------------------------------------------ summary
     def get_summary(
         self,
@@ -236,11 +440,14 @@ class PaperPortfolio:
                     "unrealized_pct": round(pnl / cost * 100, 2) if cost else 0.0,
                 })
                 total_value += value
+        cash = self.get_cash()
         return {
             "success": True,
             "positions": positions,
+            "cash": round(cash, 2),
             "total_cost_basis": round(total_cost, 2),
             "total_market_value": round(total_value, 2),
+            "total_equity": round(cash + total_value, 2),
             "total_unrealized_pnl": round(total_value - total_cost, 2),
             "realized_pnl": round(self.get_realized_pnl(), 2),
             "all_prices_live": priced_all,
