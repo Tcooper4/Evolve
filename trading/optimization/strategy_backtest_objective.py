@@ -63,11 +63,15 @@ METRIC_CHOICES = {
     "sortino_ratio": "Sortino ratio",
     "calmar_ratio": "Calmar ratio",
     "total_return": "Total return",
+    "excess_vs_bh": "Excess vs buy & hold",
     "max_drawdown": "Max drawdown (minimize)",
 }
 
 # Metrics where bigger is better (objective returns their negative).
-_MAXIMIZE = {"sharpe_ratio", "sortino_ratio", "calmar_ratio", "total_return"}
+_MAXIMIZE = {
+    "sharpe_ratio", "sortino_ratio", "calmar_ratio",
+    "total_return", "excess_vs_bh",
+}
 
 
 def normalize_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
@@ -144,6 +148,44 @@ def run_strategy(
     return strategy.generate_signals(normalize_ohlcv(data))
 
 
+def signals_to_position(
+    signals: pd.DataFrame,
+    index: pd.Index,
+    signal_mode: str = "hold",
+) -> pd.Series:
+    """Map strategy signals to a per-bar position series.
+
+    Modes:
+      - ``hold`` (default): long-only event hold — ``+1`` enters/stays long,
+        ``-1`` exits to flat (cash), ``0`` keeps the prior stance.
+        Matches RSI/MACD/SMA/Bollinger "buy/sell" semantics on stocks.
+      - ``flip``: ``+1``/``-1`` flip between long and short; ``0`` ignored
+        (forward-filled). Use for explicit long/short systems.
+      - ``raw``: signal column used verbatim as the position.
+    """
+    if signals is None or signals.empty or "signal" not in signals.columns:
+        return pd.Series(0.0, index=index)
+
+    sig = signals["signal"].reindex(index).fillna(0.0).astype(float)
+    if signal_mode == "raw":
+        return sig.clip(-1.0, 1.0)
+
+    if signal_mode == "flip":
+        return sig.replace(0.0, np.nan).ffill().fillna(0.0).clip(-1.0, 1.0)
+
+    # hold = long-only: sell exits to cash (not short)
+    vals = sig.to_numpy(dtype=float)
+    pos = np.zeros(len(vals), dtype=float)
+    cur = 0.0
+    for i, v in enumerate(vals):
+        if v > 0.5:
+            cur = 1.0
+        elif v < -0.5:
+            cur = 0.0
+        pos[i] = cur
+    return pd.Series(pos, index=index)
+
+
 def signals_to_returns(
     signals: pd.DataFrame,
     close: pd.Series,
@@ -156,9 +198,8 @@ def signals_to_returns(
         signals: DataFrame with a ``signal`` column (-1/0/+1 events or
             per-bar stances).
         close: Close price series (same or superset index).
-        signal_mode: ``"hold"`` (default) keeps the last nonzero signal as
-            the position until an opposite signal; ``"raw"`` uses the
-            signal column verbatim as the per-bar position.
+        signal_mode: ``"hold"`` (default) long-only buy/sell-to-flat;
+            ``"flip"`` long/short; ``"raw"`` uses signals as positions.
         cost_bps: One-way transaction cost in basis points, charged on
             each unit of position change.
     """
@@ -166,12 +207,7 @@ def signals_to_returns(
     if signals is None or signals.empty or "signal" not in signals.columns:
         return pd.Series(0.0, index=close.index)
 
-    sig = signals["signal"].reindex(close.index).fillna(0.0).astype(float)
-    if signal_mode == "hold":
-        position = sig.replace(0.0, np.nan).ffill().fillna(0.0)
-    else:
-        position = sig
-    position = position.clip(-1.0, 1.0)
+    position = signals_to_position(signals, close.index, signal_mode=signal_mode)
 
     # One-bar execution delay: no lookahead.
     lagged = position.shift(1).fillna(0.0)
@@ -194,7 +230,17 @@ def evaluate_params(
 
     signals = run_strategy(strategy_name, data, params)
     ndata = normalize_ohlcv(data)
-    returns = signals_to_returns(signals, ndata["close"], cost_bps=cost_bps)
+    close = ndata["close"].astype(float)
+    returns = signals_to_returns(signals, close, cost_bps=cost_bps)
+    sig = (
+        signals["signal"].reindex(ndata.index).fillna(0.0)
+        if signals is not None and "signal" in signals.columns
+        else pd.Series(0.0, index=ndata.index)
+    )
+    buy_events = int((sig > 0).sum())
+    sell_events = int((sig < 0).sum())
+    signal_events = int((sig != 0).sum())
+    bh = float(close.iloc[-1] / close.iloc[0] - 1.0) if len(close) else 0.0
     if not (returns != 0).any():
         # A strategy that never traded has no meaningful risk metrics.
         # Without this guard, compute_performance_metrics divides the
@@ -205,11 +251,17 @@ def evaluate_params(
             "sortino_ratio", "calmar_ratio", "max_drawdown",
             "volatility_annual", "win_rate", "profit_factor",
         )}
-        zero.update({"active_bars": 0, "signal_events": 0})
+        zero.update({
+            "active_bars": 0,
+            "signal_events": signal_events,
+            "buy_events": buy_events,
+            "sell_events": sell_events,
+            "buy_hold_return": round(bh, 4),
+            "excess_vs_bh": round(0.0 - bh, 4),
+        })
         return zero
     metrics = compute_performance_metrics(returns)
     n_trades = int((returns != 0).sum())
-    position = signals["signal"].reindex(ndata.index)
     out = {
         "total_return": metrics.total_return,
         "annualized_return": metrics.annualized_return,
@@ -221,7 +273,11 @@ def evaluate_params(
         "win_rate": metrics.win_rate,
         "profit_factor": metrics.profit_factor,
         "active_bars": n_trades,
-        "signal_events": int((position.fillna(0) != 0).sum()),
+        "signal_events": signal_events,
+        "buy_events": buy_events,
+        "sell_events": sell_events,
+        "buy_hold_return": round(bh, 4),
+        "excess_vs_bh": round(float(metrics.total_return) - bh, 4),
     }
     return out
 
@@ -259,6 +315,10 @@ def make_objective(
             logger.debug("Objective failed for %s %s: %s", strategy_name, cast, e)
             return INVALID_PENALTY
         if results["signal_events"] < min_signal_events:
+            return INVALID_PENALTY
+        # Long-only strategies need at least one buy; sell-only param sets
+        # stay flat forever after the long-only hold fix.
+        if int(results.get("buy_events") or 0) < 1:
             return INVALID_PENALTY
         value = results[metric]
         if not np.isfinite(value):

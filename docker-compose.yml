@@ -10,4 +10,6 @@ services:
       - ./.env:/app/.env:ro       # your API keys
     environment:
       - EVOLVE_REQUIRE_LOGIN=${EVOLVE_REQUIRE_LOGIN:-0}
+      - CMDSTAN=/root/.cmdstan/cmdstan-2.39.0
+      - PYTHONPATH=/app
     restart: unless-stopped

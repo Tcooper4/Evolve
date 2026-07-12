@@ -27,37 +27,77 @@ def _fetch_yfinance_news(symbol: str, max_items: int = 10) -> List[Dict]:
         results: List[Dict] = []
         for item in news[:max_items]:
             try:
-                ts = item.get("providerPublishTime", 0) or 0
-                published = (
-                    datetime.fromtimestamp(ts).isoformat() if ts else datetime.utcnow().isoformat()
-                )
-            except Exception:
-                published = datetime.utcnow().isoformat()
+                content = item.get("content") or {}
+                if not isinstance(content, dict):
+                    content = {}
 
-            content = item.get("content") or {}
-            if not isinstance(content, dict):
-                content = {}
-            _url = (
-                item.get("url")
-                or item.get("link")
-                or item.get("href")
-                or content.get("url")
-                or content.get("link")
-                or content.get("href")
-                or content.get("clickThroughUrl")
-                or ""
-            )
-            results.append(
-                {
-                    "title": item.get("title", "") or "",
-                    "url": str(_url or "").strip(),
-                    "source": item.get("publisher", "yfinance") or "yfinance",
-                    "published": published,
-                    "summary": item.get("summary", item.get("title", "")) or "",
-                    "symbols": item.get("relatedTickers", [symbol]) or [symbol],
-                    "source_type": "yfinance",
-                }
-            )
+                # Newer yfinance nests title/publisher under content{}
+                title = (
+                    item.get("title")
+                    or content.get("title")
+                    or ""
+                )
+                if not str(title).strip():
+                    continue
+
+                provider = content.get("provider") or {}
+                if not isinstance(provider, dict):
+                    provider = {}
+                publisher = (
+                    item.get("publisher")
+                    or provider.get("displayName")
+                    or content.get("publisher")
+                    or "Yahoo Finance"
+                )
+
+                ts = item.get("providerPublishTime", 0) or 0
+                pub_date = content.get("pubDate") or content.get("displayTime")
+                if pub_date:
+                    published = str(pub_date)
+                else:
+                    published = (
+                        datetime.fromtimestamp(ts).isoformat()
+                        if ts
+                        else datetime.utcnow().isoformat()
+                    )
+
+                click = content.get("clickThroughUrl") or {}
+                if not isinstance(click, dict):
+                    click = {}
+                canonical = content.get("canonicalUrl") or {}
+                if not isinstance(canonical, dict):
+                    canonical = {}
+                _url = (
+                    item.get("url")
+                    or item.get("link")
+                    or item.get("href")
+                    or click.get("url")
+                    or canonical.get("url")
+                    or content.get("url")
+                    or content.get("link")
+                    or content.get("href")
+                    or ""
+                )
+                summary = (
+                    item.get("summary")
+                    or content.get("summary")
+                    or content.get("description")
+                    or title
+                )
+                results.append(
+                    {
+                        "title": str(title).strip(),
+                        "url": str(_url or "").strip(),
+                        "source": str(publisher or "Yahoo Finance").strip(),
+                        "published": published,
+                        "summary": str(summary or "").strip(),
+                        "symbols": item.get("relatedTickers", [symbol]) or [symbol],
+                        "source_type": "yfinance",
+                    }
+                )
+            except Exception as e:
+                logger.debug("yfinance news item parse skipped: %s", e)
+                continue
         return results
     except Exception as e:  # pragma: no cover - defensive log
         logger.debug("yfinance news failed for %s: %s", symbol, e)
@@ -274,7 +314,8 @@ def get_news(
     Uses disk cache for 10 minutes to reduce external calls.
     """
     q = query or symbol
-    cache_key = f"news:{symbol}:{q}:{max_items}:{int(include_reddit)}"
+    # v2: bust cache entries that stored empty titles from old yfinance shape
+    cache_key = f"news:v2:{symbol}:{q}:{max_items}:{int(include_reddit)}"
     cached = disk_cache_get(cache_key)
     if cached is not None:
         return cached
@@ -291,7 +332,8 @@ def get_news(
     if not articles:
         return []
 
-    # Deduplicate and score
+    # Deduplicate and score — drop empty titles (bad cache / parse misses)
+    articles = [a for a in articles if str(a.get("title") or "").strip()]
     articles = _deduplicate(articles)
     for a in articles:
         a["relevance_score"] = _score_relevance(a, q, symbol)

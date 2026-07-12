@@ -410,19 +410,45 @@ class GARCHModel(BaseModel):
             volatility_forecast = self.predict(data, horizon)
 
             # Also provide a price-space forecast for UI/routers/tests expecting prices.
-            # GARCH primarily models volatility; use a flat price path at last close as a safe default.
+            # GARCH models volatility of returns — convert to a price path via
+            # geometric Brownian steps: S_t = S_{t-1} * exp(mu + sigma_t * z).
             last_close = None
+            recent_mu = 0.0
             if isinstance(data, pd.DataFrame):
                 _col_map = {c.lower(): c for c in data.columns}
                 _num_cols = list(data.select_dtypes(include=[np.number]).columns)
                 _tgt_col = _col_map.get("close", _num_cols[0] if _num_cols else None)
                 if _tgt_col is not None and _tgt_col in data.columns:
-                    last_close = float(data[_tgt_col].iloc[-1])
+                    closes = pd.to_numeric(data[_tgt_col], errors="coerce").dropna()
+                    last_close = float(closes.iloc[-1]) if len(closes) else None
+                    if len(closes) >= 21:
+                        recent_mu = float(closes.pct_change().dropna().tail(20).mean())
                 elif "price" in data.columns:
                     last_close = float(data["price"].iloc[-1])
             if last_close is None or not np.isfinite(last_close):
                 last_close = 100.0
-            price_forecast = np.full(int(horizon), float(last_close), dtype="float64")
+
+            vol = np.asarray(volatility_forecast, dtype="float64").ravel()
+            if vol.size < int(horizon):
+                pad = float(vol[-1]) if vol.size else 0.01
+                vol = np.concatenate([vol, np.full(int(horizon) - vol.size, pad)])
+            vol = vol[: int(horizon)]
+            # arch often returns % vol; normalize to daily decimal if needed
+            if np.nanmedian(np.abs(vol)) > 0.5:
+                vol = vol / 100.0
+            vol = np.clip(vol, 1e-6, 0.2)
+
+            rng = np.random.default_rng(42)
+            z = rng.standard_normal(int(horizon))
+            price_forecast = np.empty(int(horizon), dtype="float64")
+            px = float(last_close)
+            for i in range(int(horizon)):
+                px = px * float(np.exp(recent_mu + vol[i] * z[i]))
+                price_forecast[i] = px
+            # Blend toward last close so path isn't pure noise (keep structure)
+            alpha = 0.35
+            for i in range(int(horizon)):
+                price_forecast[i] = (1 - alpha) * price_forecast[i] + alpha * float(last_close)
 
             # Generate confidence intervals (simplified)
             # In practice, you might want to use bootstrap or simulation methods

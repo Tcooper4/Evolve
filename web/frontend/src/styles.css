@@ -107,9 +107,61 @@ button.ghost:hover { color: var(--text); border-color: var(--border); }
 .rail-label { color: var(--text-3); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 8px; }
 .user-chip { display: flex; align-items: center; justify-content: space-between; color: var(--text-2); font-size: 13px; }
 
+/* ---------- market ticker tape ---------- */
+.ticker-tape {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  margin-bottom: 18px;
+  mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+.ticker-marquee {
+  animation: tickerScroll 55s linear infinite;
+}
+.ticker-tape:hover .ticker-marquee {
+  animation-play-state: paused;
+}
+@keyframes tickerScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 22px;
+  white-space: nowrap;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ticker-item:hover { background: var(--surface-2); transform: none; }
+.ticker-item .sym { font-weight: 700; letter-spacing: 0.4px; }
+.ticker-item .px { color: var(--text-2); }
+
 /* ---------- topbar ---------- */
-.topbar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
-.search { position: relative; flex: 1; max-width: 420px; }
+.topbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.topbar > button,
+.topbar > .seg { flex-shrink: 0; }
+.topbar .search { flex: 1 1 260px; min-width: 220px; max-width: 420px; }
+.search { position: relative; }
 .search input { width: 100%; padding-left: 38px; }
 .search .icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-3); }
 .search kbd {
@@ -230,6 +282,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 
 /* forms */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.row { display: flex; gap: 10px; align-items: center; }
 .field label { display: block; color: var(--text-3); font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
 .field input, .field select { width: 100%; }
 select { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; font-family: var(--font); }

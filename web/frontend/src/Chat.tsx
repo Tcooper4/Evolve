@@ -5,7 +5,7 @@ interface Msg { role: "user" | "bot"; text: string; tools?: string[]; }
 
 export default function Chat() {
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "bot", text: "Hey — I'm Evolve's assistant. Ask me anything about the market in plain language: I'll do the research (scans, scores, news, risk) and explain it clearly. No finance background needed." },
+    { role: "bot", text: "Hey — I'm Evolve's assistant. Ask me anything about the market in plain language: I'll do the research (scans, scores, news, risk) and explain it clearly." },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,6 +35,7 @@ export default function Chat() {
   return (
     <div className="fade-in">
       <div className="greeting">Chat <small>your assistant, your memory, your API key</small></div>
+
       <div className="card">
         <div className="chat-box" ref={box}>
           {msgs.map((m, i) => (
@@ -56,6 +57,7 @@ export default function Chat() {
               "Is now a good time to buy?",
               "Explain what's happening in the market like I'm new",
               "Check the risk on my watchlist",
+              "Run a morning briefing summary",
             ].map((q) => (
               <button key={q} className="ghost" style={{ fontSize: 12.5, border: "1px solid var(--border)" }}
                 onClick={() => { setInput(q); }}>
@@ -64,11 +66,11 @@ export default function Chat() {
             ))}
           </div>
         )}
-        <div className="chat-input">
-          <input value={input} placeholder="Ask anything…"
+        <div className="row" style={{ padding: 14, borderTop: "1px solid var(--border)" }}>
+          <input style={{ flex: 1 }} value={input} placeholder="Ask about a ticker, risk, news…"
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()} />
-          <button className="primary" onClick={send}>Send</button>
+          <button className="primary" onClick={send} disabled={busy}>Send</button>
         </div>
       </div>
     </div>

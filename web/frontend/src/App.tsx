@@ -5,6 +5,7 @@ import Backtest from "./Backtest";
 import Chat from "./Chat";
 import Dashboard from "./Dashboard";
 import Login from "./Login";
+import MarketTicker from "./MarketTicker";
 import Portfolio from "./Portfolio";
 import Scanner from "./Scanner";
 import Settings from "./Settings";
@@ -25,6 +26,7 @@ export default function App() {
     hasToken() ? sessionStorage.getItem("evolve_name") : null,
   );
   const [page, setPage] = useState<PageId>("dashboard");
+  const [analyzeSymbol, setAnalyzeSymbol] = useState("SPY");
 
   if (!name) {
     return (
@@ -39,6 +41,12 @@ export default function App() {
     setToken(null);
     sessionStorage.removeItem("evolve_name");
     setName(null);
+  };
+
+  const goAnalyze = (sym: string) => {
+    const clean = (sym || "SPY").trim().toUpperCase();
+    setAnalyzeSymbol(clean);
+    setPage("analyze");
   };
 
   return (
@@ -59,9 +67,24 @@ export default function App() {
         </nav>
       </aside>
       <main className="main">
-        {page === "dashboard" && <Dashboard displayName={name} />}
-        {page === "analyze" && <Analyze />}
-        {page === "scanner" && <Scanner />}
+        <MarketTicker onSelect={goAnalyze} />
+        {page === "dashboard" && (
+          <Dashboard displayName={name} onAnalyze={goAnalyze} />
+        )}
+        {page === "analyze" && (
+          <Analyze
+            key={analyzeSymbol}
+            initialSymbol={analyzeSymbol}
+            onOpenBacktest={(sym, strategy) => {
+              sessionStorage.setItem(
+                "evolve_backtest",
+                JSON.stringify({ symbol: sym, strategy }),
+              );
+              setPage("backtest");
+            }}
+          />
+        )}
+        {page === "scanner" && <Scanner onAnalyze={goAnalyze} />}
         {page === "portfolio" && <Portfolio />}
         {page === "backtest" && <Backtest />}
         {page === "chat" && <Chat />}

@@ -100,11 +100,20 @@ class PairsTradingEngine:
 
             cointegrated_pairs = []
 
-            # Get price series
+            # Get price series (accept Close / close / first numeric col)
             price_series = {}
             for symbol in symbols:
-                if symbol in price_data and "close" in price_data[symbol].columns:
-                    price_series[symbol] = price_data[symbol]["close"]
+                if symbol not in price_data:
+                    continue
+                df = price_data[symbol]
+                if df is None or getattr(df, "empty", True):
+                    continue
+                try:
+                    _cm = {str(c).lower(): c for c in df.columns}
+                    _cc = _cm.get("close", df.columns[0])
+                    price_series[symbol] = df[_cc]
+                except Exception as e:
+                    self.logger.debug("pairs: skip %s close extract: %s", symbol, e)
 
             if len(price_series) < 2:
                 self.logger.warning("Insufficient price data for cointegration testing")

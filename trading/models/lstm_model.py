@@ -1140,11 +1140,38 @@ class LSTMForecaster(BaseModel):
                     if f.lower() in available_cols
                 ]
                 if not feature_cols:
-                    raise ModelTrainingError(
-                        "No valid feature columns found. "
-                        f"Requested: {self.config.get('feature_columns')}. "
-                        f"Available: {list(X.columns)}"
-                    )
+                    # Univariate fallback — close/price only (avoids input_size mismatch)
+                    _cm = {c.lower(): c for c in X.columns}
+                    _cc = _cm.get("close") or _cm.get("price") or list(X.columns)[0]
+                    feature_cols = [_cc]
+                    self.config["feature_columns"] = ["close"]
+                else:
+                    # Prefer close-only when config asked for close (consensus path)
+                    cfg_feats = [str(f).lower() for f in (self.config.get("feature_columns") or [])]
+                    if cfg_feats == ["close"] or cfg_feats == ["Close"]:
+                        _cm = {c.lower(): c for c in X.columns}
+                        if "close" in _cm:
+                            feature_cols = [_cm["close"]]
+
+                # Rebuild network if feature count changed since __init__
+                try:
+                    expected = len(feature_cols)
+                    built = int(getattr(getattr(self.model, "lstm", None), "input_size", 0) or 0)
+                    if int(built) != int(expected) or self.model is None:
+                        self.config["feature_columns"] = [
+                            "close" if str(c).lower() == "close" else str(c)
+                            for c in feature_cols
+                        ]
+                        self.model = self.build_model()
+                        if hasattr(self, "device") and self.model is not None:
+                            self.model.to(self.device)
+                        logger.info(
+                            "LSTM rebuilt for input_size=%s (was %s)",
+                            expected,
+                            built,
+                        )
+                except Exception as _rb:
+                    logger.warning("LSTM rebuild skipped: %s", _rb)
 
                 # BUG FIX: this previously fit both scalers on the FULL
                 # X/y (fit_transform), created sequences from the

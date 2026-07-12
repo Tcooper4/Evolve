@@ -62,6 +62,60 @@ def get_adopted_params(strategy: str, symbol: str) -> Optional[Dict[str, Any]]:
     return dict(entry["params"]) if entry else None
 
 
+def clear_adopted_params(strategy: str, symbol: str) -> bool:
+    """Remove adopted params for (strategy, symbol). Returns True if removed."""
+    store = _load_store()
+    key = f"{strategy}:{symbol}"
+    if key not in store.get("adopted", {}):
+        return False
+    del store["adopted"][key]
+    journal = list(store.get("journal") or [])
+    journal.append({
+        "strategy": strategy,
+        "symbol": symbol,
+        "adopted": False,
+        "source": "clear",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "params": {},
+    })
+    store["journal"] = journal[-200:]
+    _save_store(store)
+    return True
+
+
+def adopt_params(
+    strategy: str,
+    symbol: str,
+    params: Dict[str, Any],
+    *,
+    oos_metrics: Optional[Dict[str, Any]] = None,
+    source: str = "manual_optimize",
+) -> Dict[str, Any]:
+    """Persist tuned parameters for (strategy, symbol) so later backtests reuse them."""
+    store = _load_store()
+    key = f"{strategy}:{symbol}"
+    entry = {
+        "params": dict(params or {}),
+        "oos_metrics": oos_metrics or {},
+        "source": source,
+        "adopted_at": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    store["adopted"][key] = entry
+    journal = list(store.get("journal") or [])
+    journal.append({
+        "strategy": strategy,
+        "symbol": symbol,
+        "adopted": True,
+        "source": source,
+        "timestamp": entry["adopted_at"],
+        "params": entry["params"],
+    })
+    store["journal"] = journal[-200:]
+    _save_store(store)
+    return entry
+
+
 def _oos_metric(strategy: str, df, params: Optional[Dict[str, Any]],
                 train_fraction: float, metric: str) -> Optional[float]:
     """Evaluate params on the held-out tail only."""

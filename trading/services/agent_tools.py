@@ -69,17 +69,70 @@ def recommend_strategy(
 ) -> Dict[str, Any]:
     """
     Given market conditions, recommend a strategy name and optional parameters.
+    When ``symbol`` is set, infer regime from recent returns/volatility.
     """
+    reason = "default sideways map"
+    regime = (market_regime or "").lower().strip()
+    metrics: Dict[str, Any] = {}
+
+    if symbol and not regime:
+        try:
+            import numpy as np
+
+            from trading.data.price_cache import get_history
+
+            hist = get_history(str(symbol).strip().upper(), period="6mo")
+            if hist is not None and not hist.empty:
+                cm = {str(c).lower(): c for c in hist.columns}
+                close = hist[cm.get("close", hist.columns[0])].astype(float)
+                rets = close.pct_change().dropna()
+                if len(rets) >= 20:
+                    ret_20 = float(close.iloc[-1] / close.iloc[-21] - 1) if len(close) > 21 else float(rets.tail(20).sum())
+                    vol = float(rets.tail(40).std() * (252 ** 0.5))
+                    metrics = {
+                        "ret_20d": round(ret_20 * 100, 2),
+                        "vol_ann": round(vol * 100, 2),
+                    }
+                    if volatility is None:
+                        volatility = vol
+                    if vol >= 0.28:
+                        regime = "volatile"
+                        reason = f"elevated annualized vol (~{vol*100:.0f}%)"
+                    elif ret_20 >= 0.04:
+                        regime = "bull"
+                        reason = f"20d trend up ({ret_20*100:+.1f}%)"
+                    elif ret_20 <= -0.04:
+                        regime = "bear"
+                        reason = f"20d trend down ({ret_20*100:+.1f}%)"
+                    else:
+                        regime = "sideways"
+                        reason = "no strong 20d trend"
+        except Exception as e:
+            logger.debug("recommend_strategy regime infer failed: %s", e)
+
+    if not regime:
+        regime = "sideways"
+
+    # Map to registry-friendly strategy class names used by Backtest
     regime_map = {
-        "bull": ["MACD", "SMA Crossover", "trend_following"],
-        "bear": ["RSI", "Bollinger Bands", "mean_reversion"],
-        "sideways": ["RSI", "Bollinger Bands", "mean_reversion"],
-        "volatile": ["Bollinger Bands", "MACD", "volatility"],
-        "trending": ["MACD", "SMA Crossover"],
+        "bull": ["MACDStrategy", "SMAStrategy", "RSIStrategy"],
+        "bear": ["RSIStrategy", "BollingerStrategy", "MACDStrategy"],
+        "sideways": ["BollingerStrategy", "RSIStrategy", "SMAStrategy"],
+        "volatile": ["BollingerStrategy", "RSIStrategy", "MACDStrategy"],
+        "trending": ["MACDStrategy", "SMAStrategy", "RSIStrategy"],
     }
-    regime = (market_regime or "sideways").lower()
-    strategies = regime_map.get(regime, ["RSI", "Bollinger Bands"])
-    return {"success": True, "market_regime": regime, "recommended_strategies": strategies}
+    strategies = regime_map.get(regime, ["RSIStrategy", "BollingerStrategy"])
+    primary = strategies[0]
+    return {
+        "success": True,
+        "symbol": (symbol or "").upper() or None,
+        "market_regime": regime,
+        "reason": reason,
+        "recommended_strategies": strategies,
+        "primary_strategy": primary,
+        "metrics": metrics,
+        "note": "Rule-based playbook for this tape — backtest before sizing.",
+    }
 
 
 def recommend_model(
@@ -516,6 +569,7 @@ def optimize_strategy_params(
     method: str = "pso",
     metric: str = "sharpe_ratio",
     max_evaluations: int = 60,
+    period: str = "2y",
 ) -> Dict[str, Any]:
     """Optimize a strategy's parameters on real history with out-of-sample
     validation (train on first 75%, report held-out metrics)."""
@@ -527,7 +581,10 @@ def optimize_strategy_params(
             optimize_strategy_validated,
         )
 
-        raw = yf.Ticker(symbol).history(period="2y", interval="1d")
+        hist_period = (period or "2y").strip().lower()
+        if hist_period not in {"6mo", "1y", "2y", "5y"}:
+            hist_period = "2y"
+        raw = yf.Ticker(symbol).history(period=hist_period, interval="1d")
         if raw is None or raw.empty:
             return {"success": False, "error": f"no price data for {symbol}"}
         if getattr(raw.index, "tz", None) is not None:
@@ -537,16 +594,44 @@ def optimize_strategy_params(
             strategy, raw, train_fraction=0.75, method=method, metric=metric,
             max_evaluations=max_evaluations,
         )
+        best_params = getattr(run, "best_params", {}) or {}
+        oos = getattr(run, "oos_best_metrics", {}) or {}
+        saved = False
+        warning = None
+        oos_active = int((oos or {}).get("active_bars") or 0)
+        oos_buys = int((oos or {}).get("buy_events") or 0)
+        try:
+            from trading.services.self_tune import adopt_params, clear_adopted_params
+
+            if best_params and oos_active > 0 and oos_buys > 0:
+                adopt_params(
+                    strategy, symbol, best_params,
+                    oos_metrics=oos if isinstance(oos, dict) else {},
+                    source="backtest_optimize",
+                )
+                saved = True
+            elif best_params:
+                # Dead OOS challenger must not replace working defaults
+                clear_adopted_params(strategy, symbol)
+                warning = (
+                    "Out-of-sample window had no long trades with these params "
+                    "— not saved. Backtest will use defaults."
+                )
+        except Exception as e:
+            logger.warning("strategy param adopt failed: %s", e)
         return {
             "success": True,
             "strategy": strategy,
             "symbol": symbol,
-            "best_params": getattr(run, "best_params", {}),
+            "period": hist_period,
+            "train_range": getattr(run, "train_range", None),
+            "test_range": getattr(run, "test_range", None),
+            "best_params": best_params,
             "train_metrics": getattr(run, "best_metrics", {}),
-            "oos_metrics": getattr(run, "oos_best_metrics", {}) or {},
+            "oos_metrics": oos,
             "deflated_sharpe": getattr(run, "deflated_sharpe", None),
-            "note": "trust the out-of-sample numbers; a large train->test "
-                    "drop is the overfit signature",
+            "saved": saved,
+            "warning": warning,
         }
     except Exception as e:  # noqa: BLE001
         logger.exception("optimize_strategy_params failed: %s", e)

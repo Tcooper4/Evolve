@@ -24,8 +24,8 @@ class ATRConfig:
     multiplier: float = 2.0
     min_volume: float = 1000.0
     min_price: float = 1.0
-    use_volatility_filter: bool = True
-    volatility_threshold: float = 0.02
+    use_volatility_filter: bool = False
+    volatility_threshold: float = 0.015
 
 
 class ATRStrategy:

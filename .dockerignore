@@ -29,6 +29,19 @@ wheels/
 venv/
 env/
 ENV/
+.venv/
+evolve_venv/
+
+# Local caches / heavy artifacts (keep image lean)
+cache/
+node_modules/
+web/frontend/node_modules/
+models/
+*.joblib
+*.pt
+*.pth
+*.onnx
+*.html
 
 # IDE
 .idea/

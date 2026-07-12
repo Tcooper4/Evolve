@@ -251,7 +251,16 @@ class WalkForwardValidator:
                     "forecast",
                     result.get("predictions", [])
                 )
-                if not forecast_vals:
+                if forecast_vals is None:
+                    continue
+                # Router returns ndarray — never use truthiness on arrays
+                try:
+                    forecast_vals = list(
+                        np.asarray(forecast_vals, dtype=float).ravel()
+                    )
+                except Exception:
+                    continue
+                if len(forecast_vals) == 0:
                     continue
 
                 # Actual values for this window

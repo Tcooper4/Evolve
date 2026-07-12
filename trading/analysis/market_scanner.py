@@ -33,6 +33,7 @@ UNIVERSE_FILES = {
     "sp100": "data/universes/sp100.json",
     "sp500": "data/universes/sp500.json",
     "nasdaq100": "data/universes/nasdaq100.json",
+    "sp500_nasdaq100": "data/universes/sp500_nasdaq100.json",
     "russell1000": "data/universes/russell1000.json",
     "russell3000": "data/universes/russell3000.json",
 }

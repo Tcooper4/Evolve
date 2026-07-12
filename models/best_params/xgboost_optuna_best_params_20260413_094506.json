@@ -1,0 +1,15 @@
+{
+  "model_type": "xgboost_optuna",
+  "best_params": {
+    "n_estimators": 136,
+    "max_depth": 5,
+    "learning_rate": 0.01228467754877085,
+    "subsample": 0.992059628299339,
+    "colsample_bytree": 0.9704031417020298,
+    "reg_alpha": 0.07031293094212258,
+    "reg_lambda": 6.713884047070156
+  },
+  "best_score": 0.010055993137720865,
+  "timestamp": "2026-04-13T09:45:06.156565",
+  "backend": "optuna"
+}

@@ -51,9 +51,12 @@ def detect_significant_candles(
     df["price_change_pct"] = df["close"].pct_change()
     rolling_vol = df["volume"].rolling(20, min_periods=5).mean()
     df["volume_ratio"] = df["volume"] / rolling_vol.clip(lower=1)
-    df["is_significant"] = (df["volume_ratio"] >= volume_threshold) & (
+    # Flag abnormal volume: (2× vol AND ≥2% move) OR extreme 3× volume alone
+    vol_and_move = (df["volume_ratio"] >= volume_threshold) & (
         df["price_change_pct"].abs() >= price_threshold
     )
+    vol_extreme = df["volume_ratio"] >= max(volume_threshold * 1.5, 3.0)
+    df["is_significant"] = vol_and_move | vol_extreme
     df["candle_type"] = np.where(
         df["price_change_pct"] > 0,
         "bullish",

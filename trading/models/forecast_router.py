@@ -34,7 +34,7 @@ import pandas as pd
 
 from trading.models.forecast_features import add_forecast_features, prepare_forecast_data
 from trading.models.arima_model import ARIMAModel
-from trading.models.lstm_model import LSTMModel
+from trading.models.lstm_model import LSTMForecaster as LSTMModel
 from trading.models.ridge_model import RidgeModel
 from trading.models.xgboost_model import XGBoostModel
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ _DISCOVERY_CLASS_MAP = {
     "catboost": ("trading.models.catboost_model", "CatBoostModel"),
     "ensemble": ("trading.models.ensemble_model", "EnsembleModel"),
     "garch": ("trading.models.garch_model", "GARCHModel"),
-    "lstm": ("trading.models.lstm_model", "LSTMModel"),
+    "lstm": ("trading.models.lstm_model", "LSTMForecaster"),
     "prophet": ("trading.models.prophet_model", "ProphetModel"),
     "ridge": ("trading.models.ridge_model", "RidgeModel"),
     "tcn": ("trading.models.tcn_model", "TCNModel"),
@@ -187,9 +187,10 @@ class ForecastRouter:
         config.update(kwargs)
 
         if selected_model == "lstm":
-            config["input_dim"] = (
-                data.shape[1] if hasattr(data, "shape") else 1
-            )
+            # Univariate close-only keeps input_size aligned with the net
+            feats = config.get("feature_columns") or ["close"]
+            config["feature_columns"] = list(feats)
+            config["input_dim"] = len(config["feature_columns"])
             config["output_dim"] = 1
 
         if selected_model == "hybrid":
@@ -603,7 +604,20 @@ class ForecastRouter:
         """Return default config kwargs for a model (for instantiation)."""
         defaults = {
             "arima": {"order": (5, 1, 0), "use_auto_arima": True, "target_column": "close"},
-            "lstm": {"target_column": "close", "sequence_length": 60, "hidden_dim": 64, "num_layers": 2, "dropout": 0.2, "epochs": 50, "batch_size": 32, "learning_rate": 0.001},
+            "lstm": {
+                "target_column": "close",
+                "feature_columns": ["close"],
+                "sequence_length": 30,
+                "hidden_dim": 64,
+                "hidden_size": 64,
+                "num_layers": 2,
+                "dropout": 0.2,
+                "epochs": 40,
+                "batch_size": 32,
+                "learning_rate": 0.001,
+                "bidirectional": False,
+                "use_attention": False,
+            },
             "xgboost": {"target_column": "close", "n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
             "prophet": {"date_column": "ds", "target_column": "close", "prophet_params": {}},
             "ridge": {"target_column": "close", "alpha": 1.0, "max_iter": 1000},
@@ -619,7 +633,40 @@ class ForecastRouter:
             "tcn": {"target_column": "close", "feature_columns": ["close", "volume"], "sequence_length": 20},
             "catboost": {"target_column": "close", "iterations": 500, "depth": 6},
         }
-        return defaults.get(model_name, {"target_column": "close"}).copy()
+        cfg = defaults.get(model_name, {"target_column": "close"}).copy()
+        # Merge Optuna / tuned params from models/best_params when present
+        try:
+            from pathlib import Path
+            import json
+
+            best_dir = Path("models/best_params")
+            mapping = {
+                "xgboost": ["xgboost_consensus_best.json", "xgboost_optuna_best_params_*.json"],
+                "ridge": ["ridge_consensus_best.json"],
+                "catboost": ["catboost_consensus_best.json"],
+                "prophet": ["prophet_consensus_best.json"],
+                "garch": ["garch_consensus_best.json"],
+                "lstm": ["lstm_optuna_best_params_*.json", "lstm_consensus_best.json"],
+            }
+            for name in mapping.get(model_name, []):
+                if "*" in name:
+                    files = sorted(best_dir.glob(name), key=lambda p: p.stat().st_mtime, reverse=True)
+                    path = files[0] if files else None
+                else:
+                    path = best_dir / name
+                    if not path.exists():
+                        path = None
+                if path is None:
+                    continue
+                data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+                params = data.get("best_params") or data
+                if isinstance(params, dict):
+                    cfg.update({k: v for k, v in params.items() if v is not None})
+                    logger.info("Loaded tuned params for %s from %s", model_name, path.name)
+                break
+        except Exception as e:
+            logger.debug("tuned params load skipped for %s: %s", model_name, e)
+        return cfg
 
     def _generate_simple_forecast(self, data: pd.DataFrame, horizon: int) -> np.ndarray:
         """Generate a simple constant/last-value forecast."""
@@ -963,6 +1010,17 @@ class ForecastRouter:
 
             # Prepare data with defensive checks
             prepared_data = self._prepare_data_safely(data)
+
+            # LSTM consensus path is univariate close-only (avoids input_size drift)
+            if str(model_type).lower() in ("lstm", "transformer"):
+                try:
+                    _cm = {str(c).lower(): c for c in prepared_data.columns}
+                    if "close" in _cm:
+                        prepared_data = prepared_data[[_cm["close"]]].rename(
+                            columns={_cm["close"]: "close"}
+                        )
+                except Exception as _e:
+                    logger.debug("univariate slice skipped: %s", _e)
 
             # Select model with fallback logic
             selected_model = self._select_model_with_fallback(prepared_data, model_type)
@@ -1709,11 +1767,15 @@ class ForecastRouter:
                     d = 0
             model_dirs[name] = d
 
-        # Conviction from consensus magnitude and model agreement among valid_used
-        _agreeing = sum(
-            1 for d in model_dirs.values()
-            if (d == 1 and direction == "BULLISH")
-            or (d == -1 and direction == "BEARISH"))
+        # Conviction from consensus magnitude and model agreement among valid_used.
+        # When consensus is NEUTRAL, models inside the ±0.5% band count as agreeing
+        # (previously only BULLISH/BEARISH were counted → always 0% on flat days).
+        if direction == "BULLISH":
+            _agreeing = sum(1 for d in model_dirs.values() if d == 1)
+        elif direction == "BEARISH":
+            _agreeing = sum(1 for d in model_dirs.values() if d == -1)
+        else:
+            _agreeing = sum(1 for d in model_dirs.values() if d == 0)
         _total_valid = max(len(valid_used), 1)
         _agreement_ratio = _agreeing / _total_valid
 

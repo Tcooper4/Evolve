@@ -8,7 +8,7 @@ COPY web/frontend ./
 RUN npm run build
 
 # Stage 2: Python runtime serving API + built frontend at :8000
-FROM python:3.12-slim
+FROM python:3.10-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ \
     && rm -rf /var/lib/apt/lists/*
