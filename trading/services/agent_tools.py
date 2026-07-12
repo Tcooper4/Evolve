@@ -601,21 +601,54 @@ def optimize_strategy_params(
         oos_active = int((oos or {}).get("active_bars") or 0)
         oos_buys = int((oos or {}).get("buy_events") or 0)
         try:
-            from trading.services.self_tune import adopt_params, clear_adopted_params
+            from trading.services.self_tune import (
+                adopt_params,
+                get_adopted_entry,
+            )
 
-            if best_params and oos_active > 0 and oos_buys > 0:
+            metric_key = getattr(run, "metric", metric)
+            challenger_val = (oos or {}).get(metric_key)
+            champion_entry = get_adopted_entry(strategy, symbol)
+            champion_val = (
+                (champion_entry or {}).get("oos_metrics", {}).get(metric_key)
+                if champion_entry else None
+            )
+
+            if not best_params or oos_active <= 0 or oos_buys <= 0:
+                # DISCIPLINE FIX (found reviewing this diff): a dead OOS
+                # window used to CLEAR whatever champion was already
+                # adopted - a failed run destroying previously-good,
+                # separately-earned state. Now it changes nothing.
+                warning = (
+                    "Out-of-sample window had no long trades with these "
+                    "params - not saved, existing parameters (if any) "
+                    "kept. Backtest will use current defaults/champion."
+                )
+            elif champion_val is None or challenger_val is None or (
+                challenger_val > champion_val + 0.05
+            ):
+                # No prior champion (bootstrap), no comparable metric, or
+                # a genuine out-of-sample win - proceed.
                 adopt_params(
                     strategy, symbol, best_params,
                     oos_metrics=oos if isinstance(oos, dict) else {},
                     source="backtest_optimize",
                 )
                 saved = True
-            elif best_params:
-                # Dead OOS challenger must not replace working defaults
-                clear_adopted_params(strategy, symbol)
+            else:
+                # DISCIPLINE FIX: this used to adopt UNCONDITIONALLY once
+                # the OOS window merely had trades - a strictly worse
+                # challenger (verified: OOS Sharpe -1.2) silently
+                # overwrote a good champion (OOS Sharpe 2.5) with zero
+                # comparison. That defeated the entire point of
+                # champion/challenger discipline documented in
+                # self_tune.py's own module docstring. Now: same
+                # OOS-margin gate as the scheduled tuner.
                 warning = (
-                    "Out-of-sample window had no long trades with these params "
-                    "— not saved. Backtest will use defaults."
+                    f"This run's out-of-sample {metric_key} "
+                    f"({challenger_val:.3f}) didn't beat the current "
+                    f"champion ({champion_val:.3f}) by enough - keeping "
+                    f"the existing parameters."
                 )
         except Exception as e:
             logger.warning("strategy param adopt failed: %s", e)

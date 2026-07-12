@@ -156,3 +156,114 @@ class TestDeflatedSharpe:
         assert d["deflated_sharpe"] < 0.95
         # sentinel filter: null benchmark must be a sane per-day Sharpe
         assert abs(d["expected_max_sharpe_under_null"]) < 2.0
+
+
+class TestOptimizeToolRespectsChampionChallengerDiscipline:
+    """Regression test for a real bug found reviewing Cursor's parity work:
+    agent_tools.optimize_strategy_params called self_tune.adopt_params
+    unconditionally whenever the OOS window had any trades at all - a
+    strictly WORSE challenger (OOS Sharpe -1.2) silently overwrote a good
+    champion (OOS Sharpe 2.5) with zero comparison, defeating the entire
+    point of the champion/challenger discipline. Also: a dead/no-trade
+    run used to CLEAR any existing good champion instead of leaving it
+    alone. Both fixed; both locked here."""
+
+    def _fake_ticker(self):
+        import numpy as np
+        import pandas as pd
+
+        class FakeTicker:
+            def __init__(self, *a, **k):
+                pass
+
+            def history(self, **k):
+                rng = np.random.default_rng(3)
+                N = 300
+                idx = pd.date_range("2024-01-01", periods=N, freq="B")
+                c = 100 * np.exp(np.cumsum(rng.normal(0.0004, 0.011, N)))
+                return pd.DataFrame({
+                    "Open": c * 0.999, "High": c * 1.005, "Low": c * 0.995,
+                    "Close": c, "Volume": rng.integers(1e6, 3e6, N)},
+                    index=idx)
+
+        return FakeTicker
+
+    def _plant_champion(self, monkeypatch, tmp_path, sharpe=2.5):
+        import trading.services.self_tune as ST
+        monkeypatch.setattr(ST, "STORE_PATH", tmp_path / "st.json")
+        from trading.services.self_tune import adopt_params
+        adopt_params("RSIStrategy", "SPY", {"period": 21, "buy_threshold": 25},
+                     oos_metrics={"sharpe_ratio": sharpe}, source="prior")
+
+    def test_worse_challenger_does_not_overwrite_champion(
+        self, monkeypatch, tmp_path
+    ):
+        from unittest.mock import patch
+
+        self._plant_champion(monkeypatch, tmp_path, sharpe=2.5)
+        import trading.optimization.strategy_backtest_objective as OBJ
+        from trading.services.agent_tools import optimize_strategy_params
+        from trading.services.self_tune import get_adopted_params
+
+        class WorseRun:
+            best_params = {"period": 5, "buy_threshold": 50}
+            oos_best_metrics = {"sharpe_ratio": -1.2, "active_bars": 3,
+                                "buy_events": 2}
+            metric = "sharpe_ratio"
+
+        with patch("yfinance.Ticker", self._fake_ticker()), \
+             patch.object(OBJ, "optimize_strategy_validated",
+                          return_value=WorseRun()):
+            r = optimize_strategy_params("RSIStrategy", "SPY",
+                                         metric="sharpe_ratio")
+        assert r["saved"] is False
+        assert get_adopted_params("RSIStrategy", "SPY") == \
+            {"period": 21, "buy_threshold": 25}
+
+    def test_better_challenger_still_adopts(self, monkeypatch, tmp_path):
+        from unittest.mock import patch
+
+        self._plant_champion(monkeypatch, tmp_path, sharpe=1.0)
+        import trading.optimization.strategy_backtest_objective as OBJ
+        from trading.services.agent_tools import optimize_strategy_params
+        from trading.services.self_tune import get_adopted_params
+
+        class BetterRun:
+            best_params = {"period": 14, "buy_threshold": 30}
+            oos_best_metrics = {"sharpe_ratio": 2.0, "active_bars": 5,
+                                "buy_events": 3}
+            metric = "sharpe_ratio"
+
+        with patch("yfinance.Ticker", self._fake_ticker()), \
+             patch.object(OBJ, "optimize_strategy_validated",
+                          return_value=BetterRun()):
+            r = optimize_strategy_params("RSIStrategy", "SPY",
+                                         metric="sharpe_ratio")
+        assert r["saved"] is True
+        assert get_adopted_params("RSIStrategy", "SPY") == \
+            {"period": 14, "buy_threshold": 30}
+
+    def test_dead_oos_window_leaves_existing_champion_untouched(
+        self, monkeypatch, tmp_path
+    ):
+        from unittest.mock import patch
+
+        self._plant_champion(monkeypatch, tmp_path, sharpe=2.5)
+        import trading.optimization.strategy_backtest_objective as OBJ
+        from trading.services.agent_tools import optimize_strategy_params
+        from trading.services.self_tune import get_adopted_params
+
+        class DeadRun:
+            best_params = {"period": 99, "buy_threshold": 99}
+            oos_best_metrics = {"sharpe_ratio": 0.0, "active_bars": 0,
+                                "buy_events": 0}
+            metric = "sharpe_ratio"
+
+        with patch("yfinance.Ticker", self._fake_ticker()), \
+             patch.object(OBJ, "optimize_strategy_validated",
+                          return_value=DeadRun()):
+            r = optimize_strategy_params("RSIStrategy", "SPY",
+                                         metric="sharpe_ratio")
+        assert r["saved"] is False
+        assert get_adopted_params("RSIStrategy", "SPY") == \
+            {"period": 21, "buy_threshold": 25}  # still the champion

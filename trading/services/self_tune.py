@@ -62,6 +62,15 @@ def get_adopted_params(strategy: str, symbol: str) -> Optional[Dict[str, Any]]:
     return dict(entry["params"]) if entry else None
 
 
+def get_adopted_entry(strategy: str, symbol: str) -> Optional[Dict[str, Any]]:
+    """Full adoption record (params + oos_metrics + source), or None.
+    Needed by any caller that must compare a new challenger against the
+    champion's recorded OOS performance before overwriting it - see
+    agent_tools.optimize_strategy_params for why this matters."""
+    entry = _load_store()["adopted"].get(f"{strategy}:{symbol}")
+    return dict(entry) if entry else None
+
+
 def clear_adopted_params(strategy: str, symbol: str) -> bool:
     """Remove adopted params for (strategy, symbol). Returns True if removed."""
     store = _load_store()
