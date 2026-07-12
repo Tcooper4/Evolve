@@ -351,3 +351,41 @@ class TestParitySurfaceSweep:
         assert c.post("/api/backtest/model", json={"symbol": "SPY"}).status_code == 401
         r = c.post("/api/backtest/model", json={"symbol": "SPY"}, headers=H)
         assert r.status_code != 500
+
+
+class TestStructuredPatternData:
+    """get_pattern_analysis used to discard the detector's per-pattern
+    start_date/end_date/type/confidence down to a text-only summary,
+    making it impossible to plot patterns on a chart. Structured data
+    is now exposed alongside the summary."""
+
+    def test_patterns_field_has_dated_structured_entries(self, monkeypatch):
+        import numpy as np
+        import pandas as pd
+
+        rng = np.random.default_rng(4)
+        N = 130
+        idx = pd.date_range("2025-01-01", periods=N, freq="B")
+        close = 100 * np.exp(np.cumsum(rng.normal(0.0004, 0.015, N)))
+        hist = pd.DataFrame({
+            "Open": close * 0.999, "High": close * 1.01,
+            "Low": close * 0.99, "Close": close,
+            "Volume": rng.integers(1e6, 3e6, N)}, index=idx)
+
+        class FakeTicker:
+            def __init__(self, *a, **k):
+                pass
+
+            def history(self, **k):
+                return hist
+
+        monkeypatch.setattr("yfinance.Ticker", FakeTicker)
+        from trading.services.agent_tools import get_pattern_analysis
+        r = get_pattern_analysis("SPY")
+        assert r["success"] is True
+        assert "patterns" in r and isinstance(r["patterns"], list)
+        if r["patterns"]:
+            p0 = r["patterns"][0]
+            assert {"name", "type", "confidence", "start_date",
+                   "end_date", "description"} <= set(p0)
+            assert p0["start_date"] is not None  # chartable, not just prose

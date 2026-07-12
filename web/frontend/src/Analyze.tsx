@@ -1,9 +1,11 @@
 import { useState } from "react";
 import {
-  getCausal, getEarnings, getForecast, getNews, getOptions, getPatterns,
-  getPlaybook, getRisk, getScore, getSignalIc, runGnn, runMonteCarlo,
-  type ScoreResult,
+  getCausal, getChartEvents, getEarnings, getForecast, getHistory, getNews,
+  getOptions, getPatterns, getPlaybook, getRisk, getScore, getSignalIc,
+  runGnn, runMonteCarlo,
+  type Candle, type ChartEvent, type ScoreResult,
 } from "./api";
+import Chart, { type ChartMarker } from "./Chart";
 import Sparkline from "./Sparkline";
 
 function ScoreRing({ score }: { score: number }) {
@@ -98,6 +100,9 @@ export default function Analyze({
   const [loading, setLoading] = useState(false);
   const [extrasLoading, setExtrasLoading] = useState(false);
   const [toolBusy, setToolBusy] = useState(false);
+  const [candles, setCandles] = useState<Candle[]>([]);
+  const [events, setEvents] = useState<ChartEvent[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
 
   async function run() {
     setLoading(true);
@@ -113,12 +118,23 @@ export default function Analyze({
     setPlaybook(null);
     setEarnings(null);
     setTool("main");
+    setCandles([]);
+    setEvents([]);
     try {
       const score = await getScore(input, mode);
       setRes(score);
       setLoading(false);
 
       setExtrasLoading(true);
+      setChartLoading(true);
+      getHistory(input, "6mo")
+        .then((h) => setCandles(h.candles))
+        .catch(() => setCandles([]))
+        .finally(() => setChartLoading(false));
+      getChartEvents(input, "6mo")
+        .then((ev) => setEvents(ev.events ?? []))
+        .catch(() => setEvents([]));
+
       const [n, rk, pb, er] = await Promise.all([
         getNews(input).catch(() => ({ items: [] })),
         getRisk(input).catch(() => ({ metrics: null })),
@@ -343,6 +359,41 @@ export default function Analyze({
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="chart-head">
+              <div className="legend"><b>{res.symbol}</b> · 6mo daily</div>
+            </div>
+            {chartLoading ? (
+              <div className="skeleton" style={{ height: 320, margin: 18 }} />
+            ) : candles.length > 0 ? (
+              <Chart candles={candles} markers={[
+                ...events.map((e): ChartMarker => ({
+                  time: e.time, title: e.title, text: e.text, color: e.color,
+                })),
+                // Pattern markers: PLOTTED, not just described - the
+                // detector already computes start_date/type/confidence
+                // per pattern (agent_tools.get_pattern_analysis used to
+                // discard this down to a text summary). Appears once the
+                // Patterns tool below has been opened.
+                ...(Array.isArray(patterns?.patterns)
+                  ? (patterns!.patterns as Record<string, unknown>[])
+                      .filter((p) => p.start_date)
+                      .map((p): ChartMarker => ({
+                        time: String(p.start_date),
+                        title: String(p.name ?? "Pattern"),
+                        text: p.description ? String(p.description).slice(0, 120) : undefined,
+                        color: p.type === "bullish" ? "var(--up)"
+                          : p.type === "bearish" ? "var(--down)" : "var(--violet)",
+                      }))
+                  : []),
+              ]} />
+            ) : (
+              <div className="empty" style={{ padding: "40px 0" }}>
+                No chart data for {res.symbol}.
               </div>
             )}
           </div>

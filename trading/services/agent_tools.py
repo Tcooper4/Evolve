@@ -377,6 +377,22 @@ def get_pattern_analysis(symbol: str) -> Dict[str, Any]:
             "symbol": sym,
             "summary": "\n".join(lines),
             "pattern_count": len(patterns),
+            # STRUCTURED DATA (2026-07): the detector already computes
+            # start_date/end_date/type/confidence per pattern - it was
+            # being discarded down to a text summary. Exposed here so
+            # the UI can plot patterns as dated chart markers instead of
+            # only reading about them.
+            "patterns": [
+                {
+                    "name": p.get("name"),
+                    "type": p.get("type"),
+                    "confidence": p.get("confidence"),
+                    "start_date": p.get("start_date"),
+                    "end_date": p.get("end_date"),
+                    "description": p.get("description"),
+                }
+                for p in patterns[:12]
+            ],
         }
     except Exception as e:
         logger.exception("get_pattern_analysis failed: %s", e)
