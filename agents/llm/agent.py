@@ -3237,6 +3237,19 @@ def get_evolve_platform_tool_registry():
             },
         },
 
+        {
+            "name": "get_breaking_news",
+            "description": (
+                "Fast market-wide breaking headlines (not symbol-specific) - "
+                "use for 'what's happening in the market right now'."
+            ),
+            "function": _agent_tools.get_breaking_news,
+            "parameters": {
+                "type": "object",
+                "properties": {"max_items": {"type": "integer"}},
+            },
+        },
+
     ]
 
 

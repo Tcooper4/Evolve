@@ -555,3 +555,25 @@ class TestWalkForwardFolds:
         assert {"window", "train_start", "test_end", "mae", "mape",
                "directional_accuracy"} <= set(f0)
         assert f0["directional_accuracy"] == 0.62
+
+
+class TestBreakingNewsToolParity:
+    """/api/news/breaking shipped UI-only - a real gap against the
+    'guided analyst can do everything the codebase can do' principle.
+    Now a chat/MCP tool too, degrading gracefully offline."""
+
+    def test_registered_and_parity_holds(self):
+        import asyncio
+
+        import trading.services.mcp_server as M
+        from agents.llm.agent import get_evolve_platform_tool_registry
+        reg = {t["name"] for t in get_evolve_platform_tool_registry()}
+        mcp_names = {t.name for t in asyncio.run(M.mcp.list_tools())}
+        assert "get_breaking_news" in reg
+        assert reg <= mcp_names
+
+    def test_degrades_offline(self):
+        from trading.services.agent_tools import get_breaking_news
+        r = get_breaking_news()
+        assert r["success"] in (True, False)
+        assert isinstance(r["items"], list)

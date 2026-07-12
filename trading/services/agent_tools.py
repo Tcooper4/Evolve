@@ -931,3 +931,17 @@ def get_sec_filings(symbol: str) -> Dict[str, Any]:
     except Exception as e:  # noqa: BLE001
         logger.exception("get_sec_filings failed: %s", e)
         return {"success": False, "error": str(e)}
+
+
+def get_breaking_news(max_items: int = 8) -> Dict[str, Any]:
+    """Fast market-wide breaking headlines (Twitter/X wire accounts when
+    keyed, else RSS fallback) - for 'what's happening in the market right
+    now' rather than a single symbol."""
+    try:
+        from trading.data.twitter_headlines import get_breaking_headlines
+
+        items = get_breaking_headlines(max_items=max_items) or []
+        return {"success": True, "items": items}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_breaking_news failed: %s", e)
+        return {"success": False, "items": [], "error": str(e)}

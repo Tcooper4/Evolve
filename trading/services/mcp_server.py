@@ -380,3 +380,11 @@ def get_sec_filings(symbol: str) -> dict:
     from trading.services.agent_tools import get_sec_filings as _f
 
     return _f(symbol)
+
+
+@mcp.tool()
+def get_breaking_news(max_items: int = 8) -> dict:
+    """Fast market-wide breaking headlines, not symbol-specific."""
+    from trading.services.agent_tools import get_breaking_news as _f
+
+    return _f(max_items)
