@@ -746,6 +746,11 @@ def backtest_model(req: ModelBacktestRequest,
             "success": True,
             "kind": "model",
             "folds": folds,
+            "folds_note": (
+                None if folds else
+                "No per-window fold detail — need enough history for ≥2 "
+                "walk-forward windows. Headline averages can hide regime luck."
+            ),
             "symbol": sym,
             "model": model,
             "period": period,
@@ -809,6 +814,7 @@ class KeysRequest(BaseModel):
     news: Optional[str] = None
     reddit_client_id: Optional[str] = None
     reddit_client_secret: Optional[str] = None
+    twitter_bearer: Optional[str] = None
 
 
 @app.get("/api/settings/keys")
@@ -827,6 +833,7 @@ def get_keys(user: str = Depends(current_user)) -> Dict[str, bool]:
         "reddit": bool(
             keys.get("REDDIT_CLIENT_ID") and keys.get("REDDIT_CLIENT_SECRET")
         ),
+        "twitter": bool(keys.get("TWITTER_BEARER_TOKEN")),
     }
 
 
@@ -847,6 +854,8 @@ def save_keys(req: KeysRequest,
         keys["REDDIT_CLIENT_ID"] = req.reddit_client_id
     if req.reddit_client_secret is not None:
         keys["REDDIT_CLIENT_SECRET"] = req.reddit_client_secret
+    if req.twitter_bearer is not None:
+        keys["TWITTER_BEARER_TOKEN"] = req.twitter_bearer
     save_user_api_keys(uid, keys)
     try:
         from config.llm_config import reset_llm_config

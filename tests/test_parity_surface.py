@@ -418,6 +418,25 @@ class TestRecommendationTracker:
         recs = p.get_recommendations(price_fn=lambda _: None)
         assert recs[0]["last_price"] is None and recs[0]["change_pct"] is None
 
+    def test_paper_buy_marks_acted_and_full_exit_closes(self, pp):
+        p = pp.PaperPortfolio(user_id="user:t")
+        p.track_recommendation("NVDA", score=8.0, price_at_rec=100.0)
+        buy = p.record_trade("NVDA", "buy", 5, 105.0)
+        assert buy["success"]
+        assert buy.get("recommendation", {}).get("status") == "acted"
+        recs = p.get_recommendations(price_fn=lambda _: 110.0)
+        openish = [r for r in recs if r["symbol"] == "NVDA" and r["status"] == "acted"]
+        assert len(openish) == 1
+        assert openish[0]["acted_price"] == 105.0
+        sell = p.record_trade("NVDA", "sell", 5, 120.0)
+        assert sell["success"]
+        assert sell.get("recommendation", {}).get("status") == "closed"
+        closed = [r for r in p.get_recommendations(price_fn=lambda _: None)
+                  if r["symbol"] == "NVDA" and r["status"] == "closed"]
+        assert len(closed) == 1
+        assert closed[0]["closed_price"] == 120.0
+        assert closed[0]["change_pct"] == 20.0  # 100 → 120
+
     def test_isolated_per_user(self, pp):
         pp.PaperPortfolio(user_id="user:a").track_recommendation("SPY")
         assert pp.PaperPortfolio(user_id="user:b").get_recommendations(

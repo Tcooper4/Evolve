@@ -346,6 +346,11 @@ export const getNews = (symbol: string, max_items = 8) =>
     `/api/news/${symbol}?max_items=${max_items}`,
   );
 
+export const getBreakingNews = (max_items = 8) =>
+  req<{ success: boolean; items?: Record<string, unknown>[]; source?: string; error?: string }>(
+    `/api/news/breaking?max_items=${max_items}`,
+  );
+
 export const getForecast = (symbol: string, horizon = 7) =>
   req<{ success: boolean; forecast?: Record<string, unknown>; error?: string }>(
     `/api/forecast/${symbol}?horizon=${horizon}`,
@@ -371,13 +376,14 @@ export const runBriefing = (universe = "sp100", min_ai_score = 6.0) =>
   });
 
 export const getKeys = () =>
-  req<{ anthropic: boolean; openai: boolean; news: boolean; reddit?: boolean }>(
+  req<{ anthropic: boolean; openai: boolean; news: boolean; reddit?: boolean; twitter?: boolean }>(
     "/api/settings/keys",
   );
 
 export const saveKeys = (k: {
   anthropic?: string; openai?: string; news?: string;
   reddit_client_id?: string; reddit_client_secret?: string;
+  twitter_bearer?: string;
 }) =>
   req<{ ok: boolean }>("/api/settings/keys", {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -426,7 +432,10 @@ export interface PortfolioSummary {
 export const getPortfolio = () => req<PortfolioSummary>("/api/portfolio");
 export const recordTrade = (symbol: string, side: "buy" | "sell",
                             quantity: number, price?: number) =>
-  req<{ success: boolean; error?: string; realized_pnl?: number }>(
+  req<{
+    success: boolean; error?: string; realized_pnl?: number;
+    recommendation?: { symbol?: string; status?: string };
+  }>(
     "/api/portfolio/trade",
     { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symbol, side, quantity, price }) },
@@ -444,6 +453,7 @@ export interface AccountRisk {
     success: boolean; full_kelly_fraction?: number; half_kelly_fraction?: number;
     half_kelly_dollars?: number; note?: string;
   } | null;
+  kelly_note?: string;
   portfolio_metrics?: Record<string, string | number> | null;
   stress?: Record<string, StressEntry> | null;
   stress_note?: string;
@@ -454,7 +464,11 @@ export const getAccountRisk = () => req<AccountRisk>("/api/portfolio/risk");
 export interface TrackedRec {
   id: string; symbol: string; source: string; score: number | null;
   price_at_rec: number | null; note: string; created_at: string;
+  status?: "open" | "acted" | "closed" | string;
+  acted_at?: string | null; acted_price?: number | null;
+  closed_at?: string | null; closed_price?: number | null;
   last_price: number | null; change_pct: number | null;
+  change_since_acted_pct?: number | null;
 }
 export const getRecs = () =>
   req<{ success: boolean; recommendations: TrackedRec[] }>("/api/recs");

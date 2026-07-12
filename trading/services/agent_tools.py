@@ -810,9 +810,12 @@ def get_position_size(
             "full_kelly_fraction": round(kelly, 4),
             "half_kelly_fraction": round(half, 4),
             "half_kelly_dollars": round(half * float(account_size), 2),
-            "note": "half Kelly is the reference point, full Kelly the "
-                    "ceiling; zero means this edge doesn't justify a "
-                    "position at all",
+            "note": (
+                "Guide only — half Kelly from YOUR closed paper trades "
+                "(not live broker fills). Paper edge ≠ live edge; size "
+                "down further if your sample is small or one-sided. "
+                "Full Kelly is a ceiling, not a target."
+            ),
         }
     except Exception as e:  # noqa: BLE001
         logger.exception("get_position_size failed: %s", e)

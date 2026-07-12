@@ -71,7 +71,7 @@ def get_news_for_date(symbol: str, date_str: str, n_articles: int = 5) -> List[D
     Fetch news articles from around a specific date.
     date_str: ISO format 'YYYY-MM-DD'.
     """
-    cache_key = f"news_date:{symbol}:{date_str}:{n_articles}"
+    cache_key = f"news_date:v2:{symbol}:{date_str}:{n_articles}"
     cached = disk_cache_get(cache_key)
     if cached is not None:
         return cached
@@ -79,7 +79,19 @@ def get_news_for_date(symbol: str, date_str: str, n_articles: int = 5) -> List[D
     try:
         from trading.data.news_aggregator import get_news
 
-        articles = get_news(symbol, max_items=n_articles)
+        articles = list(get_news(symbol, max_items=max(n_articles, 8)) or [])
+        # Twitter/X dated search when bearer is set (fast breaking context)
+        try:
+            from trading.data.twitter_headlines import get_twitter_symbol_headlines
+
+            tw = get_twitter_symbol_headlines(
+                symbol, max_items=n_articles, since_date=date_str
+            )
+            if tw:
+                articles.extend(tw)
+        except Exception as _tw_e:
+            logger.debug("Twitter date overlay skipped: %s", _tw_e)
+
         if not articles:
             return []
 
@@ -92,9 +104,15 @@ def get_news_for_date(symbol: str, date_str: str, n_articles: int = 5) -> List[D
             try:
                 pub_raw = a.get("published", "") or ""
                 if not pub_raw:
+                    # Dated Twitter search already windowed — keep if source is twitter
+                    if a.get("source_type") == "twitter":
+                        relevant.append(a)
                     continue
                 s = pub_raw.replace("Z", "+00:00")
                 pub_dt = datetime.fromisoformat(s.split("+")[0])
+                # drop tz for comparison with naive window
+                if getattr(pub_dt, "tzinfo", None) is not None:
+                    pub_dt = pub_dt.replace(tzinfo=None)
                 if window_start <= pub_dt <= window_end:
                     relevant.append(a)
             except Exception:

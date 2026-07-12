@@ -337,7 +337,7 @@ export default function Analyze({
                   <div style={{ fontSize: 22, fontWeight: 700 }}>{res.symbol}</div>
                   <button className="ghost" style={{ fontSize: 12, border: "1px solid var(--border)" }}
                     onClick={trackIdea} disabled={tracked !== "idle"}
-                    title="Save this idea (no purchase) — snapshots today's price so you can see how it does">
+                    title="Save this idea (no purchase) — paper-buying later marks it Bought">
                     {tracked === "done" ? "✓ Tracking" : tracked === "saving" ? "Saving…" : "☆ Track idea"}
                   </button>
                 </div>
@@ -346,6 +346,9 @@ export default function Analyze({
                   {res.last_price != null && <> · ${Number(res.last_price).toFixed(2)}</>}
                   {mode === "short" && res.short_score != null && (
                     <> · short {Number(res.short_score).toFixed(1)}</>
+                  )}
+                  {tracked === "done" && (
+                    <> · open idea — buy in Portfolio to mark acted</>
                   )}
                 </div>
                 {res.summary && (
@@ -427,78 +430,6 @@ export default function Analyze({
             )}
           </div>
 
-          {strat && primaryStrategy && (
-            <div className="card card-pad" style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "space-between" }}>
-                <div style={{ flex: 1, minWidth: 260 }}>
-                  <div className="rail-label" style={{ marginTop: 0 }}>Suggested strategy</div>
-                  <div style={{ fontSize: 16, fontWeight: 650, marginBottom: 6 }}>
-                    {friendlyStrategy(primaryStrategy)}
-                  </div>
-                  <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 520 }}>
-                    Recent tape looks <b style={{ color: "var(--text)" }}>{regimeHint}</b>
-                    {strat.reason ? ` (${String(strat.reason)})` : ""}.
-                    {" "}This is a regime-based suggestion — not a ranked backtest winner.
-                    {alts.length > 0 && (
-                      <> Also worth trying: {alts.map(friendlyStrategy).join(", ")}.</>
-                    )}
-                  </div>
-                </div>
-                {onOpenBacktest && (
-                  <button className="primary" style={{ marginTop: 4 }}
-                    onClick={() => onOpenBacktest(input, primaryStrategy)}>
-                    Backtest {friendlyStrategy(primaryStrategy)}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {earnings && earnings.success !== false && (
-            (earnings.avg_move_1d != null || nextEarn) && (
-              <div className="card card-pad" style={{ marginBottom: 16 }}>
-                <div className="rail-label" style={{ marginTop: 0 }}>Earnings</div>
-                <div className="kpis">
-                  {nextEarn && (nextEarn.next_earnings_date != null || nextEarn.date != null) ? (
-                    <div className="card kpi" style={{ padding: "10px 12px" }}>
-                      <div className="label">Next</div>
-                      <div className="value num" style={{ fontSize: 15 }}>
-                        {String(nextEarn.next_earnings_date ?? nextEarn.date)}
-                      </div>
-                      {nextEarn.days_until != null && (
-                        <div className="sub">{Number(nextEarn.days_until)}d away</div>
-                      )}
-                    </div>
-                  ) : null}
-                  {earnings.avg_move_1d != null && (
-                    <div className="card kpi" style={{ padding: "10px 12px" }}>
-                      <div className="label">Avg 1d move</div>
-                      <div className="value num" style={{ fontSize: 16 }}>
-                        ±{Number(earnings.avg_move_1d).toFixed(1)}%
-                      </div>
-                    </div>
-                  )}
-                  {earnings.beat_rate != null && (
-                    <div className="card kpi" style={{ padding: "10px 12px" }}>
-                      <div className="label">EPS beat rate</div>
-                      <div className="value num" style={{ fontSize: 16 }}>
-                        {Number(earnings.beat_rate).toFixed(0)}%
-                      </div>
-                    </div>
-                  )}
-                  {earnings.positive_reaction_rate != null && (
-                    <div className="card kpi" style={{ padding: "10px 12px" }}>
-                      <div className="label">Positive reaction</div>
-                      <div className="value num" style={{ fontSize: 16 }}>
-                        {Number(earnings.positive_reaction_rate).toFixed(0)}%
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          )}
-
           <div className="seg" style={{ marginBottom: 12 }}>
             <button className={tool === "main" ? "active" : ""} onClick={() => setTool("main")}>Overview</button>
             <button className={tool === "monte" ? "active" : ""} onClick={() => { setTool("monte"); if (!mc) void loadMonte(); }}>Monte Carlo</button>
@@ -509,6 +440,78 @@ export default function Analyze({
 
           {tool === "main" && (
             <>
+              {strat && primaryStrategy && (
+                <div className="card card-pad" style={{ marginBottom: 16 }}>
+                  <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "space-between" }}>
+                    <div style={{ flex: 1, minWidth: 260 }}>
+                      <div className="rail-label" style={{ marginTop: 0 }}>Suggested strategy</div>
+                      <div style={{ fontSize: 16, fontWeight: 650, marginBottom: 6 }}>
+                        {friendlyStrategy(primaryStrategy)}
+                      </div>
+                      <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 520 }}>
+                        Recent tape looks <b style={{ color: "var(--text)" }}>{regimeHint}</b>
+                        {strat.reason ? ` (${String(strat.reason)})` : ""}.
+                        {" "}This is a regime-based suggestion — not a ranked backtest winner.
+                        {alts.length > 0 && (
+                          <> Also worth trying: {alts.map(friendlyStrategy).join(", ")}.</>
+                        )}
+                      </div>
+                    </div>
+                    {onOpenBacktest && (
+                      <button className="primary" style={{ marginTop: 4 }}
+                        onClick={() => onOpenBacktest(input, primaryStrategy)}>
+                        Backtest {friendlyStrategy(primaryStrategy)}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {earnings && earnings.success !== false && (
+                (earnings.avg_move_1d != null || nextEarn) && (
+                  <div className="card card-pad" style={{ marginBottom: 16 }}>
+                    <div className="rail-label" style={{ marginTop: 0 }}>Earnings</div>
+                    <div className="kpis">
+                      {nextEarn && (nextEarn.next_earnings_date != null || nextEarn.date != null) ? (
+                        <div className="card kpi" style={{ padding: "10px 12px" }}>
+                          <div className="label">Next</div>
+                          <div className="value num" style={{ fontSize: 15 }}>
+                            {String(nextEarn.next_earnings_date ?? nextEarn.date)}
+                          </div>
+                          {nextEarn.days_until != null && (
+                            <div className="sub">{Number(nextEarn.days_until)}d away</div>
+                          )}
+                        </div>
+                      ) : null}
+                      {earnings.avg_move_1d != null && (
+                        <div className="card kpi" style={{ padding: "10px 12px" }}>
+                          <div className="label">Avg 1d move</div>
+                          <div className="value num" style={{ fontSize: 16 }}>
+                            ±{Number(earnings.avg_move_1d).toFixed(1)}%
+                          </div>
+                        </div>
+                      )}
+                      {earnings.beat_rate != null && (
+                        <div className="card kpi" style={{ padding: "10px 12px" }}>
+                          <div className="label">EPS beat rate</div>
+                          <div className="value num" style={{ fontSize: 16 }}>
+                            {Number(earnings.beat_rate).toFixed(0)}%
+                          </div>
+                        </div>
+                      )}
+                      {earnings.positive_reaction_rate != null && (
+                        <div className="card kpi" style={{ padding: "10px 12px" }}>
+                          <div className="label">Positive reaction</div>
+                          <div className="value num" style={{ fontSize: 16 }}>
+                            {Number(earnings.positive_reaction_rate).toFixed(0)}%
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              )}
+
               <div className="form-grid" style={{ marginBottom: 16 }}>
                 <div className="card card-pad">
                   <div className="rail-label" style={{ marginTop: 0 }}>Forecast</div>

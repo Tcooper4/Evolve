@@ -239,6 +239,26 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
             return {"success": False, "symbol": sym, "error": str(e),
                     "price": None, "change_pct": None}
 
+    @router.get("/api/news/breaking")
+    def news_breaking(
+        max_items: int = 12,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """Fast market-wide breaking headlines (Twitter/X when keyed, else RSS)."""
+        try:
+            from trading.data.twitter_headlines import get_breaking_headlines
+
+            items = get_breaking_headlines(max_items=max_items) or []
+            return {
+                "success": True,
+                "items": items,
+                "source": "twitter" if items and items[0].get("source_type") == "twitter"
+                else ("twitter_rss" if items else "none"),
+            }
+        except Exception as e:
+            logger.warning("breaking news failed: %s", e)
+            return {"success": False, "items": [], "error": str(e)}
+
     @router.get("/api/news/{symbol}")
     def news(symbol: str, max_items: int = 8,
              user: str = Depends(current_user)) -> Dict[str, Any]:
@@ -1004,6 +1024,14 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                     ),
                 )
             out["kelly"] = kelly
+            out["kelly_note"] = (
+                (kelly or {}).get("note")
+                if isinstance(kelly, dict)
+                else (
+                    "Sizing guide only — derived from closed paper trades, "
+                    "not live broker results."
+                )
+            )
 
             if not positions:
                 out["portfolio_metrics"] = None

@@ -49,12 +49,22 @@ export default function Portfolio() {
     if (!symbol || !qty) { setMsg("Symbol and quantity required."); return; }
     const r = await recordTrade(symbol, side, Number(qty),
                                 price ? Number(price) : undefined);
-    setMsg(r.success
-      ? side === "sell" && r.realized_pnl != null
+    if (!r.success) {
+      setMsg(`⚠ ${r.error}`);
+    } else {
+      const rec = r.recommendation?.status;
+      const base = side === "sell" && r.realized_pnl != null
         ? `Sold — realized ${r.realized_pnl >= 0 ? "+" : ""}$${r.realized_pnl}`
-        : "Recorded."
-      : `⚠ ${r.error}`);
-    if (r.success) { setSymbol(""); setQty(""); setPrice(""); refresh(); }
+        : "Recorded.";
+      setMsg(
+        rec === "acted" ? `${base} Tracked idea → Bought.`
+          : rec === "closed" ? `${base} Tracked idea → Closed.`
+            : base,
+      );
+      setSymbol(""); setQty(""); setPrice("");
+      refresh();
+      if (tab === "tracked" || rec) void loadRecs();
+    }
     setTimeout(() => setMsg(""), 4000);
   }
 
@@ -339,6 +349,11 @@ export default function Portfolio() {
                     </div>
                   ))}
                 </div>
+                <div className="dim" style={{ fontSize: 12, marginBottom: 10 }}>
+                  {acctRisk.kelly_note
+                    || acctRisk.kelly?.note
+                    || "Guide only — paper-trade Kelly is not a live broker size."}
+                </div>
                 {acctRisk.stress_note && (
                   <div className="dim" style={{ fontSize: 12, marginBottom: 10 }}>{acctRisk.stress_note}</div>
                 )}
@@ -382,8 +397,9 @@ export default function Portfolio() {
         {!loading && tab === "tracked" && (
           <div className="card-pad">
             <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>
-              Ideas you saved without buying — so you can see how your picks
-              would have done. Track from Analyze, or tell the chat "track NVDA".
+              Track from Analyze (or chat "track NVDA"). Paper-buying an open
+              idea marks it Bought; selling the whole position marks it Closed
+              so you can see how the pick actually played out.
             </div>
             {recsLoading && <div className="skeleton" style={{ height: 120 }} />}
             {!recsLoading && recs.length === 0 && (
@@ -395,23 +411,40 @@ export default function Portfolio() {
             {!recsLoading && recs.length > 0 && (
               <table className="tbl">
                 <thead><tr>
-                  <th>Symbol</th><th>Tracked</th><th>Score then</th>
-                  <th>Price then</th><th>Now</th><th>Since</th><th />
+                  <th>Symbol</th><th>Status</th><th>Tracked</th><th>Score then</th>
+                  <th>Price then</th><th>Now / exit</th><th>Since track</th><th />
                 </tr></thead>
                 <tbody>
-                  {recs.map((r) => (
-                    <tr key={r.id}>
+                  {recs.map((r) => {
+                    const st = r.status || "open";
+                    const stLabel = st === "acted" ? "Bought" : st === "closed" ? "Closed" : "Open";
+                    return (
+                    <tr key={r.id} style={{ opacity: st === "closed" ? 0.72 : 1 }}>
                       <td style={{ fontWeight: 650 }}>{r.symbol}</td>
+                      <td>
+                        <span style={{
+                          fontSize: 11.5, fontWeight: 650,
+                          color: st === "acted" ? "var(--up)"
+                            : st === "closed" ? "var(--text-2)" : "var(--accent)",
+                        }}>{stLabel}</span>
+                      </td>
                       <td className="dim">{r.created_at?.slice(0, 10)}</td>
                       <td className="num">{r.score != null ? r.score.toFixed(1) : "—"}</td>
                       <td className="num">{r.price_at_rec != null ? r.price_at_rec.toFixed(2) : "—"}</td>
                       <td className="num">{r.last_price != null ? r.last_price.toFixed(2) : "—"}</td>
                       <td className={`num ${r.change_pct != null ? (r.change_pct >= 0 ? "up" : "down") : ""}`}>
                         {r.change_pct != null ? `${r.change_pct >= 0 ? "+" : ""}${r.change_pct.toFixed(2)}%` : "—"}
+                        {r.change_since_acted_pct != null && st !== "open" && (
+                          <div className="dim" style={{ fontSize: 10.5 }}>
+                            since buy {r.change_since_acted_pct >= 0 ? "+" : ""}
+                            {r.change_since_acted_pct.toFixed(1)}%
+                          </div>
+                        )}
                       </td>
                       <td><button className="ghost" onClick={() => removeRec(r.id)}>Remove</button></td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}

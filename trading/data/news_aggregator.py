@@ -145,14 +145,32 @@ def _fetch_newsapi(query: str, max_items: int = 10) -> List[Dict]:
         return []
 
 
-# ── Source 3: RSS feeds ─────────────────────────────────────────────────────
+# ── Source 3: RSS feeds (reputable wire/finance first; no SA in default mix) ─
 RSS_FEEDS = {
     "reuters_business": "https://feeds.reuters.com/reuters/businessNews",
     "cnbc_top": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
     "cnbc_finance": "https://www.cnbc.com/id/10000664/device/rss/rss.html",
+    "marketwatch_top": "https://feeds.content.dowjones.io/public/rss/mw_topstories",
     "yahoo_finance": "https://finance.yahoo.com/news/rssindex",
-    "seeking_alpha": "https://seekingalpha.com/feed.xml",
 }
+
+# Publisher reputation nudges applied in relevance scoring (−0.2 .. +0.25)
+_REPUTABLE_SOURCES = (
+    ("reuters", 0.25),
+    ("bloomberg", 0.25),
+    ("wall street journal", 0.22),
+    ("wsj", 0.22),
+    ("financial times", 0.20),
+    ("cnbc", 0.18),
+    ("marketwatch", 0.15),
+    ("barron", 0.15),
+    ("yahoo finance", 0.08),
+)
+_DEMOTE_SOURCES = (
+    ("seeking alpha", -0.18),
+    ("motley fool", -0.12),
+    ("benzinga", -0.05),
+)
 
 
 def _fetch_rss(query: str = "", max_items: int = 10) -> List[Dict]:
@@ -199,11 +217,17 @@ def _fetch_rss(query: str = "", max_items: int = 10) -> List[Dict]:
     return results[:max_items]
 
 
-# ── Source 4: Reddit/WSB ────────────────────────────────────────────────────
+# ── Source 4: Reddit/WSB (optional — not in default headline feed) ──────────
 def _fetch_reddit(symbol: str, max_items: int = 5) -> List[Dict]:
     """Fetch Reddit discussion from a few finance subs when credentials are set."""
-    client_id = os.getenv("REDDIT_CLIENT_ID")
-    client_secret = os.getenv("REDDIT_CLIENT_SECRET")
+    try:
+        from config.api_keys import resolve_api_key
+
+        client_id = (resolve_api_key("REDDIT_CLIENT_ID") or "").strip()
+        client_secret = (resolve_api_key("REDDIT_CLIENT_SECRET") or "").strip()
+    except Exception:
+        client_id = (os.getenv("REDDIT_CLIENT_ID") or "").strip()
+        client_secret = (os.getenv("REDDIT_CLIENT_SECRET") or "").strip()
     if not (client_id and client_secret):
         return []
 
@@ -284,7 +308,23 @@ def _score_relevance(article: Dict, query: str, symbol: str) -> float:
     except Exception:
         pass
 
-    return min(1.0, score)
+    # Source reputation (wire services up, tip-sheet / SA style down)
+    src = (
+        f"{article.get('source', '')} {article.get('source_type', '')}"
+    ).lower()
+    for needle, bump in _REPUTABLE_SOURCES:
+        if needle in src:
+            score += bump
+            break
+    for needle, bump in _DEMOTE_SOURCES:
+        if needle in src:
+            score += bump
+            break
+    # Twitter/X: fast but noisy — small boost only when cashtag/symbol hit
+    if article.get("source_type") == "twitter" and sym_lower and sym_lower in text:
+        score += 0.12
+
+    return min(1.0, max(0.0, score))
 
 
 def _deduplicate(articles: List[Dict]) -> List[Dict]:
@@ -314,18 +354,30 @@ def get_news(
     Uses disk cache for 10 minutes to reduce external calls.
     """
     q = query or symbol
-    # v2: bust cache entries that stored empty titles from old yfinance shape
-    cache_key = f"news:v2:{symbol}:{q}:{max_items}:{int(include_reddit)}"
+    # v3: reputable RSS mix + optional Twitter/X when bearer configured
+    cache_key = f"news:v3:{symbol}:{q}:{max_items}:{int(include_reddit)}"
     cached = disk_cache_get(cache_key)
     if cached is not None:
         return cached
 
     articles: List[Dict] = []
 
-    # Source aggregation
+    # Source aggregation (Twitter when key present; Reddit only if explicitly asked)
     articles += _fetch_yfinance_news(symbol, max_items)
     articles += _fetch_newsapi(q, max_items)
     articles += _fetch_rss(q, max_items)
+    try:
+        from trading.data.twitter_headlines import (
+            get_twitter_symbol_headlines,
+            twitter_configured,
+        )
+
+        if twitter_configured():
+            articles += get_twitter_symbol_headlines(
+                symbol, max_items=min(8, max_items)
+            )
+    except Exception as e:
+        logger.debug("Twitter headlines skipped: %s", e)
     if include_reddit:
         articles += _fetch_reddit(symbol, 5)
 

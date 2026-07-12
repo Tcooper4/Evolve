@@ -1450,7 +1450,10 @@ def _compute_ai_score_impl(
 
         social = _parallel_results.get("social")
         try:
-            if social and social.get("success") and social.get("source") == "reddit":
+            _soc_src = str((social or {}).get("source") or "")
+            if social and social.get("success") and _soc_src in (
+                "news_headlines", "news+reddit", "reddit",
+            ):
                 data_quality["sentiment"] = "real"
                 _signal_status["social_sentiment"] = "real"
             elif social and social.get("source") == "unavailable":
@@ -1485,6 +1488,12 @@ def _compute_ai_score_impl(
                 sentiment_score = (
                     sentiment_score * 0.7 + sentiment_score_social * 0.3
                 )
+                if _soc_src == "news+reddit":
+                    _src_label = "News+Reddit"
+                elif _soc_src == "news_headlines":
+                    _src_label = "News"
+                else:
+                    _src_label = "Reddit"
                 signals.append(
                     {
                         "name": "Social Sentiment",
@@ -1497,8 +1506,8 @@ def _compute_ai_score_impl(
                             else "neutral"
                         ),
                         "description": (
-                            f"Reddit: {social['sentiment_label']} "
-                            f"({social['mention_count']} mentions today"
+                            f"{_src_label}: {social['sentiment_label']} "
+                            f"({social['mention_count']} items"
                             + (
                                 " · trending"
                                 if social.get("trending")

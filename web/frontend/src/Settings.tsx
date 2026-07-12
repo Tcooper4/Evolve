@@ -16,13 +16,14 @@ const DIRECTIONS = [
 
 export default function Settings() {
   const [saved, setSaved] = useState({
-    anthropic: false, openai: false, news: false, reddit: false,
+    anthropic: false, openai: false, news: false, reddit: false, twitter: false,
   });
   const [anthropic, setAnthropic] = useState("");
   const [openai, setOpenai] = useState("");
   const [news, setNews] = useState("");
   const [redditId, setRedditId] = useState("");
   const [redditSecret, setRedditSecret] = useState("");
+  const [twitterBearer, setTwitterBearer] = useState("");
   const [scoringStyle, setScoringStyle] = useState(SCORE_STYLES[0]);
   const [briefUniverse, setBriefUniverse] = useState("sp100");
   const [minAi, setMinAi] = useState(6.0);
@@ -31,7 +32,8 @@ export default function Settings() {
 
   useEffect(() => {
     getKeys().then((k) => setSaved({
-      anthropic: k.anthropic, openai: k.openai, news: k.news, reddit: !!k.reddit,
+      anthropic: k.anthropic, openai: k.openai, news: k.news,
+      reddit: !!k.reddit, twitter: !!k.twitter,
     })).catch(() => {});
     getPrefs().then((r) => {
       const p = r.prefs || {};
@@ -49,6 +51,7 @@ export default function Settings() {
     if (news) payload.news = news;
     if (redditId) payload.reddit_client_id = redditId;
     if (redditSecret) payload.reddit_client_secret = redditSecret;
+    if (twitterBearer) payload.twitter_bearer = twitterBearer;
     if (Object.keys(payload).length) await saveKeys(payload);
     await savePrefs({
       scoring_style: scoringStyle,
@@ -57,8 +60,10 @@ export default function Settings() {
       opportunity_direction: direction,
     });
     setAnthropic(""); setOpenai(""); setNews(""); setRedditId(""); setRedditSecret("");
+    setTwitterBearer("");
     setSaved(await getKeys().then((k) => ({
-      anthropic: k.anthropic, openai: k.openai, news: k.news, reddit: !!k.reddit,
+      anthropic: k.anthropic, openai: k.openai, news: k.news,
+      reddit: !!k.reddit, twitter: !!k.twitter,
     })));
     setMsg("Saved — encrypted keys + research prefs for your account only.");
     setTimeout(() => setMsg(""), 3500);
@@ -83,8 +88,16 @@ export default function Settings() {
         <Field label="Anthropic API key" val={anthropic} set={setAnthropic} has={saved.anthropic} />
         <Field label="OpenAI API key" val={openai} set={setOpenai} has={saved.openai} />
         <Field label="News API key" val={news} set={setNews} has={saved.news} />
+        <Field label="Twitter/X bearer token" val={twitterBearer} set={setTwitterBearer} has={saved.twitter} />
+        <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px" }}>
+          Bearer token powers breaking headlines and volume-chart news overlays. Without it,
+          Evolve falls back to wire RSS (and a Walter Bloomberg RSS mirror when available).
+        </p>
         <Field label="Reddit client ID" val={redditId} set={setRedditId} has={saved.reddit} />
         <Field label="Reddit client secret" val={redditSecret} set={setRedditSecret} has={saved.reddit} />
+        <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 4px" }}>
+          Optional. AI Score sentiment is news-first; Reddit is a 30% blend when configured.
+        </p>
       </div>
 
       <div className="card card-pad" style={{ maxWidth: 560, marginBottom: 16 }}>

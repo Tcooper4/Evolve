@@ -83,9 +83,34 @@ def _connect() -> sqlite3.Connection:
                score REAL,
                price_at_rec REAL,
                note TEXT,
-               created_at TEXT NOT NULL
+               created_at TEXT NOT NULL,
+               status TEXT NOT NULL DEFAULT 'open',
+               acted_at TEXT,
+               acted_price REAL,
+               closed_at TEXT,
+               closed_price REAL
            )"""
     )
+    # Migrate older DBs that predate acted/closed lifecycle columns
+    try:
+        existing = {
+            str(r[1])
+            for r in conn.execute("PRAGMA table_info(recommendations)").fetchall()
+        }
+        for col, typedef in (
+            ("status", "TEXT NOT NULL DEFAULT 'open'"),
+            ("acted_at", "TEXT"),
+            ("acted_price", "REAL"),
+            ("closed_at", "TEXT"),
+            ("closed_price", "REAL"),
+        ):
+            if col not in existing:
+                conn.execute(
+                    f"ALTER TABLE recommendations ADD COLUMN {col} {typedef}"
+                )
+        conn.commit()
+    except Exception as e:
+        logger.debug("recommendations schema migrate: %s", e)
     conn.execute(
         """CREATE TABLE IF NOT EXISTS limit_orders (
                id TEXT PRIMARY KEY,
@@ -127,6 +152,7 @@ class PaperPortfolio:
             return {"success": False, "error": "quantity and price must be positive"}
 
         now = datetime.now(timezone.utc).isoformat()
+        new_qty = 0.0
         conn = _connect()
         try:
             row = conn.execute(
@@ -205,12 +231,20 @@ class PaperPortfolio:
                 " realized_pnl, executed_at) VALUES (?,?,?,?,?,?,?)",
                 (self.user_id, symbol, side, quantity, price, realized, now),
             )
+            # Tracker lifecycle: open → acted on buy; acted → closed on full exit
+            rec_update = self._apply_recommendation_trade(
+                conn, symbol, side, price, now,
+                fully_exited=(side == "sell" and new_qty <= 1e-9)
+                if side == "sell" else False,
+            )
             conn.commit()
             out = {"success": True, "symbol": symbol, "side": side,
                    "quantity": quantity, "price": price,
                    "cash_balance": round(cash, 2)}
             if side == "sell":
                 out["realized_pnl"] = round(realized, 2)
+            if rec_update:
+                out["recommendation"] = rec_update
             return out
         finally:
             conn.close()
@@ -412,6 +446,41 @@ class PaperPortfolio:
         return filled
 
     # ---------------------------------------------------- recommendations
+    def _apply_recommendation_trade(
+        self,
+        conn: sqlite3.Connection,
+        symbol: str,
+        side: str,
+        price: float,
+        now: str,
+        fully_exited: bool,
+    ) -> Optional[Dict[str, Any]]:
+        """Advance tracker status from paper fills (same DB connection)."""
+        try:
+            if side == "buy":
+                cur = conn.execute(
+                    "UPDATE recommendations SET status='acted',"
+                    " acted_at=?, acted_price=?"
+                    " WHERE user_id=? AND symbol=? AND status='open'",
+                    (now, float(price), self.user_id, symbol),
+                )
+                if cur.rowcount > 0:
+                    return {"symbol": symbol, "status": "acted",
+                            "acted_price": float(price)}
+            elif side == "sell" and fully_exited:
+                cur = conn.execute(
+                    "UPDATE recommendations SET status='closed',"
+                    " closed_at=?, closed_price=?"
+                    " WHERE user_id=? AND symbol=? AND status='acted'",
+                    (now, float(price), self.user_id, symbol),
+                )
+                if cur.rowcount > 0:
+                    return {"symbol": symbol, "status": "closed",
+                            "closed_price": float(price)}
+        except Exception as e:
+            logger.debug("recommendation trade sync skipped: %s", e)
+        return None
+
     def track_recommendation(self, symbol: str, source: str = "analyze",
                              score: Optional[float] = None,
                              price_at_rec: Optional[float] = None,
@@ -427,22 +496,26 @@ class PaperPortfolio:
         rid = str(uuid.uuid4())[:8]
         conn = _connect()
         try:
-            # one live rec per symbol per user: re-tracking replaces
+            # one live open/acted rec per symbol: re-tracking replaces those;
+            # keep closed history rows for the learning loop
             conn.execute(
-                "DELETE FROM recommendations WHERE user_id=? AND symbol=?",
+                "DELETE FROM recommendations WHERE user_id=? AND symbol=?"
+                " AND status IN ('open', 'acted')",
                 (self.user_id, symbol),
             )
             conn.execute(
                 "INSERT INTO recommendations (id, user_id, symbol, source,"
-                " score, price_at_rec, note, created_at)"
-                " VALUES (?,?,?,?,?,?,?,?)",
+                " score, price_at_rec, note, created_at, status,"
+                " acted_at, acted_price, closed_at, closed_price)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (rid, self.user_id, symbol, source,
                  float(score) if score is not None else None,
                  float(price_at_rec) if price_at_rec is not None else None,
-                 note or "", datetime.now(timezone.utc).isoformat()),
+                 note or "", datetime.now(timezone.utc).isoformat(),
+                 "open", None, None, None, None),
             )
             conn.commit()
-            return {"success": True, "id": rid, "symbol": symbol}
+            return {"success": True, "id": rid, "symbol": symbol, "status": "open"}
         finally:
             conn.close()
 
@@ -478,24 +551,51 @@ class PaperPortfolio:
         try:
             rows = conn.execute(
                 "SELECT id, symbol, source, score, price_at_rec, note,"
-                " created_at FROM recommendations WHERE user_id=?"
-                " ORDER BY created_at DESC",
+                " created_at, status, acted_at, acted_price,"
+                " closed_at, closed_price"
+                " FROM recommendations WHERE user_id=?"
+                " ORDER BY CASE status"
+                " WHEN 'open' THEN 0 WHEN 'acted' THEN 1 ELSE 2 END,"
+                " created_at DESC",
                 (self.user_id,),
             ).fetchall()
         finally:
             conn.close()
         out: List[Dict[str, Any]] = []
         for r in rows:
-            rec = {"id": r[0], "symbol": r[1], "source": r[2], "score": r[3],
-                   "price_at_rec": r[4], "note": r[5], "created_at": r[6],
-                   "last_price": None, "change_pct": None}
-            last = price_fn(rec["symbol"])
-            if last is not None:
-                rec["last_price"] = round(float(last), 4)
-                if rec["price_at_rec"]:
-                    rec["change_pct"] = round(
-                        (float(last) / float(rec["price_at_rec"]) - 1) * 100, 2
-                    )
+            status = (r[7] or "open") if len(r) > 7 else "open"
+            rec: Dict[str, Any] = {
+                "id": r[0], "symbol": r[1], "source": r[2], "score": r[3],
+                "price_at_rec": r[4], "note": r[5], "created_at": r[6],
+                "status": status,
+                "acted_at": r[8] if len(r) > 8 else None,
+                "acted_price": r[9] if len(r) > 9 else None,
+                "closed_at": r[10] if len(r) > 10 else None,
+                "closed_price": r[11] if len(r) > 11 else None,
+                "last_price": None, "change_pct": None,
+                "change_since_acted_pct": None,
+            }
+            # Closed ideas: mark-to-market vs exit; open/acted vs live last
+            if status == "closed" and rec["closed_price"] is not None:
+                last = float(rec["closed_price"])
+                rec["last_price"] = round(last, 4)
+            else:
+                last_opt = price_fn(rec["symbol"])
+                last = float(last_opt) if last_opt is not None else None
+                if last is not None:
+                    rec["last_price"] = round(last, 4)
+            if last is not None and rec["price_at_rec"]:
+                rec["change_pct"] = round(
+                    (float(last) / float(rec["price_at_rec"]) - 1) * 100, 2
+                )
+            if (
+                last is not None
+                and rec.get("acted_price")
+                and float(rec["acted_price"] or 0) > 0
+            ):
+                rec["change_since_acted_pct"] = round(
+                    (float(last) / float(rec["acted_price"]) - 1) * 100, 2
+                )
             out.append(rec)
         return out
 

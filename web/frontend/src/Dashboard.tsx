@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addToWatchlist,
+  getBreakingNews,
   getChartEvents,
   getHistory,
   getNews,
@@ -51,6 +52,7 @@ export default function Dashboard({
   const [events, setEvents] = useState<ChartEvent[]>([]);
   const [watchlist, setWatchlist] = useState<WlEntry[]>([]);
   const [news, setNews] = useState<Record<string, unknown>[]>([]);
+  const [breaking, setBreaking] = useState<Record<string, unknown>[]>([]);
   const [brief, setBrief] = useState<Record<string, unknown> | null>(null);
   const [briefBusy, setBriefBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -63,11 +65,12 @@ export default function Dashboard({
     setLoading(true);
     try {
       const interval = per === "1d" ? (iv ?? dayInterval) : "";
-      const [q, h, n, ev] = await Promise.all([
+      const [q, h, n, ev, br] = await Promise.all([
         getQuote(sym),
         getHistory(sym, per, interval),
         getNews(sym, 5).catch(() => ({ items: [] })),
         getChartEvents(sym, per).catch(() => ({ events: [] })),
+        getBreakingNews(5).catch(() => ({ items: [] })),
       ]);
       setQuote(q);
       setCandles(h.candles);
@@ -75,6 +78,7 @@ export default function Dashboard({
       setSymbol(h.symbol);
       setInput(h.symbol);
       setNews((n.items as Record<string, unknown>[]) ?? []);
+      setBreaking((br.items as Record<string, unknown>[]) ?? []);
       if (q.price != null && prevPrice.current != null && q.price !== prevPrice.current) {
         setFlash(q.price > prevPrice.current ? "flash-up" : "flash-down");
         setTimeout(() => setFlash(""), 700);
@@ -289,10 +293,28 @@ export default function Dashboard({
               </div>
               <div className="dim" style={{ fontSize: 11.5, marginTop: 3 }}>
                 {String(n.source ?? "")}
+                {n.source_type ? ` · ${String(n.source_type)}` : ""}
                 {n.url ? <> · <a href={String(n.url)} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>open</a></> : null}
               </div>
             </div>
           ))}
+          {breaking.length > 0 && (
+            <>
+              <div className="rail-label" style={{ marginTop: 16 }}>Breaking</div>
+              {breaking.slice(0, 4).map((n, i) => (
+                <div key={`b-${i}`} style={{ padding: "6px 0", borderTop: i ? "1px solid var(--border)" : "none" }}>
+                  <div style={{ fontSize: 13 }}>
+                    {n.url ? (
+                      <a href={String(n.url)} target="_blank" rel="noreferrer" style={{ color: "var(--text)", textDecoration: "none" }}>
+                        {String(n.title ?? "").slice(0, 160)}
+                      </a>
+                    ) : String(n.title ?? "").slice(0, 160)}
+                  </div>
+                  <div className="dim" style={{ fontSize: 11, marginTop: 2 }}>{String(n.source ?? "wire")}</div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
         <div className="card card-pad">
           <div className="rail-label" style={{ marginTop: 0 }}>Morning briefing</div>

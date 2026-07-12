@@ -68,9 +68,17 @@ def _fetch_subreddit_search(
 
 
 def _reddit_creds_from_runtime() -> Tuple[str, str]:
-    """Env first per key, then Streamlit session (Cloud)."""
-    rid_e = (os.environ.get("REDDIT_CLIENT_ID") or "").strip()
-    sec_e = (os.environ.get("REDDIT_CLIENT_SECRET") or "").strip()
+    """resolve_api_key first, then env, then Streamlit session (Cloud)."""
+    rid_e = ""
+    sec_e = ""
+    try:
+        from config.api_keys import resolve_api_key
+
+        rid_e = (resolve_api_key("REDDIT_CLIENT_ID") or "").strip()
+        sec_e = (resolve_api_key("REDDIT_CLIENT_SECRET") or "").strip()
+    except Exception:
+        rid_e = (os.environ.get("REDDIT_CLIENT_ID") or "").strip()
+        sec_e = (os.environ.get("REDDIT_CLIENT_SECRET") or "").strip()
     rid_s = ""
     sec_s = ""
     try:
@@ -80,9 +88,7 @@ def _reddit_creds_from_runtime() -> Tuple[str, str]:
         sec_s = (st.session_state.get("user_key_REDDIT_CLIENT_SECRET") or "").strip()
     except Exception:
         pass
-    reddit_id = rid_e or rid_s
-    reddit_secret = sec_e or sec_s
-    return reddit_id, reddit_secret
+    return rid_e or rid_s, sec_e or sec_s
 
 
 def _reddit_use_praw(reddit_id: str, reddit_secret: str) -> bool:
@@ -274,26 +280,169 @@ def _get_social_sentiment_impl(
         return out
 
 
+def _label_from_score(avg_c: float) -> str:
+    if avg_c >= 0.15:
+        return "BULLISH"
+    if avg_c <= -0.15:
+        return "BEARISH"
+    return "NEUTRAL"
+
+
+def get_news_headline_sentiment(symbol: str, max_items: int = 15) -> Dict[str, Any]:
+    """Primary sentiment: score aggregator headlines (news + Twitter when keyed)."""
+    out: Dict[str, Any] = {
+        "success": False,
+        "sentiment_score": 0.0,
+        "sentiment_label": "NEUTRAL",
+        "confidence": 0.0,
+        "mention_count": 0,
+        "top_posts": [],
+        "trending": False,
+        "error": None,
+        "source": "news_headlines",
+        "reason": None,
+    }
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        out["error"] = "symbol required"
+        return out
+    try:
+        from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+        analyzer = SentimentIntensityAnalyzer()
+    except Exception as e:
+        out["error"] = str(e)
+        out["source"] = "unavailable"
+        out["reason"] = str(e)
+        return out
+    try:
+        from trading.data.news_aggregator import get_news
+
+        articles = get_news(sym, max_items=max_items, include_reddit=False) or []
+        scored: List[Dict[str, Any]] = []
+        compounds: List[float] = []
+        for a in articles:
+            title = (a.get("title") or "").strip()
+            if not title:
+                continue
+            summary = (a.get("summary") or "")[:400]
+            text = f"{title}. {summary}".strip()
+            c = float(analyzer.polarity_scores(text).get("compound", 0.0) or 0.0)
+            compounds.append(c)
+            scored.append({
+                "title": title[:200],
+                "source": a.get("source") or a.get("source_type") or "news",
+                "sentiment": round(c, 3),
+                "url": a.get("url") or "",
+            })
+        if not compounds:
+            out["reason"] = "no headlines"
+            return out
+        avg_c = float(statistics.mean(compounds))
+        try:
+            from trading.nlp.sentiment_processor import SentimentProcessor
+
+            _sp = SentimentProcessor()
+            _combo = " ".join((a.get("title") or "") for a in articles[:12])
+            if len(_combo.strip()) > 20:
+                _sr = _sp.analyze_sentiment(_combo[:8000])
+                _blend = float(getattr(_sr, "scaled_score", 0.0) or 0.0)
+                avg_c = 0.6 * avg_c + 0.4 * max(-1.0, min(1.0, _blend))
+        except Exception:
+            pass
+        avg_c = max(-1.0, min(1.0, avg_c))
+        out["sentiment_score"] = avg_c
+        out["sentiment_label"] = _label_from_score(avg_c)
+        out["mention_count"] = len(compounds)
+        out["confidence"] = min(1.0, 0.35 + 0.05 * len(compounds))
+        out["top_posts"] = sorted(
+            scored, key=lambda x: abs(x.get("sentiment", 0)), reverse=True
+        )[:8]
+        out["trending"] = len(compounds) >= 8
+        out["success"] = True
+        return out
+    except Exception as e:
+        logger.warning("get_news_headline_sentiment failed for %s: %s", sym, e)
+        out["error"] = str(e)
+        return out
+
+
 def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
     """
-    Reddit sentiment from r/wallstreetbets and r/stocks (last day, search).
+    Market sentiment for AI Score.
 
-    Returns sentiment_score (-1..1), label, mention_count, top_posts, trending.
+    Primary: news/Twitter aggregator headlines.
+    Secondary: Reddit when credentials exist (30% blend).
+    Last resort: public Reddit JSON only if news is empty.
     """
+    news = get_news_headline_sentiment(symbol, max_items=15)
+    news_ok = bool(news.get("success") and int(news.get("mention_count") or 0) > 0)
+
     rid, rsec = _reddit_creds_from_runtime()
-    mode = "praw" if _reddit_use_praw(rid, rsec) else "json"
-    if not rid and not rsec:
-        return {
-            "symbol": symbol,
-            "sentiment_score": 0.0,
-            "sentiment_label": "NEUTRAL",
-            "confidence": 0.0,
-            "source": "unavailable",
-            "reason": (
-                "Reddit credentials "
-                "not configured"
+    reddit: Optional[Dict[str, Any]] = None
+    try:
+        if _reddit_use_praw(rid, rsec):
+            reddit = _get_social_sentiment_impl(symbol, limit, "praw")
+        elif not news_ok:
+            # No Reddit keys — soft public JSON only when headlines failed
+            reddit = _get_social_sentiment_impl(symbol, limit, "json")
+    except Exception as e:
+        logger.debug("Reddit sentiment optional path: %s", e)
+        reddit = None
+
+    reddit_ok = bool(
+        reddit
+        and reddit.get("success")
+        and int(reddit.get("mention_count") or 0) > 0
+        and not reddit.get("error")
+    )
+
+    if news_ok and reddit_ok and reddit is not None:
+        blended = max(
+            -1.0,
+            min(
+                1.0,
+                0.70 * float(news["sentiment_score"])
+                + 0.30 * float(reddit["sentiment_score"]),
             ),
-            "success": False,
-            "mention_count": 0,
+        )
+        return {
+            "success": True,
+            "sentiment_score": blended,
+            "sentiment_label": _label_from_score(blended),
+            "confidence": max(
+                float(news.get("confidence") or 0.5),
+                float(reddit.get("confidence") or 0.0),
+            ),
+            "mention_count": int(news.get("mention_count") or 0)
+            + int(reddit.get("mention_count") or 0),
+            "top_posts": (news.get("top_posts") or [])[:5]
+            + (reddit.get("top_posts") or [])[:3],
+            "trending": bool(news.get("trending") or reddit.get("trending")),
+            "error": None,
+            "source": "news+reddit",
+            "reason": None,
+            "news_component": news.get("sentiment_score"),
+            "reddit_component": reddit.get("sentiment_score"),
         }
-    return _get_social_sentiment_impl(symbol, limit, mode)
+
+    if news_ok:
+        return news
+    if reddit_ok and reddit is not None:
+        return reddit
+
+    return {
+        "symbol": symbol,
+        "sentiment_score": 0.0,
+        "sentiment_label": "NEUTRAL",
+        "confidence": 0.0,
+        "source": "unavailable",
+        "reason": (
+            (reddit or {}).get("reason")
+            or news.get("reason")
+            or news.get("error")
+            or "no headlines available"
+        ),
+        "success": False,
+        "mention_count": 0,
+    }
