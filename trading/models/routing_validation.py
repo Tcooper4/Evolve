@@ -235,7 +235,9 @@ def _default_consensus_forecast(
 def purged_ensemble_oos(
     data: pd.DataFrame,
     *,
-    models: Sequence[str],
+    models: Optional[Sequence[str]] = None,
+    rule: Optional[RoutingRule] = None,
+    default_models: Optional[Sequence[str]] = None,
     horizon: int = 7,
     train_window: int = 120,
     test_window: int = 40,
@@ -244,6 +246,10 @@ def purged_ensemble_oos(
     forecast_fn: Optional[ForecastFn] = None,
 ) -> Dict[str, Any]:
     """Walk-forward OOS for a fixed model list with train/test purge gap.
+
+    If ``rule`` is set, models are chosen each step from
+    ``get_series_features(train_ctx)`` (causal). Otherwise ``models`` is used
+    as a fixed list.
 
     ``purge`` defaults to ``horizon`` (regime-paper baseline). Metric:
     mean directional accuracy (higher better) and mean MAPE.
@@ -266,9 +272,14 @@ def purged_ensemble_oos(
             "purge": purge_i,
         }
 
+    base = list(default_models or models or DEFAULT_ENSEMBLE)
+    fixed = None if rule is not None else list(models or base)
+
     das: List[float] = []
     mapes: List[float] = []
     window_scores: List[float] = []
+    models_used_hist: List[str] = []
+    n_rule_fires = 0
     start = train_window
     windows = 0
 
@@ -283,9 +294,19 @@ def purged_ensemble_oos(
             )
             if len(ctx) < 30:
                 continue
+            if rule is not None:
+                feats = get_series_features(ctx)
+                raw = models_for_rule(rule, feats, base)
+                base_set = set(base)
+                step_models = [m for m in raw if m in base_set] or list(base)
+                if step_models != base:
+                    n_rule_fires += 1
+            else:
+                step_models = list(fixed or base)
+            models_used_hist.append(",".join(step_models))
             try:
                 pred = np.asarray(
-                    predict(ctx, horizon, models), dtype=float
+                    predict(ctx, horizon, step_models), dtype=float
                 ).ravel()
             except Exception as e:
                 logger.debug("purged_ensemble_oos forecast failed: %s", e)
@@ -318,6 +339,7 @@ def purged_ensemble_oos(
             "mape": None,
             "n_windows": 0,
             "purge": purge_i,
+            "n_rule_fires": n_rule_fires,
         }
 
     return {
@@ -327,7 +349,9 @@ def purged_ensemble_oos(
         "n_windows": windows,
         "purge": purge_i,
         "horizon": int(horizon),
-        "models": list(models),
+        "models": fixed if fixed is not None else "rule-adaptive",
+        "models_used_hist_tail": models_used_hist[-5:],
+        "n_rule_fires": n_rule_fires,
         "window_scores": window_scores,
     }
 
@@ -360,15 +384,16 @@ def evaluate_symbol_rules(
     train_window: int = 80,
     test_window: int = 30,
     step_size: int = 15,
+    causal_features: bool = True,
 ) -> List[SymbolRuleResult]:
-    """Champion (default ensemble) vs each rule on one symbol, purged OOS."""
+    """Champion (default ensemble) vs each rule on one symbol, purged OOS.
+
+    When ``causal_features`` is True (default), each walk-forward step
+    recomputes ``get_series_features(train_ctx)`` before applying the rule.
+    """
     rules = list(rules or CANDIDATE_RULES)
     default_models = list(default_models or DEFAULT_ENSEMBLE)
     features = get_series_features(data)
-
-    # NOTE: features are computed once on the full series for this research
-    # pass. A live Phase-4 path must recompute get_series_features(train_ctx)
-    # inside each purged window so regime labels stay causal.
 
     baseline = purged_ensemble_oos(
         data,
@@ -384,15 +409,11 @@ def evaluate_symbol_rules(
 
     out: List[SymbolRuleResult] = []
     for rule in rules:
-        models = models_for_rule(rule, features, default_models)
-        # If the rule never fires on this series, challenger == baseline
-        fired = models != default_models
-        chall = (
-            baseline
-            if not fired
-            else purged_ensemble_oos(
+        if causal_features:
+            chall = purged_ensemble_oos(
                 data,
-                models=models,
+                rule=rule,
+                default_models=default_models,
                 horizon=horizon,
                 train_window=train_window,
                 test_window=test_window,
@@ -400,7 +421,24 @@ def evaluate_symbol_rules(
                 purge=horizon,
                 forecast_fn=forecast_fn,
             )
-        )
+            fired = int(chall.get("n_rule_fires") or 0) > 0
+        else:
+            models = models_for_rule(rule, features, default_models)
+            fired = models != default_models
+            chall = (
+                baseline
+                if not fired
+                else purged_ensemble_oos(
+                    data,
+                    models=models,
+                    horizon=horizon,
+                    train_window=train_window,
+                    test_window=test_window,
+                    step_size=step_size,
+                    purge=horizon,
+                    forecast_fn=forecast_fn,
+                )
+            )
         chall_da = chall.get("directional_accuracy")
         delta = None
         if base_da is not None and chall_da is not None:
@@ -414,7 +452,7 @@ def evaluate_symbol_rules(
         )
         adopted = helped  # per-symbol only; not global always-on
         if not fired:
-            reason = "rule did not fire on this series (identical to baseline)"
+            reason = "rule did not fire on any purged window (identical to baseline)"
             adopted = False
             helped = False
             hurt = False
@@ -653,3 +691,121 @@ def stylized_forecast_fn(
         # default ensemble: average of the three styles
         paths = [arima_path, xgb_path, prophet_path]
     return np.mean(np.vstack(paths), axis=0)
+
+
+# Hybrid-core voters for tractable real-ticker OOS (documented in report).
+REAL_OOS_ENSEMBLE: List[str] = ["arima", "xgboost", "ridge"]
+DEFAULT_REAL_SYMBOLS: List[str] = ["SPY", "AAPL", "MSFT", "JPM", "XOM"]
+
+
+def load_symbol_frames(
+    symbols: Sequence[str],
+    period: str = "2y",
+) -> Dict[str, pd.DataFrame]:
+    """Load OHLCV via price_cache; skip tickers with insufficient history."""
+    from trading.data.price_cache import get_history
+
+    out: Dict[str, pd.DataFrame] = {}
+    for sym in symbols:
+        s = str(sym).strip().upper()
+        if not s:
+            continue
+        try:
+            hist = get_history(s, period=period)
+        except Exception as e:
+            logger.warning("load_symbol_frames %s failed: %s", s, e)
+            continue
+        if hist is None or getattr(hist, "empty", True) or len(hist) < 200:
+            logger.warning("load_symbol_frames %s: insufficient history", s)
+            continue
+        out[s] = hist
+    return out
+
+
+def run_real_ticker_oos(
+    symbols: Optional[Sequence[str]] = None,
+    *,
+    period: str = "2y",
+    models: Optional[Sequence[str]] = None,
+    out_path: str = "data/routing_oos_real.json",
+    horizon: int = 5,
+    train_window: int = 180,
+    test_window: int = 5,
+    step_size: int = 42,
+    min_improvement: float = DEFAULT_MIN_IMPROVEMENT,
+) -> Dict[str, Any]:
+    """Purged causal OOS on real tickers; never flips live always-on flags.
+
+    Uses one forecast per outer window (``test_window == horizon``) and the
+    hybrid-core ensemble by default so the pass finishes in reasonable time.
+    """
+    import json
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    syms = list(symbols or DEFAULT_REAL_SYMBOLS)
+    ensemble = list(models or REAL_OOS_ENSEMBLE)
+    series = load_symbol_frames(syms, period=period)
+    if not series:
+        return {"success": False, "error": "no symbol history loaded"}
+
+    logger.info(
+        "real ticker OOS: %d symbols, models=%s, horizon=%d purge=%d",
+        len(series), ensemble, horizon, horizon,
+    )
+    report = validate_routing_universe(
+        series,
+        default_models=ensemble,
+        min_improvement=min_improvement,
+        horizon=horizon,
+        train_window=train_window,
+        test_window=test_window,
+        step_size=step_size,
+        forecast_fn=None,  # live router consensus
+        # validate_routing_universe -> evaluate_symbol_rules causal default
+    )
+    report["meta"] = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "symbols_requested": syms,
+        "symbols_loaded": list(series.keys()),
+        "ensemble": ensemble,
+        "period": period,
+        "horizon": horizon,
+        "purge": horizon,
+        "train_window": train_window,
+        "test_window": test_window,
+        "step_size": step_size,
+        "min_improvement": min_improvement,
+        "causal_features": True,
+        "live_routing_enabled": LIVE_FEATURE_ROUTING_ENABLED,
+        "note": (
+            "Research pass only. LIVE_ALWAYS_ON_RULES is not modified; "
+            "enable a rule only after broad_win on this (or a larger) universe."
+        ),
+    }
+    path = Path(out_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
+    report["meta"]["out_path"] = str(path)
+    return report
+
+
+if __name__ == "__main__":
+    import logging as _logging
+
+    _logging.basicConfig(level=_logging.INFO, format="%(levelname)s %(message)s")
+    _rep = run_real_ticker_oos()
+    _sum = (_rep or {}).get("summary") or {}
+    print("always_on_candidates:", _sum.get("always_on_candidates"))
+    print("note:", _sum.get("note"))
+    for _rule in _sum.get("rules") or []:
+        print(
+            f"{_rule['rule_id']}: helped={_rule['helped']} hurt={_rule['hurt']} "
+            f"neutral={_rule['neutral']} mean_dDA={_rule['mean_delta_da']} "
+            f"broad={_rule['broad_win']}"
+        )
+        for _p in _rule.get("per_symbol") or []:
+            print(
+                f"  {_p['symbol']}: dDA={_p['delta_da']} "
+                f"helped={_p['helped']} hurt={_p['hurt']} | {_p['reason'][:80]}"
+            )

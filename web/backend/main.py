@@ -228,8 +228,35 @@ def history(symbol: str, period: str = "6mo", interval: str = "",
                 time=t,
                 open=float(r["Open"]), high=float(r["High"]),
                 low=float(r["Low"]), close=float(r["Close"]),
-                volume=float(r.get("Volume", 0.0)),
+                volume=float(r.get("Volume", 0.0) or 0.0),
             ))
+        # Yahoo often reports Volume=0 on the still-forming bar. Infer it as
+        # session volume minus sum of completed same-day bars so soft-poll
+        # legend / histogram can show live volume accumulating.
+        if intraday and candles and float(candles[-1].volume or 0) <= 0:
+            try:
+                session_vol = float(
+                    getattr(yf.Ticker(sym).fast_info, "last_volume", 0) or 0
+                )
+                last_day = candles[-1].time[:10]
+                prior = sum(
+                    float(c.volume or 0)
+                    for c in candles[:-1]
+                    if c.time[:10] == last_day
+                )
+                inferred = max(0.0, session_vol - prior)
+                if inferred > 0:
+                    last = candles[-1]
+                    candles[-1] = Candle(
+                        time=last.time,
+                        open=last.open,
+                        high=last.high,
+                        low=last.low,
+                        close=last.close,
+                        volume=inferred,
+                    )
+            except Exception as e:  # noqa: BLE001
+                logger.debug("live bar volume infer failed for %s: %s", sym, e)
         return HistoryResponse(symbol=sym, interval=iv, candles=candles)
     except Exception as e:  # noqa: BLE001
         logger.warning("history failed for %s: %s", sym, e)

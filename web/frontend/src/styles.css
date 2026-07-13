@@ -185,6 +185,34 @@ button.ghost:hover { color: var(--text); border-color: var(--border); }
 @keyframes flashUp { 0% { color: var(--up); } 100% { color: var(--text); } }
 @keyframes flashDown { 0% { color: var(--down); } 100% { color: var(--text); } }
 
+.live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--up);
+  opacity: 0.9;
+}
+.live-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--up);
+  box-shadow: 0 0 0 0 rgba(46, 234, 139, 0.55);
+  animation: livePulse 1.6s ease-out infinite;
+}
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(46, 234, 139, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(46, 234, 139, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 234, 139, 0); }
+}
+.chart-live #chart {
+  transition: opacity 0.25s ease;
+}
+
 /* ---------- watchlist ---------- */
 .wl { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
 .wl-card {

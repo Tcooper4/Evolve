@@ -330,6 +330,19 @@ export default function Portfolio() {
                           : "needs both wins and losses to size from"}
                     </div>
                   </div>
+                  {acctRisk.kelly?.half_kelly_dollars_vol_adjusted != null && (
+                    <div className="card kpi">
+                      <div className="label">Vol-adjusted (conditional)</div>
+                      <div className="value num" style={{ fontSize: 18 }}>
+                        ${Number(acctRisk.kelly.half_kelly_dollars_vol_adjusted).toLocaleString()}
+                      </div>
+                      <div className="sub">
+                        {acctRisk.kelly.vol_scaled_down
+                          ? `×${acctRisk.kelly.vol_multiplier ?? "—"} in extreme-high vol`
+                          : "×1.0 — vol not extreme; Kelly unchanged"}
+                      </div>
+                    </div>
+                  )}
                   {acctRisk.trade_stats?.win_rate != null && (
                     <div className="card kpi">
                       <div className="label">Your win rate</div>

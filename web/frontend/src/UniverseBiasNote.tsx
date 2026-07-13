@@ -1,0 +1,52 @@
+/** Survivorship / current-membership bias caveat for index universes. */
+
+import { useState } from "react";
+
+const STRONGER = /russell|3000|1000|small/i;
+
+export default function UniverseBiasNote({
+  universeId,
+  context = "scan",
+}: {
+  universeId?: string;
+  /** scan = index screen; backtest = single-name historical run */
+  context?: "scan" | "backtest";
+}) {
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
+
+  const id = universeId || "";
+  const stronger = STRONGER.test(id);
+  const body =
+    context === "backtest"
+      ? "Backtests on names that still trade today can look better than live results would have — delisted and failed names are usually missing from the sample (survivorship). Treat returns as directional, not guaranteed."
+      : stronger
+        ? "Results use today's index membership. For faster-turnover / smaller-cap universes, that current-list bias is typically larger — published work finds multi-point/year return inflation and roughly ~10% Sharpe overstatement vs point-in-time constituents. This screen has not measured Evolve's own gap."
+        : "Results use today's index membership, not point-in-time constituents. That usually makes historical screens look somewhat better than they would have been live (survivorship / membership bias). Direction of the bias is well documented; Evolve has not measured its own size here.";
+
+  return (
+    <div
+      className="dim universe-bias-note"
+      style={{
+        marginTop: 10,
+        fontSize: 12.5,
+        lineHeight: 1.45,
+        display: "flex",
+        gap: 10,
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+      }}
+    >
+      <span>{body}</span>
+      <button
+        type="button"
+        className="ghost"
+        style={{ fontSize: 11, flexShrink: 0, padding: "2px 8px" }}
+        onClick={() => setHidden(true)}
+        aria-label="Dismiss bias note"
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}

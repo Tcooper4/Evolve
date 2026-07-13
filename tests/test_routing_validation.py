@@ -82,6 +82,7 @@ class TestRoutingRulesUnit:
             train_window=70,
             test_window=25,
             step_size=20,
+            causal_features=False,
         )
         assert report["success"]
         summary = report["summary"]

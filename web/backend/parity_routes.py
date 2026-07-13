@@ -1177,6 +1177,10 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                     account_size=pp.get_cash() + sum(
                         p["quantity"] * p["avg_cost"] for p in positions
                     ),
+                    # Market vol proxy for the book; overlay is informational
+                    # until validate_conditional_vol_universe shows a broad win.
+                    symbol="SPY",
+                    apply_vol_overlay=True,
                 )
             out["kelly"] = kelly
             out["kelly_note"] = (

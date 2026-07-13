@@ -1,0 +1,371 @@
+{
+  "success": true,
+  "n_symbols": 5,
+  "results": [
+    {
+      "symbol": "SPY",
+      "rule_id": "arima_when_noisy",
+      "baseline_da": 0.625,
+      "challenger_da": 0.625,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    },
+    {
+      "symbol": "SPY",
+      "rule_id": "xgb_when_trendy",
+      "baseline_da": 0.625,
+      "challenger_da": 0.625,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "delta_da=0.000 within \u00b10.05 \u2014 keep baseline"
+    },
+    {
+      "symbol": "SPY",
+      "rule_id": "prophet_when_seasonal",
+      "baseline_da": 0.625,
+      "challenger_da": 0.625,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    },
+    {
+      "symbol": "AAPL",
+      "rule_id": "arima_when_noisy",
+      "baseline_da": 0.625,
+      "challenger_da": 0.65,
+      "delta_da": 0.025000000000000022,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "delta_da=0.025 within \u00b10.05 \u2014 keep baseline"
+    },
+    {
+      "symbol": "AAPL",
+      "rule_id": "xgb_when_trendy",
+      "baseline_da": 0.625,
+      "challenger_da": 0.625,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    },
+    {
+      "symbol": "AAPL",
+      "rule_id": "prophet_when_seasonal",
+      "baseline_da": 0.625,
+      "challenger_da": 0.625,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    },
+    {
+      "symbol": "MSFT",
+      "rule_id": "arima_when_noisy",
+      "baseline_da": 0.475,
+      "challenger_da": 0.5,
+      "delta_da": 0.025000000000000022,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "delta_da=0.025 within \u00b10.05 \u2014 keep baseline"
+    },
+    {
+      "symbol": "MSFT",
+      "rule_id": "xgb_when_trendy",
+      "baseline_da": 0.475,
+      "challenger_da": 0.475,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "delta_da=0.000 within \u00b10.05 \u2014 keep baseline"
+    },
+    {
+      "symbol": "MSFT",
+      "rule_id": "prophet_when_seasonal",
+      "baseline_da": 0.475,
+      "challenger_da": 0.475,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    },
+    {
+      "symbol": "JPM",
+      "rule_id": "arima_when_noisy",
+      "baseline_da": 0.65,
+      "challenger_da": 0.65,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    },
+    {
+      "symbol": "JPM",
+      "rule_id": "xgb_when_trendy",
+      "baseline_da": 0.65,
+      "challenger_da": 0.65,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "delta_da=0.000 within \u00b10.05 \u2014 keep baseline"
+    },
+    {
+      "symbol": "JPM",
+      "rule_id": "prophet_when_seasonal",
+      "baseline_da": 0.65,
+      "challenger_da": 0.65,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    },
+    {
+      "symbol": "XOM",
+      "rule_id": "arima_when_noisy",
+      "baseline_da": 0.475,
+      "challenger_da": 0.425,
+      "delta_da": -0.04999999999999999,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "delta_da=-0.050 within \u00b10.05 \u2014 keep baseline"
+    },
+    {
+      "symbol": "XOM",
+      "rule_id": "xgb_when_trendy",
+      "baseline_da": 0.475,
+      "challenger_da": 0.475,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    },
+    {
+      "symbol": "XOM",
+      "rule_id": "prophet_when_seasonal",
+      "baseline_da": 0.475,
+      "challenger_da": 0.475,
+      "delta_da": 0.0,
+      "helped": false,
+      "hurt": false,
+      "adopted_for_symbol": false,
+      "reason": "rule did not fire on any purged window (identical to baseline)"
+    }
+  ],
+  "summary": {
+    "min_improvement": 0.05,
+    "min_help_fraction": 0.67,
+    "always_on_candidates": [],
+    "note": "No rule ships as live always-on unless recommend_always_on is true. Mixed helped/hurt across symbols is the expected outcome (regime paper).",
+    "rules": [
+      {
+        "rule_id": "arima_when_noisy",
+        "n_symbols": 5,
+        "n_fired": 3,
+        "helped": 0,
+        "hurt": 0,
+        "neutral": 3,
+        "help_fraction": 0.0,
+        "mean_delta_da": 0.0,
+        "broad_win": false,
+        "recommend_always_on": false,
+        "dsr": {
+          "deflated_sharpe": 0.4792,
+          "expected_max_sharpe_under_null": 0.0369,
+          "n_trials": 3,
+          "interpretation": "indistinguishable from lucky noise across this many trials"
+        },
+        "per_symbol": [
+          {
+            "symbol": "SPY",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          },
+          {
+            "symbol": "AAPL",
+            "delta_da": 0.025000000000000022,
+            "helped": false,
+            "hurt": false,
+            "reason": "delta_da=0.025 within \u00b10.05 \u2014 keep baseline"
+          },
+          {
+            "symbol": "MSFT",
+            "delta_da": 0.025000000000000022,
+            "helped": false,
+            "hurt": false,
+            "reason": "delta_da=0.025 within \u00b10.05 \u2014 keep baseline"
+          },
+          {
+            "symbol": "JPM",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          },
+          {
+            "symbol": "XOM",
+            "delta_da": -0.04999999999999999,
+            "helped": false,
+            "hurt": false,
+            "reason": "delta_da=-0.050 within \u00b10.05 \u2014 keep baseline"
+          }
+        ]
+      },
+      {
+        "rule_id": "xgb_when_trendy",
+        "n_symbols": 5,
+        "n_fired": 3,
+        "helped": 0,
+        "hurt": 0,
+        "neutral": 3,
+        "help_fraction": 0.0,
+        "mean_delta_da": 0.0,
+        "broad_win": false,
+        "recommend_always_on": false,
+        "dsr": {
+          "deflated_sharpe": 0.5,
+          "expected_max_sharpe_under_null": 0.0,
+          "n_trials": 3,
+          "interpretation": "indistinguishable from lucky noise across this many trials"
+        },
+        "per_symbol": [
+          {
+            "symbol": "SPY",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "delta_da=0.000 within \u00b10.05 \u2014 keep baseline"
+          },
+          {
+            "symbol": "AAPL",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          },
+          {
+            "symbol": "MSFT",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "delta_da=0.000 within \u00b10.05 \u2014 keep baseline"
+          },
+          {
+            "symbol": "JPM",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "delta_da=0.000 within \u00b10.05 \u2014 keep baseline"
+          },
+          {
+            "symbol": "XOM",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          }
+        ]
+      },
+      {
+        "rule_id": "prophet_when_seasonal",
+        "n_symbols": 5,
+        "n_fired": 0,
+        "helped": 0,
+        "hurt": 0,
+        "neutral": 0,
+        "help_fraction": 0.0,
+        "mean_delta_da": 0.0,
+        "broad_win": false,
+        "recommend_always_on": false,
+        "dsr": null,
+        "per_symbol": [
+          {
+            "symbol": "SPY",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          },
+          {
+            "symbol": "AAPL",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          },
+          {
+            "symbol": "MSFT",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          },
+          {
+            "symbol": "JPM",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          },
+          {
+            "symbol": "XOM",
+            "delta_da": 0.0,
+            "helped": false,
+            "hurt": false,
+            "reason": "rule did not fire on any purged window (identical to baseline)"
+          }
+        ]
+      }
+    ]
+  },
+  "meta": {
+    "timestamp": "2026-07-13T07:45:05.525745+00:00",
+    "symbols_requested": [
+      "SPY",
+      "AAPL",
+      "MSFT",
+      "JPM",
+      "XOM"
+    ],
+    "symbols_loaded": [
+      "SPY",
+      "AAPL",
+      "MSFT",
+      "JPM",
+      "XOM"
+    ],
+    "ensemble": [
+      "arima",
+      "xgboost",
+      "ridge"
+    ],
+    "period": "2y",
+    "horizon": 5,
+    "purge": 5,
+    "train_window": 180,
+    "test_window": 5,
+    "step_size": 42,
+    "min_improvement": 0.05,
+    "causal_features": true,
+    "live_routing_enabled": false,
+    "note": "Research pass only. LIVE_ALWAYS_ON_RULES is not modified; enable a rule only after broad_win on this (or a larger) universe."
+  }
+}

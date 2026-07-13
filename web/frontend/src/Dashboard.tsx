@@ -44,6 +44,30 @@ interface WlEntry {
   scoreLoading?: boolean;
 }
 
+/** Yahoo often leaves Volume=0 on the open bar; infer from session volume. */
+function withLiveBarVolume(
+  candles: Candle[],
+  sessionVol: number | null | undefined,
+): Candle[] {
+  if (!candles.length || sessionVol == null || !(Number(sessionVol) > 0)) {
+    return candles;
+  }
+  const last = candles[candles.length - 1];
+  if (Number(last.volume) > 0) return candles;
+  const day = last.time.slice(0, 10);
+  let prior = 0;
+  for (let i = 0; i < candles.length - 1; i++) {
+    if (candles[i].time.slice(0, 10) === day) {
+      prior += Number(candles[i].volume) || 0;
+    }
+  }
+  const inferred = Math.max(0, Number(sessionVol) - prior);
+  if (!(inferred > 0)) return candles;
+  const next = candles.slice();
+  next[next.length - 1] = { ...last, volume: inferred };
+  return next;
+}
+
 export default function Dashboard({
   displayName,
   onAnalyze,
@@ -71,11 +95,19 @@ export default function Dashboard({
   const searchRef = useRef<HTMLInputElement>(null);
   const prevPrice = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const symbolRef = useRef(symbol);
+  const periodRef = useRef(period);
+  const dayIntervalRef = useRef(dayInterval);
+  const [chartLive, setChartLive] = useState(false);
 
-  const load = useCallback(async (sym: string, per: Period, iv?: DayInterval) => {
-    setLoading(true);
+  useEffect(() => { symbolRef.current = symbol; }, [symbol]);
+  useEffect(() => { periodRef.current = period; }, [period]);
+  useEffect(() => { dayIntervalRef.current = dayInterval; }, [dayInterval]);
+
+  const load = useCallback(async (sym: string, per: Period, iv?: DayInterval, soft = false) => {
+    if (!soft) setLoading(true);
     try {
-      const interval = per === "1d" ? (iv ?? dayInterval) : "";
+      const interval = per === "1d" ? (iv ?? dayIntervalRef.current) : "";
       const [q, h, n, ev, br] = await Promise.all([
         getQuote(sym),
         getHistory(sym, per, interval),
@@ -84,10 +116,17 @@ export default function Dashboard({
         getBreakingNews(5).catch(() => ({ items: [] })),
       ]);
       setQuote(q);
-      setCandles(h.candles);
+      setCandles(withLiveBarVolume(h.candles, q.volume));
       setEvents(ev.events ?? []);
       setSymbol(h.symbol);
       setInput(h.symbol);
+      if (q.price != null) prevPrice.current = q.price;
+
+      if (soft) {
+        // Keep existing websocket; only refresh bar history (+ live volume)
+        return;
+      }
+
       setNews((n.items as Record<string, unknown>[]) ?? []);
       setNewsWhy({});
       const titles = ((n.items as Record<string, unknown>[]) ?? [])
@@ -112,9 +151,22 @@ export default function Dashboard({
       }
       prevPrice.current = q.price;
       wsRef.current?.close();
+      setChartLive(true);
       wsRef.current = quoteSocket(h.symbol, (wq) => {
         if (wq.price == null) return;
         setQuote((prev) => prev ? { ...prev, price: wq.price, change_pct: wq.change_pct } : prev);
+        // Live last-bar movement: update OHLC of the open candle in place
+        setCandles((prev) => {
+          if (!prev.length) return prev;
+          const next = prev.slice();
+          const last = { ...next[next.length - 1] };
+          const px = Number(wq.price);
+          last.close = px;
+          last.high = Math.max(last.high, px);
+          last.low = Math.min(last.low, px);
+          next[next.length - 1] = last;
+          return next;
+        });
         if (prevPrice.current != null && wq.price !== prevPrice.current) {
           setFlash(wq.price > prevPrice.current ? "flash-up" : "flash-down");
           setTimeout(() => setFlash(""), 700);
@@ -122,12 +174,15 @@ export default function Dashboard({
         prevPrice.current = wq.price;
       });
     } catch {
-      setQuote(null);
-      setCandles([]);
+      if (!soft) {
+        setQuote(null);
+        setCandles([]);
+      }
+      setChartLive(false);
     } finally {
-      setLoading(false);
+      if (!soft) setLoading(false);
     }
-  }, [dayInterval]);
+  }, []);
 
   const refreshWatchlist = useCallback(async () => {
     try {
@@ -195,6 +250,16 @@ export default function Dashboard({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Soft-refresh candles so new bars appear without flipping the period
+  useEffect(() => {
+    const intraday = period === "1d" || period === "5d" || period === "1mo" || period === "3mo";
+    const ms = period === "1d" ? 20_000 : intraday ? 45_000 : 120_000;
+    const id = window.setInterval(() => {
+      void load(symbolRef.current, periodRef.current, dayIntervalRef.current, true);
+    }, ms);
+    return () => window.clearInterval(id);
+  }, [period, load]);
 
   async function generateBriefing() {
     setBriefBusy(true);
@@ -347,12 +412,16 @@ export default function Dashboard({
         {loading ? (
           <div className="skeleton" style={{ height: 460, margin: 18 }} />
         ) : candles.length > 0 ? (
-          <Chart candles={candles} markers={events.map((e) => ({
-            time: e.time,
-            title: e.title,
-            text: e.text,
-            color: e.color,
-          }))} />
+          <Chart
+            live={chartLive && (period === "1d" || period === "5d")}
+            candles={candles}
+            markers={events.map((e) => ({
+              time: e.time,
+              title: e.title,
+              text: e.text,
+              color: e.color,
+            }))}
+          />
         ) : (
           <div className="empty">No chart data — check the symbol or your connection.</div>
         )}

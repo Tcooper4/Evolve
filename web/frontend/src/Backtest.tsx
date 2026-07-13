@@ -4,6 +4,7 @@ import {
   type WalkForwardFold,
 } from "./api";
 import Sparkline from "./Sparkline";
+import UniverseBiasNote from "./UniverseBiasNote";
 
 const PCT_KEYS = new Set([
   "total_return", "annualized_return", "max_drawdown", "buy_hold_return",
@@ -355,6 +356,9 @@ export default function Backtest() {
               </select></div>
           )}
         </div>
+        {(tab === "backtest" || tab === "optimize") && (
+          <UniverseBiasNote context="backtest" />
+        )}
         <div style={{ marginTop: 14 }}>
           {tab === "backtest" && (
             <button className="primary" onClick={() => run()} disabled={loading}>

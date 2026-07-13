@@ -788,12 +788,20 @@ def get_position_size(
     win_rate: float,
     avg_win_loss_ratio: float = 1.5,
     account_size: float = 10_000.0,
+    symbol: Optional[str] = None,
+    apply_vol_overlay: bool = True,
 ) -> Dict[str, Any]:
     """Kelly-criterion position sizing from a strategy's stats (the 'Kelly
     tool' the position-sizing skill references). win_rate in [0,1] (or
     0-100), avg_win_loss_ratio = average win / average loss. Returns full
     Kelly, HALF Kelly (the practitioner reference - edge estimates are
-    noisy), and dollar amounts."""
+    noisy), and dollar amounts.
+
+    When ``symbol`` is set and ``apply_vol_overlay`` is True, attaches a
+    *conditional* vol multiplier (cut size only in extreme-high realized
+    vol; never leverage up). Raw Kelly fields stay; vol-adjusted fields
+    are additive.
+    """
     try:
         p = float(win_rate)
         if p > 1.0:  # tolerate percentages
@@ -805,7 +813,7 @@ def get_position_size(
         kelly = p - (1.0 - p) / b  # f* = p - q/b
         kelly = max(0.0, kelly)
         half = kelly / 2.0
-        return {
+        out: Dict[str, Any] = {
             "success": True,
             "full_kelly_fraction": round(kelly, 4),
             "half_kelly_fraction": round(half, 4),
@@ -817,6 +825,22 @@ def get_position_size(
                 "Full Kelly is a ceiling, not a target."
             ),
         }
+        if apply_vol_overlay and symbol:
+            try:
+                from trading.portfolio.conditional_vol_sizing import (
+                    apply_kelly_vol_overlay,
+                    conditional_vol_multiplier_for_symbol,
+                )
+
+                vol_info = conditional_vol_multiplier_for_symbol(str(symbol))
+                out = apply_kelly_vol_overlay(out, vol_info)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("vol overlay skipped: %s", e)
+                out["vol_multiplier"] = 1.0
+                out["vol_adjustment_reason"] = (
+                    f"Vol overlay unavailable ({e}) — Kelly only."
+                )
+        return out
     except Exception as e:  # noqa: BLE001
         logger.exception("get_position_size failed: %s", e)
         return {"success": False, "error": str(e)}

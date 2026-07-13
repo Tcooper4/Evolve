@@ -495,6 +495,8 @@ export interface AccountRisk {
   kelly?: {
     success: boolean; full_kelly_fraction?: number; half_kelly_fraction?: number;
     half_kelly_dollars?: number; note?: string;
+    vol_multiplier?: number; vol_scaled_down?: boolean;
+    half_kelly_dollars_vol_adjusted?: number; vol_adjustment_reason?: string;
   } | null;
   kelly_note?: string;
   portfolio_metrics?: Record<string, string | number> | null;

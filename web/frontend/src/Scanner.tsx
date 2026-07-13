@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getScore, runPairs, runScan, type ScoreResult } from "./api";
+import UniverseBiasNote from "./UniverseBiasNote";
 
 const FILTERS = ["momentum", "oversold", "breakout", "high_short", "insider_buying", "quick_technical"];
 
@@ -254,12 +255,18 @@ export default function Scanner({
             that stock&apos;s full AI Score.
           </div>
         )}
+        {tab === "scan" && !custom.trim() && (
+          <UniverseBiasNote universeId={universe} context="scan" />
+        )}
         {tab === "pairs" && (
           <div className="dim" style={{ marginTop: 10, fontSize: 12.5, lineHeight: 1.45 }}>
             Tests every pair in the universe for cointegration (they usually move together)
             and correlation ≥ 0.7. Only statistically linked pairs are shown — zero results
             just means none cleared the bar, not that the screen failed.
           </div>
+        )}
+        {tab === "pairs" && !custom.trim() && (
+          <UniverseBiasNote universeId={universe} context="scan" />
         )}
       </div>
 

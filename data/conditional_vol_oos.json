@@ -1,0 +1,107 @@
+{
+  "success": true,
+  "n_symbols": 5,
+  "n_adopt": 4,
+  "broad_win": true,
+  "recommend_live": true,
+  "note": "Broad win \u2014 overlay may be considered for live Kelly path",
+  "min_dd_improvement": 0.05,
+  "max_sharpe_cost": 0.15,
+  "results": [
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.282,
+      "baseline": {
+        "sharpe": 1.0973,
+        "max_drawdown": 0.1876
+      },
+      "conditional_overlay": {
+        "sharpe": 1.0977,
+        "max_drawdown": 0.1193
+      },
+      "dd_improvement": 0.0683,
+      "sharpe_delta": 0.0004,
+      "adopt_overlay": true,
+      "reason": "Overlay clears DD improvement gate without unacceptable Sharpe cost",
+      "high_multiplier": 0.5,
+      "symbol": "SPY"
+    },
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.268,
+      "baseline": {
+        "sharpe": 1.1565,
+        "max_drawdown": 0.2277
+      },
+      "conditional_overlay": {
+        "sharpe": 1.2559,
+        "max_drawdown": 0.1509
+      },
+      "dd_improvement": 0.0768,
+      "sharpe_delta": 0.0994,
+      "adopt_overlay": true,
+      "reason": "Overlay clears DD improvement gate without unacceptable Sharpe cost",
+      "high_multiplier": 0.5,
+      "symbol": "QQQ"
+    },
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.261,
+      "baseline": {
+        "sharpe": 0.9514,
+        "max_drawdown": 0.275
+      },
+      "conditional_overlay": {
+        "sharpe": 0.8156,
+        "max_drawdown": 0.2058
+      },
+      "dd_improvement": 0.0692,
+      "sharpe_delta": -0.1358,
+      "adopt_overlay": true,
+      "reason": "Overlay clears DD improvement gate without unacceptable Sharpe cost",
+      "high_multiplier": 0.5,
+      "symbol": "IWM"
+    },
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.384,
+      "baseline": {
+        "sharpe": 1.1078,
+        "max_drawdown": 0.1405
+      },
+      "conditional_overlay": {
+        "sharpe": 1.1619,
+        "max_drawdown": 0.0808
+      },
+      "dd_improvement": 0.0597,
+      "sharpe_delta": 0.0541,
+      "adopt_overlay": true,
+      "reason": "Overlay clears DD improvement gate without unacceptable Sharpe cost",
+      "high_multiplier": 0.5,
+      "symbol": "EFA"
+    },
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.159,
+      "baseline": {
+        "sharpe": -0.1441,
+        "max_drawdown": 0.097
+      },
+      "conditional_overlay": {
+        "sharpe": -0.2302,
+        "max_drawdown": 0.1137
+      },
+      "dd_improvement": -0.0168,
+      "sharpe_delta": -0.0861,
+      "adopt_overlay": false,
+      "reason": "No adopt: dd_improvement=-0.017 (need >0.05), sharpe_delta=-0.086 (floor -0.15)",
+      "high_multiplier": 0.5,
+      "symbol": "TLT"
+    }
+  ]
+}
