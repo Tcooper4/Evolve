@@ -651,6 +651,18 @@ def backtest_model(req: ModelBacktestRequest,
             test_window=test_w,
             step_size=step,
             horizon=horizon,
+            # LEAKAGE FIX (2026-07): the purge/embargo mechanism was added
+            # to WalkForwardValidator and verified correct in isolation
+            # (tests/test_routing_validation.py's research harness used
+            # it), but this LIVE route - the one the fold-strip UI users
+            # actually see - was never updated to pass it, so real
+            # results were still leakage-prone with the default purge=0.
+            # A gap of `horizon` bars between train end and test start is
+            # the standard baseline (see the regime-detection literature
+            # this project reviewed): without it, any feature or label
+            # that reaches even one bar past the train boundary can peek
+            # into the forecast horizon itself.
+            purge=horizon,
         )
         perf = result.model_performance or {}
         if perf.get("error") and not result.windows:

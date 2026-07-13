@@ -194,6 +194,14 @@ with tab_wf:
                         train_window=int(wf_train),
                         test_window=int(wf_test),
                         step_size=int(wf_step),
+                        # LEAKAGE FIX (2026-07): same gap as the React
+                        # backtest route - purge was added to
+                        # WalkForwardValidator but this call never used
+                        # it. horizon made explicit (was silently
+                        # relying on the default of 7) so purge matches
+                        # what's actually being forecast.
+                        horizon=7,
+                        purge=7,
                     )
                     summary = wf_result.model_performance
 

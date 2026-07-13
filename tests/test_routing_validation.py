@@ -153,3 +153,27 @@ class TestLiveForecastPolicy:
         assert set(policy["models"]) <= {
             "arima", "xgboost", "ridge", "catboost", "prophet", "garch",
         }
+
+
+class TestLivePathPurgeWiring:
+    """The purge/embargo mechanism was built and verified correct in
+    isolation, but the LIVE model-backtest route never actually passed
+    it - meaning real fold-strip numbers shown to users were still
+    leakage-prone with the default purge=0. Locks in that the live
+    route now requests a purge gap."""
+
+    def test_backend_route_passes_purge_equal_to_horizon(self):
+        src = open("web/backend/main.py").read()
+        # anchor on the actual call site, not just any mention
+        i = src.find("wfv = WalkForwardValidator(model_name=model")
+        assert i > 0, "backtest_model call site not found"
+        call_block = src[i:i + 1200]
+        assert "purge=horizon" in call_block
+
+    def test_streamlit_page_passes_explicit_purge(self):
+        src = open("pages/5_Backtest.py").read()
+        i = src.find("wf_result = validator.run(")
+        assert i > 0, "Streamlit walk-forward call site not found"
+        call_block = src[i:i + 700]
+        assert "purge=7" in call_block
+        assert "horizon=7" in call_block  # was previously relying on an implicit default
