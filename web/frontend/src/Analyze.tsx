@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   getCausal, getChartEvents, getEarnings, getEdgar, getForecast, getHistory,
-  getNews, getOptions, getPatterns, getPlaybook, getRisk, getScore,
+  getNews, getNewsContext, getOptions, getPatterns, getPlaybook, getRisk, getScore,
   getSignalIc, runGnn, runMonteCarlo, trackRec,
   type Candle, type ChartEvent, type EdgarFiling, type ScoreResult,
 } from "./api";
@@ -87,7 +87,9 @@ export default function Analyze({
   const [lab, setLab] = useState<LabTab>("ic");
   const [res, setRes] = useState<ScoreResult | null>(null);
   const [news, setNews] = useState<Record<string, unknown>[]>([]);
+  const [newsWhy, setNewsWhy] = useState<Record<string, string>>({});
   const [forecast, setForecast] = useState<Record<string, unknown> | null>(null);
+  const [showModels, setShowModels] = useState(false);
   const [risk, setRisk] = useState<Record<string, string | number> | null>(null);
   const [mc, setMc] = useState<Record<string, unknown> | null>(null);
   const [opts, setOpts] = useState<Record<string, unknown> | null>(null);
@@ -109,7 +111,9 @@ export default function Analyze({
   async function run() {
     setLoading(true);
     setNews([]);
+    setNewsWhy({});
     setForecast(null);
+    setShowModels(false);
     setRisk(null);
     setMc(null);
     setOpts(null);
@@ -146,6 +150,22 @@ export default function Analyze({
         getEarnings(input).catch(() => null),
       ]);
       setNews((n.items as Record<string, unknown>[]) ?? []);
+      setNewsWhy({});
+      const titles = ((n.items as Record<string, unknown>[]) ?? [])
+        .map((it) => String(it.title ?? it.headline ?? "").trim())
+        .filter(Boolean)
+        .slice(0, 6);
+      if (titles.length) {
+        getNewsContext(titles)
+          .then((ctx) => {
+            const map: Record<string, string> = {};
+            for (const it of ctx.items ?? []) {
+              if (it.title && it.why) map[it.title] = it.why;
+            }
+            setNewsWhy(map);
+          })
+          .catch(() => {});
+      }
       setRisk((rk.metrics as Record<string, string | number>) ?? null);
       setPlaybook(pb);
       setEarnings(er);
@@ -274,6 +294,25 @@ export default function Analyze({
   const riskEntries = risk ? Object.entries(risk).slice(0, 8) : [];
   const agreement = forecast?.model_agreement != null ? Number(forecast.model_agreement) : null;
   const conviction = forecast?.conviction != null ? String(forecast.conviction) : null;
+  const lastPx = forecast?.last_price != null ? Number(forecast.last_price) : null;
+  const priceTargets = (forecast?.price_targets && typeof forecast.price_targets === "object")
+    ? forecast.price_targets as Record<string, unknown>
+    : {};
+  const modelsUsed = Array.isArray(forecast?.models_used) ? (forecast!.models_used as string[]) : [];
+  const modelsFailed = Array.isArray(forecast?.models_failed) ? (forecast!.models_failed as string[]) : [];
+  const modelsExcluded = Array.isArray(forecast?.models_excluded) ? (forecast!.models_excluded as string[]) : [];
+  const modelRows = modelsUsed.map((name) => {
+    const target = priceTargets[name];
+    const t = typeof target === "number" ? target : Number(target);
+    let dir = "flat";
+    if (lastPx != null && Number.isFinite(t) && lastPx > 0) {
+      if (t > lastPx * 1.005) dir = "up";
+      else if (t < lastPx * 0.995) dir = "down";
+    }
+    const chg = (lastPx != null && Number.isFinite(t) && lastPx > 0)
+      ? ((t / lastPx) - 1) * 100 : null;
+    return { name, target: Number.isFinite(t) ? t : null, dir, chg };
+  });
   const mcPath = Array.isArray(mc?.mean_path) ? (mc!.mean_path as number[]) : [];
 
   const strat = (playbook?.strategy && typeof playbook.strategy === "object")
@@ -543,9 +582,50 @@ export default function Analyze({
                           <> · agreement {(agreement * 100).toFixed(0)}%</>
                         )}
                       </div>
-                      {Array.isArray(forecast?.models_used) && (
-                        <div className="dim" style={{ marginTop: 4, fontSize: 11.5 }}>
-                          Models: {(forecast!.models_used as string[]).join(", ")}
+                      {modelRows.length > 0 && (
+                        <div style={{ marginTop: 10 }}>
+                          <button className="ghost" style={{ fontSize: 12, border: "1px solid var(--border)", padding: "4px 10px" }}
+                            onClick={() => setShowModels((v) => !v)}>
+                            {showModels ? "Hide models" : "Show models"}
+                          </button>
+                          {showModels && (
+                            <div style={{ marginTop: 10 }}>
+                              <div className="dim" style={{ fontSize: 11.5, marginBottom: 8, lineHeight: 1.4 }}>
+                                Per-model targets under the consensus — disagreement is information, not a vote to trade.
+                              </div>
+                              <table className="tbl">
+                                <thead>
+                                  <tr><th>Model</th><th>Target</th><th>vs last</th><th>Lean</th></tr>
+                                </thead>
+                                <tbody>
+                                  {modelRows.map((m) => (
+                                    <tr key={m.name}>
+                                      <td style={{ fontWeight: 600, textTransform: "capitalize" }}>{m.name}</td>
+                                      <td className="num">{m.target != null ? `$${m.target.toFixed(2)}` : "—"}</td>
+                                      <td className="num" style={{
+                                        color: m.chg == null ? undefined
+                                          : m.chg > 0 ? "var(--up)" : m.chg < 0 ? "var(--down)" : undefined,
+                                      }}>
+                                        {m.chg != null ? `${m.chg >= 0 ? "+" : ""}${m.chg.toFixed(2)}%` : "—"}
+                                      </td>
+                                      <td style={{
+                                        color: m.dir === "up" ? "var(--up)"
+                                          : m.dir === "down" ? "var(--down)" : "var(--text-2)",
+                                      }}>
+                                        {m.dir === "up" ? "up" : m.dir === "down" ? "down" : "flat"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {(modelsFailed.length > 0 || modelsExcluded.length > 0) && (
+                                <div className="dim" style={{ fontSize: 11.5, marginTop: 8 }}>
+                                  {modelsFailed.length > 0 && <>Failed: {modelsFailed.join(", ")}. </>}
+                                  {modelsExcluded.length > 0 && <>Excluded as outliers: {modelsExcluded.join(", ")}.</>}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </>
@@ -570,16 +650,28 @@ export default function Analyze({
 
               <div className="card card-pad">
                 <div className="rail-label" style={{ marginTop: 0 }}>News · {input}</div>
+                <div className="dim" style={{ fontSize: 11.5, marginBottom: 8 }}>
+                  Optional LLM blurbs are context only — not a trade call.
+                </div>
                 {news.length === 0 && <div className="dim">No headlines — add a News API key in Settings for more coverage.</div>}
-                {news.slice(0, 6).map((n, i) => (
-                  <div key={i} style={{ padding: "10px 0", borderTop: i ? "1px solid var(--border)" : "none" }}>
-                    <div style={{ fontWeight: 600 }}>{String(n.title ?? n.headline ?? "Untitled")}</div>
-                    <div className="dim" style={{ fontSize: 12, marginTop: 4 }}>
-                      {String(n.source ?? n.publisher ?? "")}
-                      {n.url ? <> · <a href={String(n.url)} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>open</a></> : null}
+                {news.slice(0, 6).map((n, i) => {
+                  const title = String(n.title ?? n.headline ?? "Untitled");
+                  const why = newsWhy[title];
+                  return (
+                    <div key={i} style={{ padding: "10px 0", borderTop: i ? "1px solid var(--border)" : "none" }}>
+                      <div style={{ fontWeight: 600 }}>{title}</div>
+                      {why && (
+                        <div style={{ fontSize: 12.5, marginTop: 4, color: "var(--text-2)", lineHeight: 1.4 }}>
+                          <span className="dim">Context: </span>{why}
+                        </div>
+                      )}
+                      <div className="dim" style={{ fontSize: 12, marginTop: 4 }}>
+                        {String(n.source ?? n.publisher ?? "")}
+                        {n.url ? <> · <a href={String(n.url)} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>open</a></> : null}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}

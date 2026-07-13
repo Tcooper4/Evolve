@@ -13,6 +13,7 @@ yfinance==1.2.0
 alpha_vantage==3.0.0
 newsapi-python==0.2.7
 requests==2.32.3
+xlrd>=2.0.1  # Caldara & Iacoviello GPR .xls (macro_factors)
 
 # ML / Forecasting
 scikit-learn==1.3.0

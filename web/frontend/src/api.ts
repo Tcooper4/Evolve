@@ -351,6 +351,17 @@ export const getBreakingNews = (max_items = 8) =>
     `/api/news/breaking?max_items=${max_items}`,
   );
 
+export const getNewsContext = (titles: string[]) =>
+  req<{
+    success: boolean;
+    items?: { title: string; why: string; hedged?: boolean; note?: string }[];
+    error?: string;
+  }>("/api/news/context", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ titles }),
+  });
+
 export const getForecast = (symbol: string, horizon = 7) =>
   req<{ success: boolean; forecast?: Record<string, unknown>; error?: string }>(
     `/api/forecast/${symbol}?horizon=${horizon}`,
@@ -398,6 +409,38 @@ export const savePrefs = (prefs: Record<string, unknown>) =>
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify(prefs),
   });
+
+export interface GprSignal {
+  current: number;
+  level?: string;
+  trend?: string;
+  percentile?: number;
+  description?: string;
+  source?: string;
+}
+export interface RevisionBreadth {
+  success?: boolean;
+  pct_up: number;
+  pct_down: number;
+  pct_neutral?: number;
+  signal?: string;
+  sample_size?: number;
+  description?: string;
+  breadth_score?: number;
+}
+export const getMarketSignals = () =>
+  req<{ success: boolean; gpr: GprSignal | null; revision_breadth: RevisionBreadth | null }>(
+    "/api/market-signals",
+  );
+export const loadGpr = () =>
+  req<{ success: boolean; gpr?: GprSignal; error?: string }>("/api/market-signals/gpr", {
+    method: "POST",
+  });
+export const loadRevisionBreadth = (sample_size = 150) =>
+  req<{ success: boolean; revision_breadth?: RevisionBreadth; error?: string }>(
+    `/api/market-signals/revision-breadth?sample_size=${sample_size}`,
+    { method: "POST" },
+  );
 
 export function quoteSocket(symbol: string,
                             onQuote: (q: { price: number | null; change_pct: number | null }) => void) {

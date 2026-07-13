@@ -88,6 +88,10 @@ class TrackRecRequest(BaseModel):
     note: str = ""
 
 
+class NewsContextRequest(BaseModel):
+    titles: List[str] = Field(default_factory=list)
+
+
 class GnnRequest(BaseModel):
     symbols: List[str] = Field(default_factory=list)
     period: str = "1y"
@@ -264,6 +268,25 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
              user: str = Depends(current_user)) -> Dict[str, Any]:
         from trading.services import agent_tools
         return agent_tools.get_news(symbol, max_items=max_items)
+
+    @router.post("/api/news/context")
+    def news_context(
+        req: NewsContextRequest,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """Hedged one-line context for headlines — never a trade call.
+
+        Soft-fails to empty whys when no LLM key is configured.
+        """
+        try:
+            from trading.services.news_context import explain_headlines
+
+            titles = [str(t).strip() for t in (req.titles or []) if str(t).strip()]
+            items = explain_headlines(titles[:8], user_id=f"user:{user}")
+            return {"success": True, "items": items}
+        except Exception as e:
+            logger.warning("news context failed: %s", e)
+            return {"success": False, "items": [], "error": str(e)}
 
     @router.get("/api/forecast/{symbol}")
     def forecast(
@@ -469,6 +492,90 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 prefs[k] = v
         save_user_preferences(uid, prefs)
         return {"ok": True, "prefs": prefs}
+
+    @router.get("/api/market-signals")
+    def market_signals(user: str = Depends(current_user)) -> Dict[str, Any]:
+        """Cached GPR + EPS revision breadth for Dashboard pulse.
+
+        Prefers per-user prefs (Settings load). For GPR, also falls back to
+        the on-disk MacroFactors cache so a prior load still shows without
+        re-download. Never fabricates numbers.
+        """
+        from config.user_store import load_user_preferences
+
+        prefs = load_user_preferences(f"user:{user}") or {}
+        gpr = prefs.get("cached_gpr") if isinstance(prefs.get("cached_gpr"), dict) else None
+        rb = (
+            prefs.get("cached_revision_breadth")
+            if isinstance(prefs.get("cached_revision_breadth"), dict)
+            else None
+        )
+        if not gpr or gpr.get("current") is None:
+            try:
+                from trading.analysis.macro_factors import MacroFactors
+
+                disk = MacroFactors()._get_gpr_index()
+                if isinstance(disk, dict) and disk.get("current") is not None:
+                    gpr = disk
+            except Exception as e:
+                logger.debug("market-signals GPR disk fallback: %s", e)
+        return {
+            "success": True,
+            "gpr": gpr if (gpr and gpr.get("current") is not None) else None,
+            "revision_breadth": rb if (rb and rb.get("success")) else None,
+        }
+
+    @router.post("/api/market-signals/gpr")
+    def load_gpr(user: str = Depends(current_user)) -> Dict[str, Any]:
+        """Download/refresh Caldara & Iacoviello GPR and save to user prefs."""
+        from config.user_store import load_user_preferences, save_user_preferences
+
+        try:
+            from trading.analysis.macro_factors import MacroFactors
+
+            gpr = MacroFactors()._get_gpr_index()
+            if not isinstance(gpr, dict) or gpr.get("current") is None:
+                return {
+                    "success": False,
+                    "error": gpr.get("error") if isinstance(gpr, dict)
+                    else "GPR download failed",
+                }
+            uid = f"user:{user}"
+            prefs = dict(load_user_preferences(uid) or {})
+            prefs["cached_gpr"] = gpr
+            save_user_preferences(uid, prefs)
+            return {"success": True, "gpr": gpr}
+        except Exception as e:
+            logger.warning("load_gpr failed: %s", e)
+            return {"success": False, "error": str(e)}
+
+    @router.post("/api/market-signals/revision-breadth")
+    def load_revision_breadth(
+        sample_size: int = 150,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """Sample S&P names for EPS revision breadth; may take minutes."""
+        from config.user_store import load_user_preferences, save_user_preferences
+
+        try:
+            from trading.data.earnings_quality import get_revision_breadth
+
+            n = max(20, min(int(sample_size or 150), 300))
+            rb = get_revision_breadth(sample_size=n)
+            if not isinstance(rb, dict) or not rb.get("success"):
+                return {
+                    "success": False,
+                    "error": "Breadth compute returned no usable data",
+                    "revision_breadth": rb if isinstance(rb, dict) else None,
+                }
+            uid = f"user:{user}"
+            prefs = dict(load_user_preferences(uid) or {})
+            prefs["cached_revision_breadth"] = rb
+            save_user_preferences(uid, prefs)
+            return {"success": True, "revision_breadth": rb}
+        except Exception as e:
+            logger.warning("revision-breadth failed: %s", e)
+            return {"success": False, "error": str(e)}
 
     # ---- Progressive Labs (thin wrappers; keep UI uncluttered) ----
 

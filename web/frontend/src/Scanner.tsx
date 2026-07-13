@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { runPairs, runScan } from "./api";
+import { getScore, runPairs, runScan, type ScoreResult } from "./api";
 
 const FILTERS = ["momentum", "oversold", "breakout", "high_short", "insider_buying", "quick_technical"];
 
@@ -33,9 +33,14 @@ export default function Scanner({
   const [error, setError] = useState("");
   const [live, setLive] = useState(false);
   const liveRef = useRef(false);
+  const [drillSym, setDrillSym] = useState<string | null>(null);
+  const [drill, setDrill] = useState<ScoreResult | null>(null);
+  const [drillBusy, setDrillBusy] = useState(false);
+  const [drillErr, setDrillErr] = useState("");
 
   async function run() {
     setLoading(true); setError(""); setMeta("");
+    setDrillSym(null); setDrill(null); setDrillErr("");
     try {
       const custom_tickers = custom.split(/[,\s]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
       const r = await runScan({
@@ -64,7 +69,6 @@ export default function Scanner({
     setLoading(true); setError(""); setMeta(""); setPairRows([]);
     try {
       const fromCustom = custom.split(/[,\s]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
-      // Always use selected universe unless custom tickers are provided
       const r = await runPairs(fromCustom.length >= 2 ? fromCustom : [], {
         universe: fromCustom.length >= 2 ? "" : universe,
         max_symbols: 200,
@@ -85,12 +89,28 @@ export default function Scanner({
     } finally { setLoading(false); }
   }
 
+  async function openDrill(sym: string) {
+    const clean = (sym || "").trim().toUpperCase();
+    if (!clean) return;
+    setDrillSym(clean);
+    setDrill(null);
+    setDrillErr("");
+    setDrillBusy(true);
+    try {
+      const s = await getScore(clean, "long");
+      setDrill(s);
+      if (s.error) setDrillErr(String(s.error));
+    } catch (e) {
+      setDrillErr(e instanceof Error ? e.message : "score failed");
+    } finally {
+      setDrillBusy(false);
+    }
+  }
+
   useEffect(() => {
     liveRef.current = live;
   }, [live]);
 
-  // Live refresh only re-runs after the user has already scanned once —
-  // toggling the checkbox alone must not start a scan.
   useEffect(() => {
     if (!live || tab !== "scan" || rows.length === 0) return;
     const id = window.setInterval(() => {
@@ -103,22 +123,69 @@ export default function Scanner({
   const SCORE_COLS = [
     "symbol", "quick_score", "price", "change_20d", "rsi", "vs_sma20", "volume_ratio",
   ];
+  // Hide bulk AI / short-screen fields from the results table — those belong in drill-in.
+  const HIDDEN_COLS = new Set([
+    "ai_score", "short_quick_score", "ai_grade", "signals", "pct_from_52w_high",
+  ]);
+  const COL_LABEL: Record<string, string> = {
+    symbol: "Symbol",
+    quick_score: "Screen score",
+    price: "Price",
+    change_20d: "20d chg",
+    rsi: "RSI",
+    vs_sma20: "vs SMA20",
+    volume_ratio: "Vol ratio",
+  };
   const cols = rows.length
     ? [
         ...SCORE_COLS.filter((c) => c in rows[0]),
-        ...Object.keys(rows[0]).filter((c) => !SCORE_COLS.includes(c)).slice(0, 3),
+        ...Object.keys(rows[0])
+          .filter((c) => !SCORE_COLS.includes(c) && !HIDDEN_COLS.has(c))
+          .slice(0, 3),
       ]
     : [];
   const pcols = pairRows.length ? Object.keys(pairRows[0]) : [];
+
+  const drillQuick = (() => {
+    if (!drillSym) return null;
+    const row = rows.find((r) => String(r.symbol || "").toUpperCase() === drillSym);
+    const q = row?.quick_score;
+    return typeof q === "number" ? q : q != null ? Number(q) : null;
+  })();
+
+  const signals = (() => {
+    const list = Array.isArray(drill?.signal_list) ? drill!.signal_list! : [];
+    if (list.length) {
+      return list
+        .filter((s) => s?.name)
+        .slice(0, 12)
+        .map((s) => ({
+          name: String(s.name),
+          value: s.value,
+          impact: s.impact,
+          description: s.description ? String(s.description) : "",
+        }));
+    }
+    return Object.entries(drill?.signals ?? {})
+      .slice(0, 8)
+      .map(([k, v]) => ({
+        name: k,
+        value: typeof v === "object" && v && "value" in (v as object)
+          ? (v as { value?: unknown }).value
+          : v,
+        impact: undefined as string | undefined,
+        description: "",
+      }));
+  })();
 
   return (
     <div className="fade-in">
       <div className="greeting">
         Scanner{" "}
         <small>
-          {tab === "pairs"
-            ? "Find two stocks that usually move together, then trade when they temporarily split apart."
-            : "screen the market by technical filters and quick score"}
+          {tab === "scan"
+            ? "fast screen first — click a row for the full AI Score"
+            : "Find two stocks that usually move together, then trade when they temporarily split apart."}
         </small>
       </div>
 
@@ -143,7 +210,7 @@ export default function Scanner({
           {tab === "scan" && (
             <>
               <div className="field">
-                <label>Min quick score</label>
+                <label>Min screen score</label>
                 <input type="number" min={0} max={10} step={0.5} value={minScore}
                   onChange={(e) => setMinScore(Number(e.target.value))} />
               </div>
@@ -181,6 +248,12 @@ export default function Scanner({
             </label>
           )}
         </div>
+        {tab === "scan" && (
+          <div className="dim" style={{ marginTop: 10, fontSize: 12.5, lineHeight: 1.45 }}>
+            The list uses a fast screen score so scanning stays quick. Click any row for
+            that stock&apos;s full AI Score.
+          </div>
+        )}
         {tab === "pairs" && (
           <div className="dim" style={{ marginTop: 10, fontSize: 12.5, lineHeight: 1.45 }}>
             Tests every pair in the universe for cointegration (they usually move together)
@@ -195,27 +268,32 @@ export default function Scanner({
         {loading && <div className="skeleton" style={{ height: 260, margin: 16 }} />}
         {!loading && tab === "scan" && rows.length > 0 && (
           <table className="tbl">
-            <thead><tr>{cols.map((c) => <th key={c}>{c.replace(/_/g, " ")}</th>)}</tr></thead>
+            <thead><tr>{cols.map((c) => <th key={c}>{COL_LABEL[c] ?? c.replace(/_/g, " ")}</th>)}</tr></thead>
             <tbody>
-              {rows.map((r, i) => (
-                <tr key={i} style={{ cursor: onAnalyze ? "pointer" : undefined }}
-                  onClick={() => {
-                    const sym = String(r.symbol || "");
-                    if (sym && onAnalyze) onAnalyze(sym);
-                  }}>
-                  {cols.map((c) => {
-                    const v = r[c];
-                    const n = typeof v === "number";
-                    const isSym = c === "symbol";
-                    return (
-                      <td key={c} className={n ? "num" : ""}
-                        style={isSym ? { color: "var(--accent)", fontWeight: 650 } : undefined}>
-                        {n ? (v as number).toFixed(2) : String(v ?? "—")}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {rows.map((r, i) => {
+                const sym = String(r.symbol || "");
+                const selected = drillSym === sym;
+                return (
+                  <tr key={i}
+                    style={{
+                      cursor: "pointer",
+                      background: selected ? "rgba(255,255,255,0.04)" : undefined,
+                    }}
+                    onClick={() => openDrill(sym)}>
+                    {cols.map((c) => {
+                      const v = r[c];
+                      const n = typeof v === "number";
+                      const isSym = c === "symbol";
+                      return (
+                        <td key={c} className={n ? "num" : ""}
+                          style={isSym ? { color: "var(--accent)", fontWeight: 650 } : undefined}>
+                          {n ? (v as number).toFixed(2) : String(v ?? "—")}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -239,6 +317,107 @@ export default function Scanner({
             : "Pick a universe (or custom tickers), then Find pairs.")}</div>
         )}
       </div>
+
+      {tab === "scan" && drillSym && (
+        <div className="card card-pad" style={{ marginTop: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <div>
+              <div className="rail-label" style={{ marginTop: 0 }}>Full research · {drillSym}</div>
+              <div className="dim" style={{ fontSize: 12.5, maxWidth: 520, lineHeight: 1.4 }}>
+                Full AI Score for this stock only. It can differ from the screen score —
+                that is expected.
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {onAnalyze && (
+                <button className="primary" onClick={() => onAnalyze(drillSym)}>Open in Analyze</button>
+              )}
+              <button className="ghost" onClick={() => { setDrillSym(null); setDrill(null); setDrillErr(""); }}>
+                Close
+              </button>
+            </div>
+          </div>
+          {drillBusy && <div className="skeleton" style={{ height: 100, marginTop: 12 }} />}
+          {!drillBusy && drillErr && <div className="dim" style={{ marginTop: 12 }}>⚠ {drillErr}</div>}
+          {!drillBusy && drill && (
+            <>
+              <div className="kpis" style={{ marginTop: 12 }}>
+                <div className="card kpi" style={{ padding: "10px 12px" }}>
+                  <div className="label">Screen score</div>
+                  <div className="value num" style={{ fontSize: 18 }}>
+                    {drillQuick != null && Number.isFinite(drillQuick) ? drillQuick.toFixed(1) : "—"}
+                  </div>
+                  <div className="sub">fast technical filter</div>
+                </div>
+                <div className="card kpi" style={{ padding: "10px 12px" }}>
+                  <div className="label">Full AI Score</div>
+                  <div className="value num" style={{ fontSize: 18 }}>
+                    {drill.score != null ? Number(drill.score).toFixed(1) : "—"}
+                    {drill.grade ? <span className="dim" style={{ fontSize: 12, marginLeft: 6 }}>{drill.grade}</span> : null}
+                  </div>
+                  <div className="sub">tech + momentum + sentiment + fundamentals</div>
+                </div>
+                {drillQuick != null && drill.score != null && Number.isFinite(drillQuick) && (
+                  <div className="card kpi" style={{ padding: "10px 12px" }}>
+                    <div className="label">Gap</div>
+                    <div className="value num" style={{
+                      fontSize: 18,
+                      color: Math.abs(Number(drill.score) - drillQuick) >= 2 ? "var(--down)" : "var(--text-2)",
+                    }}>
+                      {`${Number(drill.score) - drillQuick >= 0 ? "+" : ""}${(Number(drill.score) - drillQuick).toFixed(1)}`}
+                    </div>
+                    <div className="sub">full minus screen</div>
+                  </div>
+                )}
+                {([
+                  ["Technical", drill.technical_score],
+                  ["Momentum", drill.momentum_score],
+                  ["Sentiment", drill.sentiment_score],
+                  ["Fundamental", drill.fundamental_score],
+                ] as const).map(([label, v]) => (
+                  <div className="card kpi" key={label} style={{ padding: "10px 12px" }}>
+                    <div className="label">{label}</div>
+                    <div className="value num" style={{ fontSize: 16 }}>
+                      {v != null ? Number(v).toFixed(1) : "—"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {drill.summary && (
+                <div style={{ marginTop: 12, fontSize: 13.5, lineHeight: 1.45, color: "var(--text-2)" }}>
+                  {String(drill.summary)}
+                </div>
+              )}
+              {signals.length > 0 ? (
+                <table className="tbl" style={{ marginTop: 12 }}>
+                  <thead>
+                    <tr><th>Signal</th><th>Value</th><th>Impact</th><th>Note</th></tr>
+                  </thead>
+                  <tbody>
+                    {signals.map((s) => (
+                      <tr key={s.name}>
+                        <td style={{ fontWeight: 600 }}>{s.name.replace(/_/g, " ")}</td>
+                        <td className="num">
+                          {typeof s.value === "number" ? (s.value as number).toFixed(2) : String(s.value ?? "—")}
+                        </td>
+                        <td style={{
+                          color: s.impact === "positive" ? "var(--up)"
+                            : s.impact === "negative" ? "var(--down)" : "var(--text-2)",
+                        }}>
+                          {s.impact ?? "—"}
+                        </td>
+                        <td className="dim" style={{ fontSize: 12 }}>{s.description.slice(0, 120)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="dim" style={{ marginTop: 12 }}>No per-signal breakdown available for this symbol.</div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

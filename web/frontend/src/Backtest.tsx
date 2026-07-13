@@ -107,6 +107,50 @@ type Tab = "backtest" | "optimize" | "models";
 type Engine = "strategy" | "model";
 type ChartView = "equity" | "compare";
 
+interface SavedRun {
+  id: string;
+  ts: number;
+  kind: "strategy" | "model";
+  symbol: string;
+  name: string; // strategy or model id
+  period: string;
+  metrics: Record<string, number>;
+  snapshot: Record<string, unknown>;
+}
+
+const BT_HISTORY_KEY = "evolve_bt_runs_v1";
+const BT_HISTORY_MAX = 8;
+
+function loadRunHistory(): SavedRun[] {
+  try {
+    const raw = localStorage.getItem(BT_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SavedRun[];
+    return Array.isArray(parsed) ? parsed.slice(0, BT_HISTORY_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistRunHistory(runs: SavedRun[]) {
+  try {
+    localStorage.setItem(BT_HISTORY_KEY, JSON.stringify(runs.slice(0, BT_HISTORY_MAX)));
+  } catch { /* quota / private mode */ }
+}
+
+function pickRunMetrics(res: Record<string, unknown>): Record<string, number> {
+  const isModel = res.kind === "model";
+  const keys = isModel
+    ? ["mean_mape", "mean_directional_accuracy", "hit_rate_10pct", "n_windows", "consistency_score"]
+    : ["total_return", "buy_hold_return", "sharpe_ratio", "max_drawdown", "trade_win_rate", "n_trades", "excess_vs_bh"];
+  const out: Record<string, number> = {};
+  for (const k of keys) {
+    const v = res[k];
+    if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
+  }
+  return out;
+}
+
 export default function Backtest() {
   const [tab, setTab] = useState<Tab>("backtest");
   const [engine, setEngine] = useState<Engine>("strategy");
@@ -123,8 +167,11 @@ export default function Backtest() {
   const [opt, setOpt] = useState<Record<string, unknown> | null>(null);
   const [tune, setTune] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState<SavedRun[]>([]);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   useEffect(() => {
+    setHistory(loadRunHistory());
     try {
       const raw = sessionStorage.getItem("evolve_backtest");
       if (raw) {
@@ -145,14 +192,36 @@ export default function Backtest() {
     }).catch(() => {});
   }, []);
 
+  function rememberRun(result: Record<string, unknown>) {
+    if (result.success !== true) return;
+    const kind = result.kind === "model" ? "model" : "strategy";
+    const entry: SavedRun = {
+      id: `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      ts: Date.now(),
+      kind,
+      symbol: String(result.symbol || symbol).toUpperCase(),
+      name: kind === "model"
+        ? String(result.model || model)
+        : String(result.strategy || strategy),
+      period: String(result.period || period),
+      metrics: pickRunMetrics(result),
+      snapshot: result,
+    };
+    setHistory((prev) => {
+      const next = [entry, ...prev].slice(0, BT_HISTORY_MAX);
+      persistRunHistory(next);
+      return next;
+    });
+  }
+
   async function run(params: Record<string, unknown> = {}) {
     setLoading(true);
     try {
-      if (engine === "model") {
-        setRes(await runModelBacktest(symbol, model, period));
-      } else {
-        setRes(await runBacktest(symbol, strategy, params, period));
-      }
+      const result = engine === "model"
+        ? await runModelBacktest(symbol, model, period)
+        : await runBacktest(symbol, strategy, params, period);
+      setRes(result as Record<string, unknown>);
+      rememberRun(result as Record<string, unknown>);
     } catch (e) {
       setRes({ success: false, error: String(e) });
     } finally {
@@ -304,6 +373,115 @@ export default function Backtest() {
           )}
         </div>
       </div>
+
+      {tab === "backtest" && history.length > 0 && (
+        <div className="card card-pad" style={{ marginBottom: 16 }}>
+          <div className="rail-label" style={{ marginTop: 0 }}>Recent runs</div>
+          <div className="dim" style={{ fontSize: 12.5, marginBottom: 10 }}>
+            Saved in this browser — pick one to restore, or check two for a side-by-side.
+          </div>
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th style={{ width: 36 }} />
+                <th>When</th><th>Kind</th><th>Symbol</th><th>Name</th><th>Period</th>
+                <th>Headline</th><th />
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h) => {
+                const checked = compareIds.includes(h.id);
+                const headline = h.kind === "model"
+                  ? (h.metrics.mean_directional_accuracy != null
+                    ? `DA ${(h.metrics.mean_directional_accuracy * 100).toFixed(0)}%`
+                    : "—")
+                  : (h.metrics.sharpe_ratio != null
+                    ? `Sharpe ${h.metrics.sharpe_ratio.toFixed(2)}`
+                    : h.metrics.total_return != null
+                      ? `Ret ${formatMetric("total_return", h.metrics.total_return)}`
+                      : "—");
+                return (
+                  <tr key={h.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setCompareIds((ids) => {
+                            if (ids.includes(h.id)) return ids.filter((x) => x !== h.id);
+                            if (ids.length >= 2) return [ids[1], h.id];
+                            return [...ids, h.id];
+                          });
+                        }}
+                      />
+                    </td>
+                    <td className="dim">{new Date(h.ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+                    <td>{h.kind}</td>
+                    <td style={{ fontWeight: 650 }}>{h.symbol}</td>
+                    <td>{h.kind === "strategy" ? prettyStrategy(h.name) : h.name}</td>
+                    <td>{h.period}</td>
+                    <td className="num">{headline}</td>
+                    <td>
+                      <button className="ghost" onClick={() => {
+                        setEngine(h.kind);
+                        setSymbol(h.symbol);
+                        setPeriod(h.period);
+                        if (h.kind === "model") setModel(h.name);
+                        else setStrategy(h.name);
+                        setRes(h.snapshot);
+                        setTab("backtest");
+                      }}>Restore</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="ghost" onClick={() => {
+              setHistory([]);
+              setCompareIds([]);
+              persistRunHistory([]);
+            }}>Clear history</button>
+          </div>
+          {compareIds.length === 2 && (() => {
+            const a = history.find((h) => h.id === compareIds[0]);
+            const b = history.find((h) => h.id === compareIds[1]);
+            if (!a || !b) return null;
+            const keys = Array.from(new Set([
+              ...Object.keys(a.metrics), ...Object.keys(b.metrics),
+            ]));
+            return (
+              <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                <div className="rail-label" style={{ marginTop: 0 }}>Side-by-side</div>
+                <div className="dim" style={{ fontSize: 12.5, marginBottom: 10 }}>
+                  {a.symbol} {a.kind === "strategy" ? prettyStrategy(a.name) : a.name} ({a.period})
+                  {"  vs  "}
+                  {b.symbol} {b.kind === "strategy" ? prettyStrategy(b.name) : b.name} ({b.period})
+                </div>
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Metric</th>
+                      <th>{a.kind === "strategy" ? prettyStrategy(a.name) : a.name}</th>
+                      <th>{b.kind === "strategy" ? prettyStrategy(b.name) : b.name}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {keys.map((k) => (
+                      <tr key={k}>
+                        <td>{k.replace(/_/g, " ")}</td>
+                        <td className="num">{a.metrics[k] != null ? formatMetric(k, a.metrics[k]) : "—"}</td>
+                        <td className="num">{b.metrics[k] != null ? formatMetric(k, b.metrics[k]) : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {loading && <div className="skeleton" style={{ height: 120 }} />}
 

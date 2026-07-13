@@ -279,6 +279,8 @@ PARITY_GET_ROUTES = [
     "/api/portfolio/risk",
     "/api/recs",
     "/api/edgar/SPY",
+    "/api/market-signals",
+    "/api/news/breaking",
 ]
 
 PARITY_POST_ROUTES = [
@@ -297,6 +299,8 @@ PARITY_POST_ROUTES = [
                      "threshold": 100.0}),
     ("/api/settings/prefs", {"scoring_style": "balanced"}),
     ("/api/recs", {"symbol": "SPY", "score": 7.0, "price_at_rec": 100.0}),
+    ("/api/market-signals/gpr", {}),
+    ("/api/news/context", {"titles": ["Markets steady ahead of data"]}),
 ]
 
 
@@ -577,3 +581,64 @@ class TestBreakingNewsToolParity:
         r = get_breaking_news()
         assert r["success"] in (True, False)
         assert isinstance(r["items"], list)
+
+
+class TestMarketSignals:
+    """GPR + EPS revision breadth: Dashboard pulse reads prefs/disk;
+    Settings POSTs refresh and persist. Never invents a number."""
+
+    def test_get_shape_and_offline_safe(self, parity_client):
+        c, H = parity_client
+        r = c.get("/api/market-signals", headers=H)
+        assert r.status_code == 200
+        body = r.json()
+        assert body["success"] is True
+        assert "gpr" in body and "revision_breadth" in body
+        # None is honest when not loaded / offline
+        assert body["gpr"] is None or (
+            isinstance(body["gpr"], dict) and body["gpr"].get("current") is not None
+        )
+
+    def test_gpr_post_persists_to_prefs(self, parity_client, monkeypatch):
+        c, H = parity_client
+        fake = {
+            "current": 142.0, "level": "ELEVATED", "trend": "RISING",
+            "percentile": 80.0, "description": "test", "source": "test",
+        }
+
+        class FakeMF:
+            def _get_gpr_index(self):
+                return fake
+
+        import trading.analysis.macro_factors as MF
+        monkeypatch.setattr(MF, "MacroFactors", FakeMF)
+        r = c.post("/api/market-signals/gpr", headers=H).json()
+        assert r["success"] is True
+        assert r["gpr"]["current"] == 142.0
+        got = c.get("/api/market-signals", headers=H).json()
+        assert got["gpr"]["current"] == 142.0
+        assert got["gpr"]["level"] == "ELEVATED"
+
+
+class TestNewsContextHedge:
+    def test_sanitize_strips_advice(self):
+        from trading.services.news_context import _sanitize_why
+        assert _sanitize_why("Buy NVDA now") == ""
+        assert _sanitize_why("This may reflect rate-cut expectations.") != ""
+
+    def test_endpoint_offline_safe(self, parity_client, monkeypatch):
+        c, H = parity_client
+        import trading.services.news_context as NC
+        monkeypatch.setattr(NC, "_complete", lambda *a, **k: "May reflect softer inflation data.")
+        r = c.post("/api/news/context",
+                   json={"titles": ["CPI cools more than expected"]},
+                   headers=H).json()
+        assert r["success"] is True
+        assert r["items"][0]["why"]
+        assert r["items"][0]["hedged"] is True
+
+        monkeypatch.setattr(NC, "_complete", lambda *a, **k: "You should buy the dip")
+        r2 = c.post("/api/news/context",
+                    json={"titles": ["Stocks rally"]},
+                    headers=H).json()
+        assert r2["items"][0]["why"] == ""

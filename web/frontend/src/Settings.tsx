@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { getKeys, getPrefs, saveKeys, savePrefs } from "./api";
+import {
+  getKeys, getMarketSignals, getPrefs, loadGpr, loadRevisionBreadth,
+  saveKeys, savePrefs, type GprSignal, type RevisionBreadth,
+} from "./api";
 
 const SCORE_STYLES = [
   "Balanced (default)",
@@ -29,6 +32,11 @@ export default function Settings() {
   const [minAi, setMinAi] = useState(6.0);
   const [direction, setDirection] = useState(DIRECTIONS[0]);
   const [msg, setMsg] = useState("");
+  const [gpr, setGpr] = useState<GprSignal | null>(null);
+  const [rb, setRb] = useState<RevisionBreadth | null>(null);
+  const [gprBusy, setGprBusy] = useState(false);
+  const [rbBusy, setRbBusy] = useState(false);
+  const [sigMsg, setSigMsg] = useState("");
 
   useEffect(() => {
     getKeys().then((k) => setSaved({
@@ -41,6 +49,10 @@ export default function Settings() {
       if (typeof p.briefing_universe === "string") setBriefUniverse(p.briefing_universe);
       if (typeof p.min_ai_score === "number") setMinAi(p.min_ai_score);
       if (typeof p.opportunity_direction === "string") setDirection(p.opportunity_direction);
+    }).catch(() => {});
+    getMarketSignals().then((s) => {
+      setGpr(s.gpr);
+      setRb(s.revision_breadth);
     }).catch(() => {});
   }, []);
 
@@ -89,13 +101,13 @@ export default function Settings() {
         <Field label="OpenAI API key" val={openai} set={setOpenai} has={saved.openai} />
         <Field label="News API key" val={news} set={setNews} has={saved.news} />
         <Field label="Twitter/X bearer token" val={twitterBearer} set={setTwitterBearer} has={saved.twitter} />
-        <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 12px" }}>
+        <p style={{ fontSize: 12, color: "var(--text-2)", margin: "0 0 12px" }}>
           Bearer token powers breaking headlines and volume-chart news overlays. Without it,
           Evolve falls back to wire RSS (and a Walter Bloomberg RSS mirror when available).
         </p>
         <Field label="Reddit client ID" val={redditId} set={setRedditId} has={saved.reddit} />
         <Field label="Reddit client secret" val={redditSecret} set={setRedditSecret} has={saved.reddit} />
-        <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 4px" }}>
+        <p style={{ fontSize: 12, color: "var(--text-2)", margin: "0 0 4px" }}>
           Optional. AI Score sentiment is news-first; Reddit is a 30% blend when configured.
         </p>
       </div>
@@ -127,10 +139,61 @@ export default function Settings() {
             </select>
           </div>
         </div>
+        <button className="primary" onClick={save} style={{ marginTop: 14 }}>Save settings</button>
+        {msg && <div style={{ color: "var(--up)", marginTop: 10, fontSize: 13 }}>{msg}</div>}
       </div>
 
-      <button className="primary" onClick={save}>Save settings</button>
-      {msg && <div style={{ color: "var(--up)", marginTop: 10, fontSize: 13 }}>{msg}</div>}
+      <div className="card card-pad" style={{ maxWidth: 560, marginBottom: 16 }}>
+        <div className="rail-label" style={{ marginTop: 0 }}>Market signals</div>
+        <p style={{ fontSize: 12.5, color: "var(--text-2)", margin: "0 0 12px", lineHeight: 1.45 }}>
+          Manual load only — results save to your profile and show on the Dashboard pulse.
+          GPR is the Caldara &amp; Iacoviello academic index (disk-cached ~30 days).
+          EPS breadth samples S&amp;P names and can take a few minutes.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div className="dim" style={{ fontSize: 12.5, marginBottom: 6 }}>
+              {gpr
+                ? `GPR: ${gpr.current} (${gpr.level ?? "—"}) · ${gpr.trend ?? ""}`
+                : "GPR: not loaded"}
+            </div>
+            <button className="primary" disabled={gprBusy} onClick={async () => {
+              setGprBusy(true); setSigMsg("");
+              try {
+                const r = await loadGpr();
+                if (r.success && r.gpr) { setGpr(r.gpr); setSigMsg("GPR saved to your profile."); }
+                else setSigMsg(r.error ?? "GPR load failed.");
+              } catch (e) {
+                setSigMsg(e instanceof Error ? e.message : "GPR failed");
+              } finally { setGprBusy(false); setTimeout(() => setSigMsg(""), 4000); }
+            }}>
+              {gprBusy ? "Loading GPR…" : "Load Geopolitical Risk Index"}
+            </button>
+          </div>
+          <div>
+            <div className="dim" style={{ fontSize: 12.5, marginBottom: 6 }}>
+              {rb
+                ? `EPS breadth: ${rb.pct_up.toFixed(0)}% ↑ / ${rb.pct_down.toFixed(0)}% ↓ (${rb.sample_size ?? "?"} stocks) · ${rb.signal ?? ""}`
+                : "EPS revision breadth: not loaded"}
+            </div>
+            <button disabled={rbBusy} onClick={async () => {
+              setRbBusy(true); setSigMsg("");
+              try {
+                const r = await loadRevisionBreadth(150);
+                if (r.success && r.revision_breadth) {
+                  setRb(r.revision_breadth);
+                  setSigMsg("EPS breadth saved to your profile.");
+                } else setSigMsg(r.error ?? "Breadth compute failed.");
+              } catch (e) {
+                setSigMsg(e instanceof Error ? e.message : "Breadth failed");
+              } finally { setRbBusy(false); setTimeout(() => setSigMsg(""), 5000); }
+            }}>
+              {rbBusy ? "Computing breadth (may take minutes)…" : "Compute EPS revision breadth"}
+            </button>
+          </div>
+        </div>
+        {sigMsg && <div style={{ marginTop: 10, fontSize: 13, color: "var(--text-2)" }}>{sigMsg}</div>}
+      </div>
     </div>
   );
 }

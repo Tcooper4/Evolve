@@ -4,15 +4,20 @@ import {
   getBreakingNews,
   getChartEvents,
   getHistory,
+  getMarketSignals,
   getNews,
+  getNewsContext,
   getQuote,
+  getScore,
   getWatchlist,
   quoteSocket,
   removeFromWatchlist,
   runBriefing,
   type Candle,
   type ChartEvent,
+  type GprSignal,
   type Quote,
+  type RevisionBreadth,
 } from "./api";
 import Chart from "./Chart";
 import Sparkline from "./Sparkline";
@@ -34,6 +39,9 @@ interface WlEntry {
   symbol: string;
   spark: number[];
   last: number | null;
+  score: number | null;
+  grade: string | null;
+  scoreLoading?: boolean;
 }
 
 export default function Dashboard({
@@ -52,11 +60,14 @@ export default function Dashboard({
   const [events, setEvents] = useState<ChartEvent[]>([]);
   const [watchlist, setWatchlist] = useState<WlEntry[]>([]);
   const [news, setNews] = useState<Record<string, unknown>[]>([]);
+  const [newsWhy, setNewsWhy] = useState<Record<string, string>>({});
   const [breaking, setBreaking] = useState<Record<string, unknown>[]>([]);
   const [brief, setBrief] = useState<Record<string, unknown> | null>(null);
   const [briefBusy, setBriefBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [flash, setFlash] = useState("");
+  const [gpr, setGpr] = useState<GprSignal | null>(null);
+  const [rb, setRb] = useState<RevisionBreadth | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const prevPrice = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -78,6 +89,22 @@ export default function Dashboard({
       setSymbol(h.symbol);
       setInput(h.symbol);
       setNews((n.items as Record<string, unknown>[]) ?? []);
+      setNewsWhy({});
+      const titles = ((n.items as Record<string, unknown>[]) ?? [])
+        .map((it) => String(it.title ?? it.headline ?? "").trim())
+        .filter(Boolean)
+        .slice(0, 5);
+      if (titles.length) {
+        getNewsContext(titles)
+          .then((ctx) => {
+            const map: Record<string, string> = {};
+            for (const it of ctx.items ?? []) {
+              if (it.title && it.why) map[it.title] = it.why;
+            }
+            setNewsWhy(map);
+          })
+          .catch(() => {});
+      }
       setBreaking((br.items as Record<string, unknown>[]) ?? []);
       if (q.price != null && prevPrice.current != null && q.price !== prevPrice.current) {
         setFlash(q.price > prevPrice.current ? "flash-up" : "flash-down");
@@ -110,19 +137,50 @@ export default function Dashboard({
           try {
             const h = await getHistory(r.symbol, "1mo");
             const closes = h.candles.map((c) => c.close);
-            return { symbol: r.symbol, spark: closes, last: closes.at(-1) ?? null };
+            return {
+              symbol: r.symbol, spark: closes, last: closes.at(-1) ?? null,
+              score: null, grade: null, scoreLoading: true,
+            };
           } catch {
-            return { symbol: r.symbol, spark: [], last: null };
+            return {
+              symbol: r.symbol, spark: [], last: null,
+              score: null, grade: null, scoreLoading: true,
+            };
           }
         }),
       );
       setWatchlist(entries);
+      // Scores load after sparks so the board paints fast
+      void Promise.all(
+        entries.map(async (e) => {
+          try {
+            const s = await getScore(e.symbol, "long");
+            setWatchlist((prev) => prev.map((w) =>
+              w.symbol === e.symbol
+                ? {
+                    ...w,
+                    score: s.score != null ? Number(s.score) : null,
+                    grade: s.grade != null ? String(s.grade) : null,
+                    scoreLoading: false,
+                  }
+                : w,
+            ));
+          } catch {
+            setWatchlist((prev) => prev.map((w) =>
+              w.symbol === e.symbol ? { ...w, scoreLoading: false } : w,
+            ));
+          }
+        }),
+      );
     } catch { /* handled by api client */ }
   }, []);
 
   useEffect(() => {
     load(symbol, period);
     refreshWatchlist();
+    getMarketSignals()
+      .then((s) => { setGpr(s.gpr); setRb(s.revision_breadth); })
+      .catch(() => {});
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
         e.preventDefault();
@@ -231,6 +289,28 @@ export default function Dashboard({
           </div>
           <div className="sub">close vs close</div>
         </div>
+        <div className="card kpi fade-in" title={gpr?.description || "Load in Settings → Market signals"}>
+          <div className="label">Geopolitical risk</div>
+          <div className="value num" style={{
+            fontSize: 18,
+            color: gpr?.level === "HIGH" || gpr?.level === "ELEVATED" ? "var(--down)" : undefined,
+          }}>
+            {gpr?.current != null ? `${Number(gpr.current).toFixed(0)}` : "—"}
+            {gpr?.level ? <span className="dim" style={{ fontSize: 12, marginLeft: 6 }}>{gpr.level}</span> : null}
+          </div>
+          <div className="sub">{gpr?.trend || "Caldara & Iacoviello · Settings to load"}</div>
+        </div>
+        <div className="card kpi fade-in" title={rb?.description || "Load in Settings → Market signals"}>
+          <div className="label">EPS revision breadth</div>
+          <div className="value num" style={{
+            fontSize: 16,
+            color: rb?.signal === "POSITIVE" ? "var(--up)"
+              : rb?.signal === "NEGATIVE" ? "var(--down)" : undefined,
+          }}>
+            {rb ? `${rb.pct_up.toFixed(0)}% ↑ / ${rb.pct_down.toFixed(0)}% ↓` : "—"}
+          </div>
+          <div className="sub">{rb?.signal || "Settings to compute"}</div>
+        </div>
       </div>
 
       <div className="card fade-in">
@@ -281,23 +361,35 @@ export default function Dashboard({
       <div className="form-grid" style={{ marginTop: 16 }}>
         <div className="card card-pad">
           <div className="rail-label" style={{ marginTop: 0 }}>Headlines · {symbol}</div>
+          <div className="dim" style={{ fontSize: 11.5, marginBottom: 6 }}>
+            LLM blurbs (when keyed) are context only — not a call.
+          </div>
           {news.length === 0 && <div className="dim">No headlines yet.</div>}
-          {news.slice(0, 5).map((n, i) => (
+          {news.slice(0, 5).map((n, i) => {
+            const title = String(n.title ?? n.headline ?? "Untitled");
+            const why = newsWhy[title];
+            return (
             <div key={i} style={{ padding: "8px 0", borderTop: i ? "1px solid var(--border)" : "none" }}>
               <div style={{ fontWeight: 600, fontSize: 13.5 }}>
                 {n.url ? (
                   <a href={String(n.url)} target="_blank" rel="noreferrer" style={{ color: "var(--text)", textDecoration: "none" }}>
-                    {String(n.title ?? n.headline ?? "Untitled")}
+                    {title}
                   </a>
-                ) : String(n.title ?? n.headline ?? "Untitled")}
+                ) : title}
               </div>
+              {why && (
+                <div style={{ fontSize: 12, marginTop: 3, color: "var(--text-2)", lineHeight: 1.4 }}>
+                  <span className="dim">Context: </span>{why}
+                </div>
+              )}
               <div className="dim" style={{ fontSize: 11.5, marginTop: 3 }}>
                 {String(n.source ?? "")}
                 {n.source_type ? ` · ${String(n.source_type)}` : ""}
                 {n.url ? <> · <a href={String(n.url)} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>open</a></> : null}
               </div>
             </div>
-          ))}
+            );
+          })}
           {breaking.length > 0 && (
             <>
               <div className="rail-label" style={{ marginTop: 16 }}>Breaking</div>
@@ -347,7 +439,18 @@ export default function Dashboard({
           <div key={w.symbol}
             className={`wl-card fade-in ${w.symbol === symbol ? "active" : ""}`}
             onClick={() => load(w.symbol, period)}>
-            <span className="wl-sym">{w.symbol}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+              <span className="wl-sym">{w.symbol}</span>
+              <span className="num" style={{
+                fontSize: 12.5, fontWeight: 650,
+                color: w.score == null ? "var(--text-3)"
+                  : w.score >= 7 ? "var(--up)"
+                    : w.score <= 4 ? "var(--down)" : "var(--text-2)",
+              }}>
+                {w.scoreLoading ? "…" : w.score != null ? w.score.toFixed(1) : "—"}
+                {!w.scoreLoading && w.grade ? ` ${w.grade}` : ""}
+              </span>
+            </div>
             <Sparkline values={w.spark} baseline="start" />
             <span className="wl-px num">
               {w.last != null ? w.last.toFixed(2) : "—"}
