@@ -343,6 +343,22 @@ export default function Portfolio() {
                       </div>
                     </div>
                   )}
+                  {acctRisk.kelly?.half_kelly_dollars_options_vix_adjusted != null && (
+                    <div className="card kpi">
+                      <div className="label">Options VIX-adjusted</div>
+                      <div className="value num" style={{ fontSize: 18 }}>
+                        ${Number(acctRisk.kelly.half_kelly_dollars_options_vix_adjusted).toLocaleString()}
+                      </div>
+                      <div className="sub">
+                        {acctRisk.kelly.options_vix_scaled_down
+                          ? `×${acctRisk.kelly.options_vix_multiplier ?? "—"} (VIX ${acctRisk.kelly.options_vix ?? "—"} elevated)`
+                          : "×1.0 — VIX not elevated; Kelly unchanged"}
+                        {acctRisk.kelly.options_vix_live_wired
+                          ? ""
+                          : " · informational (not auto-wired)"}
+                      </div>
+                    </div>
+                  )}
                   {acctRisk.trade_stats?.win_rate != null && (
                     <div className="card kpi">
                       <div className="label">Your win rate</div>

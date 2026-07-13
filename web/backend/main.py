@@ -213,17 +213,19 @@ def history(symbol: str, period: str = "6mo", interval: str = "",
         df = yf.Ticker(sym).history(period=per, interval=iv)
         if df is None or df.empty:
             return HistoryResponse(symbol=sym, interval=iv, candles=[])
+        # Normalize to UTC so clients can display in any chosen timezone.
+        # yfinance intraday indexes are usually exchange-local (US/Eastern).
         if hasattr(df.index, "tz") and df.index.tz is not None:
             df = df.copy()
-            df.index = df.index.tz_convert(None)
+            df.index = df.index.tz_convert("UTC")
         candles = []
         intraday = iv.endswith("m") or iv in ("1h", "60m", "90m")
         for idx, r in df.iterrows():
-            t = (
-                idx.strftime("%Y-%m-%dT%H:%M:%S")
-                if intraday
-                else idx.strftime("%Y-%m-%d")
-            )
+            if intraday:
+                # Always emit Zulu so browsers don't treat naive times as local
+                t = idx.strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                t = idx.strftime("%Y-%m-%d")
             candles.append(Candle(
                 time=t,
                 open=float(r["Open"]), high=float(r["High"]),

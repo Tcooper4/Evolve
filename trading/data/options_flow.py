@@ -294,6 +294,90 @@ def _fetch_options_data(symbol: str, top_n: int) -> Dict[str, Any]:
     return out
 
 
+def fetch_option_chain(
+    symbol: str,
+    expiry: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Fetch one yfinance option chain (calls + puts) for GEX / skew modules.
+
+    Reuses the same ``Ticker.option_chain`` source as ``get_options_flow``.
+    Does not invent a second data path.
+
+    Returns:
+        success, symbol, expiry, spot, calls (DataFrame), puts (DataFrame),
+        expiries, error, source, delayed_data (always True for honesty).
+    """
+    sym = (symbol or "").strip().upper()
+    empty = {
+        "success": False,
+        "symbol": sym,
+        "expiry": None,
+        "spot": None,
+        "calls": pd.DataFrame(),
+        "puts": pd.DataFrame(),
+        "expiries": [],
+        "error": None,
+        "source": "yfinance",
+        "delayed_data": True,
+    }
+    if not sym:
+        empty["error"] = "symbol required"
+        return empty
+    try:
+        import yfinance as yf
+
+        t = yf.Ticker(sym)
+        expiries = [str(e) for e in (t.options or [])]
+        empty["expiries"] = expiries
+        if not expiries:
+            empty["error"] = "no options expiries"
+            return empty
+
+        chosen = (expiry or "").strip() or expiries[0]
+        if chosen not in expiries:
+            # Nearest expiry on/after requested date, else first listed
+            later = [e for e in expiries if e >= chosen]
+            chosen = later[0] if later else expiries[0]
+
+        chain = t.option_chain(chosen)
+        calls = chain.calls if chain.calls is not None else pd.DataFrame()
+        puts = chain.puts if chain.puts is not None else pd.DataFrame()
+
+        spot = None
+        try:
+            spot = float(getattr(t.fast_info, "last_price", None) or 0) or None
+        except Exception as e:
+            logger.debug("spot via fast_info failed for %s: %s", sym, e)
+        if spot is None:
+            try:
+                hist = t.history(period="5d")
+                if hist is not None and not hist.empty:
+                    _cmap = {c.lower(): c for c in hist.columns}
+                    close_col = _cmap.get("close")
+                    if close_col:
+                        spot = float(hist[close_col].iloc[-1])
+            except Exception as e:
+                logger.debug("spot via history failed for %s: %s", sym, e)
+
+        return {
+            "success": True,
+            "symbol": sym,
+            "expiry": chosen,
+            "spot": spot,
+            "calls": calls,
+            "puts": puts,
+            "expiries": expiries,
+            "error": None,
+            "source": "yfinance",
+            "delayed_data": True,
+        }
+    except Exception as e:
+        logger.warning("fetch_option_chain failed for %s: %s", sym, e)
+        empty["error"] = str(e)
+        return empty
+
+
 def get_options_flow(symbol: str, top_n: int = 10) -> Dict[str, Any]:
     """
     Fetch options chains via yfinance and surface unusual volume vs expiry average.

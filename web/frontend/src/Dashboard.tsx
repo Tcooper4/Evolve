@@ -10,6 +10,7 @@ import {
   getQuote,
   getScore,
   getWatchlist,
+  getPrefs,
   quoteSocket,
   removeFromWatchlist,
   runBriefing,
@@ -21,6 +22,7 @@ import {
 } from "./api";
 import Chart from "./Chart";
 import Sparkline from "./Sparkline";
+import { loadCachedChartTimezone, cacheChartTimezone } from "./chartTime";
 
 const PERIODS = ["1d", "5d", "1mo", "3mo", "6mo", "1y", "max"] as const;
 type Period = (typeof PERIODS)[number];
@@ -99,10 +101,21 @@ export default function Dashboard({
   const periodRef = useRef(period);
   const dayIntervalRef = useRef(dayInterval);
   const [chartLive, setChartLive] = useState(false);
+  const [chartTimezone, setChartTimezone] = useState(loadCachedChartTimezone);
 
   useEffect(() => { symbolRef.current = symbol; }, [symbol]);
   useEffect(() => { periodRef.current = period; }, [period]);
   useEffect(() => { dayIntervalRef.current = dayInterval; }, [dayInterval]);
+
+  useEffect(() => {
+    getPrefs().then((r) => {
+      const tz = r.prefs?.chart_timezone;
+      if (typeof tz === "string" && tz) {
+        setChartTimezone(tz);
+        cacheChartTimezone(tz);
+      }
+    }).catch(() => {});
+  }, []);
 
   const load = useCallback(async (sym: string, per: Period, iv?: DayInterval, soft = false) => {
     if (!soft) setLoading(true);
@@ -414,6 +427,7 @@ export default function Dashboard({
         ) : candles.length > 0 ? (
           <Chart
             live={chartLive && (period === "1d" || period === "5d")}
+            timeZone={chartTimezone}
             candles={candles}
             markers={events.map((e) => ({
               time: e.time,

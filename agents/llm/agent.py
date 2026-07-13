@@ -3002,6 +3002,62 @@ def get_evolve_platform_tool_registry():
             },
         },
         {
+            "name": "get_gamma_exposure",
+            "description": (
+                "Dealer gamma exposure (GEX) from delayed free option chains: "
+                "net GEX sign, gamma flip level, pin-candidate strikes, and a "
+                "plain-language hedging regime. Not real-time OPRA — directional "
+                "context only. Advanced options tooling; translate for novices."
+            ),
+            "function": _agent_tools.get_gamma_exposure,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "expiry": {
+                        "type": "string",
+                        "description": "Optional YYYY-MM-DD; default nearest expiry",
+                    },
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
+            "name": "get_options_skew",
+            "description": (
+                "IV skew shape (flat/smile/put_smirk/call_smirk) with same-day "
+                "earnings/macro event framing. Delayed chain data. Advanced "
+                "options tooling; translate for novices."
+            ),
+            "function": _agent_tools.get_options_skew,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "expiry": {"type": "string"},
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
+            "name": "get_options_vix_sizing",
+            "description": (
+                "Kelly position size with a conditional VIX overlay for options "
+                "risk capital (cut size only when VIX is elevated; never above "
+                "×1.0). Informational while live auto-wire is off."
+            ),
+            "function": _agent_tools.get_options_vix_sizing,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "win_rate": {"type": "number"},
+                    "avg_win_loss_ratio": {"type": "number"},
+                    "account_size": {"type": "number"},
+                },
+                "required": ["win_rate"],
+            },
+        },
+        {
             "name": "detect_market_regime",
             "description": (
                 "Classify the current market regime for a symbol "

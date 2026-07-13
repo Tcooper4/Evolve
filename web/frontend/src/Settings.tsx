@@ -3,6 +3,7 @@ import {
   getKeys, getMarketSignals, getPrefs, loadGpr, loadRevisionBreadth,
   saveKeys, savePrefs, type GprSignal, type RevisionBreadth,
 } from "./api";
+import { CHART_TIMEZONES, cacheChartTimezone } from "./chartTime";
 
 const SCORE_STYLES = [
   "Balanced (default)",
@@ -31,6 +32,7 @@ export default function Settings() {
   const [briefUniverse, setBriefUniverse] = useState("sp100");
   const [minAi, setMinAi] = useState(6.0);
   const [direction, setDirection] = useState(DIRECTIONS[0]);
+  const [chartTimezone, setChartTimezone] = useState("America/New_York");
   const [msg, setMsg] = useState("");
   const [gpr, setGpr] = useState<GprSignal | null>(null);
   const [rb, setRb] = useState<RevisionBreadth | null>(null);
@@ -49,6 +51,10 @@ export default function Settings() {
       if (typeof p.briefing_universe === "string") setBriefUniverse(p.briefing_universe);
       if (typeof p.min_ai_score === "number") setMinAi(p.min_ai_score);
       if (typeof p.opportunity_direction === "string") setDirection(p.opportunity_direction);
+      if (typeof p.chart_timezone === "string") {
+        setChartTimezone(p.chart_timezone);
+        cacheChartTimezone(p.chart_timezone);
+      }
     }).catch(() => {});
     getMarketSignals().then((s) => {
       setGpr(s.gpr);
@@ -70,7 +76,9 @@ export default function Settings() {
       briefing_universe: briefUniverse,
       min_ai_score: minAi,
       opportunity_direction: direction,
+      chart_timezone: chartTimezone,
     });
+    cacheChartTimezone(chartTimezone);
     setAnthropic(""); setOpenai(""); setNews(""); setRedditId(""); setRedditSecret("");
     setTwitterBearer("");
     setSaved(await getKeys().then((k) => ({
@@ -138,7 +146,19 @@ export default function Settings() {
               {DIRECTIONS.map((d) => <option key={d}>{d}</option>)}
             </select>
           </div>
+          <div className="field">
+            <label>Chart timezone</label>
+            <select value={chartTimezone} onChange={(e) => setChartTimezone(e.target.value)}>
+              {CHART_TIMEZONES.map((z) => (
+                <option key={z.id} value={z.id}>{z.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
+        <p style={{ fontSize: 12, color: "var(--text-2)", margin: "10px 0 0" }}>
+          Intraday chart labels and hover times use this zone. Candle data is stored in UTC.
+          Default is US Eastern (NYSE session).
+        </p>
         <button className="primary" onClick={save} style={{ marginTop: 14 }}>Save settings</button>
         {msg && <div style={{ color: "var(--up)", marginTop: 10, fontSize: 13 }}>{msg}</div>}
       </div>

@@ -223,6 +223,20 @@ export const runMonteCarlo = (symbol: string, n_simulations = 400, horizon_days 
 export const getOptions = (symbol: string) =>
   req<Record<string, unknown>>(`/api/options/${encodeURIComponent(symbol)}`);
 
+export const getOptionsContext = (symbol: string, expiry = "") =>
+  req<{
+    success: boolean;
+    symbol?: string;
+    sentiment?: Record<string, unknown>;
+    gex?: Record<string, unknown>;
+    skew?: Record<string, unknown>;
+    disclosure?: string;
+    error?: string;
+  }>(
+    `/api/options/context/${encodeURIComponent(symbol)}`
+    + (expiry ? `?expiry=${encodeURIComponent(expiry)}` : ""),
+  );
+
 export const getSignalIc = (symbol: string) =>
   req<Record<string, unknown>>(`/api/ic/${encodeURIComponent(symbol)}`);
 
@@ -497,6 +511,10 @@ export interface AccountRisk {
     half_kelly_dollars?: number; note?: string;
     vol_multiplier?: number; vol_scaled_down?: boolean;
     half_kelly_dollars_vol_adjusted?: number; vol_adjustment_reason?: string;
+    options_vix_multiplier?: number; options_vix_scaled_down?: boolean;
+    half_kelly_dollars_options_vix_adjusted?: number;
+    options_vix_reason?: string; options_vix?: number;
+    options_vix_live_wired?: boolean;
   } | null;
   kelly_note?: string;
   portfolio_metrics?: Record<string, string | number> | null;

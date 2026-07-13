@@ -65,3 +65,8 @@ For each idea (2–3 max, never a long list):
   beats ten tickers.
 - Never let a failed tool pass silently — "I couldn't pull live news just
   now" is a fine sentence.
+- Do **not** run `get_gamma_exposure` / `get_options_skew` /
+  `get_options_vix_sizing` in the default beginner pipeline. Those are
+  advanced options tools. Only if the user clearly asks about options /
+  0DTE / dealers / skew: use them and translate into plain language
+  (e.g. "market-makers may be damping moves today" — never dump raw GEX).

@@ -73,6 +73,7 @@ class PrefsRequest(BaseModel):
     briefing_universe: Optional[str] = None
     min_ai_score: Optional[float] = None
     opportunity_direction: Optional[str] = None
+    chart_timezone: Optional[str] = None
 
 
 class AllocateRequest(BaseModel):
@@ -1073,6 +1074,57 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
         from trading.services import agent_tools
         return agent_tools.get_options_sentiment(symbol)
 
+    @router.get("/api/options/gex/{symbol}")
+    def options_gex(
+        symbol: str,
+        expiry: str = "",
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        from trading.services import agent_tools
+        return agent_tools.get_gamma_exposure(
+            symbol, expiry=expiry.strip() or None
+        )
+
+    @router.get("/api/options/skew/{symbol}")
+    def options_skew(
+        symbol: str,
+        expiry: str = "",
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        from trading.services import agent_tools
+        return agent_tools.get_options_skew(
+            symbol, expiry=expiry.strip() or None
+        )
+
+    @router.get("/api/options/context/{symbol}")
+    def options_context(
+        symbol: str,
+        expiry: str = "",
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """Sentiment + GEX + skew in one call for the Analyze Options tab."""
+        from trading.services import agent_tools
+
+        exp = expiry.strip() or None
+        sentiment = agent_tools.get_options_sentiment(symbol)
+        gex = agent_tools.get_gamma_exposure(symbol, expiry=exp)
+        skew = agent_tools.get_options_skew(symbol, expiry=exp)
+        ok = bool(
+            sentiment.get("success") or gex.get("success") or skew.get("success")
+        )
+        return {
+            "success": ok,
+            "symbol": (symbol or "").strip().upper(),
+            "sentiment": sentiment,
+            "gex": gex,
+            "skew": skew,
+            "disclosure": (
+                "Options analytics use delayed/free yfinance chains, not "
+                "real-time OPRA. Treat GEX and skew as directional context."
+            ),
+            "error": None if ok else "options context unavailable",
+        }
+
     @router.post("/api/optimize")
     def optimize(req: OptimizeRequest,
                  user: str = Depends(current_user)) -> Dict[str, Any]:
@@ -1182,6 +1234,21 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                     symbol="SPY",
                     apply_vol_overlay=True,
                 )
+                # Options-VIX overlay: dual display only (live flag off)
+                try:
+                    from trading.portfolio.options_vix_sizing import (
+                        LIVE_OPTIONS_VIX_SIZING_ENABLED,
+                        apply_kelly_options_vix_overlay,
+                        options_vix_multiplier_live,
+                    )
+
+                    vix_info = options_vix_multiplier_live()
+                    kelly = apply_kelly_options_vix_overlay(kelly, vix_info)
+                    kelly["options_vix_live_wired"] = bool(
+                        LIVE_OPTIONS_VIX_SIZING_ENABLED
+                    )
+                except Exception as e:
+                    logger.debug("options vix overlay skipped: %s", e)
             out["kelly"] = kelly
             out["kelly_note"] = (
                 (kelly or {}).get("note")

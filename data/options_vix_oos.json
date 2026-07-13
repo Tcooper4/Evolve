@@ -1,0 +1,115 @@
+{
+  "success": true,
+  "n_symbols": 5,
+  "n_adopt": 4,
+  "broad_win": true,
+  "recommend_live": false,
+  "recommend_live_candidate": true,
+  "live_flag": false,
+  "note": "Broad win on equity-proxy OOS \u2014 candidate for Phase 4 options sizing wire after review (live flag still off in Phase 3).",
+  "min_dd_improvement": 0.05,
+  "max_sharpe_cost": 0.15,
+  "proxy_caveat": "OOS uses underlying equity returns \u00d7 VIX-conditional size as a risk-capital proxy \u2014 not a multi-leg 0DTE options fill replay (paper book has no options trade history to validate against).",
+  "results": [
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.348,
+      "baseline": {
+        "sharpe": 1.0785,
+        "max_drawdown": 0.1876
+      },
+      "options_vix_overlay": {
+        "sharpe": 2.4741,
+        "max_drawdown": 0.0969
+      },
+      "dd_improvement": 0.0907,
+      "sharpe_delta": 1.3956,
+      "adopt_overlay": true,
+      "reason": "Overlay clears DD improvement gate without unacceptable Sharpe cost",
+      "elevated_multiplier": 0.5,
+      "proxy": "underlying_equity_returns_x_vix_conditional_size",
+      "symbol": "SPY"
+    },
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.348,
+      "baseline": {
+        "sharpe": 1.1402,
+        "max_drawdown": 0.2277
+      },
+      "options_vix_overlay": {
+        "sharpe": 2.4097,
+        "max_drawdown": 0.1201
+      },
+      "dd_improvement": 0.1076,
+      "sharpe_delta": 1.2695,
+      "adopt_overlay": true,
+      "reason": "Overlay clears DD improvement gate without unacceptable Sharpe cost",
+      "elevated_multiplier": 0.5,
+      "proxy": "underlying_equity_returns_x_vix_conditional_size",
+      "symbol": "QQQ"
+    },
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.348,
+      "baseline": {
+        "sharpe": 0.9388,
+        "max_drawdown": 0.275
+      },
+      "options_vix_overlay": {
+        "sharpe": 1.7854,
+        "max_drawdown": 0.147
+      },
+      "dd_improvement": 0.128,
+      "sharpe_delta": 0.8467,
+      "adopt_overlay": true,
+      "reason": "Overlay clears DD improvement gate without unacceptable Sharpe cost",
+      "elevated_multiplier": 0.5,
+      "proxy": "underlying_equity_returns_x_vix_conditional_size",
+      "symbol": "IWM"
+    },
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.348,
+      "baseline": {
+        "sharpe": 1.0872,
+        "max_drawdown": 0.1405
+      },
+      "options_vix_overlay": {
+        "sharpe": 2.0226,
+        "max_drawdown": 0.0748
+      },
+      "dd_improvement": 0.0657,
+      "sharpe_delta": 0.9354,
+      "adopt_overlay": true,
+      "reason": "Overlay clears DD improvement gate without unacceptable Sharpe cost",
+      "elevated_multiplier": 0.5,
+      "proxy": "underlying_equity_returns_x_vix_conditional_size",
+      "symbol": "EFA"
+    },
+    {
+      "success": true,
+      "n_steps": 440,
+      "pct_time_scaled_down": 0.348,
+      "baseline": {
+        "sharpe": -0.1619,
+        "max_drawdown": 0.097
+      },
+      "options_vix_overlay": {
+        "sharpe": -0.2557,
+        "max_drawdown": 0.0822
+      },
+      "dd_improvement": 0.0147,
+      "sharpe_delta": -0.0938,
+      "adopt_overlay": false,
+      "reason": "No adopt: dd_improvement=0.015 (need >0.05), sharpe_delta=-0.094 (floor -0.15)",
+      "elevated_multiplier": 0.5,
+      "proxy": "underlying_equity_returns_x_vix_conditional_size",
+      "symbol": "TLT"
+    }
+  ]
+}

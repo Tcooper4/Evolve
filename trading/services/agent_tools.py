@@ -565,6 +565,79 @@ def get_options_sentiment(symbol: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
+def get_gamma_exposure(symbol: str, expiry: Optional[str] = None) -> Dict[str, Any]:
+    """Net gamma exposure (GEX), flip level, and pin strikes from delayed chains.
+
+    Advanced/options-trader context — not for zero-background users unprompted.
+    Always includes a delayed-data disclosure (not real-time OPRA).
+    """
+    try:
+        from trading.data.gamma_exposure import get_gamma_exposure as _gex
+
+        return _gex(symbol, expiry=expiry)
+    except Exception as e:
+        logger.exception("get_gamma_exposure failed: %s", e)
+        return {"success": False, "error": str(e), "delayed_data": True}
+
+
+def get_options_skew(symbol: str, expiry: Optional[str] = None) -> Dict[str, Any]:
+    """IV skew shape with same-day event-context framing (earnings/macro).
+
+    Advanced/options-trader context. Delayed-chain disclosure attached.
+    """
+    try:
+        from trading.data.options_skew import get_options_skew as _skew
+
+        return _skew(symbol, expiry=expiry)
+    except Exception as e:
+        logger.exception("get_options_skew failed: %s", e)
+        return {"success": False, "error": str(e), "delayed_data": True}
+
+
+def get_options_vix_sizing(
+    win_rate: float,
+    avg_win_loss_ratio: float = 1.5,
+    account_size: float = 10_000.0,
+) -> Dict[str, Any]:
+    """Kelly size with conditional VIX overlay for options risk capital.
+
+    Research candidate — live auto-wire flag is off until reviewed. Returns
+    raw Kelly plus options-VIX-adjusted fields (never scales above ×1.0).
+    """
+    try:
+        from trading.portfolio.options_vix_sizing import (
+            LIVE_OPTIONS_VIX_SIZING_ENABLED,
+            apply_kelly_options_vix_overlay,
+            options_vix_multiplier_live,
+        )
+
+        base = get_position_size(
+            win_rate,
+            avg_win_loss_ratio,
+            account_size,
+            symbol=None,
+            apply_vol_overlay=False,
+        )
+        if not base.get("success"):
+            return base
+        vix_info = options_vix_multiplier_live()
+        out = apply_kelly_options_vix_overlay(base, vix_info)
+        out["live_wired"] = bool(LIVE_OPTIONS_VIX_SIZING_ENABLED)
+        out["note"] = (
+            str(out.get("note") or "")
+            + (
+                " Options-VIX overlay is informational "
+                "(not auto-applied as the sole size) while live_wired=false."
+                if not LIVE_OPTIONS_VIX_SIZING_ENABLED
+                else ""
+            )
+        ).strip()
+        return out
+    except Exception as e:
+        logger.exception("get_options_vix_sizing failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
 def get_evolve_platform_tool_registry():
     """
     Re-export for callers using ``from trading.services.agent_tools import …``.

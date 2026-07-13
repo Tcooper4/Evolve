@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getCausal, getChartEvents, getEarnings, getEdgar, getForecast, getHistory,
-  getNews, getNewsContext, getOptions, getPatterns, getPlaybook, getRisk, getScore,
+  getNews, getNewsContext, getOptionsContext, getPatterns, getPlaybook, getPrefs, getRisk, getScore,
   getSignalIc, runGnn, runMonteCarlo, trackRec,
   type Candle, type ChartEvent, type EdgarFiling, type ScoreResult,
 } from "./api";
 import Chart, { type ChartMarker } from "./Chart";
 import Sparkline from "./Sparkline";
+import { cacheChartTimezone, loadCachedChartTimezone } from "./chartTime";
 
 function ScoreRing({ score }: { score: number }) {
   const pct = Math.max(0, Math.min(1, score / 10));
@@ -107,6 +108,17 @@ export default function Analyze({
   const [chartLoading, setChartLoading] = useState(false);
   const [edgar, setEdgar] = useState<{ filings?: EdgarFiling[]; signal?: Record<string, unknown> | null; note?: string; success?: boolean; error?: string } | null>(null);
   const [tracked, setTracked] = useState<"idle" | "saving" | "done">("idle");
+  const [chartTimezone, setChartTimezone] = useState(loadCachedChartTimezone);
+
+  useEffect(() => {
+    getPrefs().then((r) => {
+      const tz = r.prefs?.chart_timezone;
+      if (typeof tz === "string" && tz) {
+        setChartTimezone(tz);
+        cacheChartTimezone(tz);
+      }
+    }).catch(() => {});
+  }, []);
 
   async function run() {
     setLoading(true);
@@ -190,7 +202,7 @@ export default function Analyze({
 
   async function loadOptions() {
     setToolBusy(true);
-    try { setOpts(await getOptions(input)); }
+    try { setOpts(await getOptionsContext(input) as unknown as Record<string, unknown>); }
     catch (e) { setOpts({ success: false, error: String(e) }); }
     finally { setToolBusy(false); }
   }
@@ -441,7 +453,7 @@ export default function Analyze({
             {chartLoading ? (
               <div className="skeleton" style={{ height: 320, margin: 18 }} />
             ) : candles.length > 0 ? (
-              <Chart candles={candles} markers={[
+              <Chart timeZone={chartTimezone} candles={candles} markers={[
                 ...events.map((e): ChartMarker => ({
                   time: e.time, title: e.title, text: e.text, color: e.color,
                 })),
@@ -718,16 +730,111 @@ export default function Analyze({
 
           {tool === "options" && (
             <div className="card card-pad">
-              <div className="rail-label" style={{ marginTop: 0 }}>Options sentiment · {input}</div>
-              {toolBusy && <div className="dim">Loading…</div>}
-              {!toolBusy && opts && (
-                opts.success === false
-                  ? <div className="dim">{String(opts.error ?? "Unavailable")}</div>
-                  : (
-                    <pre style={{ whiteSpace: "pre-wrap", fontSize: 12.5, color: "var(--text-2)", margin: 0 }}>
-                      {JSON.stringify(opts, null, 2).slice(0, 1200)}
-                    </pre>
-                  )
+              <div className="rail-label" style={{ marginTop: 0 }}>Options context · {input}</div>
+              <div className="dim" style={{ fontSize: 11.5, marginBottom: 10 }}>
+                {String(opts?.disclosure
+                  ?? "Delayed/free chain data (not real-time OPRA) — directional context only.")}
+              </div>
+              {toolBusy && <div className="skeleton" style={{ height: 140 }} />}
+              {!toolBusy && opts && opts.success === false && (
+                <div className="dim">{String(opts.error ?? "Unavailable")}</div>
+              )}
+              {!toolBusy && opts && opts.success !== false && (
+                <>
+                  {(() => {
+                    const gex = (opts.gex || {}) as Record<string, unknown>;
+                    const skew = (opts.skew || {}) as Record<string, unknown>;
+                    const sent = (opts.sentiment || {}) as Record<string, unknown>;
+                    const pins = Array.isArray(gex.pin_candidates)
+                      ? (gex.pin_candidates as Array<Record<string, unknown>>).slice(0, 5)
+                      : [];
+                    return (
+                      <>
+                        <div className="kpis" style={{ marginBottom: 12 }}>
+                          <div className="card kpi">
+                            <div className="label">GEX regime</div>
+                            <div className="value" style={{ fontSize: 15 }}>
+                              {gex.success
+                                ? String(gex.regime_short ?? "—").replace(/_/g, " ")
+                                : "—"}
+                            </div>
+                            <div className="sub">
+                              {gex.success
+                                ? String(gex.regime ?? "").slice(0, 120)
+                                : String(gex.error ?? "GEX unavailable")}
+                            </div>
+                          </div>
+                          <div className="card kpi">
+                            <div className="label">Gamma flip</div>
+                            <div className="value num" style={{ fontSize: 18 }}>
+                              {gex.gamma_flip != null
+                                ? Number(gex.gamma_flip).toFixed(2)
+                                : "—"}
+                            </div>
+                            <div className="sub">
+                              spot {gex.spot != null ? Number(gex.spot).toFixed(2) : "—"}
+                              {gex.net_gex != null
+                                ? ` · net GEX ${Number(gex.net_gex).toExponential(2)}`
+                                : ""}
+                            </div>
+                          </div>
+                          <div className="card kpi">
+                            <div className="label">IV skew</div>
+                            <div className="value" style={{ fontSize: 15 }}>
+                              {skew.success
+                                ? String(skew.shape ?? "—").replace(/_/g, " ")
+                                : "—"}
+                            </div>
+                            <div className="sub">
+                              {skew.success
+                                ? String(
+                                  (skew.event_context as Record<string, unknown> | undefined)
+                                    ?.interpretation
+                                    ?? skew.detail
+                                    ?? "",
+                                ).replace(/_/g, " ")
+                                : String(skew.error ?? "Skew unavailable")}
+                            </div>
+                          </div>
+                          <div className="card kpi">
+                            <div className="label">Flow</div>
+                            <div className="value" style={{ fontSize: 15 }}>
+                              {sent.success ? String(sent.net_flow ?? "—") : "—"}
+                            </div>
+                            <div className="sub">
+                              {sent.success
+                                ? `P/C ${Number(sent.put_call_ratio ?? 0).toFixed(2)} · max pain ${Number(sent.max_pain ?? 0).toFixed(2)}`
+                                : String(sent.error ?? "Flow unavailable")}
+                            </div>
+                          </div>
+                        </div>
+                        {pins.length > 0 && (
+                          <div style={{ marginBottom: 12 }}>
+                            <div className="rail-label">Pin candidates (highest |GEX|)</div>
+                            <table className="tbl">
+                              <thead>
+                                <tr><th>Strike</th><th className="num">GEX</th></tr>
+                              </thead>
+                              <tbody>
+                                {pins.map((p) => (
+                                  <tr key={String(p.strike)}>
+                                    <td className="num">{Number(p.strike).toFixed(2)}</td>
+                                    <td className="num">{Number(p.gex).toExponential(2)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        {skew.framing != null && (
+                          <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
+                            {String(skew.framing)}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
               )}
             </div>
           )}

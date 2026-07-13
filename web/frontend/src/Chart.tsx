@@ -12,6 +12,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import type { Candle } from "./api";
+import { formatChartTime, resolveChartTimeZone } from "./chartTime";
 
 export interface ChartMarker {
   time: string;
@@ -33,26 +34,6 @@ function toChartTime(t: string): Time {
     if (Number.isFinite(ms)) return Math.floor(ms / 1000) as Time;
   }
   return t.slice(0, 10) as Time;
-}
-
-function formatHoverTime(t: string | number, intraday: boolean): string {
-  if (!intraday) {
-    const s = String(t);
-    return s.length >= 10 && !/^\d+$/.test(s) ? s.slice(0, 10) : s;
-  }
-  let ms: number;
-  if (typeof t === "number") {
-    ms = t < 1e12 ? t * 1000 : t;
-  } else if (/^\d+$/.test(t)) {
-    const n = Number(t);
-    ms = n < 1e12 ? n * 1000 : n;
-  } else {
-    ms = Date.parse(t);
-  }
-  if (!Number.isFinite(ms)) return String(t);
-  return new Date(ms).toLocaleString(undefined, {
-    month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-  });
 }
 
 function toCandleData(candles: Candle[]): CandlestickData[] {
@@ -104,11 +85,14 @@ export default function Chart({
   candles,
   markers = [],
   live = false,
+  timeZone,
 }: {
   candles: Candle[];
   markers?: ChartMarker[];
   /** Soft CSS cue when the last bar is being updated live */
   live?: boolean;
+  /** IANA timezone id, or omit / "local" for browser local */
+  timeZone?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -120,6 +104,7 @@ export default function Chart({
   const [hover, setHover] = useState<Hover | null>(null);
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const intraday = candles.some((c) => c.time.includes("T") || c.time.length > 10);
+  const tz = resolveChartTimeZone(timeZone);
 
   candlesRef.current = candles;
   markersRef.current = markers;
@@ -167,6 +152,13 @@ export default function Chart({
           pinch: true,
         },
         autoSize: true,
+        localization: {
+          timeFormatter: (time: Time) => formatChartTime(
+            typeof time === "number" ? time : String(time),
+            true,
+            tz,
+          ),
+        },
       });
 
       const series = chart.addCandlestickSeries({
@@ -239,6 +231,16 @@ export default function Chart({
       timeVisible: intraday,
       barSpacing: Math.max(3, Math.min(8, Math.floor(720 / Math.max(candles.length, 1)))),
     });
+    chart.applyOptions({
+      localization: {
+        timeFormatter: (time: Time) => {
+          const raw = typeof time === "number" || typeof time === "string"
+            ? time
+            : String(time);
+          return formatChartTime(raw as string | number, intraday, tz);
+        },
+      },
+    });
     series.setData(toCandleData(candles));
     volume.setData(toVolumeData(candles));
 
@@ -266,7 +268,7 @@ export default function Chart({
       chart.timeScale().fitContent();
       fittedOnceRef.current = true;
     }
-  }, [candles, markers, intraday]);
+  }, [candles, markers, intraday, tz]);
 
   // Keep legend volume in sync when soft-poll / live updates refresh candle data
   useEffect(() => {
@@ -325,7 +327,7 @@ export default function Chart({
     <div className={live ? "chart-live" : undefined}>
       {shown && (
         <div className="legend num" style={{ padding: "0 18px 8px" }}>
-          <span>{formatHoverTime(shown.t, intraday)}</span>
+          <span>{formatChartTime(shown.t, intraday, tz)}</span>
           <span>O <b>{shown.o.toFixed(2)}</b></span>
           <span>H <b>{shown.h.toFixed(2)}</b></span>
           <span>L <b>{shown.l.toFixed(2)}</b></span>

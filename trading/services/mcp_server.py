@@ -162,6 +162,46 @@ def get_options_sentiment(symbol: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
+def get_gamma_exposure(symbol: str, expiry: str = "") -> Dict[str, Any]:
+    """Net gamma exposure (GEX), gamma flip, and pin strikes from delayed
+    free option chains — not real-time OPRA. Directional dealer-hedging
+    context for experienced options traders."""
+    from trading.services import agent_tools
+
+    return _jsonable(
+        agent_tools.get_gamma_exposure(symbol, expiry=expiry or None)
+    )
+
+
+@mcp.tool()
+def get_options_skew(symbol: str, expiry: str = "") -> Dict[str, Any]:
+    """IV skew classification with same-day earnings/macro event framing.
+    Delayed free chain data — not OPRA."""
+    from trading.services import agent_tools
+
+    return _jsonable(
+        agent_tools.get_options_skew(symbol, expiry=expiry or None)
+    )
+
+
+@mcp.tool()
+def get_options_vix_sizing(
+    win_rate: float,
+    avg_win_loss_ratio: float = 1.5,
+    account_size: float = 10_000.0,
+) -> Dict[str, Any]:
+    """Kelly sizing with conditional VIX overlay for options risk capital.
+    Informational while live auto-wire remains off."""
+    from trading.services import agent_tools
+
+    return _jsonable(
+        agent_tools.get_options_vix_sizing(
+            win_rate, avg_win_loss_ratio, account_size
+        )
+    )
+
+
+@mcp.tool()
 def detect_market_regime(symbol: str = "SPY", period: str = "1y") -> Dict[str, Any]:
     """Current market regime (bull/bear/sideways/volatile) with confidence
     and which strategy families historically suit it."""
