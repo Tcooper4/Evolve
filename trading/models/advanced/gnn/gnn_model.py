@@ -261,6 +261,13 @@ class GNNForecaster:
             )
         else:
             self.correlation_threshold = float(correlation_threshold)
+
+        if self.num_assets < 3:
+            raise ValueError(
+                "GNN requires at least 3 assets (got num_assets="
+                f"{self.num_assets}). It models cross-asset relationships — "
+                "use a single-asset model for one ticker."
+            )
         
         self.model = None
         self.scaler = StandardScaler()
@@ -364,8 +371,10 @@ class GNNForecaster:
         actual_assets = data.shape[1] if hasattr(data, "shape") and data.ndim == 2 else 1
         if actual_assets < 3:
             raise ValueError(
-                f"GNNForecaster requires at least 3 assets, got {actual_assets}. "
-                "Use a different model for single-asset forecasting."
+                f"GNN requires at least 3 assets (got {actual_assets} column"
+                f"{'' if actual_assets == 1 else 's'}). "
+                "It models cross-asset relationships — pass a multi-ticker "
+                "frame or use a single-asset model."
             )
 
         # Build adjacency matrix from correlations
@@ -495,6 +504,13 @@ class GNNForecaster:
             raise ValueError(f"GNNForecaster.forecast expected integer horizon, got {horizon!r}: {e}")
         if horizon <= 0:
             raise ValueError("GNNForecaster.forecast horizon must be positive")
+        if data.shape[1] < 3:
+            raise ValueError(
+                f"GNN requires at least 3 assets (got {data.shape[1]} column"
+                f"{'' if data.shape[1] == 1 else 's'}). "
+                "It models cross-asset relationships — pass a multi-ticker "
+                "frame or use a single-asset model."
+            )
         # For simplicity, do multi-step forecasting by iterating
         predictions = []
         current_data = data.copy()

@@ -582,6 +582,23 @@ export default function Analyze({
                           <> · agreement {(agreement * 100).toFixed(0)}%</>
                         )}
                       </div>
+                      {(() => {
+                        const routing = (forecast?.routing && typeof forecast.routing === "object")
+                          ? forecast.routing as Record<string, unknown>
+                          : null;
+                        if (!routing) return null;
+                        const just = routing.justification != null ? String(routing.justification) : "";
+                        const applied = Boolean(routing.feature_routing_applied);
+                        const rule = routing.active_rule != null ? String(routing.active_rule) : "";
+                        return (
+                          <div className="dim" style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.45, maxWidth: 480 }}>
+                            {applied && rule
+                              ? <>Routing rule <span style={{ color: "var(--text)" }}>{rule}</span> applied (OOS-validated). </>
+                              : <>No feature-routing rule live — default ensemble with eligibility only. </>}
+                            {just}
+                          </div>
+                        );
+                      })()}
                       {modelRows.length > 0 && (
                         <div style={{ marginTop: 10 }}>
                           <button className="ghost" style={{ fontSize: 12, border: "1px solid var(--border)", padding: "4px 10px" }}

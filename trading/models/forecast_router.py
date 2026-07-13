@@ -90,6 +90,110 @@ except Exception:
     _resilience_handle_failure = None  # type: ignore
 
 
+def _extract_close_series(data: pd.DataFrame) -> pd.Series:
+    """First available close-like column as a float Series (no model logic)."""
+    if data is None or getattr(data, "empty", True):
+        return pd.Series(dtype=float)
+    col_map = {str(c).lower(): c for c in data.columns}
+    col = col_map.get("close") or col_map.get("adj close") or list(data.columns)[0]
+    return pd.to_numeric(data[col], errors="coerce").dropna()
+
+
+def _shannon_entropy_norm(values: np.ndarray, n_bins: int = 10) -> float:
+    """Shannon entropy of a 1-d sample, normalized to [0, 1] by log(n_bins)."""
+    if values is None or len(values) < 2 or n_bins < 2:
+        return 0.0
+    hist, _ = np.histogram(values, bins=n_bins)
+    total = float(hist.sum())
+    if total <= 0:
+        return 0.0
+    p = hist.astype(float) / total
+    p = p[p > 0]
+    h = float(-np.sum(p * np.log(p)))
+    return float(np.clip(h / np.log(n_bins), 0.0, 1.0))
+
+
+def get_series_features(df: pd.DataFrame) -> Dict[str, Any]:
+    """Descriptive time-series features (FFORMA-style inputs, not routing).
+
+    Returns continuous / labeled stats only — no model selection. Treats
+    ``df`` as the information set available at decision time (caller must
+    pass a causal slice; this function does not peek past the frame).
+
+    Keys:
+        trend_strength: R² of log-price vs time in [0, 1]
+        seasonality_strength: |autocorr(returns, lag=5)| in [0, 1]
+        noise_entropy: normalized Shannon entropy of returns in [0, 1]
+        volatility_regime: \"low\" | \"medium\" | \"high\" | \"insufficient\"
+            from the latest 21d realized-vol percentile vs its own history
+        data_length: number of close observations used
+    """
+    close = _extract_close_series(df)
+    n = int(len(close))
+    out: Dict[str, Any] = {
+        "trend_strength": 0.0,
+        "seasonality_strength": 0.0,
+        "noise_entropy": 0.0,
+        "volatility_regime": "insufficient",
+        "data_length": n,
+    }
+    if n < 2:
+        return out
+
+    # --- trend_strength: R² of log-linear fit (mirrors _check_trend math) ---
+    try:
+        y = np.log(np.clip(close.to_numpy(dtype=float), 1e-12, None))
+        if len(y) >= 3:
+            x = np.arange(len(y), dtype=float)
+            slope, intercept = np.polyfit(x, y, 1)
+            pred = slope * x + intercept
+            ss_res = float(np.sum((y - pred) ** 2))
+            ss_tot = float(np.sum((y - y.mean()) ** 2)) or 1e-12
+            r2 = 1.0 - ss_res / ss_tot
+            out["trend_strength"] = float(np.clip(r2, 0.0, 1.0))
+    except Exception as e:
+        logger.debug("get_series_features trend_strength failed: %s", e)
+
+    rets = close.pct_change().dropna()
+    rets_arr = rets.to_numpy(dtype=float) if len(rets) else np.array([])
+
+    # --- seasonality_strength: |weekly lag autocorr| (mirrors _check_seasonality) ---
+    try:
+        if len(rets) >= 30:
+            ac5 = rets.autocorr(lag=5)
+            if ac5 is not None and np.isfinite(ac5):
+                out["seasonality_strength"] = float(np.clip(abs(float(ac5)), 0.0, 1.0))
+    except Exception as e:
+        logger.debug("get_series_features seasonality_strength failed: %s", e)
+
+    # --- noise_entropy: normalized Shannon entropy of returns ---
+    try:
+        if len(rets_arr) >= 10:
+            out["noise_entropy"] = _shannon_entropy_norm(rets_arr, n_bins=10)
+    except Exception as e:
+        logger.debug("get_series_features noise_entropy failed: %s", e)
+
+    # --- volatility_regime: causal vs history inside this frame only ---
+    try:
+        if len(rets) >= 42:
+            # 21-session realized vol (annualized); latest vs in-sample percentile
+            rv = rets.rolling(21).std() * np.sqrt(252)
+            rv = rv.dropna()
+            if len(rv) >= 20:
+                current = float(rv.iloc[-1])
+                pct = float((rv <= current).mean())
+                if pct < 1.0 / 3.0:
+                    out["volatility_regime"] = "low"
+                elif pct < 2.0 / 3.0:
+                    out["volatility_regime"] = "medium"
+                else:
+                    out["volatility_regime"] = "high"
+    except Exception as e:
+        logger.debug("get_series_features volatility_regime failed: %s", e)
+
+    return out
+
+
 class ForecastRouter:
     """Router for managing and selecting forecasting models.
 
@@ -233,14 +337,20 @@ class ForecastRouter:
             from trading.models.advanced.gnn.gnn_model import GNNForecaster
 
             # GNNForecaster expects explicit kwargs, not a config dict.
-            # Infer number of assets from the data columns as a safe default.
+            # Infer number of assets from the data columns — never silently
+            # inflate a single-ticker frame to 3 (that caused shape mismatches).
             _n_assets = (
-                data.shape[1]
-                if isinstance(data, pd.DataFrame) and data.shape[1] > 1
+                int(data.shape[1])
+                if isinstance(data, pd.DataFrame) and data.ndim == 2
                 else 1
             )
-            # Clamp to a reasonable range
-            _n_assets = max(3, min(20, _n_assets))
+            if _n_assets < 3:
+                raise ValueError(
+                    f"GNN requires at least 3 assets (got {_n_assets}). "
+                    "It models cross-asset relationships — use a single-asset "
+                    "model for one ticker."
+                )
+            _n_assets = min(20, _n_assets)
 
             model = GNNForecaster(
                 num_assets=_n_assets,
@@ -490,12 +600,19 @@ class ForecastRouter:
         Returns:
             Dictionary of data characteristics
         """
+        features = get_series_features(data)
         characteristics = {
-            "length": len(data),
+            "length": features["data_length"],
             "has_seasonality": self._check_seasonality(data),
             "has_trend": self._check_trend(data),
-            "volatility": data.std().mean(),
-            "missing_values": data.isnull().sum().sum(),
+            "volatility": data.std().mean() if data is not None and not data.empty else 0.0,
+            "missing_values": int(data.isnull().sum().sum()) if data is not None else 0,
+            # Continuous FFORMA-style descriptors (selection logic not wired yet)
+            "trend_strength": features["trend_strength"],
+            "seasonality_strength": features["seasonality_strength"],
+            "noise_entropy": features["noise_entropy"],
+            "volatility_regime": features["volatility_regime"],
+            "data_length": features["data_length"],
         }
         return characteristics
 

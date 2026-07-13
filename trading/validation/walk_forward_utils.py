@@ -96,6 +96,7 @@ class WalkForwardValidator:
         test_window: int = 63,
         step_size: int = 21,
         horizon: int = 7,
+        purge: int = 0,
     ) -> WalkForwardResult:
         """
         Run walk-forward validation.
@@ -106,18 +107,27 @@ class WalkForwardValidator:
             test_window: Test window size in days
             step_size: Days to advance each step
             horizon: Forecast horizon (days ahead)
+            purge: Bars skipped between train end and test start
+                (embargo / purge gap). Pass ``horizon`` to match the
+                regime-paper baseline and block label leakage across the
+                forecast horizon. Default 0 preserves legacy callers.
 
         Returns:
             WalkForwardResult with per-window and aggregate metrics
         """
         self._windows = []
 
-        if data is None or len(data) < train_window + test_window:
+        try:
+            purge_i = max(0, int(purge))
+        except Exception:
+            purge_i = 0
+
+        if data is None or len(data) < train_window + purge_i + test_window:
             logger.warning(
                 "WalkForwardValidator: insufficient data "
                 "(%d rows, need %d)",
                 len(data) if data is not None else 0,
-                train_window + test_window,
+                train_window + purge_i + test_window,
             )
             return WalkForwardResult(
                 model_name=self.model_name,
@@ -135,7 +145,7 @@ class WalkForwardValidator:
         window_idx = 0
         start_idx = train_window
 
-        while start_idx + test_window <= total_rows:
+        while start_idx + purge_i + test_window <= total_rows:
             try:
                 # Define train/test splits
                 if self.window_type == "rolling":
@@ -144,8 +154,9 @@ class WalkForwardValidator:
                     train_start_idx = 0
 
                 train_end_idx = start_idx
-                test_start_idx = start_idx
-                test_end_idx = min(start_idx + test_window, total_rows)
+                # Purge/embargo: test starts after ``purge`` bars past train end
+                test_start_idx = start_idx + purge_i
+                test_end_idx = min(test_start_idx + test_window, total_rows)
 
                 train_data = data.iloc[train_start_idx:train_end_idx].copy()
                 test_data = data.iloc[test_start_idx:test_end_idx].copy()
@@ -180,10 +191,11 @@ class WalkForwardValidator:
                 self._windows.append(window)
                 logger.info(
                     "WalkForwardValidator: window %d complete "
-                    "— MAPE=%.2f%% DA=%.1f%%",
+                    "— MAPE=%.2f%% DA=%.1f%% (purge=%d)",
                     window_idx,
                     metrics["mape"],
                     metrics["directional_accuracy"] * 100,
+                    purge_i,
                 )
 
             except Exception as e:
@@ -199,7 +211,11 @@ class WalkForwardValidator:
             model_name=self.model_name,
             symbol=self.symbol,
             windows=self._windows,
-            model_performance=self._aggregate_performance(),
+            model_performance={
+                **self._aggregate_performance(),
+                "purge": purge_i,
+                "horizon": int(horizon),
+            },
         )
         return self.results
 

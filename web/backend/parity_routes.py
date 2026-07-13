@@ -295,10 +295,15 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
         full: bool = False,
         user: str = Depends(current_user),
     ) -> Dict[str, Any]:
-        """Fast 5-model consensus by default. Pass full=1 for the full stack."""
+        """Fast consensus by default. Pass full=1 for the full stack.
+
+        Live path applies registry eligibility (Phase 2). Feature-routing
+        rules stay off — Phase 3 found no broad OOS winner.
+        """
         try:
             from trading.data.price_cache import get_history
             from trading.models.forecast_router import get_router_singleton
+            from trading.models.routing_validation import live_forecast_policy
 
             sym = (symbol or "").strip().upper()
             if not sym:
@@ -308,9 +313,16 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 return {"success": False, "error": f"No data for {sym}"}
             router = get_router_singleton()
             # Skip flat-prone backends + ensemble (re-fits ARIMA) + TCN (~60s).
-            models = None if full else [
+            requested = None if full else [
                 "arima", "xgboost", "ridge", "catboost", "prophet", "garch",
             ]
+            policy = live_forecast_policy(
+                hist,
+                requested_models=requested,
+                n_assets=1,
+                apply_feature_rules=False,
+            )
+            models = None if full else policy["models"]
             fc = router.get_consensus_forecast(
                 data=hist,
                 horizon=int(horizon),
@@ -318,12 +330,35 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 models=models,
                 model_configs={"arima": {"fast_mode": True}},
             )
+            if isinstance(fc, dict):
+                fc = {
+                    **fc,
+                    "routing": {
+                        "models": policy["models"],
+                        "excluded_ineligible": policy["excluded_ineligible"],
+                        "feature_routing_applied": policy["feature_routing_applied"],
+                        "active_rule": policy["active_rule"],
+                        "always_on_rules": policy["always_on_rules"],
+                        "justification": policy["justification"],
+                        "features": {
+                            k: policy["features"].get(k)
+                            for k in (
+                                "trend_strength",
+                                "seasonality_strength",
+                                "noise_entropy",
+                                "volatility_regime",
+                                "data_length",
+                            )
+                        },
+                    },
+                }
             if fc.get("error"):
                 return {"success": False, "error": fc["error"], "forecast": fc}
             return {
                 "success": True,
                 "symbol": sym,
                 "forecast": fc,
+                "routing": fc.get("routing"),
                 "mode": "full" if full else "fast",
             }
         except Exception as e:
@@ -935,7 +970,14 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
 
             syms = [s.strip().upper() for s in (req.symbols or []) if s and str(s).strip()]
             if len(syms) < 3:
-                syms = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"]
+                return {
+                    "success": False,
+                    "error": (
+                        f"GNN requires at least 3 symbols (got {len(syms)}). "
+                        "It models cross-asset relationships — pass ≥3 tickers "
+                        "or use a single-asset model."
+                    ),
+                }
             frames = {}
             for s in syms[:8]:
                 h = get_history(s, period=req.period or "1y")
@@ -945,7 +987,13 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 cc = _cm.get("close", h.columns[0])
                 frames[s] = h[cc].astype(float)
             if len(frames) < 3:
-                return {"success": False, "error": "Need price history for ≥3 symbols"}
+                return {
+                    "success": False,
+                    "error": (
+                        f"GNN requires price history for ≥3 symbols "
+                        f"(got usable history for {len(frames)})."
+                    ),
+                }
             import pandas as pd
             df = pd.DataFrame(frames).dropna()
             if len(df) < 60:

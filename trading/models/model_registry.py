@@ -385,6 +385,69 @@ class ModelRegistry:
 # Global registry instance
 _global_registry = None
 
+_COMPLEXITY_RANK = {"low": 0, "medium": 1, "high": 2}
+
+
+def filter_eligible_models(
+    features: Optional[Dict] = None,
+    available_data_points: int = 0,
+    n_assets: int = 1,
+    registry: Optional["ModelRegistry"] = None,
+) -> List[str]:
+    """Inclusion list from registry metadata — not weights, not ranking.
+
+    Uses existing per-model metadata only:
+      * min_data_points vs available_data_points
+      * type (single_asset / multi_asset) vs n_assets
+      * min_assets / max_assets for multi-asset models
+      * optional features['max_complexity'] in {low, medium, high} as a
+        hard cost ceiling (omitted → complexity does not filter)
+
+    ``features`` may also carry Phase-1 descriptors; they are ignored here
+    so eligibility stays separate from FFORMA-style weighting (Phase 3).
+    """
+    reg = registry if registry is not None else get_registry()
+    features = features or {}
+    try:
+        n_points = int(available_data_points)
+    except Exception:
+        n_points = 0
+    try:
+        n_assets_i = int(n_assets)
+    except Exception:
+        n_assets_i = 0
+
+    max_complexity = features.get("max_complexity")
+    if max_complexity not in _COMPLEXITY_RANK:
+        max_complexity = None
+
+    eligible: List[str] = []
+    for name in reg.list_models():
+        info = reg.get_model_info(name) or {}
+        min_dp = int(info.get("min_data_points") or 0)
+        if n_points < min_dp:
+            continue
+
+        mtype = str(info.get("type") or "single_asset")
+        if mtype == "multi_asset":
+            min_a = int(info.get("min_assets") or 3)
+            max_a = int(info.get("max_assets") or 10**9)
+            if n_assets_i < min_a or n_assets_i > max_a:
+                continue
+        else:
+            # single-asset (and unknown types): need at least one series
+            if n_assets_i < 1:
+                continue
+
+        if max_complexity is not None:
+            rank = _COMPLEXITY_RANK.get(str(info.get("complexity") or "medium"), 1)
+            if rank > _COMPLEXITY_RANK[max_complexity]:
+                continue
+
+        eligible.append(name)
+    return sorted(eligible)
+
+
 def get_registry() -> ModelRegistry:
     """Get the global model registry instance."""
     global _global_registry
