@@ -9,7 +9,7 @@ import hashlib
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 import email.utils
 
 from trading.utils.data_manager import disk_cache_get, disk_cache_set
@@ -105,8 +105,18 @@ def _fetch_yfinance_news(symbol: str, max_items: int = 10) -> List[Dict]:
 
 
 # ── Source 2: NewsAPI (requires NEWSAPI_KEY env var) ────────────────────────
-def _fetch_newsapi(query: str, max_items: int = 10) -> List[Dict]:
-    """Fetch news from NewsAPI.org when NEWSAPI_KEY is configured."""
+def _fetch_newsapi(
+    query: str,
+    max_items: int = 10,
+    *,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+) -> List[Dict]:
+    """Fetch news from NewsAPI.org when NEWSAPI_KEY is configured.
+
+    Optional ``from_date`` / ``to_date`` (YYYY-MM-DD) pin the search window —
+    critical for chart volume-day linkage so we don't always pull "last 3 days".
+    """
     from config.api_keys import resolve_api_key
     api_key = resolve_api_key("NEWSAPI_KEY")
     if not api_key:
@@ -122,8 +132,10 @@ def _fetch_newsapi(query: str, max_items: int = 10) -> List[Dict]:
             "pageSize": max_items,
             "sortBy": "publishedAt",
             "language": "en",
-            "from": (datetime.today() - timedelta(days=3)).strftime("%Y-%m-%d"),
+            "from": from_date or (datetime.today() - timedelta(days=3)).strftime("%Y-%m-%d"),
         }
+        if to_date:
+            params["to"] = to_date
         resp = requests.get(url, params=params, timeout=8)
         articles = resp.json().get("articles", []) if resp.status_code == 200 else []
         out: List[Dict] = []

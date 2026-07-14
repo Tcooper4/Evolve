@@ -454,9 +454,16 @@ export default function Analyze({
               <div className="skeleton" style={{ height: 320, margin: 18 }} />
             ) : candles.length > 0 ? (
               <Chart timeZone={chartTimezone} candles={candles} markers={[
-                ...events.map((e): ChartMarker => ({
-                  time: e.time, title: e.title, text: e.text, color: e.color,
-                })),
+                ...events.map((e): ChartMarker => {
+                  const fallback = e.link_quality === "fallback_recent";
+                  const honesty = fallback ? " · may not be same-day headline" : "";
+                  return {
+                    time: e.time,
+                    title: e.title ? `${e.title}${honesty}` : e.title,
+                    text: e.text,
+                    color: e.color,
+                  };
+                }),
                 // Pattern markers: PLOTTED, not just described - the
                 // detector already computes start_date/type/confidence
                 // per pattern (agent_tools.get_pattern_analysis used to

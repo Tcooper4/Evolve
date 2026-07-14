@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -53,7 +54,25 @@ def _secret() -> str:
         return secrets.token_hex(32)
 
 
-app = FastAPI(title="Evolve API", version="0.1.0")
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Start the single background fill/alert loop; stop cleanly on shutdown."""
+    try:
+        from trading.services.background_jobs import start_background_jobs
+
+        await start_background_jobs()
+    except Exception as e:
+        logger.warning("background_jobs startup failed: %s", e)
+    yield
+    try:
+        from trading.services.background_jobs import stop_background_jobs
+
+        await stop_background_jobs()
+    except Exception as e:
+        logger.debug("background_jobs shutdown: %s", e)
+
+
+app = FastAPI(title="Evolve API", version="0.1.0", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("EVOLVE_CORS_ORIGINS",
@@ -921,7 +940,8 @@ app.include_router(_build_parity_router(current_user))
 @app.websocket("/ws/quote/{symbol}")
 async def quote_stream(ws: WebSocket, symbol: str) -> None:
     """Push a quote every few seconds. Token via ?token= query param
-    (browsers can't set headers on websockets)."""
+    (browsers can't set headers on websockets). Every ~60s also evaluates
+    a provisional intraday volume spike (Phase 3b) on this open chart."""
     import asyncio
 
     token = ws.query_params.get("token", "")
@@ -940,6 +960,7 @@ async def quote_stream(ws: WebSocket, symbol: str) -> None:
     from trading.data.ticker_resolver import normalize_ticker
 
     sym = normalize_ticker(symbol)
+    tick = 0
     try:
         while True:
             try:
@@ -952,12 +973,63 @@ async def quote_stream(ws: WebSocket, symbol: str) -> None:
                     "change_pct": ((price - prev) / prev * 100)
                     if price and prev else None,
                 })
+                tick += 1
+                # Throttle spike eval ~once/minute (12 * 5s); not every quote.
+                if tick % 12 == 0 and price is not None:
+                    try:
+                        from trading.analysis.intraday_volume_spike import (
+                            evaluate_live_volume_spike,
+                        )
+
+                        live_vol = getattr(info, "last_volume", None)
+                        if live_vol is None:
+                            live_vol = getattr(info, "volume", None)
+                        day_open = getattr(info, "open", None)
+                        spike = await asyncio.to_thread(
+                            evaluate_live_volume_spike,
+                            sym,
+                            float(price),
+                            float(live_vol) if live_vol is not None else None,
+                            float(prev) if prev is not None else None,
+                            float(day_open) if day_open is not None else None,
+                        )
+                        if spike is not None:
+                            await ws.send_json(spike)
+                    except Exception as e:
+                        logger.debug("quote_stream spike %s: %s", sym, e)
             except Exception:
                 await ws.send_json({"symbol": sym, "price": None,
                                     "change_pct": None})
             await asyncio.sleep(5)
     except WebSocketDisconnect:
         pass
+
+
+@app.websocket("/ws/notifications")
+async def notifications_stream(ws: WebSocket) -> None:
+    """User-scoped push channel for background fills and alert triggers."""
+    token = ws.query_params.get("token", "")
+    try:
+        payload = jwt.decode(token, _secret(), algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        assert username
+    except Exception:
+        await ws.close(code=4401)
+        return
+    await ws.accept()
+    from trading.services.notification_hub import notification_hub
+
+    await notification_hub.connect(username, ws)
+    try:
+        while True:
+            # Keepalive / client pings — ignore payload content
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        await notification_hub.disconnect(username, ws)
 
 
 # (frontend static mount moved to the END of this module - a

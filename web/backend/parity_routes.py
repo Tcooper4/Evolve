@@ -621,9 +621,16 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
         period: str = "6mo",
         user: str = Depends(current_user),
     ) -> Dict[str, Any]:
-        """Significant volume/price candles with linked headlines (news overlay)."""
+        """Significant volume/price candles with linked headlines (news overlay).
+
+        Detection uses daily bars (need ≥20d for the volume baseline). Events are
+        then clipped to the *plotted* lookback so a 1D chart is not told it has
+        June marks that cannot appear on today's 5m session.
+        """
         try:
-            import pandas as pd
+            from datetime import datetime, timedelta
+
+            import pytz
 
             from trading.analysis.volume_news_linker import (
                 build_chart_annotations,
@@ -632,36 +639,169 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
             from trading.data.price_cache import get_history
 
             sym = (symbol or "").strip().upper()
-            hist = get_history(sym, period=period if period not in ("1d", "5d", "1w") else "3mo")
+            per = (period or "6mo").strip().lower()
+            # Always need enough daily bars for the 20d volume mean.
+            hist_period = {
+                "1d": "3mo",
+                "5d": "3mo",
+                "1w": "3mo",
+                "1mo": "6mo",
+                "3mo": "6mo",
+            }.get(per, per if per not in ("1d", "5d", "1w") else "3mo")
+            hist = get_history(sym, period=hist_period)
             if hist is None or hist.empty:
                 return {"success": False, "events": [], "error": "No history"}
             tagged = detect_significant_candles(hist)
-            anns = build_chart_annotations(tagged, sym, max_annotations=12)
+
+            # Visible calendar window FIRST — news I/O must not run for days
+            # the chart cannot display (was ~12s of GDELT/Twitter for 1D).
+            et = pytz.timezone("America/New_York")
+            today = datetime.now(et).date()
+            # Short periods: recent feeds only (no GDELT) — archive I/O made
+            # 1D/1W feel stuck while longer charts still need dated headlines.
+            include_archives = True
+            if per == "1d":
+                win_start = today
+                max_ann, min_vis = 2, 1
+                include_archives = False
+            elif per in ("5d", "1w"):
+                win_start = today - timedelta(days=8)
+                max_ann, min_vis = 6, 2
+                include_archives = False
+            elif per == "1mo":
+                win_start = today - timedelta(days=35)
+                max_ann, min_vis = 10, 4
+            elif per == "3mo":
+                win_start = today - timedelta(days=100)
+                max_ann, min_vis = 12, 6
+            elif per == "6mo":
+                win_start = today - timedelta(days=200)
+                max_ann, min_vis = 14, 8
+            elif per in ("1y", "ytd"):
+                win_start = today - timedelta(days=400)
+                max_ann, min_vis = 14, 8
+            else:
+                win_start = None
+                max_ann, min_vis = 14, 8
+
+            anns = build_chart_annotations(
+                tagged,
+                sym,
+                max_annotations=max_ann,
+                min_visible=min_vis,
+                win_start=win_start,
+                include_archives=include_archives,
+            )
+
+            # 1D: if today's session is quiet on daily marks, surface a live
+            # provisional spike (same math as /ws/quote) when it qualifies.
+            if per == "1d":
+                has_today = any(
+                    str(a.get("date") or "")[:10] == today.isoformat() for a in (anns or [])
+                )
+                if not has_today:
+                    try:
+                        from trading.analysis.intraday_volume_spike import (
+                            evaluate_live_volume_spike,
+                        )
+                        import yfinance as yf
+
+                        info = yf.Ticker(sym).fast_info
+                        price = getattr(info, "last_price", None)
+                        prev = getattr(info, "previous_close", None)
+                        live_vol = getattr(info, "last_volume", None) or getattr(
+                            info, "volume", None
+                        )
+                        day_open = getattr(info, "open", None)
+                        spike = evaluate_live_volume_spike(
+                            sym,
+                            float(price) if price is not None else None,
+                            float(live_vol) if live_vol is not None else None,
+                            float(prev) if prev is not None else None,
+                            float(day_open) if day_open is not None else None,
+                        )
+                        if spike and spike.get("active"):
+                            anns = list(anns or []) + [{
+                                "date": today.isoformat(),
+                                "price": price,
+                                "text": "LIVE",
+                                "color": spike.get("color") or "#F5A623",
+                                "volume_ratio": spike.get("volume_ratio"),
+                                "price_change_pct": spike.get("price_change_pct"),
+                                "news": spike.get("headlines") or [],
+                                "link_quality": spike.get("link_quality") or "same_day",
+                                "date_confirmed": bool(spike.get("date_confirmed")),
+                                "tier": "provisional",
+                                "hover": spike.get("title"),
+                            }]
+                    except Exception as e:
+                        logger.debug("chart-events live spike skip: %s", e)
+
             events = []
             for a in anns or []:
-                headlines = [
-                    str(n.get("title") or "")[:100]
-                    for n in (a.get("news") or [])
-                    if n.get("title")
-                ]
-                title = headlines[0] if headlines else (
-                    f"Vol {a.get('volume_ratio', 0):.1f}x · "
-                    f"{float(a.get('price_change_pct') or 0) * 100:+.1f}%"
+                news_rows = a.get("news") or []
+                headlines = []
+                for n in news_rows:
+                    if not n.get("title"):
+                        continue
+                    headlines.append({
+                        "title": str(n.get("title") or "")[:100],
+                        "source": n.get("source"),
+                        "link_quality": n.get("link_quality") or (
+                            "same_day" if a.get("date_confirmed") else "fallback_recent"
+                        ),
+                        "date_confirmed": bool(n.get("date_confirmed")),
+                    })
+                title = (
+                    headlines[0]["title"] if headlines else (
+                        f"Vol {a.get('volume_ratio', 0):.1f}x · "
+                        f"{float(a.get('price_change_pct') or 0) * 100:+.1f}%"
+                    )
                 )
+                if a.get("tier") == "provisional" and a.get("hover"):
+                    title = str(a.get("hover"))
+                lq = a.get("link_quality") or (
+                    "same_day" if a.get("date_confirmed") else "fallback_recent"
+                )
+                if not headlines and a.get("tier") != "provisional":
+                    lq = "same_day"  # no headline claim either way
                 events.append({
                     "time": str(a.get("date") or "")[:10],
                     "price": a.get("price"),
                     "color": a.get("color"),
-                    "text": "N",
+                    "text": a.get("text") or "N",
                     "title": title,
                     "volume_ratio": a.get("volume_ratio"),
                     "price_change_pct": a.get("price_change_pct"),
                     "headlines": headlines[:3],
+                    "link_quality": lq,
+                    "date_confirmed": bool(a.get("date_confirmed")),
+                    "tier": a.get("tier") or "significant",
                 })
-            return {"success": True, "symbol": sym, "events": events}
+            return {
+                "success": True,
+                "symbol": sym,
+                "period": per,
+                "events": events,
+                "window_start": win_start.isoformat() if win_start else None,
+            }
         except Exception as e:
             logger.warning("chart-events failed: %s", e)
             return {"success": False, "events": [], "error": str(e)}
+
+    @router.get("/api/strategy-overlay/{symbol}")
+    def strategy_overlay(
+        symbol: str,
+        strategy: str = "RSIStrategy",
+        period: str = "6mo",
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """Toggleable chart markers: backtest signals / research guide only."""
+        from trading.analysis.strategy_chart_overlay import build_strategy_overlay
+
+        return build_strategy_overlay(
+            symbol, strategy, period=period or "6mo",
+        )
 
     @router.get("/api/causal/{symbol}")
     def causal(symbol: str, user: str = Depends(current_user)) -> Dict[str, Any]:

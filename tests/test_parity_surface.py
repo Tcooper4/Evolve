@@ -267,6 +267,7 @@ PARITY_GET_ROUTES = [
     "/api/strategies",
     "/api/settings/prefs",
     "/api/chart-events/SPY",
+    "/api/strategy-overlay/SPY?strategy=RSIStrategy&period=6mo",
     "/api/causal/SPY",
     "/api/patterns/SPY",
     "/api/playbook/SPY",

@@ -11,6 +11,8 @@ import {
   getScore,
   getWatchlist,
   getPrefs,
+  getStrategies,
+  getStrategyOverlay,
   quoteSocket,
   removeFromWatchlist,
   runBriefing,
@@ -19,9 +21,14 @@ import {
   type GprSignal,
   type Quote,
   type RevisionBreadth,
+  type StrategyOverlay,
 } from "./api";
 import Chart from "./Chart";
 import Sparkline from "./Sparkline";
+import {
+  alignOverlaySeriesToCandles,
+  filterMarkersToCandles,
+} from "./chartMarkers";
 import { loadCachedChartTimezone, cacheChartTimezone } from "./chartTime";
 
 const PERIODS = ["1d", "5d", "1mo", "3mo", "6mo", "1y", "max"] as const;
@@ -84,6 +91,7 @@ export default function Dashboard({
   const [quote, setQuote] = useState<Quote | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
   const [events, setEvents] = useState<ChartEvent[]>([]);
+  const [liveSpike, setLiveSpike] = useState<ChartEvent | null>(null);
   const [watchlist, setWatchlist] = useState<WlEntry[]>([]);
   const [news, setNews] = useState<Record<string, unknown>[]>([]);
   const [newsWhy, setNewsWhy] = useState<Record<string, string>>({});
@@ -102,6 +110,14 @@ export default function Dashboard({
   const dayIntervalRef = useRef(dayInterval);
   const [chartLive, setChartLive] = useState(false);
   const [chartTimezone, setChartTimezone] = useState(loadCachedChartTimezone);
+  // Strategy overlay — OFF by default (no OOS default-on)
+  const [overlayOn, setOverlayOn] = useState(false);
+  const [overlayStrategy, setOverlayStrategy] = useState("RSIStrategy");
+  const [strategies, setStrategies] = useState<string[]>([
+    "RSIStrategy", "MACDStrategy", "BollingerStrategy", "SMAStrategy",
+  ]);
+  const [overlay, setOverlay] = useState<StrategyOverlay | null>(null);
+  const [overlayBusy, setOverlayBusy] = useState(false);
 
   useEffect(() => { symbolRef.current = symbol; }, [symbol]);
   useEffect(() => { periodRef.current = period; }, [period]);
@@ -115,22 +131,51 @@ export default function Dashboard({
         cacheChartTimezone(tz);
       }
     }).catch(() => {});
+    getStrategies().then((r) => {
+      if (r.strategies?.length) setStrategies(r.strategies);
+    }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!overlayOn) {
+      setOverlay(null);
+      return;
+    }
+    let cancelled = false;
+    setOverlayBusy(true);
+    const per = period === "1d" || period === "5d" ? "3mo" : period;
+    getStrategyOverlay(symbol, overlayStrategy, per)
+      .then((r) => { if (!cancelled) setOverlay(r); })
+      .catch((e) => {
+        if (!cancelled) {
+          setOverlay({
+            success: false,
+            error: e instanceof Error ? e.message : "overlay failed",
+          });
+        }
+      })
+      .finally(() => { if (!cancelled) setOverlayBusy(false); });
+    return () => { cancelled = true; };
+  }, [overlayOn, overlayStrategy, symbol, period]);
 
   const load = useCallback(async (sym: string, per: Period, iv?: DayInterval, soft = false) => {
     if (!soft) setLoading(true);
     try {
       const interval = per === "1d" ? (iv ?? dayIntervalRef.current) : "";
+      // Soft polls only refresh quote+history — chart-events does GDELT/Twitter
+      // per mark and was adding multi-second stalls every 20–45s on 1D/1W.
       const [q, h, n, ev, br] = await Promise.all([
         getQuote(sym),
         getHistory(sym, per, interval),
-        getNews(sym, 5).catch(() => ({ items: [] })),
-        getChartEvents(sym, per).catch(() => ({ events: [] })),
-        getBreakingNews(5).catch(() => ({ items: [] })),
+        soft ? Promise.resolve({ items: [] as unknown[] }) : getNews(sym, 5).catch(() => ({ items: [] })),
+        soft ? Promise.resolve({ events: [] as ChartEvent[] }) : getChartEvents(sym, per).catch(() => ({ events: [] })),
+        soft ? Promise.resolve({ items: [] as unknown[] }) : getBreakingNews(5).catch(() => ({ items: [] })),
       ]);
       setQuote(q);
       setCandles(withLiveBarVolume(h.candles, q.volume));
-      setEvents(ev.events ?? []);
+      if (!soft) {
+        setEvents(ev.events ?? []);
+      }
       setSymbol(h.symbol);
       setInput(h.symbol);
       if (q.price != null) prevPrice.current = q.price;
@@ -140,6 +185,7 @@ export default function Dashboard({
         return;
       }
 
+      setLiveSpike(null);
       setNews((n.items as Record<string, unknown>[]) ?? []);
       setNewsWhy({});
       const titles = ((n.items as Record<string, unknown>[]) ?? [])
@@ -166,8 +212,30 @@ export default function Dashboard({
       wsRef.current?.close();
       setChartLive(true);
       wsRef.current = quoteSocket(h.symbol, (wq) => {
+        if (wq.type === "volume_spike") {
+          if (wq.active === false) {
+            setLiveSpike(null);
+            return;
+          }
+          const fallback = wq.link_quality === "fallback_recent";
+          const honesty = fallback ? " · may not be same-day headline" : "";
+          const baseTitle = String(wq.title ?? "Provisional live volume spike");
+          setLiveSpike({
+            time: String(wq.time ?? new Date().toISOString().slice(0, 10)),
+            title: `${baseTitle}${honesty.includes("may not") && !baseTitle.includes("may not") ? honesty : ""}`,
+            text: String(wq.text ?? "LIVE"),
+            color: String(wq.color ?? "#F5A623"),
+            shape: typeof wq.shape === "string" ? wq.shape : "circle",
+            provisional: true,
+            link_quality: typeof wq.link_quality === "string" ? wq.link_quality : undefined,
+            date_confirmed: Boolean(wq.date_confirmed),
+            volume_ratio: typeof wq.volume_ratio === "number" ? wq.volume_ratio : undefined,
+            price_change_pct: typeof wq.price_change_pct === "number" ? wq.price_change_pct : undefined,
+          });
+          return;
+        }
         if (wq.price == null) return;
-        setQuote((prev) => prev ? { ...prev, price: wq.price, change_pct: wq.change_pct } : prev);
+        setQuote((prev) => prev ? { ...prev, price: wq.price as number, change_pct: wq.change_pct as number | null } : prev);
         // Live last-bar movement: update OHLC of the open candle in place
         setCandles((prev) => {
           if (!prev.length) return prev;
@@ -184,7 +252,7 @@ export default function Dashboard({
           setFlash(wq.price > prevPrice.current ? "flash-up" : "flash-down");
           setTimeout(() => setFlash(""), 700);
         }
-        prevPrice.current = wq.price;
+        prevPrice.current = wq.price as number;
       });
     } catch {
       if (!soft) {
@@ -292,6 +360,42 @@ export default function Dashboard({
   const periodChange = candles.length > 1
     ? ((candles[candles.length - 1].close - candles[0].close) / candles[0].close) * 100
     : null;
+
+  // Only count/plot marks that land on days actually present in this chart.
+  // (API may use a longer lookback for the 20d volume baseline.)
+  const visibleNews = filterMarkersToCandles(
+    events.map((e) => {
+      const fallback = e.link_quality === "fallback_recent";
+      const honesty = fallback ? " · may not be same-day headline" : "";
+      const notable = e.tier === "notable"
+        ? " · notable volume (below full spike bar)"
+        : "";
+      const provisional = e.tier === "provisional"
+        ? " · provisional live (may change by close)"
+        : "";
+      return {
+        time: e.time,
+        title: e.title
+          ? `${e.title}${honesty}${notable}${provisional}`
+          : (fallback ? "Volume mark · may not be same-day headline" : undefined),
+        text: e.text ?? (e.tier === "notable" ? "n" : e.tier === "provisional" ? "LIVE" : "N"),
+        color: e.color,
+        shape: "circle" as const,
+      };
+    }),
+    candles,
+  );
+  const visibleStrategy = filterMarkersToCandles(
+    (overlayOn && overlay?.success && overlay.markers) ? overlay.markers : [],
+    candles,
+  );
+  const visibleOverlays = alignOverlaySeriesToCandles(
+    (overlayOn && overlay?.success && overlay.overlay_series)
+      ? overlay.overlay_series
+      : [],
+    candles,
+  );
+
   const up = (quote?.change_pct ?? 0) >= 0;
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -399,9 +503,35 @@ export default function Dashboard({
             {period === "1d" || period === "5d" || period === "1mo" || period === "3mo"
               ? (period === "1d" ? dayInterval : "intraday")
               : "daily"}
-            {events.length > 0 ? ` · ${events.length} news marks` : ""}
+            {visibleNews.length > 0
+              ? ` · ${visibleNews.length} news mark${visibleNews.length === 1 ? "" : "s"}`
+              : (period === "1d" || period === "5d")
+                ? " · no news marks in this session window"
+                : " · no news marks"}
+            {overlayOn && overlay?.success
+              ? ` · ${visibleStrategy.length} backtest signal${visibleStrategy.length === 1 ? "" : "s"}`
+              : ""}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <label className="dim" style={{ fontSize: 12, display: "inline-flex", gap: 6, alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={overlayOn}
+                onChange={(e) => setOverlayOn(e.target.checked)}
+              />
+              Strategy overlay
+            </label>
+            {overlayOn && (
+              <select
+                value={overlayStrategy}
+                onChange={(e) => setOverlayStrategy(e.target.value)}
+                style={{ fontSize: 12 }}
+              >
+                {strategies.map((s) => (
+                  <option key={s} value={s}>{s.replace(/Strategy$/, "")}</option>
+                ))}
+              </select>
+            )}
             {period === "1d" && (
               <div className="seg">
                 {DAY_INTERVALS.map((iv) => (
@@ -429,15 +559,67 @@ export default function Dashboard({
             live={chartLive && (period === "1d" || period === "5d")}
             timeZone={chartTimezone}
             candles={candles}
-            markers={events.map((e) => ({
-              time: e.time,
-              title: e.title,
-              text: e.text,
-              color: e.color,
-            }))}
+            overlays={visibleOverlays}
+            markers={[
+              ...visibleNews,
+              ...filterMarkersToCandles(
+                liveSpike ? [{
+                  time: liveSpike.time,
+                  title: liveSpike.title,
+                  text: liveSpike.text ?? "LIVE",
+                  color: liveSpike.color ?? "#F5A623",
+                  shape: (liveSpike.shape as "circle" | "square" | "arrowUp" | "arrowDown" | undefined) ?? "circle",
+                }] : [],
+                candles,
+              ),
+              ...visibleStrategy,
+            ]}
           />
         ) : (
           <div className="empty">No chart data — check the symbol or your connection.</div>
+        )}
+        {overlayOn && (
+          <div style={{ padding: "0 18px 14px" }}>
+            <div className="dim" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 8 }}>
+              {overlay?.disclosure
+                ?? "Backtest signals / research guide only — not trade instructions."}
+            </div>
+            {overlayBusy && <div className="dim" style={{ fontSize: 12 }}>Loading strategy markers…</div>}
+            {!overlayBusy && overlay && overlay.success === false && (
+              <div className="dim" style={{ fontSize: 12 }}>
+                Overlay unavailable{overlay.error ? ` — ${overlay.error}` : ""}
+              </div>
+            )}
+            {!overlayBusy && overlay?.success && (
+              <>
+                {overlay.gamma_context && (
+                  <div className="dim" style={{ fontSize: 12, marginBottom: 6 }}>
+                    {overlay.gamma_context.available
+                      ? <>Current GEX snapshot (display-only): <b>{String(overlay.gamma_context.regime_short ?? "—").replace(/_/g, " ")}</b>
+                          {" — "}{String(overlay.gamma_context.historical_note ?? "")}</>
+                      : <>GEX context unavailable{overlay.gamma_context.reason ? ` — ${String(overlay.gamma_context.reason)}` : ""}</>}
+                  </div>
+                )}
+                {(overlay.reference_levels?.levels?.length ?? 0) > 0 && (
+                  <div className="dim" style={{ fontSize: 12 }}>
+                    Last-bar reference levels:{" "}
+                    {overlay.reference_levels!.levels!.map((l) => (
+                      <span key={l.key} style={{ marginRight: 10 }}>
+                        {l.label} <b className="num">{l.value}</b>
+                      </span>
+                    ))}
+                    <div style={{ marginTop: 4 }}>{overlay.reference_levels?.note}</div>
+                    {(overlay.overlay_series?.length ?? 0) > 0 && (
+                      <div style={{ marginTop: 4 }}>
+                        Dotted guides on chart: {overlay.overlay_series!.map((s) => s.label || s.id).join(" · ")}
+                        {" — research guide only."}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         )}
       </div>
 

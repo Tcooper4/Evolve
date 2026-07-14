@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { hasToken, setToken } from "./api";
+import { useEffect, useState } from "react";
+import { hasToken, notificationsSocket, setToken } from "./api";
 import Analyze from "./Analyze";
 import Backtest from "./Backtest";
 import Chat from "./Chat";
@@ -27,6 +27,18 @@ export default function App() {
   );
   const [page, setPage] = useState<PageId>("dashboard");
   const [analyzeSymbol, setAnalyzeSymbol] = useState("SPY");
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!name) return;
+    const ws = notificationsSocket((n) => {
+      const msg = String(n.message || n.type || "").trim();
+      if (!msg) return;
+      setToast(msg);
+      window.setTimeout(() => setToast(null), 8000);
+    });
+    return () => { try { ws.close(); } catch { /* skip */ } };
+  }, [name]);
 
   if (!name) {
     return (
@@ -67,6 +79,24 @@ export default function App() {
         </nav>
       </aside>
       <main className="main">
+        {toast && (
+          <div
+            role="status"
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 40,
+              margin: "0 0 8px",
+              padding: "10px 14px",
+              background: "rgba(18, 28, 42, 0.95)",
+              borderBottom: "1px solid #2a3a4f",
+              color: "#e8eef7",
+              fontSize: 13,
+            }}
+          >
+            {toast}
+          </div>
+        )}
         <MarketTicker onSelect={goAnalyze} />
         {page === "dashboard" && (
           <Dashboard displayName={name} onAnalyze={goAnalyze} />

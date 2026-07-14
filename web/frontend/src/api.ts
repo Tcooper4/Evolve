@@ -73,14 +73,26 @@ export const getHistory = (symbol: string, period = "6mo", interval = "") =>
     `/api/history/${symbol}?period=${encodeURIComponent(period)}${interval ? `&interval=${encodeURIComponent(interval)}` : ""}`,
   );
 
+export type ChartEventHeadline = {
+  title: string;
+  source?: string;
+  link_quality?: "same_day" | "fallback_recent" | string;
+  date_confirmed?: boolean;
+};
+
 export type ChartEvent = {
   time: string;
   title?: string;
   text?: string;
   color?: string;
-  headlines?: string[];
+  shape?: string;
+  headlines?: Array<string | ChartEventHeadline>;
   volume_ratio?: number;
   price_change_pct?: number;
+  link_quality?: "same_day" | "fallback_recent" | string;
+  date_confirmed?: boolean;
+  provisional?: boolean;
+  tier?: "significant" | "notable" | string;
 };
 
 export const getChartEvents = (symbol: string, period = "6mo") =>
@@ -293,6 +305,55 @@ export const deleteAlert = (id: string) =>
 export const getStrategies = () =>
   req<{ success: boolean; strategies: string[] }>("/api/strategies");
 
+export type StrategyOverlayMarker = {
+  time: string;
+  position?: "aboveBar" | "belowBar";
+  color?: string;
+  shape?: "circle" | "square" | "arrowUp" | "arrowDown";
+  text?: string;
+  title?: string;
+  side?: string;
+  label?: string;
+  price?: number;
+  gamma_tag?: string | null;
+};
+
+export type StrategyOverlay = {
+  success: boolean;
+  symbol?: string;
+  strategy?: string;
+  markers?: StrategyOverlayMarker[];
+  n_markers?: number;
+  overlay_series?: Array<{
+    id: string;
+    label?: string;
+    color: string;
+    style?: "solid" | "dashed" | "dotted";
+    points: Array<{ time: string; value: number }>;
+  }>;
+  reference_levels?: {
+    levels?: Array<{ key: string; label: string; value: number; price_scale?: boolean }>;
+    note?: string;
+  };
+  gamma_context?: Record<string, unknown> | null;
+  disclosure?: string;
+  default_on?: boolean;
+  framing?: string;
+  last_bar?: string;
+  error?: string;
+};
+
+export const getStrategyOverlay = (
+  symbol: string,
+  strategy: string,
+  period = "6mo",
+) =>
+  req<StrategyOverlay>(
+    `/api/strategy-overlay/${encodeURIComponent(symbol)}`
+    + `?strategy=${encodeURIComponent(strategy)}`
+    + `&period=${encodeURIComponent(period)}`,
+  );
+
 export const runBacktest = (symbol: string, strategy: string,
                             params: Record<string, unknown> = {},
                             period = "1y",
@@ -456,12 +517,40 @@ export const loadRevisionBreadth = (sample_size = 150) =>
     { method: "POST" },
   );
 
-export function quoteSocket(symbol: string,
-                            onQuote: (q: { price: number | null; change_pct: number | null }) => void) {
+export function quoteSocket(
+  symbol: string,
+  onMsg: (q: {
+    price?: number | null;
+    change_pct?: number | null;
+    type?: string;
+    [key: string]: unknown;
+  }) => void,
+) {
   const t = sessionStorage.getItem("evolve_token") ?? "";
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/ws/quote/${symbol}?token=${t}`);
-  ws.onmessage = (e) => { try { onQuote(JSON.parse(e.data)); } catch { /* skip */ } };
+  ws.onmessage = (e) => { try { onMsg(JSON.parse(e.data)); } catch { /* skip */ } };
+  return ws;
+}
+
+export function notificationsSocket(
+  onMsg: (n: { type?: string; message?: string; [key: string]: unknown }) => void,
+) {
+  const t = sessionStorage.getItem("evolve_token") ?? "";
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${proto}://${location.host}/ws/notifications?token=${t}`);
+  ws.onmessage = (e) => { try { onMsg(JSON.parse(e.data)); } catch { /* skip */ } };
+  // Server waits on receive_text for keepalive; ping occasionally
+  const ping = window.setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      try { ws.send("ping"); } catch { /* skip */ }
+    }
+  }, 25000);
+  const prevClose = ws.close.bind(ws);
+  ws.close = (...args: Parameters<WebSocket["close"]>) => {
+    window.clearInterval(ping);
+    return prevClose(...args);
+  };
   return ws;
 }
 

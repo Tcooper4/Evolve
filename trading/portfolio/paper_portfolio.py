@@ -43,6 +43,22 @@ def _resolve_user(user_id: Optional[str]) -> str:
     return user_id or os.getenv("EVOLVE_SESSION_ID") or "local"
 
 
+def list_users_with_open_limit_orders() -> List[str]:
+    """Distinct user_id values that currently have open limit orders."""
+    try:
+        conn = _connect()
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT user_id FROM limit_orders WHERE status='open'"
+            ).fetchall()
+            return [str(r[0]) for r in rows if r and r[0]]
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.debug("list_users_with_open_limit_orders failed: %s", e)
+        return []
+
+
 def _connect() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)

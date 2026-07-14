@@ -3,6 +3,7 @@ import {
   createChart,
   ColorType,
   CrosshairMode,
+  LineStyle,
   type IChartApi,
   type ISeriesApi,
   type CandlestickData,
@@ -12,7 +13,13 @@ import {
   type Time,
 } from "lightweight-charts";
 import type { Candle } from "./api";
-import { formatChartTime, resolveChartTimeZone } from "./chartTime";
+import {
+  formatChartTime,
+  formatTickMark,
+  resolveChartTimeZone,
+  utcSecToDisplaySec,
+} from "./chartTime";
+import { chartDayKey } from "./chartMarkers";
 
 export interface ChartMarker {
   time: string;
@@ -23,22 +30,33 @@ export interface ChartMarker {
   title?: string;
 }
 
+export interface ChartOverlaySeries {
+  id: string;
+  label?: string;
+  color: string;
+  style?: "solid" | "dashed" | "dotted";
+  points: Array<{ time: string; value: number }>;
+}
+
 interface Hover {
   o: number; h: number; l: number; c: number; v?: number; t: string;
   note?: string;
 }
 
-function toChartTime(t: string): Time {
+function toChartTime(t: string, timeZone?: string): Time {
   if (t.includes("T") || t.length > 10) {
     const ms = Date.parse(t);
-    if (Number.isFinite(ms)) return Math.floor(ms / 1000) as Time;
+    if (Number.isFinite(ms)) {
+      const utcSec = Math.floor(ms / 1000);
+      return utcSecToDisplaySec(utcSec, timeZone) as Time;
+    }
   }
   return t.slice(0, 10) as Time;
 }
 
-function toCandleData(candles: Candle[]): CandlestickData[] {
+function toCandleData(candles: Candle[], timeZone?: string): CandlestickData[] {
   return candles.map((c) => ({
-    time: toChartTime(c.time),
+    time: toChartTime(c.time, timeZone),
     open: c.open,
     high: c.high,
     low: c.low,
@@ -46,9 +64,10 @@ function toCandleData(candles: Candle[]): CandlestickData[] {
   })) as CandlestickData[];
 }
 
-function toVolumeData(candles: Candle[]): HistogramData[] {
+function toVolumeData(candles: Candle[], timeZone?: string): HistogramData[] {
   return candles.map((c) => ({
-    time: toChartTime(c.time),
+    time: toChartTime(c.time, timeZone),
+    // Per-bar volume only — never session totals
     value: Number(c.volume) || 0,
     color: c.close >= c.open
       ? "rgba(46,234,139,0.35)"
@@ -64,54 +83,86 @@ function formatVolume(v: number): string {
   return v.toFixed(0);
 }
 
-function timesEqual(chartTime: string | number, candleTime: string): boolean {
-  const a = String(chartTime);
-  const b = String(toChartTime(candleTime));
-  if (a === b) return true;
-  // Daily bars: chart may be YYYY-MM-DD
-  if (a.length >= 10 && candleTime.slice(0, 10) === a.slice(0, 10)) return true;
-  return false;
-}
-
 function findCandle(
   candles: Candle[],
   chartTime: string | number,
+  timeZone?: string,
 ): Candle | undefined {
+  // Prefer exact match against the same display time we fed the series
+  if (typeof chartTime === "number" || /^\d+$/.test(String(chartTime))) {
+    const target = typeof chartTime === "number" ? chartTime : Number(chartTime);
+    const hit = candles.find((c) => {
+      const ct = toChartTime(c.time, timeZone);
+      return typeof ct === "number" && ct === target;
+    });
+    if (hit) return hit;
+  }
   const t = String(chartTime);
-  return candles.find((c) => timesEqual(t, c.time));
+  return candles.find((c) => {
+    if (c.time === t) return true;
+    if (c.time.slice(0, 10) === t.slice(0, 10) && !c.time.includes("T")) return true;
+    return false;
+  });
+}
+
+function lineStyleOf(style?: ChartOverlaySeries["style"]): LineStyle {
+  if (style === "solid") return LineStyle.Solid;
+  if (style === "dashed") return LineStyle.Dashed;
+  return LineStyle.Dotted;
 }
 
 export default function Chart({
   candles,
   markers = [],
+  overlays = [],
   live = false,
   timeZone,
 }: {
   candles: Candle[];
   markers?: ChartMarker[];
-  /** Soft CSS cue when the last bar is being updated live */
+  overlays?: ChartOverlaySeries[];
   live?: boolean;
-  /** IANA timezone id, or omit / "local" for browser local */
   timeZone?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const overlaySeriesRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
   const candlesRef = useRef(candles);
   const markersRef = useRef(markers);
   const fittedOnceRef = useRef(false);
+  const modeRef = useRef("");
   const [hover, setHover] = useState<Hover | null>(null);
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const intraday = candles.some((c) => c.time.includes("T") || c.time.length > 10);
   const tz = resolveChartTimeZone(timeZone);
+  // Prefer America/New_York for US equity charts when prefs fall through
+  const displayTz = tz || (intraday ? "America/New_York" : undefined);
+  // Data is shifted so LWC axis (UTC) = wall clock in displayTz
+  const shiftDisplay = Boolean(intraday && displayTz);
 
   candlesRef.current = candles;
   markersRef.current = markers;
 
-  // Create chart once; update data in place so live ticks / soft polls don't remount
   useEffect(() => {
     if (!containerRef.current || candles.length === 0) return;
+
+    const mode = `${intraday ? "i" : "d"}|${displayTz || "local"}`;
+    if (chartRef.current && modeRef.current && modeRef.current !== mode) {
+      try {
+        const chart = chartRef.current;
+        const onMove = (chart as unknown as { __onMove?: (p: MouseEventParams) => void }).__onMove;
+        if (onMove) chart.unsubscribeCrosshairMove(onMove);
+        chart.remove();
+      } catch { /* skip */ }
+      chartRef.current = null;
+      candleSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+      overlaySeriesRef.current = new Map();
+      fittedOnceRef.current = false;
+    }
+    modeRef.current = mode;
 
     if (!chartRef.current) {
       const chart = createChart(containerRef.current, {
@@ -139,6 +190,12 @@ export default function Chart({
           secondsVisible: false,
           barSpacing: Math.max(3, Math.min(8, Math.floor(720 / Math.max(candles.length, 1)))),
           minBarSpacing: 2,
+          tickMarkFormatter: (time: Time, tickMarkType: number) => formatTickMark(
+            time as string | number | { year: number; month: number; day: number },
+            tickMarkType,
+            displayTz,
+            shiftDisplay,
+          ),
         },
         handleScroll: {
           mouseWheel: true,
@@ -155,9 +212,11 @@ export default function Chart({
         localization: {
           timeFormatter: (time: Time) => formatChartTime(
             typeof time === "number" ? time : String(time),
-            true,
-            tz,
+            intraday,
+            displayTz,
+            shiftDisplay,
           ),
+          locale: "en-US",
         },
       });
 
@@ -168,7 +227,6 @@ export default function Chart({
         wickUpColor: "#2eea8b",
         wickDownColor: "#ff5470",
       });
-      // Leave room at the bottom so the volume pane is visible
       series.priceScale().applyOptions({
         scaleMargins: { top: 0.05, bottom: 0.22 },
       });
@@ -179,7 +237,6 @@ export default function Chart({
         lastValueVisible: false,
         priceLineVisible: false,
       });
-      // Hide the vol axis (avoids a stray "0" in the bottom-right)
       chart.priceScale("vol").applyOptions({
         scaleMargins: { top: 0.8, bottom: 0 },
         visible: false,
@@ -192,25 +249,27 @@ export default function Chart({
 
       const onMove = (p: MouseEventParams) => {
         const candleSeries = candleSeriesRef.current;
-        const volSeries = volumeSeriesRef.current;
         if (!candleSeries) return;
         const d = p.seriesData.get(candleSeries) as CandlestickData | undefined;
         if (d && p.time != null) {
-          const t = String(p.time);
-          const day = t.slice(0, 10);
+          const match = findCandle(
+            candlesRef.current,
+            p.time as string | number,
+            displayTz,
+          );
+          const day = match
+            ? chartDayKey(match.time)
+            : chartDayKey(p.time as string | number);
           const noteByDay = new Map(
-            markersRef.current.map((m) => [m.time.slice(0, 10), m.title || m.text || ""]),
+            markersRef.current.map((m) => [chartDayKey(m.time), m.title || m.text || ""]),
           );
           const note = noteByDay.get(day) || undefined;
-          const volPoint = volSeries
-            ? (p.seriesData.get(volSeries) as HistogramData | undefined)
-            : undefined;
-          const match = findCandle(candlesRef.current, p.time as string | number);
-          const v = Number(volPoint?.value ?? match?.volume ?? 0);
+          // Prefer per-candle volume from our data (histogram can lag/mismatch)
+          const v = Number(match?.volume ?? 0);
           setHover({
             o: d.open, h: d.high, l: d.low, c: d.close,
             v: Number.isFinite(v) && v > 0 ? v : undefined,
-            t, note,
+            t: match?.time ?? String(p.time), note,
           });
           setActiveNote(note ?? null);
         } else {
@@ -220,39 +279,50 @@ export default function Chart({
       };
       chart.subscribeCrosshairMove(onMove);
       (chart as unknown as { __onMove?: typeof onMove }).__onMove = onMove;
+    } else {
+      // Keep formatters current without remount when only candles change
+      chartRef.current.applyOptions({
+        localization: {
+          timeFormatter: (time: Time) => formatChartTime(
+            typeof time === "number" ? time : String(time),
+            intraday,
+            displayTz,
+            shiftDisplay,
+          ),
+          locale: "en-US",
+        },
+        timeScale: {
+          timeVisible: intraday,
+          tickMarkFormatter: (time: Time, tickMarkType: number) => formatTickMark(
+            time as string | number | { year: number; month: number; day: number },
+            tickMarkType,
+            displayTz,
+            shiftDisplay,
+          ),
+        },
+      });
     }
 
-    const chart = chartRef.current;
     const series = candleSeriesRef.current;
     const volume = volumeSeriesRef.current;
-    if (!chart || !series || !volume) return;
+    const chart = chartRef.current;
+    if (!series || !volume || !chart) return;
 
-    chart.timeScale().applyOptions({
-      timeVisible: intraday,
-      barSpacing: Math.max(3, Math.min(8, Math.floor(720 / Math.max(candles.length, 1)))),
-    });
-    chart.applyOptions({
-      localization: {
-        timeFormatter: (time: Time) => {
-          const raw = typeof time === "number" || typeof time === "string"
-            ? time
-            : String(time);
-          return formatChartTime(raw as string | number, intraday, tz);
-        },
-      },
-    });
-    series.setData(toCandleData(candles));
-    volume.setData(toVolumeData(candles));
+    series.setData(toCandleData(candles, displayTz));
+    volume.setData(toVolumeData(candles, displayTz));
 
     if (markers.length) {
-      const byTime = new Map(markers.map((m) => [m.time.slice(0, 10), m]));
-      const mk: SeriesMarker<Time>[] = [];
+      const byDay = new Map(markers.map((m) => [chartDayKey(m.time), m]));
+      const lastCandleByDay = new Map<string, Candle>();
       for (const c of candles) {
-        const key = c.time.slice(0, 10);
-        const m = byTime.get(key);
-        if (!m) continue;
+        lastCandleByDay.set(chartDayKey(c.time), c);
+      }
+      const mk: SeriesMarker<Time>[] = [];
+      for (const [day, m] of byDay) {
+        const c = lastCandleByDay.get(day);
+        if (!c) continue;
         mk.push({
-          time: toChartTime(c.time),
+          time: toChartTime(c.time, displayTz),
           position: m.position ?? (c.close >= c.open ? "aboveBar" : "belowBar"),
           color: m.color ?? (c.close >= c.open ? "#2eea8b" : "#ff5470"),
           shape: m.shape ?? (c.close >= c.open ? "arrowUp" : "arrowDown"),
@@ -268,13 +338,62 @@ export default function Chart({
       chart.timeScale().fitContent();
       fittedOnceRef.current = true;
     }
-  }, [candles, markers, intraday, tz]);
+  }, [candles, markers, intraday, displayTz, shiftDisplay]);
 
-  // Keep legend volume in sync when soft-poll / live updates refresh candle data
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const existing = overlaySeriesRef.current;
+    const nextIds = new Set(overlays.map((o) => o.id));
+
+    for (const [id, s] of existing) {
+      if (!nextIds.has(id)) {
+        try { chart.removeSeries(s); } catch { /* skip */ }
+        existing.delete(id);
+      }
+    }
+
+    for (const ov of overlays) {
+      let s = existing.get(ov.id);
+      if (!s) {
+        s = chart.addLineSeries({
+          color: ov.color,
+          lineWidth: 1,
+          lineStyle: lineStyleOf(ov.style),
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+          title: ov.label ?? ov.id,
+        });
+        existing.set(ov.id, s);
+      } else {
+        s.applyOptions({
+          color: ov.color,
+          lineStyle: lineStyleOf(ov.style),
+          title: ov.label ?? ov.id,
+        });
+      }
+      const lastByDay = new Map<string, string>();
+      for (const c of candles) {
+        lastByDay.set(chartDayKey(c.time), c.time);
+      }
+      const data = ov.points
+        .map((p) => {
+          if (!Number.isFinite(p.value)) return null;
+          const aligned = lastByDay.get(chartDayKey(p.time));
+          if (!aligned) return null;
+          return { time: toChartTime(aligned, displayTz), value: p.value };
+        })
+        .filter((x): x is { time: Time; value: number } => x != null);
+      s.setData(data);
+    }
+  }, [overlays, candles, displayTz]);
+
   useEffect(() => {
     setHover((h) => {
       if (!h) return h;
-      const match = findCandle(candles, h.t);
+      const match = findCandle(candles, h.t, displayTz)
+        || candles.find((c) => c.time === h.t);
       if (!match) return h;
       const v = Number(match.volume) || 0;
       if (
@@ -290,11 +409,11 @@ export default function Chart({
         l: match.low,
         c: match.close,
         v: v > 0 ? v : undefined,
+        t: match.time,
       };
     });
-  }, [candles]);
+  }, [candles, displayTz]);
 
-  // Tear down only on unmount (or when series empties → remount next load)
   useEffect(() => () => {
     const chart = chartRef.current;
     if (chart) {
@@ -305,6 +424,7 @@ export default function Chart({
     chartRef.current = null;
     candleSeriesRef.current = null;
     volumeSeriesRef.current = null;
+    overlaySeriesRef.current = new Map();
     fittedOnceRef.current = false;
   }, []);
 
@@ -316,31 +436,44 @@ export default function Chart({
       v: last.volume, t: last.time,
     };
   } else if (shown) {
-    // Prefer latest volume from candle array (soft poll) over stale hover
-    const match = findCandle(candles, shown.t);
+    const match = findCandle(candles, shown.t, displayTz)
+      || candles.find((c) => c.time === shown!.t);
     if (match && Number(match.volume) > 0) {
-      shown = { ...shown, v: match.volume };
+      shown = { ...shown, v: match.volume, t: match.time };
     }
   }
 
   return (
     <div className={live ? "chart-live" : undefined}>
-      {shown && (
-        <div className="legend num" style={{ padding: "0 18px 8px" }}>
-          <span>{formatChartTime(shown.t, intraday, tz)}</span>
-          <span>O <b>{shown.o.toFixed(2)}</b></span>
-          <span>H <b>{shown.h.toFixed(2)}</b></span>
-          <span>L <b>{shown.l.toFixed(2)}</b></span>
-          <span>C <b style={{ color: shown.c >= shown.o ? "var(--up)" : "var(--down)" }}>{shown.c.toFixed(2)}</b></span>
-          <span>V <b>{formatVolume(Number(shown.v) || 0)}</b></span>
-          {live && <span className="live-dot" title="Live last bar">LIVE</span>}
-        </div>
-      )}
-      {activeNote && (
-        <div className="dim" style={{ padding: "0 18px 8px", fontSize: 12.5, lineHeight: 1.4 }}>
-          {activeNote}
-        </div>
-      )}
+      <div className="legend num" style={{ padding: "0 18px 8px", minHeight: 22 }}>
+        {shown ? (
+          <>
+            <span>{formatChartTime(shown.t, intraday, displayTz, false)}</span>
+            <span>O <b>{shown.o.toFixed(2)}</b></span>
+            <span>H <b>{shown.h.toFixed(2)}</b></span>
+            <span>L <b>{shown.l.toFixed(2)}</b></span>
+            <span>C <b style={{ color: shown.c >= shown.o ? "var(--up)" : "var(--down)" }}>{shown.c.toFixed(2)}</b></span>
+            <span>V <b>{formatVolume(Number(shown.v) || 0)}</b></span>
+            {live && <span className="live-dot" title="Live last bar">LIVE</span>}
+          </>
+        ) : (
+          <span className="dim">—</span>
+        )}
+      </div>
+      <div
+        style={{
+          padding: "0 18px 8px",
+          fontSize: 12.5,
+          lineHeight: 1.35,
+          minHeight: 44,
+          maxHeight: 44,
+          overflow: "hidden",
+          color: activeNote ? "var(--text-2, #c5d0e0)" : "transparent",
+        }}
+        title={activeNote ?? undefined}
+      >
+        {activeNote || "\u00a0"}
+      </div>
       <div id="chart" ref={containerRef} />
     </div>
   );

@@ -190,5 +190,109 @@ def get_breaking_headlines(max_items: int = 12) -> List[Dict[str, Any]]:
         return []
 
 
+def get_breaking_headlines_for_date(
+    date_str: str,
+    max_items: int = 12,
+    symbol: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Breaking wires (WalterBloomberg / DeItaone / squawk) for one calendar day.
+
+    Free X recent-search only covers ~7 days — older dates return []. Optional
+    ``symbol`` prefers tweets that also mention the ticker / cashtag.
+    """
+    try:
+        d0 = datetime.strptime(str(date_str)[:10], "%Y-%m-%d").replace(
+            tzinfo=timezone.utc
+        )
+    except Exception:
+        return []
+    d1 = d0 + timedelta(days=1)
+    # Refuse clearly out-of-range asks (API will 400 anyway past ~7d)
+    age = (datetime.now(timezone.utc) - d0).days
+    if age > 7 or age < -1:
+        return []
+
+    parts = [f"from:{a}" for a in _BREAKING_ACCOUNTS]
+    q = f"({' OR '.join(parts)}) -is:retweet"
+    sym = (symbol or "").strip().upper().lstrip("$")
+    if sym:
+        # Soft prefer: still pull wires that day, rank symbol mentions later
+        q = f"{q} (${sym} OR {sym} OR stocks OR market OR S&P OR Nasdaq)"
+
+    token = _bearer()
+    if not token:
+        # RSS Walter fallback — filter by published day when possible
+        try:
+            from trading.data.news_aggregator import get_walter_bloomberg_headlines
+
+            fb = get_walter_bloomberg_headlines(max_items=max(max_items, 15))
+            out: List[Dict[str, Any]] = []
+            for a in fb:
+                a = dict(a)
+                a.setdefault("source_type", "twitter_rss")
+                a.setdefault("url", a.get("link") or "")
+                pub = str(a.get("published") or "")
+                if pub and str(date_str)[:10] not in pub and str(date_str)[:10] not in pub.replace("/", "-"):
+                    # keep if we cannot parse — ranking/filter happens upstream
+                    pass
+                out.append(a)
+            return out[:max_items]
+        except Exception:
+            return []
+
+    try:
+        params = {
+            "query": q,
+            "max_results": max(10, min(int(max_items), 50)),
+            "tweet.fields": "created_at,author_id",
+            "expansions": "author_id",
+            "user.fields": "username",
+            "start_time": d0.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "end_time": d1.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        r = requests.get(
+            "https://api.twitter.com/2/tweets/search/recent",
+            headers={"Authorization": f"Bearer {token}"},
+            params=params,
+            timeout=12,
+        )
+        if r.status_code >= 400:
+            logger.debug(
+                "breaking-for-date HTTP %s: %s", r.status_code, r.text[:180]
+            )
+            return []
+        data = r.json() or {}
+        users = {
+            u.get("id"): u
+            for u in ((data.get("includes") or {}).get("users") or [])
+            if isinstance(u, dict)
+        }
+        out = []
+        for tw in data.get("data") or []:
+            text = (tw.get("text") or "").strip()
+            if not text:
+                continue
+            handle = (
+                (users.get(tw.get("author_id") or "", {}) or {}).get("username")
+                or "twitter"
+            )
+            tid = tw.get("id") or ""
+            out.append({
+                "title": text[:280],
+                "url": f"https://x.com/{handle}/status/{tid}" if tid else "",
+                "source": f"@{handle}",
+                "published": tw.get("created_at") or date_str,
+                "summary": text[:300],
+                "symbols": [sym] if sym else [],
+                "source_type": "twitter",
+                "breaking": True,
+            })
+        return out[:max_items]
+    except Exception as e:
+        logger.debug("get_breaking_headlines_for_date failed: %s", e)
+        return []
+
+
 def twitter_configured() -> bool:
     return bool(_bearer())

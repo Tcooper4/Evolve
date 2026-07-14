@@ -127,6 +127,29 @@ def load_user_preferences(session_id: str) -> dict:
     return json.loads(row[0])
 
 
+def list_session_ids_with_alerts() -> list:
+    """Session IDs whose preferences contain a non-empty evolve_alerts list."""
+    out: list = []
+    try:
+        with _get_conn() as conn:
+            rows = conn.execute(
+                "SELECT session_id, preferences FROM users"
+            ).fetchall()
+        for session_id, prefs_raw in rows:
+            if not session_id or not prefs_raw:
+                continue
+            try:
+                prefs = json.loads(prefs_raw)
+            except Exception:
+                continue
+            raw = prefs.get("evolve_alerts") if isinstance(prefs, dict) else None
+            if isinstance(raw, list) and len(raw) > 0:
+                out.append(str(session_id))
+    except Exception as e:
+        logger.debug("list_session_ids_with_alerts failed: %s", e)
+    return out
+
+
 def inject_user_keys_to_env(session_id: str) -> None:
     """
     Load stored API keys for the given session and set them in os.environ.
