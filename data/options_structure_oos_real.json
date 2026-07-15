@@ -1,0 +1,579 @@
+{
+  "success": true,
+  "symbol": "SPY",
+  "period": "max",
+  "limitation": "SPY used as longest liquid ETF proxy for defined-risk short-premium style (iron condor / put credit). Not a fill-level historical options replay \u2014 BS+VIX IV proxy + modeled half-spread costs only. Single-name equity underlyings may differ in IV / liquidity.",
+  "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+  "base_params": {
+    "dte": 37,
+    "short_delta": 0.2,
+    "wing_pct": 0.05,
+    "profit_take": 0.5,
+    "exit_dte_floor": 8
+  },
+  "timestamp": "2026-07-15T06:19:56.598652+00:00",
+  "strategies": {
+    "iron_condor": {
+      "fixed": {
+        "success": true,
+        "n_trades": 321,
+        "stats": {
+          "win_rate": 0.729,
+          "avg_pnl": -14.42,
+          "total_pnl": -4630.09,
+          "sharpe": -0.0571,
+          "n": 321
+        },
+        "params": {
+          "strategy": "iron_condor",
+          "dte": 37,
+          "short_delta": 0.2,
+          "wing_pct": 0.05,
+          "profit_take": 0.5,
+          "max_loss_mult": 2.0,
+          "exit_dte_floor": 8,
+          "reentry_gap_days": 5,
+          "risk_free": 0.04,
+          "multiplier": 100.0
+        },
+        "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+        "recommend_live": false,
+        "symbol": "SPY",
+        "period": "max",
+        "method": "fixed_params",
+        "iv_proxy": "VIX_close/100"
+      },
+      "sweep_oos": {
+        "success": true,
+        "symbol": "SPY",
+        "period": "max",
+        "method": "sweep_oos",
+        "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+        "iv_proxy": "VIX_close/100",
+        "purge_days": 37,
+        "train_end_idx": 5051,
+        "test_start_idx": 5088,
+        "n_trials": 12,
+        "champion": {
+          "short_delta": 0.25,
+          "wing_pct": 0.06,
+          "train_stats": {
+            "win_rate": 0.7527,
+            "avg_pnl": 7.7,
+            "total_pnl": 1401.06,
+            "sharpe": 0.0749,
+            "n": 182
+          }
+        },
+        "test": {
+          "success": true,
+          "n_trades": 122,
+          "stats": {
+            "win_rate": 0.7131,
+            "avg_pnl": -14.72,
+            "total_pnl": -1795.92,
+            "sharpe": -0.0324,
+            "n": 122
+          },
+          "params": {
+            "strategy": "iron_condor",
+            "dte": 37,
+            "short_delta": 0.25,
+            "wing_pct": 0.06,
+            "profit_take": 0.5,
+            "max_loss_mult": 2.0,
+            "exit_dte_floor": 8,
+            "reentry_gap_days": 5,
+            "risk_free": 0.04,
+            "multiplier": 100.0
+          },
+          "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+          "recommend_live": false
+        },
+        "deflated_sharpe": {
+          "deflated_sharpe": 0.1012,
+          "expected_max_sharpe_under_null": 0.0835,
+          "n_trials": 12,
+          "interpretation": "indistinguishable from lucky noise across this many trials"
+        },
+        "recommend_live": false,
+        "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+        "trials": [
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.04,
+            "n_trades": 211,
+            "score": -0.0881,
+            "train_stats": {
+              "win_rate": 0.7156,
+              "avg_pnl": -5.15,
+              "total_pnl": -1087.27,
+              "sharpe": -0.0881,
+              "n": 211
+            }
+          },
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.05,
+            "n_trades": 214,
+            "score": -0.0398,
+            "train_stats": {
+              "win_rate": 0.757,
+              "avg_pnl": -2.65,
+              "total_pnl": -566.35,
+              "sharpe": -0.0398,
+              "n": 214
+            }
+          },
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.06,
+            "n_trades": 219,
+            "score": -0.0503,
+            "train_stats": {
+              "win_rate": 0.7626,
+              "avg_pnl": -3.72,
+              "total_pnl": -814.22,
+              "sharpe": -0.0503,
+              "n": 219
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.04,
+            "n_trades": 189,
+            "score": -0.0195,
+            "train_stats": {
+              "win_rate": 0.7354,
+              "avg_pnl": -1.46,
+              "total_pnl": -275.44,
+              "sharpe": -0.0195,
+              "n": 189
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.05,
+            "n_trades": 191,
+            "score": 0.047,
+            "train_stats": {
+              "win_rate": 0.7382,
+              "avg_pnl": 3.62,
+              "total_pnl": 691.01,
+              "sharpe": 0.047,
+              "n": 191
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.06,
+            "n_trades": 193,
+            "score": 0.0538,
+            "train_stats": {
+              "win_rate": 0.7358,
+              "avg_pnl": 4.64,
+              "total_pnl": 895.82,
+              "sharpe": 0.0538,
+              "n": 193
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.04,
+            "n_trades": 171,
+            "score": 0.0344,
+            "train_stats": {
+              "win_rate": 0.6959,
+              "avg_pnl": 2.67,
+              "total_pnl": 457.12,
+              "sharpe": 0.0344,
+              "n": 171
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.05,
+            "n_trades": 174,
+            "score": 0.0402,
+            "train_stats": {
+              "win_rate": 0.7356,
+              "avg_pnl": 3.95,
+              "total_pnl": 688.03,
+              "sharpe": 0.0402,
+              "n": 174
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.06,
+            "n_trades": 182,
+            "score": 0.0749,
+            "train_stats": {
+              "win_rate": 0.7527,
+              "avg_pnl": 7.7,
+              "total_pnl": 1401.06,
+              "sharpe": 0.0749,
+              "n": 182
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.04,
+            "n_trades": 158,
+            "score": -0.0417,
+            "train_stats": {
+              "win_rate": 0.6203,
+              "avg_pnl": -3.74,
+              "total_pnl": -590.26,
+              "sharpe": -0.0417,
+              "n": 158
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.05,
+            "n_trades": 160,
+            "score": -0.0104,
+            "train_stats": {
+              "win_rate": 0.6125,
+              "avg_pnl": -1.09,
+              "total_pnl": -173.85,
+              "sharpe": -0.0104,
+              "n": 160
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.06,
+            "n_trades": 165,
+            "score": 0.0082,
+            "train_stats": {
+              "win_rate": 0.6424,
+              "avg_pnl": 0.92,
+              "total_pnl": 152.59,
+              "sharpe": 0.0082,
+              "n": 165
+            }
+          }
+        ]
+      },
+      "summary": {
+        "success": true,
+        "method": "sweep_oos",
+        "error": null,
+        "n_trades": 122,
+        "champion": {
+          "short_delta": 0.25,
+          "wing_pct": 0.06,
+          "train_stats": {
+            "win_rate": 0.7527,
+            "avg_pnl": 7.7,
+            "total_pnl": 1401.06,
+            "sharpe": 0.0749,
+            "n": 182
+          }
+        },
+        "oos_stats": {
+          "win_rate": 0.7131,
+          "avg_pnl": -14.72,
+          "total_pnl": -1795.92,
+          "sharpe": -0.0324,
+          "n": 122
+        },
+        "deflated_sharpe": 0.1012,
+        "dsr_detail": {
+          "deflated_sharpe": 0.1012,
+          "expected_max_sharpe_under_null": 0.0835,
+          "n_trials": 12,
+          "interpretation": "indistinguishable from lucky noise across this many trials"
+        },
+        "recommend_live": false,
+        "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+        "purge_days": 37,
+        "n_trials": 12
+      }
+    },
+    "put_credit_spread": {
+      "fixed": {
+        "success": true,
+        "n_trades": 642,
+        "stats": {
+          "win_rate": 0.8162,
+          "avg_pnl": -0.03,
+          "total_pnl": -18.0,
+          "sharpe": -0.0002,
+          "n": 642
+        },
+        "params": {
+          "strategy": "put_credit_spread",
+          "dte": 37,
+          "short_delta": 0.2,
+          "wing_pct": 0.05,
+          "profit_take": 0.5,
+          "max_loss_mult": 2.0,
+          "exit_dte_floor": 8,
+          "reentry_gap_days": 5,
+          "risk_free": 0.04,
+          "multiplier": 100.0
+        },
+        "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+        "recommend_live": false,
+        "symbol": "SPY",
+        "period": "max",
+        "method": "fixed_params",
+        "iv_proxy": "VIX_close/100"
+      },
+      "sweep_oos": {
+        "success": true,
+        "symbol": "SPY",
+        "period": "max",
+        "method": "sweep_oos",
+        "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+        "iv_proxy": "VIX_close/100",
+        "purge_days": 37,
+        "train_end_idx": 5051,
+        "test_start_idx": 5088,
+        "n_trials": 12,
+        "champion": {
+          "short_delta": 0.3,
+          "wing_pct": 0.06,
+          "train_stats": {
+            "win_rate": 0.8105,
+            "avg_pnl": -0.39,
+            "total_pnl": -118.97,
+            "sharpe": -0.0042,
+            "n": 306
+          }
+        },
+        "test": {
+          "success": true,
+          "n_trades": 225,
+          "stats": {
+            "win_rate": 0.8356,
+            "avg_pnl": 27.71,
+            "total_pnl": 6235.83,
+            "sharpe": 0.0718,
+            "n": 225
+          },
+          "params": {
+            "strategy": "put_credit_spread",
+            "dte": 37,
+            "short_delta": 0.3,
+            "wing_pct": 0.06,
+            "profit_take": 0.5,
+            "max_loss_mult": 2.0,
+            "exit_dte_floor": 8,
+            "reentry_gap_days": 5,
+            "risk_free": 0.04,
+            "multiplier": 100.0
+          },
+          "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+          "recommend_live": false
+        },
+        "deflated_sharpe": {
+          "deflated_sharpe": 0.5901,
+          "expected_max_sharpe_under_null": 0.0566,
+          "n_trials": 12,
+          "interpretation": "indistinguishable from lucky noise across this many trials"
+        },
+        "recommend_live": false,
+        "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+        "trials": [
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.04,
+            "n_trades": 401,
+            "score": -0.0953,
+            "train_stats": {
+              "win_rate": 0.7805,
+              "avg_pnl": -3.7,
+              "total_pnl": -1482.24,
+              "sharpe": -0.0953,
+              "n": 401
+            }
+          },
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.05,
+            "n_trades": 405,
+            "score": -0.1053,
+            "train_stats": {
+              "win_rate": 0.7753,
+              "avg_pnl": -4.66,
+              "total_pnl": -1887.28,
+              "sharpe": -0.1053,
+              "n": 405
+            }
+          },
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.06,
+            "n_trades": 418,
+            "score": -0.0762,
+            "train_stats": {
+              "win_rate": 0.7967,
+              "avg_pnl": -3.65,
+              "total_pnl": -1524.6,
+              "sharpe": -0.0762,
+              "n": 418
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.04,
+            "n_trades": 356,
+            "score": -0.0705,
+            "train_stats": {
+              "win_rate": 0.7893,
+              "avg_pnl": -3.55,
+              "total_pnl": -1263.06,
+              "sharpe": -0.0705,
+              "n": 356
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.05,
+            "n_trades": 368,
+            "score": -0.0279,
+            "train_stats": {
+              "win_rate": 0.8098,
+              "avg_pnl": -1.56,
+              "total_pnl": -572.7,
+              "sharpe": -0.0279,
+              "n": 368
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.06,
+            "n_trades": 374,
+            "score": -0.0253,
+            "train_stats": {
+              "win_rate": 0.8128,
+              "avg_pnl": -1.53,
+              "total_pnl": -573.97,
+              "sharpe": -0.0253,
+              "n": 374
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.04,
+            "n_trades": 310,
+            "score": -0.031,
+            "train_stats": {
+              "win_rate": 0.8065,
+              "avg_pnl": -1.96,
+              "total_pnl": -606.08,
+              "sharpe": -0.031,
+              "n": 310
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.05,
+            "n_trades": 325,
+            "score": -0.0347,
+            "train_stats": {
+              "win_rate": 0.8092,
+              "avg_pnl": -2.49,
+              "total_pnl": -810.35,
+              "sharpe": -0.0347,
+              "n": 325
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.06,
+            "n_trades": 345,
+            "score": -0.0091,
+            "train_stats": {
+              "win_rate": 0.8203,
+              "avg_pnl": -0.72,
+              "total_pnl": -246.92,
+              "sharpe": -0.0091,
+              "n": 345
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.04,
+            "n_trades": 287,
+            "score": -0.0361,
+            "train_stats": {
+              "win_rate": 0.8014,
+              "avg_pnl": -2.71,
+              "total_pnl": -776.98,
+              "sharpe": -0.0361,
+              "n": 287
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.05,
+            "n_trades": 303,
+            "score": -0.015,
+            "train_stats": {
+              "win_rate": 0.8053,
+              "avg_pnl": -1.29,
+              "total_pnl": -390.85,
+              "sharpe": -0.015,
+              "n": 303
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.06,
+            "n_trades": 306,
+            "score": -0.0042,
+            "train_stats": {
+              "win_rate": 0.8105,
+              "avg_pnl": -0.39,
+              "total_pnl": -118.97,
+              "sharpe": -0.0042,
+              "n": 306
+            }
+          }
+        ]
+      },
+      "summary": {
+        "success": true,
+        "method": "sweep_oos",
+        "error": null,
+        "n_trades": 225,
+        "champion": {
+          "short_delta": 0.3,
+          "wing_pct": 0.06,
+          "train_stats": {
+            "win_rate": 0.8105,
+            "avg_pnl": -0.39,
+            "total_pnl": -118.97,
+            "sharpe": -0.0042,
+            "n": 306
+          }
+        },
+        "oos_stats": {
+          "win_rate": 0.8356,
+          "avg_pnl": 27.71,
+          "total_pnl": 6235.83,
+          "sharpe": 0.0718,
+          "n": 225
+        },
+        "deflated_sharpe": 0.5901,
+        "dsr_detail": {
+          "deflated_sharpe": 0.5901,
+          "expected_max_sharpe_under_null": 0.0566,
+          "n_trials": 12,
+          "interpretation": "indistinguishable from lucky noise across this many trials"
+        },
+        "recommend_live": false,
+        "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+        "purge_days": 37,
+        "n_trials": 12
+      }
+    }
+  },
+  "recommend_live": false,
+  "note": "Null / not significant on OOS+DSR for iron_condor and put_credit_spread on SPY \u2014 leave research-only (acceptable expected outcome)."
+}

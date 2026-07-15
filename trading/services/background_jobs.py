@@ -106,67 +106,96 @@ async def _publish(username: str, payload: Dict[str, Any]) -> None:
         logger.debug("background_jobs: notify %s failed: %s", username, e)
 
 
+async def _process_user_session(session_id: str) -> Dict[str, int]:
+    """Limits + alerts for one user. Isolated — exceptions stay local.
+
+    Intended to run concurrently with other users' sessions via
+    ``asyncio.gather`` so one slow/failing user cannot stall peers.
+    """
+    fills_n = 0
+    alerts_n = 0
+    username = username_from_session_id(session_id)
+
+    try:
+        filled = await asyncio.to_thread(run_limit_checks_for_user, session_id)
+        for order in filled:
+            fills_n += 1
+            await _publish(username, {
+                "type": "limit_fill",
+                "symbol": order.get("symbol"),
+                "side": order.get("side"),
+                "quantity": order.get("quantity"),
+                "filled_price": order.get("filled_price"),
+                "order_id": order.get("id"),
+                "message": (
+                    f"Limit {order.get('side')} {order.get('symbol')} "
+                    f"filled @ {order.get('filled_price')}"
+                ),
+            })
+    except Exception as e:
+        logger.warning("background_jobs: limits %s: %s", session_id, e)
+
+    try:
+        from trading.services.alert_push_policy import (
+            should_push_alert_notification,
+        )
+
+        triggered = await asyncio.to_thread(
+            run_alert_checks_for_user, session_id
+        )
+        for row in triggered:
+            # Execution already happened inside check_alerts_for_user
+            # (one-shot stamp). Push is a separate, optional channel.
+            alerts_n += 1
+            do_push, reason = should_push_alert_notification(username, row)
+            if not do_push:
+                logger.debug(
+                    "background_jobs: alert push skipped (%s) %s %s",
+                    reason, username, row.get("symbol"),
+                )
+                continue
+            await _publish(username, {
+                "type": "alert_trigger",
+                "symbol": row.get("symbol"),
+                "condition": row.get("condition"),
+                "threshold": row.get("threshold"),
+                "alert_id": row.get("alert_id"),
+                "current_price": row.get("current_price"),
+                "mode": row.get("mode") or "action",
+                "message": (
+                    f"Alert {row.get('symbol')} "
+                    f"{row.get('condition')} {row.get('threshold')}"
+                ),
+            })
+    except Exception as e:
+        logger.warning("background_jobs: alerts %s: %s", session_id, e)
+
+    return {"fills": fills_n, "alerts": alerts_n}
+
+
 async def background_tick() -> Dict[str, int]:
-    """One scan cycle. Safe to call from tests (no market-hours gate here)."""
+    """One scan cycle. Safe to call from tests (no market-hours gate here).
+
+    Users are processed concurrently (``asyncio.gather``) so one slow or
+    failing check cannot head-of-line-block other users in the same tick.
+    """
     fills_n = 0
     alerts_n = 0
     targets = collect_target_session_ids()
 
-    for session_id in targets:
-        username = username_from_session_id(session_id)
-        try:
-            filled = await asyncio.to_thread(run_limit_checks_for_user, session_id)
-            for order in filled:
-                fills_n += 1
-                await _publish(username, {
-                    "type": "limit_fill",
-                    "symbol": order.get("symbol"),
-                    "side": order.get("side"),
-                    "quantity": order.get("quantity"),
-                    "filled_price": order.get("filled_price"),
-                    "order_id": order.get("id"),
-                    "message": (
-                        f"Limit {order.get('side')} {order.get('symbol')} "
-                        f"filled @ {order.get('filled_price')}"
-                    ),
-                })
-        except Exception as e:
-            logger.warning("background_jobs: limits %s: %s", session_id, e)
-
-        try:
-            from trading.services.alert_push_policy import (
-                should_push_alert_notification,
-            )
-
-            triggered = await asyncio.to_thread(
-                run_alert_checks_for_user, session_id
-            )
-            for row in triggered:
-                # Execution already happened inside check_alerts_for_user
-                # (one-shot stamp). Push is a separate, optional channel.
-                alerts_n += 1
-                do_push, reason = should_push_alert_notification(username, row)
-                if not do_push:
-                    logger.debug(
-                        "background_jobs: alert push skipped (%s) %s %s",
-                        reason, username, row.get("symbol"),
-                    )
-                    continue
-                await _publish(username, {
-                    "type": "alert_trigger",
-                    "symbol": row.get("symbol"),
-                    "condition": row.get("condition"),
-                    "threshold": row.get("threshold"),
-                    "alert_id": row.get("alert_id"),
-                    "current_price": row.get("current_price"),
-                    "mode": row.get("mode") or "action",
-                    "message": (
-                        f"Alert {row.get('symbol')} "
-                        f"{row.get('condition')} {row.get('threshold')}"
-                    ),
-                })
-        except Exception as e:
-            logger.warning("background_jobs: alerts %s: %s", session_id, e)
+    if targets:
+        results = await asyncio.gather(
+            *[_process_user_session(sid) for sid in targets],
+            return_exceptions=True,
+        )
+        for sid, result in zip(targets, results):
+            if isinstance(result, Exception):
+                logger.warning(
+                    "background_jobs: user %s failed: %s", sid, result
+                )
+                continue
+            fills_n += int(result.get("fills") or 0)
+            alerts_n += int(result.get("alerts") or 0)
 
     # Opt-in GEX snapshot logger — at most once per calendar day
     # (runs even with zero user sessions so the dataset can accumulate).

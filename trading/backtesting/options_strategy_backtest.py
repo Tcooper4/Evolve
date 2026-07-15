@@ -281,13 +281,15 @@ def _aligned_spot_vix(
             return None, None, "no underlying history"
         cm = {str(c).lower(): c for c in hist.columns}
         close = pd.to_numeric(hist[cm.get("close", hist.columns[0])], errors="coerce")
-        close.index = pd.to_datetime(close.index).tz_localize(None)
+        # yfinance can stamp SPY vs ^VIX at different hours (e.g. 04:00 vs 05:00);
+        # normalize to calendar date so the joint panel actually aligns.
+        close.index = pd.to_datetime(close.index).tz_localize(None).normalize()
         close = close.dropna()
         vix = fetch_vix_history(period=period)
         if vix is None or vix.empty:
             return None, None, "no VIX history"
         vix = vix.copy()
-        vix.index = pd.to_datetime(vix.index).tz_localize(None)
+        vix.index = pd.to_datetime(vix.index).tz_localize(None).normalize()
         df = pd.DataFrame({"spot": close, "vix": vix}).dropna()
         if len(df) < 80:
             return None, None, "insufficient aligned spot/VIX history"

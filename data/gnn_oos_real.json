@@ -1,0 +1,276 @@
+{
+  "success": true,
+  "basket": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "EFA"
+  ],
+  "focus": "SPY",
+  "baseline_ensemble": [
+    "arima",
+    "xgboost",
+    "ridge"
+  ],
+  "n_trials": 8,
+  "recommend_live": false,
+  "timestamp": "2026-07-15T05:59:18.209920+00:00",
+  "baseline": {
+    "directional_accuracy": 0.525,
+    "mape": 2.839250998096992,
+    "n_steps": 40,
+    "n_windows": 8,
+    "purge": 5,
+    "error": null
+  },
+  "trials": [
+    {
+      "hidden_size": 32,
+      "seq_length": 20,
+      "correlation_threshold": 0.3,
+      "directional_accuracy": 0.4,
+      "n_steps": 40,
+      "n_windows": 8,
+      "n_errors": 0,
+      "purge": 5,
+      "horizon": 5,
+      "params": {
+        "hidden_size": 32,
+        "seq_length": 20,
+        "correlation_threshold": 0.3,
+        "epochs": 15
+      },
+      "window_scores": [
+        0.6,
+        0.4,
+        0.2,
+        0.6,
+        0.4,
+        0.4,
+        0.2,
+        0.4
+      ]
+    },
+    {
+      "hidden_size": 32,
+      "seq_length": 20,
+      "correlation_threshold": 0.5,
+      "directional_accuracy": 0.4,
+      "n_steps": 40,
+      "n_windows": 8,
+      "n_errors": 0,
+      "purge": 5,
+      "horizon": 5,
+      "params": {
+        "hidden_size": 32,
+        "seq_length": 20,
+        "correlation_threshold": 0.5,
+        "epochs": 15
+      },
+      "window_scores": [
+        0.6,
+        0.4,
+        0.2,
+        0.6,
+        0.4,
+        0.4,
+        0.2,
+        0.4
+      ]
+    },
+    {
+      "hidden_size": 32,
+      "seq_length": 30,
+      "correlation_threshold": 0.3,
+      "directional_accuracy": 0.4,
+      "n_steps": 40,
+      "n_windows": 8,
+      "n_errors": 0,
+      "purge": 5,
+      "horizon": 5,
+      "params": {
+        "hidden_size": 32,
+        "seq_length": 30,
+        "correlation_threshold": 0.3,
+        "epochs": 15
+      },
+      "window_scores": [
+        0.6,
+        0.4,
+        0.2,
+        0.6,
+        0.4,
+        0.4,
+        0.2,
+        0.4
+      ]
+    },
+    {
+      "hidden_size": 32,
+      "seq_length": 30,
+      "correlation_threshold": 0.5,
+      "directional_accuracy": 0.425,
+      "n_steps": 40,
+      "n_windows": 8,
+      "n_errors": 0,
+      "purge": 5,
+      "horizon": 5,
+      "params": {
+        "hidden_size": 32,
+        "seq_length": 30,
+        "correlation_threshold": 0.5,
+        "epochs": 15
+      },
+      "window_scores": [
+        0.8,
+        0.4,
+        0.2,
+        0.6,
+        0.4,
+        0.4,
+        0.2,
+        0.4
+      ]
+    },
+    {
+      "hidden_size": 64,
+      "seq_length": 20,
+      "correlation_threshold": 0.3,
+      "directional_accuracy": 0.4,
+      "n_steps": 40,
+      "n_windows": 8,
+      "n_errors": 0,
+      "purge": 5,
+      "horizon": 5,
+      "params": {
+        "hidden_size": 64,
+        "seq_length": 20,
+        "correlation_threshold": 0.3,
+        "epochs": 15
+      },
+      "window_scores": [
+        0.6,
+        0.4,
+        0.2,
+        0.4,
+        0.4,
+        0.4,
+        0.2,
+        0.6
+      ]
+    },
+    {
+      "hidden_size": 64,
+      "seq_length": 20,
+      "correlation_threshold": 0.5,
+      "directional_accuracy": 0.475,
+      "n_steps": 40,
+      "n_windows": 8,
+      "n_errors": 0,
+      "purge": 5,
+      "horizon": 5,
+      "params": {
+        "hidden_size": 64,
+        "seq_length": 20,
+        "correlation_threshold": 0.5,
+        "epochs": 15
+      },
+      "window_scores": [
+        0.8,
+        0.4,
+        0.2,
+        0.6,
+        0.4,
+        0.4,
+        0.2,
+        0.8
+      ]
+    },
+    {
+      "hidden_size": 64,
+      "seq_length": 30,
+      "correlation_threshold": 0.3,
+      "directional_accuracy": 0.425,
+      "n_steps": 40,
+      "n_windows": 8,
+      "n_errors": 0,
+      "purge": 5,
+      "horizon": 5,
+      "params": {
+        "hidden_size": 64,
+        "seq_length": 30,
+        "correlation_threshold": 0.3,
+        "epochs": 15
+      },
+      "window_scores": [
+        0.6,
+        0.4,
+        0.4,
+        0.6,
+        0.4,
+        0.4,
+        0.2,
+        0.4
+      ]
+    },
+    {
+      "hidden_size": 64,
+      "seq_length": 30,
+      "correlation_threshold": 0.5,
+      "directional_accuracy": 0.425,
+      "n_steps": 40,
+      "n_windows": 8,
+      "n_errors": 0,
+      "purge": 5,
+      "horizon": 5,
+      "params": {
+        "hidden_size": 64,
+        "seq_length": 30,
+        "correlation_threshold": 0.5,
+        "epochs": 15
+      },
+      "window_scores": [
+        0.6,
+        0.4,
+        0.2,
+        0.6,
+        0.4,
+        0.4,
+        0.2,
+        0.6
+      ]
+    }
+  ],
+  "aligned_rows": 500,
+  "meta": {
+    "period": "2y",
+    "horizon": 5,
+    "train_window": 180,
+    "test_window": 5,
+    "step_size": 42,
+    "purge": 5,
+    "epochs": 15,
+    "method": "Purged walk-forward (purge=horizon) matching WalkForwardValidator / purged_ensemble_oos. GNN fits multi-asset closes; baseline is single-asset ['arima', 'xgboost', 'ridge'] consensus on SPY."
+  },
+  "champion": {
+    "params": {
+      "hidden_size": 64,
+      "seq_length": 20,
+      "correlation_threshold": 0.5
+    },
+    "directional_accuracy": 0.475,
+    "n_steps": 40,
+    "n_windows": 8
+  },
+  "delta_da_vs_baseline": -0.05,
+  "deflated_sharpe": {
+    "deflated_sharpe": 0.3476,
+    "expected_max_sharpe_under_null": 0.0378,
+    "n_trials": 8,
+    "interpretation": "indistinguishable from lucky noise across this many trials"
+  },
+  "min_da_improvement": 0.05,
+  "dsr_bar": 0.95,
+  "would_clear_research_bar": false,
+  "note": "Null / not significant vs baseline under DA margin + DSR \u2014 leave GNN research-only (acceptable expected outcome)."
+}

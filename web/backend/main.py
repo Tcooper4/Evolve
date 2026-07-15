@@ -28,7 +28,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -125,17 +125,52 @@ class WatchlistItem(BaseModel):
 # --------------------------------------------------------------------------
 
 @app.post("/api/auth/token", response_model=TokenResponse)
-def login(form: OAuth2PasswordRequestForm = Depends()) -> TokenResponse:
-    """Issue a JWT for valid credentials from the shared accounts DB."""
+def login(
+    request: Request,
+    form: OAuth2PasswordRequestForm = Depends(),
+) -> TokenResponse:
+    """Issue a JWT for valid credentials from the shared accounts DB.
+
+    Failed attempts are rate-limited per username and per client IP
+    (progressive cooldown after a short typo budget). See
+    ``trading.auth.login_rate_limit``.
+    """
     from trading.auth import accounts
+    from trading.auth.login_rate_limit import login_rate_limiter
 
     username = (form.username or "").strip().lower()
+    client = request.client
+    ip = (client.host if client is not None else None) or "unknown"
+
+    gate = login_rate_limiter.check(username, ip)
+    if not gate.allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=gate.detail or "Too many failed login attempts.",
+            headers={
+                "Retry-After": str(max(1, int(gate.retry_after_sec))),
+                "WWW-Authenticate": "Bearer",
+            },
+        )
+
     if not accounts.authenticate(username, form.password):
+        fail = login_rate_limiter.record_failure(username, ip)
+        if not fail.allowed:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=fail.detail or "Too many failed login attempts.",
+                headers={
+                    "Retry-After": str(max(1, int(fail.retry_after_sec))),
+                    "WWW-Authenticate": "Bearer",
+                },
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    login_rate_limiter.record_success(username, ip)
     display = username
     for u in accounts.list_users():
         if u["username"] == username:
