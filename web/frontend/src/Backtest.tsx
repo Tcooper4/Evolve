@@ -785,7 +785,7 @@ export default function Backtest() {
                 <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>{optStruct.note}</div>
               )}
               <div className="kpis" style={{ marginBottom: 14 }}>
-                {[
+                {([
                   ["Trades", (optStruct.n_trades as number | undefined)
                     ?? ((optStruct.test as Record<string, unknown> | undefined)?.n_trades as number | undefined)],
                   ["Win rate", (() => {
@@ -801,14 +801,14 @@ export default function Backtest() {
                     return typeof sh === "number" ? sh.toFixed(2) : "—";
                   })()],
                   ["Live recommend", optStruct.recommend_live === true ? "yes*" : "no"],
-                ].map(([label, val]) => (
+                ] as [string, string | number | undefined][]).map(([label, val]) => (
                   <div className="card kpi" key={String(label)}>
                     <div className="label">{label}</div>
-                    <div className="value num" style={{ fontSize: 16 }}>{val ?? "—"}</div>
+                    <div className="value num" style={{ fontSize: 16 }}>{(val as React.ReactNode) ?? "—"}</div>
                   </div>
                 ))}
               </div>
-              {optStruct.deflated_sharpe && typeof optStruct.deflated_sharpe === "object" && (
+              {Boolean(optStruct.deflated_sharpe) && typeof optStruct.deflated_sharpe === "object" && (
                 <div className="dim" style={{ fontSize: 12.5 }}>
                   Deflated Sharpe:{" "}
                   {String((optStruct.deflated_sharpe as Record<string, unknown>).deflated_sharpe ?? "—")}
