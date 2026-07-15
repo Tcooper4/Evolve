@@ -1,0 +1,582 @@
+{
+  "success": true,
+  "symbol": "SPY",
+  "period": "max",
+  "proxy_for": "0DTE",
+  "actual_tested": "1DTE_daily_close",
+  "phase1_finding": "True 0DTE not representable on daily-close simulator (dte=0 degenerates to zero entry credit / same-bar exit). 1-DTE is the closest honest reuse of existing purge/sweep/DSR machinery.",
+  "limitation": "SPY longest-history liquid ETF proxy. 1-DTE daily close\u2192close structure marks via BS + VIX30 \u2014 not SPX 0DTE fills, not intraday theta/gamma path. See disclosure.",
+  "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. ADDITIONAL CAVEAT (short-dated / 0DTE-style run): this result is a 1-DTE daily-bar PROXY (enter day t, exit day t+1) \u2014 NOT true same-session 0DTE. Daily closes cannot see intraday theta acceleration or gamma pin. VIX is a 30-day constant-maturity IV proxy; using it for 0DTE/1-DTE is a materially rougher approximation than for ~37 DTE, because near-term / same-day implied vol can diverge sharply from the 30-day read around intraday catalysts. Do not interpret as a fill-level 0DTE backtest.",
+  "base_params": {
+    "dte": 1,
+    "short_delta": 0.2,
+    "wing_pct": 0.05,
+    "profit_take": 0.5,
+    "exit_dte_floor": 0
+  },
+  "timestamp": "2026-07-15T06:48:44.497604+00:00",
+  "strategies": {
+    "iron_condor": {
+      "fixed": {
+        "success": true,
+        "n_trades": 1403,
+        "stats": {
+          "win_rate": 0.7505,
+          "avg_pnl": -2.77,
+          "total_pnl": -3883.96,
+          "sharpe": -0.0216,
+          "n": 1403
+        },
+        "params": {
+          "strategy": "iron_condor",
+          "dte": 1,
+          "short_delta": 0.2,
+          "wing_pct": 0.05,
+          "profit_take": 0.5,
+          "max_loss_mult": 2.0,
+          "exit_dte_floor": 0,
+          "reentry_gap_days": 5,
+          "risk_free": 0.04,
+          "multiplier": 100.0
+        },
+        "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. ADDITIONAL CAVEAT (short-dated / 0DTE-style run): this result is a 1-DTE daily-bar PROXY (enter day t, exit day t+1) \u2014 NOT true same-session 0DTE. Daily closes cannot see intraday theta acceleration or gamma pin. VIX is a 30-day constant-maturity IV proxy; using it for 0DTE/1-DTE is a materially rougher approximation than for ~37 DTE, because near-term / same-day implied vol can diverge sharply from the 30-day read around intraday catalysts. Do not interpret as a fill-level 0DTE backtest.",
+        "recommend_live": false,
+        "symbol": "SPY",
+        "period": "max",
+        "method": "fixed_params",
+        "iv_proxy": "VIX_close/100"
+      },
+      "sweep_oos": {
+        "success": true,
+        "symbol": "SPY",
+        "period": "max",
+        "method": "sweep_oos",
+        "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. ADDITIONAL CAVEAT (short-dated / 0DTE-style run): this result is a 1-DTE daily-bar PROXY (enter day t, exit day t+1) \u2014 NOT true same-session 0DTE. Daily closes cannot see intraday theta acceleration or gamma pin. VIX is a 30-day constant-maturity IV proxy; using it for 0DTE/1-DTE is a materially rougher approximation than for ~37 DTE, because near-term / same-day implied vol can diverge sharply from the 30-day read around intraday catalysts. Do not interpret as a fill-level 0DTE backtest.",
+        "iv_proxy": "VIX_close/100",
+        "purge_days": 5,
+        "train_end_idx": 5051,
+        "test_start_idx": 5056,
+        "n_trials": 12,
+        "champion": {
+          "short_delta": 0.25,
+          "wing_pct": 0.04,
+          "train_stats": {
+            "win_rate": 0.7233,
+            "avg_pnl": -1.65,
+            "total_pnl": -1389.2,
+            "sharpe": -0.0356,
+            "n": 842
+          }
+        },
+        "test": {
+          "success": true,
+          "n_trades": 560,
+          "stats": {
+            "win_rate": 0.7411,
+            "avg_pnl": 9.21,
+            "total_pnl": 5158.31,
+            "sharpe": 0.0517,
+            "n": 560
+          },
+          "params": {
+            "strategy": "iron_condor",
+            "dte": 1,
+            "short_delta": 0.25,
+            "wing_pct": 0.04,
+            "profit_take": 0.5,
+            "max_loss_mult": 2.0,
+            "exit_dte_floor": 0,
+            "reentry_gap_days": 5,
+            "risk_free": 0.04,
+            "multiplier": 100.0
+          },
+          "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+          "recommend_live": false
+        },
+        "deflated_sharpe": {
+          "deflated_sharpe": 0.8546,
+          "expected_max_sharpe_under_null": 0.007,
+          "n_trials": 12,
+          "interpretation": "uncertain - could be selection luck"
+        },
+        "recommend_live": false,
+        "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+        "trials": [
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.04,
+            "n_trades": 842,
+            "score": -0.0409,
+            "train_stats": {
+              "win_rate": 0.7993,
+              "avg_pnl": -1.44,
+              "total_pnl": -1214.2,
+              "sharpe": -0.0409,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.05,
+            "n_trades": 842,
+            "score": -0.0434,
+            "train_stats": {
+              "win_rate": 0.7993,
+              "avg_pnl": -1.59,
+              "total_pnl": -1338.75,
+              "sharpe": -0.0434,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.06,
+            "n_trades": 842,
+            "score": -0.0445,
+            "train_stats": {
+              "win_rate": 0.7993,
+              "avg_pnl": -1.66,
+              "total_pnl": -1397.36,
+              "sharpe": -0.0445,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.04,
+            "n_trades": 842,
+            "score": -0.046,
+            "train_stats": {
+              "win_rate": 0.7458,
+              "avg_pnl": -1.88,
+              "total_pnl": -1581.51,
+              "sharpe": -0.046,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.05,
+            "n_trades": 842,
+            "score": -0.0485,
+            "train_stats": {
+              "win_rate": 0.7458,
+              "avg_pnl": -2.06,
+              "total_pnl": -1732.12,
+              "sharpe": -0.0485,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.06,
+            "n_trades": 842,
+            "score": -0.0498,
+            "train_stats": {
+              "win_rate": 0.7458,
+              "avg_pnl": -2.15,
+              "total_pnl": -1814.42,
+              "sharpe": -0.0498,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.04,
+            "n_trades": 842,
+            "score": -0.0356,
+            "train_stats": {
+              "win_rate": 0.7233,
+              "avg_pnl": -1.65,
+              "total_pnl": -1389.2,
+              "sharpe": -0.0356,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.05,
+            "n_trades": 842,
+            "score": -0.0384,
+            "train_stats": {
+              "win_rate": 0.7233,
+              "avg_pnl": -1.83,
+              "total_pnl": -1544.53,
+              "sharpe": -0.0384,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.06,
+            "n_trades": 842,
+            "score": -0.0397,
+            "train_stats": {
+              "win_rate": 0.7233,
+              "avg_pnl": -1.92,
+              "total_pnl": -1619.39,
+              "sharpe": -0.0397,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.04,
+            "n_trades": 842,
+            "score": -0.0392,
+            "train_stats": {
+              "win_rate": 0.6948,
+              "avg_pnl": -1.97,
+              "total_pnl": -1660.38,
+              "sharpe": -0.0392,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.05,
+            "n_trades": 842,
+            "score": -0.0423,
+            "train_stats": {
+              "win_rate": 0.6948,
+              "avg_pnl": -2.19,
+              "total_pnl": -1843.1,
+              "sharpe": -0.0423,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.06,
+            "n_trades": 842,
+            "score": -0.044,
+            "train_stats": {
+              "win_rate": 0.6948,
+              "avg_pnl": -2.32,
+              "total_pnl": -1956.0,
+              "sharpe": -0.044,
+              "n": 842
+            }
+          }
+        ]
+      },
+      "summary": {
+        "success": true,
+        "method": "sweep_oos",
+        "error": null,
+        "n_trades": 560,
+        "champion": {
+          "short_delta": 0.25,
+          "wing_pct": 0.04,
+          "train_stats": {
+            "win_rate": 0.7233,
+            "avg_pnl": -1.65,
+            "total_pnl": -1389.2,
+            "sharpe": -0.0356,
+            "n": 842
+          }
+        },
+        "oos_stats": {
+          "win_rate": 0.7411,
+          "avg_pnl": 9.21,
+          "total_pnl": 5158.31,
+          "sharpe": 0.0517,
+          "n": 560
+        },
+        "deflated_sharpe": 0.8546,
+        "dsr_detail": {
+          "deflated_sharpe": 0.8546,
+          "expected_max_sharpe_under_null": 0.007,
+          "n_trials": 12,
+          "interpretation": "uncertain - could be selection luck"
+        },
+        "recommend_live": false,
+        "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+        "purge_days": 5,
+        "n_trials": 12
+      }
+    },
+    "put_credit_spread": {
+      "fixed": {
+        "success": true,
+        "n_trades": 1403,
+        "stats": {
+          "win_rate": 0.8468,
+          "avg_pnl": -4.32,
+          "total_pnl": -6060.61,
+          "sharpe": -0.0388,
+          "n": 1403
+        },
+        "params": {
+          "strategy": "put_credit_spread",
+          "dte": 1,
+          "short_delta": 0.2,
+          "wing_pct": 0.05,
+          "profit_take": 0.5,
+          "max_loss_mult": 2.0,
+          "exit_dte_floor": 0,
+          "reentry_gap_days": 5,
+          "risk_free": 0.04,
+          "multiplier": 100.0
+        },
+        "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. ADDITIONAL CAVEAT (short-dated / 0DTE-style run): this result is a 1-DTE daily-bar PROXY (enter day t, exit day t+1) \u2014 NOT true same-session 0DTE. Daily closes cannot see intraday theta acceleration or gamma pin. VIX is a 30-day constant-maturity IV proxy; using it for 0DTE/1-DTE is a materially rougher approximation than for ~37 DTE, because near-term / same-day implied vol can diverge sharply from the 30-day read around intraday catalysts. Do not interpret as a fill-level 0DTE backtest.",
+        "recommend_live": false,
+        "symbol": "SPY",
+        "period": "max",
+        "method": "fixed_params",
+        "iv_proxy": "VIX_close/100"
+      },
+      "sweep_oos": {
+        "success": true,
+        "symbol": "SPY",
+        "period": "max",
+        "method": "sweep_oos",
+        "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. ADDITIONAL CAVEAT (short-dated / 0DTE-style run): this result is a 1-DTE daily-bar PROXY (enter day t, exit day t+1) \u2014 NOT true same-session 0DTE. Daily closes cannot see intraday theta acceleration or gamma pin. VIX is a 30-day constant-maturity IV proxy; using it for 0DTE/1-DTE is a materially rougher approximation than for ~37 DTE, because near-term / same-day implied vol can diverge sharply from the 30-day read around intraday catalysts. Do not interpret as a fill-level 0DTE backtest.",
+        "iv_proxy": "VIX_close/100",
+        "purge_days": 5,
+        "train_end_idx": 5051,
+        "test_start_idx": 5056,
+        "n_trials": 12,
+        "champion": {
+          "short_delta": 0.25,
+          "wing_pct": 0.04,
+          "train_stats": {
+            "win_rate": 0.8195,
+            "avg_pnl": -0.73,
+            "total_pnl": -612.76,
+            "sharpe": -0.0214,
+            "n": 842
+          }
+        },
+        "test": {
+          "success": true,
+          "n_trades": 560,
+          "stats": {
+            "win_rate": 0.8643,
+            "avg_pnl": 0.48,
+            "total_pnl": 266.27,
+            "sharpe": 0.0029,
+            "n": 560
+          },
+          "params": {
+            "strategy": "put_credit_spread",
+            "dte": 1,
+            "short_delta": 0.25,
+            "wing_pct": 0.04,
+            "profit_take": 0.5,
+            "max_loss_mult": 2.0,
+            "exit_dte_floor": 0,
+            "reentry_gap_days": 5,
+            "risk_free": 0.04,
+            "multiplier": 100.0
+          },
+          "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay.",
+          "recommend_live": false
+        },
+        "deflated_sharpe": {
+          "deflated_sharpe": 0.4483,
+          "expected_max_sharpe_under_null": 0.0084,
+          "n_trials": 12,
+          "interpretation": "indistinguishable from lucky noise across this many trials"
+        },
+        "recommend_live": false,
+        "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+        "trials": [
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.04,
+            "n_trades": 842,
+            "score": -0.0312,
+            "train_stats": {
+              "win_rate": 0.8824,
+              "avg_pnl": -0.78,
+              "total_pnl": -653.15,
+              "sharpe": -0.0312,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.05,
+            "n_trades": 842,
+            "score": -0.0325,
+            "train_stats": {
+              "win_rate": 0.8824,
+              "avg_pnl": -0.84,
+              "total_pnl": -704.98,
+              "sharpe": -0.0325,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.15,
+            "wing_pct": 0.06,
+            "n_trades": 842,
+            "score": -0.0326,
+            "train_stats": {
+              "win_rate": 0.8824,
+              "avg_pnl": -0.84,
+              "total_pnl": -710.74,
+              "sharpe": -0.0326,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.04,
+            "n_trades": 842,
+            "score": -0.0309,
+            "train_stats": {
+              "win_rate": 0.8456,
+              "avg_pnl": -0.9,
+              "total_pnl": -757.71,
+              "sharpe": -0.0309,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.05,
+            "n_trades": 842,
+            "score": -0.032,
+            "train_stats": {
+              "win_rate": 0.8456,
+              "avg_pnl": -0.95,
+              "total_pnl": -803.58,
+              "sharpe": -0.032,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.2,
+            "wing_pct": 0.06,
+            "n_trades": 842,
+            "score": -0.0328,
+            "train_stats": {
+              "win_rate": 0.8456,
+              "avg_pnl": -0.99,
+              "total_pnl": -837.14,
+              "sharpe": -0.0328,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.04,
+            "n_trades": 842,
+            "score": -0.0214,
+            "train_stats": {
+              "win_rate": 0.8195,
+              "avg_pnl": -0.73,
+              "total_pnl": -612.76,
+              "sharpe": -0.0214,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.05,
+            "n_trades": 842,
+            "score": -0.0222,
+            "train_stats": {
+              "win_rate": 0.8195,
+              "avg_pnl": -0.77,
+              "total_pnl": -649.11,
+              "sharpe": -0.0222,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.25,
+            "wing_pct": 0.06,
+            "n_trades": 842,
+            "score": -0.0229,
+            "train_stats": {
+              "win_rate": 0.8195,
+              "avg_pnl": -0.81,
+              "total_pnl": -679.03,
+              "sharpe": -0.0229,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.04,
+            "n_trades": 842,
+            "score": -0.0221,
+            "train_stats": {
+              "win_rate": 0.7957,
+              "avg_pnl": -0.85,
+              "total_pnl": -718.59,
+              "sharpe": -0.0221,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.05,
+            "n_trades": 842,
+            "score": -0.0225,
+            "train_stats": {
+              "win_rate": 0.7957,
+              "avg_pnl": -0.88,
+              "total_pnl": -742.94,
+              "sharpe": -0.0225,
+              "n": 842
+            }
+          },
+          {
+            "short_delta": 0.3,
+            "wing_pct": 0.06,
+            "n_trades": 842,
+            "score": -0.0236,
+            "train_stats": {
+              "win_rate": 0.7957,
+              "avg_pnl": -0.94,
+              "total_pnl": -791.02,
+              "sharpe": -0.0236,
+              "n": 842
+            }
+          }
+        ]
+      },
+      "summary": {
+        "success": true,
+        "method": "sweep_oos",
+        "error": null,
+        "n_trades": 560,
+        "champion": {
+          "short_delta": 0.25,
+          "wing_pct": 0.04,
+          "train_stats": {
+            "win_rate": 0.8195,
+            "avg_pnl": -0.73,
+            "total_pnl": -612.76,
+            "sharpe": -0.0214,
+            "n": 842
+          }
+        },
+        "oos_stats": {
+          "win_rate": 0.8643,
+          "avg_pnl": 0.48,
+          "total_pnl": 266.27,
+          "sharpe": 0.0029,
+          "n": 560
+        },
+        "deflated_sharpe": 0.4483,
+        "dsr_detail": {
+          "deflated_sharpe": 0.4483,
+          "expected_max_sharpe_under_null": 0.0084,
+          "n_trials": 12,
+          "interpretation": "indistinguishable from lucky noise across this many trials"
+        },
+        "recommend_live": false,
+        "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+        "purge_days": 5,
+        "n_trials": 12
+      }
+    }
+  },
+  "recommend_live": false,
+  "note": "Null / not significant on OOS+DSR for 1-DTE iron_condor and put_credit_spread proxies on SPY \u2014 leave research-only (acceptable expected outcome). Not a verdict on true 0DTE."
+}
