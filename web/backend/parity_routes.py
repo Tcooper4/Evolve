@@ -96,6 +96,11 @@ class PrefsRequest(BaseModel):
     min_ai_score: Optional[float] = None
     opportunity_direction: Optional[str] = None
     chart_timezone: Optional[str] = None
+    # Stated risk profile only — never inferred from clicks/engagement.
+    risk_tolerance: Optional[str] = None  # conservative|moderate|aggressive
+    allow_undefined_risk: Optional[bool] = None
+    preferred_dte_min: Optional[int] = None
+    preferred_dte_max: Optional[int] = None
 
 
 class AllocateRequest(BaseModel):
@@ -304,6 +309,19 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
         except Exception as e:
             logger.warning("breaking news failed: %s", e)
             return {"success": False, "items": [], "error": str(e)}
+
+    @router.get("/api/market-state/{symbol}")
+    def market_state(
+        symbol: str,
+        max_headlines: int = 8,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """Situational awareness composite — not a price forecast."""
+        from trading.services import agent_tools
+
+        return agent_tools.get_market_state(
+            symbol, max_headlines=max_headlines
+        )
 
     @router.get("/api/news/{symbol}")
     def news(symbol: str, max_items: int = 8,

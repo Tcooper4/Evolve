@@ -143,11 +143,31 @@ async def _process_user_session(session_id: str) -> Dict[str, int]:
         triggered = await asyncio.to_thread(
             run_alert_checks_for_user, session_id
         )
+        # Per-tick cache: elevated market-state may elevate watch pushes
+        # via alert_push_policy (same rate limiter — not a new channel).
+        ms_cache: Dict[str, Any] = {}
+
+        def _market_state_for(sym: str) -> Any:
+            key = (sym or "").strip().upper() or "SPY"
+            if key not in ms_cache:
+                try:
+                    from trading.analysis.market_state import get_market_state
+
+                    ms_cache[key] = get_market_state(key)
+                except Exception as e:
+                    logger.debug("background_jobs: market_state %s: %s", key, e)
+                    ms_cache[key] = None
+            return ms_cache[key]
+
         for row in triggered:
             # Execution already happened inside check_alerts_for_user
             # (one-shot stamp). Push is a separate, optional channel.
             alerts_n += 1
-            do_push, reason = should_push_alert_notification(username, row)
+            do_push, reason = should_push_alert_notification(
+                username,
+                row,
+                market_state=_market_state_for(str(row.get("symbol") or "")),
+            )
             if not do_push:
                 logger.debug(
                     "background_jobs: alert push skipped (%s) %s %s",
@@ -162,6 +182,7 @@ async def _process_user_session(session_id: str) -> Dict[str, int]:
                 "alert_id": row.get("alert_id"),
                 "current_price": row.get("current_price"),
                 "mode": row.get("mode") or "action",
+                "push_reason": reason,
                 "message": (
                     f"Alert {row.get('symbol')} "
                     f"{row.get('condition')} {row.get('threshold')}"

@@ -84,6 +84,7 @@ def _with_mapping_meta(pick: Dict[str, Any]) -> Dict[str, Any]:
     out["mapping_validated"] = STRUCTURE_MAPPING_VALIDATED
     out["mapping_note"] = STRUCTURE_MAPPING_NOTE
     out["mapping_basis"] = "research_default"
+    out["risk_class"] = out.get("risk_class") or "defined"
     return out
 
 
@@ -94,6 +95,8 @@ def pick_options_structure(
     skew_diff: Optional[float] = None,
     spot: Optional[float] = None,
     gamma_flip: Optional[float] = None,
+    risk_tolerance: Optional[str] = None,
+    allow_undefined_risk: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
     Pure mapping — hand-verifiable truth table for chart guide.
@@ -104,7 +107,16 @@ def pick_options_structure(
 
     Mapping logic is unchanged from the research-backed default; every
     return includes ``mapping_validated=False`` until Evolve OOS exists.
+
+    ``risk_tolerance`` (stated Settings pref) deprioritizes undefined-risk
+    ``also_noted`` ideas for conservative users without removing them.
     """
+    from trading.portfolio.risk_profile import (
+        RISK_MODERATE,
+        apply_risk_profile_to_structure_pick,
+        normalize_risk_tolerance,
+    )
+
     regime = str(regime_short or "").strip().lower()
     shape = str(skew_shape or "").strip().lower()
     try:
@@ -120,7 +132,7 @@ def pick_options_structure(
         spot_vs_flip = None
 
     if regime in ("short_gamma",):
-        return _with_mapping_meta({
+        pick = _with_mapping_meta({
             "structure": STRUCTURE_WAIT,
             "label": "Wait / avoid short premium",
             "mark_text": "WAIT",
@@ -131,10 +143,21 @@ def pick_options_structure(
                 "this tape; wait or use defined-risk debit ideas separately."
             ),
             "wing_pct_guide": None,
+            "also_noted": [
+                {
+                    "structure": "naked_short_put",
+                    "risk_class": "undefined",
+                    "label": "Naked short put (undefined risk)",
+                    "note": (
+                        "Educational only in short-gamma — undefined risk and "
+                        "wrong-way vs dealer hedging; not a lead suggestion."
+                    ),
+                    "priority_rank": 80,
+                }
+            ],
         })
-
-    if regime in ("near_flip", "", "unknown"):
-        return _with_mapping_meta({
+    elif regime in ("near_flip", "", "unknown"):
+        pick = _with_mapping_meta({
             "structure": STRUCTURE_WAIT,
             "label": "Wait — near gamma flip / mixed",
             "mark_text": "WAIT",
@@ -145,64 +168,75 @@ def pick_options_structure(
             ),
             "wing_pct_guide": None,
         })
+    else:
+        # long_gamma (and anything we treat as dampened / pin-prone)
+        put_heavy = shape in ("put_smirk", "put_skew", "downside_skew") or (
+            sd is not None and sd > 0.02
+        )
+        call_heavy = shape in ("call_smirk", "call_skew", "upside_skew") or (
+            sd is not None and sd < -0.02
+        )
+        above_flip = spot_vs_flip is not None and spot_vs_flip > 0.005
+        below_flip = spot_vs_flip is not None and spot_vs_flip < -0.005
 
-    # long_gamma (and anything we treat as dampened / pin-prone)
-    put_heavy = shape in ("put_smirk", "put_skew", "downside_skew") or (
-        sd is not None and sd > 0.02
+        if put_heavy and above_flip:
+            pick = _with_mapping_meta({
+                "structure": STRUCTURE_PUT_CREDIT,
+                "label": "Put credit spread (research)",
+                "mark_text": "PCS",
+                "color": "#7EB6FF",
+                "rationale": (
+                    "Long-gamma / pin-prone tape with elevated put skew and spot "
+                    "above gamma flip — a defined-risk put credit fits a "
+                    "supported-bullish tape better than a wide naked short put. "
+                    "Iron condor is the alternate if you want both wings."
+                ),
+                "wing_pct_guide": 0.03,
+                "alternate": STRUCTURE_IRON_CONDOR,
+            })
+        elif call_heavy and below_flip:
+            pick = _with_mapping_meta({
+                "structure": STRUCTURE_CALL_CREDIT,
+                "label": "Call credit spread (research)",
+                "mark_text": "CCS",
+                "color": "#C084FC",
+                "rationale": (
+                    "Long-gamma tape with call-side skew and spot below flip — "
+                    "a defined-risk call credit is the directional short-premium "
+                    "read. Prefer an iron condor if you want non-directional."
+                ),
+                "wing_pct_guide": 0.03,
+                "alternate": STRUCTURE_IRON_CONDOR,
+            })
+        else:
+            pick = _with_mapping_meta({
+                "structure": STRUCTURE_IRON_CONDOR,
+                "label": "Iron condor (research)",
+                "mark_text": "IC",
+                "color": "#00FF88",
+                "rationale": (
+                    "Dealers net long gamma — dampened / pinning-prone tape favors "
+                    "a defined-risk iron condor (short premium both wings with "
+                    "long hedges) over directional single-legged short premium."
+                ),
+                "wing_pct_guide": 0.04,
+                "alternate": (
+                    STRUCTURE_PUT_CREDIT if above_flip else STRUCTURE_CALL_CREDIT
+                    if below_flip else None
+                ),
+            })
+
+    if risk_tolerance is None and allow_undefined_risk is None:
+        # Pure default for callers/tests; live overlay passes stated prefs explicitly.
+        rt = RISK_MODERATE
+        allow = False
+    else:
+        rt = normalize_risk_tolerance(risk_tolerance)
+        allow = bool(allow_undefined_risk) if allow_undefined_risk is not None else False
+
+    return apply_risk_profile_to_structure_pick(
+        pick, risk_tolerance=rt, allow_undefined_risk=allow
     )
-    call_heavy = shape in ("call_smirk", "call_skew", "upside_skew") or (
-        sd is not None and sd < -0.02
-    )
-    above_flip = spot_vs_flip is not None and spot_vs_flip > 0.005
-    below_flip = spot_vs_flip is not None and spot_vs_flip < -0.005
-
-    if put_heavy and above_flip:
-        return _with_mapping_meta({
-            "structure": STRUCTURE_PUT_CREDIT,
-            "label": "Put credit spread (research)",
-            "mark_text": "PCS",
-            "color": "#7EB6FF",
-            "rationale": (
-                "Long-gamma / pin-prone tape with elevated put skew and spot "
-                "above gamma flip — a defined-risk put credit fits a "
-                "supported-bullish tape better than a wide naked short put. "
-                "Iron condor is the alternate if you want both wings."
-            ),
-            "wing_pct_guide": 0.03,
-            "alternate": STRUCTURE_IRON_CONDOR,
-        })
-
-    if call_heavy and below_flip:
-        return _with_mapping_meta({
-            "structure": STRUCTURE_CALL_CREDIT,
-            "label": "Call credit spread (research)",
-            "mark_text": "CCS",
-            "color": "#C084FC",
-            "rationale": (
-                "Long-gamma tape with call-side skew and spot below flip — "
-                "a defined-risk call credit is the directional short-premium "
-                "read. Prefer an iron condor if you want non-directional."
-            ),
-            "wing_pct_guide": 0.03,
-            "alternate": STRUCTURE_IRON_CONDOR,
-        })
-
-    return _with_mapping_meta({
-        "structure": STRUCTURE_IRON_CONDOR,
-        "label": "Iron condor (research)",
-        "mark_text": "IC",
-        "color": "#00FF88",
-        "rationale": (
-            "Dealers net long gamma — dampened / pinning-prone tape favors "
-            "a defined-risk iron condor (short premium both wings with "
-            "long hedges) over directional single-legged short premium."
-        ),
-        "wing_pct_guide": 0.04,
-        "alternate": (
-            STRUCTURE_PUT_CREDIT if above_flip else STRUCTURE_CALL_CREDIT
-            if below_flip else None
-        ),
-    })
 
 
 def _levels_for_pick(
@@ -313,14 +347,24 @@ def build_options_structure_overlay(symbol: str) -> Dict[str, Any]:
             skew_meta = {"success": False, "error": str(e)}
         out["skew"] = skew_meta
 
+        from trading.portfolio.risk_profile import load_stated_risk_profile
+
+        profile = load_stated_risk_profile()
         pick = pick_options_structure(
             regime_short=str(gex.get("regime_short") or ""),
             skew_shape=str(skew_meta.get("shape") or "") or None,
             skew_diff=skew_meta.get("skew_diff"),
             spot=gex.get("spot"),
             gamma_flip=gex.get("gamma_flip"),
+            risk_tolerance=profile.get("risk_tolerance"),
+            allow_undefined_risk=bool(profile.get("allow_undefined_risk")),
         )
         out["pick"] = pick
+        out["risk_profile"] = {
+            "risk_tolerance": profile.get("risk_tolerance"),
+            "allow_undefined_risk": bool(profile.get("allow_undefined_risk")),
+            "source": "stated_settings",
+        }
 
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         # Prefer last history bar date when available

@@ -42,8 +42,20 @@ def assess_kelly_sample(
     win_rate: float,
     *,
     defined_risk_premium_selling: bool = False,
+    risk_tolerance: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Return sample-size flags + human caveat (never mutates Kelly math)."""
+    """Return sample-size flags + human caveat (never mutates Kelly math).
+
+    ``risk_tolerance`` is a *stated* Settings preference (see
+    ``trading.portfolio.risk_profile``). Conservative forces quarter-Kelly
+    with reason ``stated_conservative``, kept distinct from
+    ``small_sample`` / ``premium_selling``.
+    """
+    from trading.portfolio.risk_profile import (
+        RISK_CONSERVATIVE,
+        normalize_risk_tolerance,
+    )
+
     try:
         p = float(win_rate)
         if p > 1.0:
@@ -51,16 +63,33 @@ def assess_kelly_sample(
     except Exception:
         p = 0.0
 
+    rt = normalize_risk_tolerance(risk_tolerance)
+    reasons: list = []
+
     if n_closed_trades is None:
-        return {
+        out = {
             "sample_size_flag": "unknown",
             "n_closed_trades": None,
             "sample_size_caveat": (
                 "Sample size not provided — treat this Kelly fraction as a "
                 "ceiling estimate only until you attach closed-trade count."
             ),
-            "recommend_quarter_kelly": bool(defined_risk_premium_selling),
+            "recommend_quarter_kelly": bool(defined_risk_premium_selling)
+            or rt == RISK_CONSERVATIVE,
+            "defined_risk_premium_selling": bool(defined_risk_premium_selling),
+            "risk_tolerance": rt,
+            "quarter_kelly_reasons": [],
         }
+        if defined_risk_premium_selling:
+            out["quarter_kelly_reasons"].append("premium_selling")
+        if rt == RISK_CONSERVATIVE:
+            out["quarter_kelly_reasons"].append("stated_conservative")
+            out["sample_size_caveat"] = (
+                f"{out['sample_size_caveat']} Stated risk profile "
+                "(conservative) further guides to quarter-Kelly — "
+                "profile-driven, not a sample-size finding."
+            )
+        return out
 
     try:
         n = int(n_closed_trades)
@@ -73,7 +102,9 @@ def assess_kelly_sample(
         "sample_size_caveat": None,
         "recommend_quarter_kelly": False,
         "defined_risk_premium_selling": bool(defined_risk_premium_selling),
+        "risk_tolerance": rt,
         "small_sample_threshold": SMALL_SAMPLE_N,
+        "quarter_kelly_reasons": [],
     }
 
     if n < SMALL_SAMPLE_N:
@@ -89,34 +120,55 @@ def assess_kelly_sample(
             "This sample is too small to treat Kelly at face value;"
             f"{wr_note} treat sizing as provisional."
         ).replace("  ", " ").strip()
-        # Small sample always argues for a more conservative guided size.
         out["recommend_quarter_kelly"] = True
-        return out
+        reasons.append("small_sample")
 
     if defined_risk_premium_selling:
         out["recommend_quarter_kelly"] = True
-        if n < PREMIUM_SOFT_N:
-            out["sample_size_flag"] = "provisional"
-            out["sample_size_caveat"] = (
-                f"Based on {n} closed trades — past the base bar ({SMALL_SAMPLE_N}) "
-                f"but under {PREMIUM_SOFT_N} for a defined-risk premium-selling "
-                "book. Prefer quarter-Kelly until a wing/breach-class loss has "
-                "had a fair chance to show up."
-            )
-        else:
-            out["sample_size_caveat"] = (
-                f"Based on {n} closed trades. Defined-risk premium-selling "
-                "still favors quarter-Kelly as the guided size (fat left "
-                "tail); half-Kelly remains informational."
-            )
-        return out
+        if "premium_selling" not in reasons:
+            reasons.append("premium_selling")
+        if n >= SMALL_SAMPLE_N:
+            if n < PREMIUM_SOFT_N:
+                out["sample_size_flag"] = "provisional"
+                out["sample_size_caveat"] = (
+                    f"Based on {n} closed trades — past the base bar ({SMALL_SAMPLE_N}) "
+                    f"but under {PREMIUM_SOFT_N} for a defined-risk premium-selling "
+                    "book. Prefer quarter-Kelly until a wing/breach-class loss has "
+                    "had a fair chance to show up."
+                )
+            else:
+                out["sample_size_caveat"] = (
+                    f"Based on {n} closed trades. Defined-risk premium-selling "
+                    "still favors quarter-Kelly as the guided size (fat left "
+                    "tail); half-Kelly remains informational."
+                )
 
-    # Adequate non-premium sample — light note only when n is modest
-    if n < PREMIUM_SOFT_N:
+    if rt == RISK_CONSERVATIVE:
+        out["recommend_quarter_kelly"] = True
+        if "stated_conservative" not in reasons:
+            reasons.append("stated_conservative")
+        profile_bit = (
+            "Stated risk profile (conservative) — guided size is "
+            "quarter-Kelly because of the profile setting (distinct from "
+            "sample-size / premium-selling triggers)."
+        )
+        if out.get("sample_size_caveat"):
+            out["sample_size_caveat"] = f"{out['sample_size_caveat']} {profile_bit}"
+        else:
+            out["sample_size_caveat"] = profile_bit
+
+    if (
+        not out["recommend_quarter_kelly"]
+        and n >= SMALL_SAMPLE_N
+        and n < PREMIUM_SOFT_N
+        and not defined_risk_premium_selling
+    ):
         out["sample_size_caveat"] = (
             f"Based on {n} closed trades — usable, but still a short history; "
             "keep half-Kelly as a ceiling, not a target."
         )
+
+    out["quarter_kelly_reasons"] = reasons
     return out
 
 
@@ -127,6 +179,7 @@ def attach_kelly_recommendation(
 ) -> Dict[str, Any]:
     """Merge assessment into a get_position_size payload; set recommended_*."""
     out = dict(kelly_out)
+    reasons = list(assessment.get("quarter_kelly_reasons") or [])
     out.update({
         "sample_size_flag": assessment.get("sample_size_flag"),
         "n_closed_trades": assessment.get("n_closed_trades"),
@@ -134,6 +187,8 @@ def attach_kelly_recommendation(
         "defined_risk_premium_selling": bool(
             assessment.get("defined_risk_premium_selling")
         ),
+        "risk_tolerance": assessment.get("risk_tolerance"),
+        "quarter_kelly_reasons": reasons,
         "small_sample_threshold": assessment.get(
             "small_sample_threshold", SMALL_SAMPLE_N
         ),
@@ -150,10 +205,19 @@ def attach_kelly_recommendation(
         out["recommended_fraction"] = out["quarter_kelly_fraction"]
         out["recommended_dollars"] = out["quarter_kelly_dollars"]
         out["recommended_basis"] = "quarter_kelly"
+        if "stated_conservative" in reasons and "small_sample" not in reasons:
+            out["recommended_reason"] = "stated_conservative"
+        elif "small_sample" in reasons:
+            out["recommended_reason"] = "small_sample"
+        elif "premium_selling" in reasons:
+            out["recommended_reason"] = "premium_selling"
+        else:
+            out["recommended_reason"] = "quarter_kelly"
     else:
         out["recommended_fraction"] = round(half, 4)
         out["recommended_dollars"] = round(half * float(account_size), 2)
         out["recommended_basis"] = "half_kelly"
+        out["recommended_reason"] = "half_kelly"
 
     caveat = assessment.get("sample_size_caveat")
     base_note = str(out.get("note") or "")

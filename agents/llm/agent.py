@@ -3375,6 +3375,25 @@ def get_evolve_platform_tool_registry():
                 "properties": {"max_items": {"type": "integer"}},
             },
         },
+        {
+            "name": "get_market_state",
+            "description": (
+                "Situational awareness composite from existing GEX regime, "
+                "breaking-news severity, and realized-vol regime — explains "
+                "WHAT to pay attention to and WHY. NOT a price prediction and "
+                "must never be framed as forecasting direction. Advanced / "
+                "opt-in; translate to plain language only if a novice asks "
+                "what is happening in the market."
+            ),
+            "function": _agent_tools.get_market_state,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "max_headlines": {"type": "integer"},
+                },
+            },
+        },
 
     ]
 

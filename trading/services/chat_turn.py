@@ -7,6 +7,10 @@ context + Agent Skills + the platform tool loop (scan, score, forecast,
 news, risk, patterns, backtests, options sentiment), with a plain-LLM
 fallback when tools fail. Extracted from pages/6_Chat.py's orchestration
 so the logic can never drift between frontends.
+
+Personalization boundary: stated Settings risk profile may shape framing
+tone only. Do not infer recommendations or filter symbols from clicks /
+engagement — see docs/PERSONALIZATION.md and trading.portfolio.risk_profile.
 """
 
 from __future__ import annotations
@@ -41,12 +45,16 @@ def run_chat_turn(
     conversation_messages: Optional[List[Dict[str, str]]] = None,
     focus_symbol: Optional[str] = None,
     max_tokens: int = 2048,
+    session_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run one full chat turn. Returns
     {"success", "reply", "tool_captions", "error"}.
 
     Never raises: every failure degrades to the next-simplest path and
     ultimately to a clean error dict.
+
+    ``session_id`` (e.g. ``user:alice``) loads the *stated* Settings risk
+    profile for framing only — never inferred from clicks/engagement.
     """
     conv = conversation_messages or []
 
@@ -69,6 +77,24 @@ def run_chat_turn(
             context_block = memory_ctx or ""
     except Exception as e:  # noqa: BLE001
         logger.warning("chat_turn: context build failed: %s", e)
+
+    # 1b) Stated risk-profile framing (Settings prefs — explicit only)
+    try:
+        from trading.portfolio.risk_profile import (
+            chat_framing_block,
+            load_stated_risk_profile,
+        )
+
+        profile = load_stated_risk_profile(session_id)
+        risk_block = chat_framing_block(profile)
+        if risk_block:
+            context_block = (
+                f"{context_block}\n\n{risk_block}".strip()
+                if context_block
+                else risk_block
+            )
+    except Exception as e:  # noqa: BLE001
+        logger.debug("chat_turn: risk profile framing skipped: %s", e)
 
     # 2) Agent Skills (playbooks matched to the message; '' when none)
     skills_ctx = ""

@@ -165,6 +165,9 @@ Several modules are deliberately **scoped**, not hyped:
   `trading/backtesting/options_cost_model.py`).
 - Analyze **Diagnostics** is stationarity/structure — not Granger
   causality.
+- **Personalization boundary:** risk appetite is Settings-stated only.
+  Implicit preference-learning from clicks/engagement must never narrow
+  what symbols or ideas are shown — see `docs/PERSONALIZATION.md`.
 
 ## Tests
 

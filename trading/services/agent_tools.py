@@ -915,6 +915,7 @@ def get_position_size(
     apply_vol_overlay: bool = True,
     n_closed_trades: Optional[int] = None,
     defined_risk_premium_selling: bool = False,
+    risk_tolerance: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Kelly-criterion position sizing from a strategy's stats (the 'Kelly
     tool' the position-sizing skill references). win_rate in [0,1] (or
@@ -931,11 +932,20 @@ def get_position_size(
     ``kelly_sample_disclosure``). ``defined_risk_premium_selling`` is an
     explicit opt-in flag (paper ledger is not multi-leg aware) that
     recommends quarter-Kelly as the guided size.
+
+    ``risk_tolerance`` is a *stated* Settings preference
+    (conservative/moderate/aggressive). Conservative forces quarter-Kelly
+    with ``recommended_reason=stated_conservative``, distinct from
+    sample-size reasons. If omitted, loads from user prefs when available.
     """
     try:
         from trading.portfolio.kelly_sample_disclosure import (
             assess_kelly_sample,
             attach_kelly_recommendation,
+        )
+        from trading.portfolio.risk_profile import (
+            load_stated_risk_profile,
+            normalize_risk_tolerance,
         )
 
         p = float(win_rate)
@@ -960,10 +970,14 @@ def get_position_size(
                 "Full Kelly is a ceiling, not a target."
             ),
         }
+        if risk_tolerance is None:
+            risk_tolerance = load_stated_risk_profile().get("risk_tolerance")
+        rt = normalize_risk_tolerance(risk_tolerance)
         assessment = assess_kelly_sample(
             n_closed_trades,
             p,
             defined_risk_premium_selling=bool(defined_risk_premium_selling),
+            risk_tolerance=rt,
         )
         out = attach_kelly_recommendation(out, assessment, acct)
 
@@ -1167,3 +1181,26 @@ def get_breaking_news(max_items: int = 8) -> Dict[str, Any]:
     except Exception as e:  # noqa: BLE001
         logger.exception("get_breaking_news failed: %s", e)
         return {"success": False, "items": [], "error": str(e)}
+
+
+def get_market_state(symbol: str = "SPY", max_headlines: int = 8) -> Dict[str, Any]:
+    """Situational awareness composite (GEX + news severity + vol regime).
+
+    Not a price forecast — discloses that it does not predict direction.
+    """
+    try:
+        from trading.analysis.market_state import get_market_state as _core
+
+        return _core(symbol, max_headlines=int(max_headlines or 8))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("get_market_state failed: %s", e)
+        return {
+            "success": False,
+            "symbol": (symbol or "SPY").strip().upper(),
+            "error": str(e),
+            "predicts_direction": False,
+            "disclosure": (
+                "Situational awareness synthesized from existing signals — "
+                "not a price prediction."
+            ),
+        }

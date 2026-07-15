@@ -519,3 +519,11 @@ def get_breaking_news(max_items: int = 8) -> dict:
     from trading.services.agent_tools import get_breaking_news as _f
 
     return _f(max_items)
+
+
+@mcp.tool()
+def get_market_state(symbol: str = "SPY", max_headlines: int = 8) -> dict:
+    """Situational awareness (GEX + news severity + vol) — not a forecast."""
+    from trading.services.agent_tools import get_market_state as _f
+
+    return _jsonable(_f(symbol, max_headlines=max_headlines))

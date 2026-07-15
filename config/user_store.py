@@ -1,6 +1,11 @@
 """
 Per-user persistent storage for beta: encrypted API keys and preferences in SQLite.
 Do not commit data/users.db; keep EVOLVE_ENCRYPTION_KEY in .env and out of version control.
+
+Preferences JSON is **user-stated** only (e.g. Settings risk_tolerance). Do not
+treat this store as an engagement / click-learning model, and do not write
+inferred preference fields from watchlist or UI activity. See
+docs/PERSONALIZATION.md.
 """
 
 import json

@@ -184,6 +184,26 @@ _DEMOTE_SOURCES = (
     ("benzinga", -0.05),
 )
 
+# Neutral baseline before reputable/demote bumps (shared with severity scoring).
+_REPUTATION_BASE = 0.35
+
+
+def source_reputation_factor(source: str) -> float:
+    """Map a publisher name to [0.05, 1.0] using the same reputable/demote table
+    as ``_score_relevance`` — single source of truth for trust weighting.
+    """
+    src = (source or "").lower()
+    score = float(_REPUTATION_BASE)
+    for needle, bump in _REPUTABLE_SOURCES:
+        if needle in src:
+            score += float(bump)
+            break
+    for needle, bump in _DEMOTE_SOURCES:
+        if needle in src:
+            score += float(bump)
+            break
+    return round(min(1.0, max(0.05, score)), 4)
+
 
 def _fetch_rss(query: str = "", max_items: int = 10) -> List[Dict]:
     """Fetch and filter RSS feed entries by a simple keyword query."""

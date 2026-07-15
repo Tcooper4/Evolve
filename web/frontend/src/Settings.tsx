@@ -18,6 +18,12 @@ const DIRECTIONS = [
   "Both",
 ];
 
+const RISK_TOLERANCES = [
+  { id: "conservative", label: "Conservative" },
+  { id: "moderate", label: "Moderate (default)" },
+  { id: "aggressive", label: "Aggressive" },
+] as const;
+
 export default function Settings() {
   const [saved, setSaved] = useState({
     anthropic: false, openai: false, news: false, reddit: false, twitter: false,
@@ -33,6 +39,10 @@ export default function Settings() {
   const [minAi, setMinAi] = useState(6.0);
   const [direction, setDirection] = useState(DIRECTIONS[0]);
   const [chartTimezone, setChartTimezone] = useState("America/New_York");
+  const [riskTolerance, setRiskTolerance] = useState<string>("moderate");
+  const [allowUndefinedRisk, setAllowUndefinedRisk] = useState(false);
+  const [preferredDteMin, setPreferredDteMin] = useState(7);
+  const [preferredDteMax, setPreferredDteMax] = useState(45);
   const [msg, setMsg] = useState("");
   const [gpr, setGpr] = useState<GprSignal | null>(null);
   const [rb, setRb] = useState<RevisionBreadth | null>(null);
@@ -55,6 +65,10 @@ export default function Settings() {
         setChartTimezone(p.chart_timezone);
         cacheChartTimezone(p.chart_timezone);
       }
+      if (typeof p.risk_tolerance === "string") setRiskTolerance(p.risk_tolerance);
+      if (typeof p.allow_undefined_risk === "boolean") setAllowUndefinedRisk(p.allow_undefined_risk);
+      if (typeof p.preferred_dte_min === "number") setPreferredDteMin(p.preferred_dte_min);
+      if (typeof p.preferred_dte_max === "number") setPreferredDteMax(p.preferred_dte_max);
     }).catch(() => {});
     getMarketSignals().then((s) => {
       setGpr(s.gpr);
@@ -77,6 +91,10 @@ export default function Settings() {
       min_ai_score: minAi,
       opportunity_direction: direction,
       chart_timezone: chartTimezone,
+      risk_tolerance: riskTolerance,
+      allow_undefined_risk: allowUndefinedRisk,
+      preferred_dte_min: preferredDteMin,
+      preferred_dte_max: preferredDteMax,
     });
     cacheChartTimezone(chartTimezone);
     setAnthropic(""); setOpenai(""); setNews(""); setRedditId(""); setRedditSecret("");
@@ -85,7 +103,7 @@ export default function Settings() {
       anthropic: k.anthropic, openai: k.openai, news: k.news,
       reddit: !!k.reddit, twitter: !!k.twitter,
     })));
-    setMsg("Saved — encrypted keys + research prefs for your account only.");
+    setMsg("Saved — encrypted keys + stated preferences for your account only.");
     setTimeout(() => setMsg(""), 3500);
   }
 
@@ -154,12 +172,45 @@ export default function Settings() {
               ))}
             </select>
           </div>
+          <div className="field">
+            <label>Risk tolerance (stated)</label>
+            <select value={riskTolerance} onChange={(e) => setRiskTolerance(e.target.value)}>
+              {RISK_TOLERANCES.map((r) => (
+                <option key={r.id} value={r.id}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Comfortable with undefined-risk / naked positions?</label>
+            <select
+              value={allowUndefinedRisk ? "yes" : "no"}
+              onChange={(e) => setAllowUndefinedRisk(e.target.value === "yes")}
+            >
+              <option value="no">No — flag &amp; deprioritize</option>
+              <option value="yes">Yes — still list, less flagging</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Preferred DTE min</label>
+            <input type="number" min={0} max={365} step={1} value={preferredDteMin}
+              onChange={(e) => setPreferredDteMin(Number(e.target.value))} />
+          </div>
+          <div className="field">
+            <label>Preferred DTE max</label>
+            <input type="number" min={0} max={365} step={1} value={preferredDteMax}
+              onChange={(e) => setPreferredDteMax(Number(e.target.value))} />
+          </div>
         </div>
+        <p style={{ fontSize: 12, color: "var(--text-2)", margin: "10px 0 0" }}>
+          Risk tolerance is what you set here — Evolve never infers it from clicks or
+          watchlist activity. Default is moderate (keeps prior Kelly guidance).
+          Conservative forces quarter-Kelly as a profile reason and deprioritizes
+          undefined-risk options ideas without hiding them.
+        </p>
         <p style={{ fontSize: 12, color: "var(--text-2)", margin: "10px 0 0" }}>
           Intraday chart labels and hover times use this zone. Candle data is stored in UTC.
           Default is US Eastern (NYSE session).
-        </p>
-        <button className="primary" onClick={save} style={{ marginTop: 14 }}>Save settings</button>
+        </p>        <button className="primary" onClick={save} style={{ marginTop: 14 }}>Save settings</button>
         {msg && <div style={{ color: "var(--up)", marginTop: 10, fontSize: 13 }}>{msg}</div>}
       </div>
 

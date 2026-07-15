@@ -285,6 +285,7 @@ PARITY_GET_ROUTES = [
     "/api/edgar/SPY",
     "/api/market-signals",
     "/api/news/breaking",
+    "/api/market-state/SPY",
 ]
 
 PARITY_POST_ROUTES = [

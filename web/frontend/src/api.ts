@@ -491,6 +491,27 @@ export const getBreakingNews = (max_items = 8) =>
     `/api/news/breaking?max_items=${max_items}`,
   );
 
+export type MarketState = {
+  success: boolean;
+  symbol?: string;
+  level?: string;
+  label?: string;
+  disclosure?: string;
+  predicts_direction?: boolean;
+  push_priority?: boolean;
+  components?: {
+    gex_regime?: string;
+    event_severity?: number;
+    volatility_regime?: string;
+  };
+  error?: string;
+};
+
+export const getMarketState = (symbol: string, max_headlines = 8) =>
+  req<MarketState>(
+    `/api/market-state/${encodeURIComponent(symbol)}?max_headlines=${max_headlines}`,
+  );
+
 export const getNewsContext = (titles: string[]) =>
   req<{
     success: boolean;

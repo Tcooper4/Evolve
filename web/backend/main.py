@@ -897,7 +897,7 @@ def chat(req: ChatRequest, user: str = Depends(current_user)) -> Dict[str, Any]:
     try:
         from trading.services.chat_turn import run_chat_turn
 
-        return run_chat_turn(req.message)
+        return run_chat_turn(req.message, session_id=f"user:{user}")
     except Exception as e:  # noqa: BLE001
         logger.warning("chat failed: %s", e)
         return {"success": False, "error": str(e)}

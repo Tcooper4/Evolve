@@ -105,17 +105,31 @@ def should_push_alert_notification(
     *,
     limiter: Optional[AlertPushRateLimiter] = None,
     now: Optional[float] = None,
+    market_state: Optional[Dict[str, Any]] = None,
 ) -> Tuple[bool, str]:
     """
     Notification gate after an alert has already executed/triggered.
 
-    Returns ``(push?, reason)`` where reason is ``ok`` | ``watch`` | ``rate_limited``.
+    Returns ``(push?, reason)`` where reason is
+    ``ok`` | ``ok_priority`` | ``watch`` | ``rate_limited``.
+
     Execution must already have happened — this never blocks one-shot stamping.
+
+    ``market_state`` (from ``get_market_state``) is an optional priority signal:
+    elevated/critical composite levels may surface a push even for ``watch``
+    mode alerts. Rate-limit / cooldown still go through the same limiter —
+    no second notification channel.
     """
-    if not alert_allows_push(row):
+    from trading.analysis.market_state import is_push_priority_state
+
+    priority = is_push_priority_state(market_state)
+    action = alert_allows_push(row)
+    if not action and not priority:
         return False, "watch"
     lim = limiter if limiter is not None else alert_push_rate_limiter
     sym = str(row.get("symbol") or "")
     if not lim.allow(username, sym, now=now, record=True):
         return False, "rate_limited"
+    if not action and priority:
+        return True, "ok_priority"
     return True, "ok"

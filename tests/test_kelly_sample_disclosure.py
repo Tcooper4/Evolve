@@ -58,6 +58,7 @@ class TestGetPositionSizeDisclosure:
             10_000,
             apply_vol_overlay=False,
             n_closed_trades=5,
+            risk_tolerance="moderate",
         )
         assert r["success"] is True
         assert r["n_closed_trades"] == 5
@@ -79,10 +80,32 @@ class TestGetPositionSizeDisclosure:
             10_000,
             apply_vol_overlay=False,
             n_closed_trades=40,
+            risk_tolerance="moderate",
         )
         assert r["sample_size_flag"] == "adequate"
         assert r["recommended_basis"] == "half_kelly"
         assert abs(r["recommended_fraction"] - r["half_kelly_fraction"]) < 1e-9
+
+    def test_stated_conservative_smaller_than_moderate_same_stats(self):
+        """Same trade stats; conservative recommended size < moderate."""
+        common = dict(
+            win_rate=0.55,
+            avg_win_loss_ratio=1.5,
+            account_size=10_000,
+            apply_vol_overlay=False,
+            n_closed_trades=40,
+            defined_risk_premium_selling=False,
+        )
+        mod = get_position_size(**common, risk_tolerance="moderate")
+        cons = get_position_size(**common, risk_tolerance="conservative")
+        assert mod["recommended_basis"] == "half_kelly"
+        assert cons["recommended_basis"] == "quarter_kelly"
+        assert cons["recommended_fraction"] < mod["recommended_fraction"]
+        assert "stated_conservative" in cons["quarter_kelly_reasons"]
+        assert cons["recommended_reason"] == "stated_conservative"
+        # Sample-size reason must NOT be the conservative trigger here
+        assert "small_sample" not in cons["quarter_kelly_reasons"]
+        assert "profile" in (cons.get("sample_size_caveat") or "").lower()
 
     def test_premium_flag_quarter_kelly(self):
         r = get_position_size(
@@ -92,6 +115,7 @@ class TestGetPositionSizeDisclosure:
             apply_vol_overlay=False,
             n_closed_trades=40,
             defined_risk_premium_selling=True,
+            risk_tolerance="moderate",
         )
         assert r["defined_risk_premium_selling"] is True
         assert r["recommended_basis"] == "quarter_kelly"

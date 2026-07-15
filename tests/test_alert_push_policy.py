@@ -121,6 +121,15 @@ class TestBackgroundSeparatesExecutionFromPush:
             "trading.services.background_jobs.run_alert_checks_for_user",
             lambda _s: fired,
         )
+        # Isolate from live market-state priority elevation
+        monkeypatch.setattr(
+            "trading.analysis.market_state.get_market_state",
+            lambda *_a, **_k: {
+                "success": True,
+                "level": "calm",
+                "push_priority": False,
+            },
+        )
 
         from trading.services.background_jobs import background_tick
 

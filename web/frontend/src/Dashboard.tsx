@@ -6,6 +6,7 @@ import {
   getOptionsStructureOverlay,
   getHistory,
   getMarketSignals,
+  getMarketState,
   getNews,
   getNewsContext,
   getQuote,
@@ -20,6 +21,7 @@ import {
   type Candle,
   type ChartEvent,
   type GprSignal,
+  type MarketState,
   type Quote,
   type RevisionBreadth,
   type OptionsStructureOverlay,
@@ -105,6 +107,7 @@ export default function Dashboard({
   const [flash, setFlash] = useState("");
   const [gpr, setGpr] = useState<GprSignal | null>(null);
   const [rb, setRb] = useState<RevisionBreadth | null>(null);
+  const [marketState, setMarketState] = useState<MarketState | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const prevPrice = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -193,12 +196,15 @@ export default function Dashboard({
       const interval = per === "1d" ? (iv ?? dayIntervalRef.current) : "";
       // Soft polls only refresh quote+history — chart-events does GDELT/Twitter
       // per mark and was adding multi-second stalls every 20–45s on 1D/1W.
-      const [q, h, n, ev, br] = await Promise.all([
+      const [q, h, n, ev, br, ms] = await Promise.all([
         getQuote(sym),
         getHistory(sym, per, interval),
         soft ? Promise.resolve({ items: [] as unknown[] }) : getNews(sym, 5).catch(() => ({ items: [] })),
         soft ? Promise.resolve({ events: [] as ChartEvent[] }) : getChartEvents(sym, per).catch(() => ({ events: [] })),
         soft ? Promise.resolve({ items: [] as unknown[] }) : getBreakingNews(5).catch(() => ({ items: [] })),
+        soft
+          ? Promise.resolve(null as MarketState | null)
+          : getMarketState(sym).catch(() => null),
       ]);
       setQuote(q);
       setCandles(withLiveBarVolume(h.candles, q.volume));
@@ -233,6 +239,7 @@ export default function Dashboard({
           .catch(() => {});
       }
       setBreaking((br.items as Record<string, unknown>[]) ?? []);
+      setMarketState(ms);
       if (q.price != null && prevPrice.current != null && q.price !== prevPrice.current) {
         setFlash(q.price > prevPrice.current ? "flash-up" : "flash-down");
         setTimeout(() => setFlash(""), 700);
@@ -501,6 +508,26 @@ export default function Dashboard({
               : "—"}
           </div>
           <div className="sub">close vs close</div>
+        </div>
+        <div className="card kpi fade-in" title={marketState?.disclosure || "Situational awareness — not a price prediction"}>
+          <div className="label">Market state</div>
+          <div className="value num" style={{
+            fontSize: 16,
+            color:
+              marketState?.level === "critical" || marketState?.level === "elevated"
+                ? "var(--down)"
+                : marketState?.level === "calm"
+                  ? "var(--up)"
+                  : undefined,
+          }}>
+            {marketState?.level
+              ? marketState.level.toUpperCase()
+              : loading ? "…" : "—"}
+          </div>
+          <div className="sub" style={{ maxWidth: 220 }}>
+            {marketState?.label
+              || (marketState?.error ? "unavailable" : "GEX · news · vol")}
+          </div>
         </div>
         <div className="card kpi fade-in" title={gpr?.description || "Load in Settings → Market signals"}>
           <div className="label">Geopolitical risk</div>

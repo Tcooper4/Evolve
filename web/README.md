@@ -79,6 +79,8 @@ memory, paper book, watchlist, and alerts to the logged-in user when
 - Historical dealer GEX time series from free yfinance (snapshot only)
 - OOS-validated options-structure mapping or near_flip threshold
 - True tick streaming without a paid feed (websocket polls delayed quotes)
+- Engagement/click-based recommendation filtering (stated Settings prefs
+  only — `docs/PERSONALIZATION.md`)
 
 Deeper backlog: `docs/NEXT_SESSIONS.md`. Platform MCP tools:
 `docs/MCP_SERVER.md`.

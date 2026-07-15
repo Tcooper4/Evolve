@@ -48,9 +48,38 @@ class TestPickOptionsStructure:
             skew_diff=-0.05,
             spot=100.0,
             gamma_flip=105.0,
+            risk_tolerance="moderate",
+            allow_undefined_risk=True,
         )
         assert p["structure"] == STRUCTURE_CALL_CREDIT
         assert p["mark_text"] == "CCS"
+
+
+class TestConservativeDeprioritizesUndefined:
+    def test_conservative_flags_undefined_without_hiding(self):
+        cons = pick_options_structure(
+            regime_short="long_gamma",
+            risk_tolerance="conservative",
+            allow_undefined_risk=False,
+        )
+        agg = pick_options_structure(
+            regime_short="long_gamma",
+            risk_tolerance="aggressive",
+            allow_undefined_risk=True,
+        )
+        assert cons["structure"] == STRUCTURE_IRON_CONDOR  # lead stays defined
+        noted = cons.get("also_noted") or []
+        undef = [x for x in noted if x.get("risk_class") == "undefined"]
+        assert undef, "undefined-risk must remain visible"
+        assert all(x.get("deprioritized") is True for x in undef)
+        assert cons.get("conservative_note")
+        # Aggressive with allow may leave undefined not deprioritized
+        agg_undef = [
+            x for x in (agg.get("also_noted") or [])
+            if x.get("risk_class") == "undefined"
+        ]
+        assert agg_undef
+        assert any(not x.get("deprioritized") for x in agg_undef)
 
 
 class TestStructureMappingHonesty:
