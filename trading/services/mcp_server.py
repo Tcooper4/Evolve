@@ -202,6 +202,40 @@ def get_options_vix_sizing(
 
 
 @mcp.tool()
+def run_options_structure_backtest(
+    symbol: str,
+    strategy: str = "iron_condor",
+    period: str = "2y",
+    dte: int = 37,
+    short_delta: float = 0.20,
+    wing_pct: float = 0.05,
+    profit_take: float = 0.50,
+    max_loss_mult: float = 2.0,
+    exit_dte_floor: int = 8,
+    sweep: bool = False,
+) -> Dict[str, Any]:
+    """Iron condor / credit-spread STRUCTURE backtest via Black-Scholes on
+    real underlying + VIX IV proxy — not historical option quotes. Set
+    sweep=true for purged train/test + Deflated Sharpe."""
+    from trading.services import agent_tools
+
+    return _jsonable(
+        agent_tools.run_options_structure_backtest(
+            symbol,
+            strategy=strategy,
+            period=period,
+            dte=dte,
+            short_delta=short_delta,
+            wing_pct=wing_pct,
+            profit_take=profit_take,
+            max_loss_mult=max_loss_mult,
+            exit_dte_floor=exit_dte_floor,
+            sweep=sweep,
+        )
+    )
+
+
+@mcp.tool()
 def detect_market_regime(symbol: str = "SPY", period: str = "1y") -> Dict[str, Any]:
     """Current market regime (bull/bear/sideways/volatile) with confidence
     and which strategy families historically suit it."""
@@ -412,18 +446,60 @@ def record_paper_trade(symbol: str, side: str, quantity: float,
 
 
 @mcp.tool()
-def track_recommendation(symbol: str, score: float | None = None,
-                         note: str = "") -> dict:
+def track_recommendation(
+    symbol: str,
+    score: float | None = None,
+    note: str = "",
+    capture_guidance: bool = True,
+) -> dict:
     """Save an idea to the tracked list without buying; captures current
-    price for honest performance-since measurement."""
+    price plus GEX/structure/Kelly guidance snapshot when available."""
     from trading.services.agent_tools import track_recommendation as _f
 
-    return _f(symbol, score=score, note=note, source="mcp")
+    return _f(
+        symbol,
+        score=score,
+        note=note,
+        source="mcp",
+        capture_guidance=capture_guidance,
+    )
+
+
+@mcp.tool()
+def record_real_outcome(
+    real_pnl: float,
+    rec_id: str = "",
+    symbol: str = "",
+    real_strategy: str = "",
+    real_acted: bool = True,
+    real_entry_price: float | None = None,
+    real_entry_date: str = "",
+    real_exit_price: float | None = None,
+    real_exit_date: str = "",
+    real_notes: str = "",
+) -> dict:
+    """Manual real-account outcome on a tracked idea (e.g. closed AAPL
+    condor +$140). Pass symbol or rec_id. No brokerage sync."""
+    from trading.services.agent_tools import record_real_outcome as _f
+
+    return _f(
+        real_pnl,
+        rec_id=rec_id,
+        symbol=symbol,
+        real_strategy=real_strategy,
+        real_acted=real_acted,
+        real_entry_price=real_entry_price,
+        real_entry_date=real_entry_date,
+        real_exit_price=real_exit_price,
+        real_exit_date=real_exit_date,
+        real_notes=real_notes,
+    )
 
 
 @mcp.tool()
 def get_recommendations() -> dict:
-    """Tracked ideas with performance since each was tracked."""
+    """Tracked ideas with performance, guidance snapshots, and real-outcome
+    match/mismatch summary."""
     from trading.services.agent_tools import get_recommendations as _f
 
     return _f()

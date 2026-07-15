@@ -414,6 +414,24 @@ export const runBacktest = (symbol: string, strategy: string,
     }),
   });
 
+export const runOptionsStructureBacktest = (body: {
+  symbol: string;
+  strategy?: string;
+  period?: string;
+  dte?: number;
+  short_delta?: number;
+  wing_pct?: number;
+  profit_take?: number;
+  max_loss_mult?: number;
+  exit_dte_floor?: number;
+  sweep?: boolean;
+}) =>
+  req<Record<string, unknown>>("/api/backtest/options-structure", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
 export const runModelBacktest = (symbol: string, model: string, period = "1y") =>
   req<Record<string, unknown>>("/api/backtest/model", {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -689,11 +707,40 @@ export interface TrackedRec {
   status?: "open" | "acted" | "closed" | string;
   acted_at?: string | null; acted_price?: number | null;
   closed_at?: string | null; closed_price?: number | null;
+  gex_regime?: string | null;
+  structure_suggestion?: string | null;
+  kelly_recommended_fraction?: number | null;
+  kelly_recommended_dollars?: number | null;
+  real_acted?: boolean | null;
+  real_strategy?: string | null;
+  real_entry_price?: number | null;
+  real_entry_date?: string | null;
+  real_exit_price?: number | null;
+  real_exit_date?: string | null;
+  real_pnl?: number | null;
+  real_notes?: string | null;
+  real_outcome_at?: string | null;
+  real_won?: boolean | null;
   last_price: number | null; change_pct: number | null;
   change_since_acted_pct?: number | null;
 }
+export interface RealOutcomeSummary {
+  success?: boolean;
+  n_with_outcome?: number;
+  overall?: { n: number; wins: number; win_rate: number | null; avg_pnl: number | null };
+  matched_structure?: { n: number; wins: number; win_rate: number | null; avg_pnl: number | null };
+  mismatched_structure?: { n: number; wins: number; win_rate: number | null; avg_pnl: number | null };
+  sample_size_flag?: string;
+  sample_size_caveat?: string | null;
+  small_sample_threshold?: number;
+  note?: string;
+}
 export const getRecs = () =>
-  req<{ success: boolean; recommendations: TrackedRec[] }>("/api/recs");
+  req<{
+    success: boolean;
+    recommendations: TrackedRec[];
+    real_outcome_summary?: RealOutcomeSummary;
+  }>("/api/recs");
 export const trackRec = (symbol: string, score?: number | null,
                          price_at_rec?: number | null, note = "",
                          source = "analyze") =>
@@ -701,6 +748,27 @@ export const trackRec = (symbol: string, score?: number | null,
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ symbol, score, price_at_rec, note, source }),
   });
+export const recordRecOutcome = (
+  recId: string,
+  body: {
+    real_pnl: number;
+    real_acted?: boolean;
+    real_strategy?: string;
+    real_entry_price?: number | null;
+    real_entry_date?: string;
+    real_exit_price?: number | null;
+    real_exit_date?: string;
+    real_notes?: string;
+  },
+) =>
+  req<{ success: boolean; id?: string; error?: string; won?: boolean | null }>(
+    `/api/recs/${encodeURIComponent(recId)}/outcome`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
 export const deleteRec = (id: string) =>
   req<{ success: boolean }>(`/api/recs/${encodeURIComponent(id)}`, { method: "DELETE" });
 

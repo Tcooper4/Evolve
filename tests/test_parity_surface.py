@@ -293,6 +293,10 @@ PARITY_POST_ROUTES = [
     ("/api/tune-models", {"symbol": "SPY", "n_trials": 5, "models": []}),
     ("/api/gnn", {"symbols": []}),
     ("/api/monte-carlo", {"symbol": "SPY", "n_simulations": 50}),
+    ("/api/backtest/options-structure", {
+        "symbol": "SPY", "strategy": "iron_condor", "period": "1y",
+        "sweep": False,
+    }),
     ("/api/optimize", {"strategy": "RSIStrategy", "symbol": "SPY",
                        "max_evaluations": 5}),
     ("/api/allocate", {"symbols": ["SPY", "QQQ"]}),
@@ -302,7 +306,11 @@ PARITY_POST_ROUTES = [
     ("/api/alerts", {"symbol": "SPY", "condition": "price_above",
                      "threshold": 100.0}),
     ("/api/settings/prefs", {"scoring_style": "balanced"}),
-    ("/api/recs", {"symbol": "SPY", "score": 7.0, "price_at_rec": 100.0}),
+    ("/api/recs", {"symbol": "SPY", "score": 7.0, "price_at_rec": 100.0,
+                   "capture_guidance": False}),
+    ("/api/recs/outcome", {
+        "symbol": "SPY", "real_pnl": 10.0, "real_strategy": "shares",
+    }),
     ("/api/market-signals/gpr", {}),
     ("/api/news/context", {"titles": ["Markets steady ahead of data"]}),
 ]
@@ -409,26 +417,34 @@ class TestRecommendationTracker:
 
     def test_lifecycle_and_performance_math(self, pp):
         p = pp.PaperPortfolio(user_id="user:t")
-        r = p.track_recommendation("NVDA", score=8.2, price_at_rec=100.0)
+        r = p.track_recommendation(
+            "NVDA", score=8.2, price_at_rec=100.0, capture_guidance=False,
+        )
         assert r["success"]
         recs = p.get_recommendations(price_fn=lambda _: 112.0)
         assert recs[0]["change_pct"] == 12.0
         assert recs[0]["score"] == 8.2
         # re-track replaces (one live rec per symbol)
-        p.track_recommendation("NVDA", score=6.0, price_at_rec=112.0)
+        p.track_recommendation(
+            "NVDA", score=6.0, price_at_rec=112.0, capture_guidance=False,
+        )
         assert len(p.get_recommendations(price_fn=lambda _: None)) == 1
         rid = p.get_recommendations(price_fn=lambda _: None)[0]["id"]
         assert p.delete_recommendation(rid)["success"]
 
     def test_offline_prices_none_safe(self, pp):
         p = pp.PaperPortfolio(user_id="user:t")
-        p.track_recommendation("SPY", price_at_rec=500.0)
+        p.track_recommendation(
+            "SPY", price_at_rec=500.0, capture_guidance=False,
+        )
         recs = p.get_recommendations(price_fn=lambda _: None)
         assert recs[0]["last_price"] is None and recs[0]["change_pct"] is None
 
     def test_paper_buy_marks_acted_and_full_exit_closes(self, pp):
         p = pp.PaperPortfolio(user_id="user:t")
-        p.track_recommendation("NVDA", score=8.0, price_at_rec=100.0)
+        p.track_recommendation(
+            "NVDA", score=8.0, price_at_rec=100.0, capture_guidance=False,
+        )
         buy = p.record_trade("NVDA", "buy", 5, 105.0)
         assert buy["success"]
         assert buy.get("recommendation", {}).get("status") == "acted"
@@ -446,9 +462,73 @@ class TestRecommendationTracker:
         assert closed[0]["change_pct"] == 20.0  # 100 → 120
 
     def test_isolated_per_user(self, pp):
-        pp.PaperPortfolio(user_id="user:a").track_recommendation("SPY")
+        pp.PaperPortfolio(user_id="user:a").track_recommendation(
+            "SPY", capture_guidance=False,
+        )
         assert pp.PaperPortfolio(user_id="user:b").get_recommendations(
             price_fn=lambda _: None) == []
+
+    def test_real_outcome_win_loss_and_match_summary(self, pp):
+        """Hand-check: match vs mismatch buckets + Kelly small-sample caveat."""
+        from trading.portfolio.kelly_sample_disclosure import SMALL_SAMPLE_N
+
+        p = pp.PaperPortfolio(user_id="user:t")
+        # 2 matched wins, 1 matched loss; 1 mismatched win, 1 mismatched loss
+        for sym, sug, used, pnl in (
+            ("AAPL", "iron_condor", "iron_condor", 140.0),
+            ("MSFT", "iron_condor", "IC", 80.0),
+            ("AMD", "iron_condor", "iron_condor", -200.0),
+            ("TSLA", "put_credit_spread", "shares", 50.0),
+            ("META", "call_credit_spread", "iron_condor", -30.0),
+        ):
+            r = p.track_recommendation(
+                sym,
+                price_at_rec=100.0,
+                capture_guidance=False,
+                structure_suggestion=sug,
+            )
+            out = p.record_real_outcome(
+                r["id"], real_pnl=pnl, real_strategy=used, real_acted=True,
+            )
+            assert out["success"] is True
+            assert out["won"] is (pnl > 0)
+
+        recs = p.get_recommendations(price_fn=lambda _: None)
+        aapl = next(x for x in recs if x["symbol"] == "AAPL")
+        assert aapl["real_pnl"] == 140.0
+        assert aapl["real_won"] is True
+
+        summary = p.summarize_real_outcomes(recs)
+        assert summary["n_with_outcome"] == 5
+        # matched: AAPL, MSFT (IC→iron_condor), AMD → 2 wins / 3
+        assert summary["matched_structure"]["n"] == 3
+        assert summary["matched_structure"]["wins"] == 2
+        assert summary["matched_structure"]["win_rate"] == pytest.approx(2 / 3, abs=1e-3)
+        assert summary["matched_structure"]["avg_pnl"] == pytest.approx(
+            (140 + 80 - 200) / 3, abs=0.02
+        )
+        # mismatched: TSLA, META → 1 win / 2
+        assert summary["mismatched_structure"]["n"] == 2
+        assert summary["mismatched_structure"]["win_rate"] == pytest.approx(0.5)
+        # Under Kelly threshold → same caveat machinery fires
+        assert summary["n_with_outcome"] < SMALL_SAMPLE_N
+        assert summary["sample_size_flag"] in ("insufficient", "provisional")
+        assert summary["sample_size_caveat"]
+        assert str(SMALL_SAMPLE_N) in summary["sample_size_caveat"]
+
+    def test_record_real_outcome_by_symbol(self, pp):
+        p = pp.PaperPortfolio(user_id="user:t")
+        p.track_recommendation(
+            "AAPL",
+            price_at_rec=190.0,
+            capture_guidance=False,
+            structure_suggestion="iron_condor",
+        )
+        out = p.record_real_outcome(
+            None, symbol="AAPL", real_pnl=140.0, real_strategy="iron_condor",
+        )
+        assert out["success"] is True
+        assert out["won"] is True
 
 
 class TestTradeStatsAndAccountRisk:

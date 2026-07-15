@@ -107,7 +107,7 @@ def _connect() -> sqlite3.Connection:
                closed_price REAL
            )"""
     )
-    # Migrate older DBs that predate acted/closed lifecycle columns
+    # Migrate older DBs: lifecycle + guidance snapshot + real-outcome journal
     try:
         existing = {
             str(r[1])
@@ -119,6 +119,21 @@ def _connect() -> sqlite3.Connection:
             ("acted_price", "REAL"),
             ("closed_at", "TEXT"),
             ("closed_price", "REAL"),
+            # Guidance context at track time (snapshot — not live-updating)
+            ("gex_regime", "TEXT"),
+            ("structure_suggestion", "TEXT"),
+            ("kelly_recommended_fraction", "REAL"),
+            ("kelly_recommended_dollars", "REAL"),
+            # Manual real-account outcome (no brokerage API)
+            ("real_acted", "INTEGER"),
+            ("real_strategy", "TEXT"),
+            ("real_entry_price", "REAL"),
+            ("real_entry_date", "TEXT"),
+            ("real_exit_price", "REAL"),
+            ("real_exit_date", "TEXT"),
+            ("real_pnl", "REAL"),
+            ("real_notes", "TEXT"),
+            ("real_outcome_at", "TEXT"),
         ):
             if col not in existing:
                 conn.execute(
@@ -462,6 +477,77 @@ class PaperPortfolio:
         return filled
 
     # ---------------------------------------------------- recommendations
+    @staticmethod
+    def normalize_structure_key(value: Optional[str]) -> str:
+        """Canonical structure id for match/mismatch summaries."""
+        s = (value or "").strip().lower().replace(" ", "_").replace("-", "_")
+        aliases = {
+            "ic": "iron_condor",
+            "ironcondor": "iron_condor",
+            "pcs": "put_credit_spread",
+            "ccs": "call_credit_spread",
+            "put_credit": "put_credit_spread",
+            "call_credit": "call_credit_spread",
+            "wait": "wait_mixed",
+            "wait_mixed": "wait_mixed",
+            "shares": "shares",
+            "stock": "shares",
+            "equity": "shares",
+        }
+        return aliases.get(s, s)
+
+    def _capture_guidance_snapshot(self, symbol: str) -> Dict[str, Any]:
+        """Best-effort GEX / structure / Kelly snapshot at track time.
+
+        Degrades to None fields when offline or APIs fail — never blocks tracking.
+        """
+        snap: Dict[str, Any] = {
+            "gex_regime": None,
+            "structure_suggestion": None,
+            "kelly_recommended_fraction": None,
+            "kelly_recommended_dollars": None,
+        }
+        try:
+            from trading.analysis.options_structure_overlay import (
+                build_options_structure_overlay,
+            )
+
+            ov = build_options_structure_overlay(symbol)
+            gex = ov.get("gex") or {}
+            snap["gex_regime"] = gex.get("regime_short") or gex.get("regime")
+            pick = ov.get("pick") or {}
+            if pick.get("structure"):
+                snap["structure_suggestion"] = str(pick["structure"])
+        except Exception as e:
+            logger.debug("guidance GEX/structure snapshot skipped: %s", e)
+
+        try:
+            st = self.get_trade_stats()
+            wr = st.get("win_rate")
+            n = st.get("closed_trades") or 0
+            ratio = st.get("avg_win_loss_ratio")
+            if wr is not None and n and int(n) > 0 and ratio:
+                from trading.services.agent_tools import get_position_size
+
+                kelly = get_position_size(
+                    float(wr),
+                    float(ratio),
+                    account_size=float(self.get_cash() or DEFAULT_STARTING_CASH),
+                    symbol=symbol,
+                    apply_vol_overlay=False,
+                    n_closed_trades=int(n),
+                )
+                if kelly.get("success"):
+                    snap["kelly_recommended_fraction"] = kelly.get(
+                        "recommended_fraction"
+                    )
+                    snap["kelly_recommended_dollars"] = kelly.get(
+                        "recommended_dollars"
+                    )
+        except Exception as e:
+            logger.debug("guidance Kelly snapshot skipped: %s", e)
+        return snap
+
     def _apply_recommendation_trade(
         self,
         conn: sqlite3.Connection,
@@ -497,19 +583,50 @@ class PaperPortfolio:
             logger.debug("recommendation trade sync skipped: %s", e)
         return None
 
-    def track_recommendation(self, symbol: str, source: str = "analyze",
-                             score: Optional[float] = None,
-                             price_at_rec: Optional[float] = None,
-                             note: str = "") -> Dict[str, Any]:
+    def track_recommendation(
+        self,
+        symbol: str,
+        source: str = "analyze",
+        score: Optional[float] = None,
+        price_at_rec: Optional[float] = None,
+        note: str = "",
+        *,
+        capture_guidance: bool = True,
+        gex_regime: Optional[str] = None,
+        structure_suggestion: Optional[str] = None,
+        kelly_recommended_fraction: Optional[float] = None,
+        kelly_recommended_dollars: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """Save an idea to watch WITHOUT buying - closes the learning loop
         ('how do the ideas I liked actually perform?'). Price at rec time
-        is captured so performance-since can be computed honestly later."""
+        is captured so performance-since can be computed honestly later.
+
+        Optionally snapshots Evolve guidance (GEX regime, structure pick,
+        Kelly recommended size) at track time — frozen, not live-updating.
+        """
         import uuid
 
         symbol = (symbol or "").strip().upper()
         if not symbol:
             return {"success": False, "error": "symbol required"}
         rid = str(uuid.uuid4())[:8]
+
+        snap = {
+            "gex_regime": gex_regime,
+            "structure_suggestion": structure_suggestion,
+            "kelly_recommended_fraction": kelly_recommended_fraction,
+            "kelly_recommended_dollars": kelly_recommended_dollars,
+        }
+        if capture_guidance and all(v is None for v in snap.values()):
+            snap = self._capture_guidance_snapshot(symbol)
+        else:
+            # Fill only missing keys from live snapshot when capture is on
+            if capture_guidance:
+                live = self._capture_guidance_snapshot(symbol)
+                for k, v in snap.items():
+                    if v is None:
+                        snap[k] = live.get(k)
+
         conn = _connect()
         try:
             # one live open/acted rec per symbol: re-tracking replaces those;
@@ -522,18 +639,211 @@ class PaperPortfolio:
             conn.execute(
                 "INSERT INTO recommendations (id, user_id, symbol, source,"
                 " score, price_at_rec, note, created_at, status,"
-                " acted_at, acted_price, closed_at, closed_price)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (rid, self.user_id, symbol, source,
-                 float(score) if score is not None else None,
-                 float(price_at_rec) if price_at_rec is not None else None,
-                 note or "", datetime.now(timezone.utc).isoformat(),
-                 "open", None, None, None, None),
+                " acted_at, acted_price, closed_at, closed_price,"
+                " gex_regime, structure_suggestion,"
+                " kelly_recommended_fraction, kelly_recommended_dollars)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    rid, self.user_id, symbol, source,
+                    float(score) if score is not None else None,
+                    float(price_at_rec) if price_at_rec is not None else None,
+                    note or "", datetime.now(timezone.utc).isoformat(),
+                    "open", None, None, None, None,
+                    snap.get("gex_regime"),
+                    snap.get("structure_suggestion"),
+                    float(snap["kelly_recommended_fraction"])
+                    if snap.get("kelly_recommended_fraction") is not None
+                    else None,
+                    float(snap["kelly_recommended_dollars"])
+                    if snap.get("kelly_recommended_dollars") is not None
+                    else None,
+                ),
             )
             conn.commit()
-            return {"success": True, "id": rid, "symbol": symbol, "status": "open"}
+            return {
+                "success": True,
+                "id": rid,
+                "symbol": symbol,
+                "status": "open",
+                "gex_regime": snap.get("gex_regime"),
+                "structure_suggestion": snap.get("structure_suggestion"),
+                "kelly_recommended_fraction": snap.get(
+                    "kelly_recommended_fraction"
+                ),
+                "kelly_recommended_dollars": snap.get(
+                    "kelly_recommended_dollars"
+                ),
+            }
         finally:
             conn.close()
+
+    def _resolve_rec_id(
+        self, rec_id: Optional[str] = None, symbol: Optional[str] = None
+    ) -> Optional[str]:
+        rid = (rec_id or "").strip()
+        if rid:
+            return rid
+        sym = (symbol or "").strip().upper()
+        if not sym:
+            return None
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT id FROM recommendations WHERE user_id=? AND symbol=?"
+                " ORDER BY created_at DESC LIMIT 1",
+                (self.user_id, sym),
+            ).fetchone()
+            return str(row[0]) if row else None
+        finally:
+            conn.close()
+
+    def record_real_outcome(
+        self,
+        rec_id: Optional[str] = None,
+        *,
+        symbol: Optional[str] = None,
+        real_acted: bool = True,
+        real_strategy: Optional[str] = None,
+        real_entry_price: Optional[float] = None,
+        real_entry_date: Optional[str] = None,
+        real_exit_price: Optional[float] = None,
+        real_exit_date: Optional[str] = None,
+        real_pnl: Optional[float] = None,
+        real_notes: str = "",
+    ) -> Dict[str, Any]:
+        """Manual real-account journal entry against a tracked recommendation.
+
+        No brokerage integration — user-supplied fills/P&L only.
+        ``rec_id`` or ``symbol`` (latest tracked idea for that ticker).
+        """
+        rid = self._resolve_rec_id(rec_id, symbol)
+        if not rid:
+            return {
+                "success": False,
+                "error": "rec_id or tracked symbol required",
+            }
+        now = datetime.now(timezone.utc).isoformat()
+        conn = _connect()
+        try:
+            cur = conn.execute(
+                "UPDATE recommendations SET"
+                " real_acted=?,"
+                " real_strategy=?,"
+                " real_entry_price=?,"
+                " real_entry_date=?,"
+                " real_exit_price=?,"
+                " real_exit_date=?,"
+                " real_pnl=?,"
+                " real_notes=?,"
+                " real_outcome_at=?"
+                " WHERE id=? AND user_id=?",
+                (
+                    1 if real_acted else 0,
+                    (real_strategy or "").strip() or None,
+                    float(real_entry_price)
+                    if real_entry_price is not None else None,
+                    (real_entry_date or "").strip() or None,
+                    float(real_exit_price)
+                    if real_exit_price is not None else None,
+                    (real_exit_date or "").strip() or None,
+                    float(real_pnl) if real_pnl is not None else None,
+                    real_notes or "",
+                    now,
+                    rid,
+                    self.user_id,
+                ),
+            )
+            conn.commit()
+            if cur.rowcount <= 0:
+                return {"success": False, "error": "recommendation not found"}
+            return {
+                "success": True,
+                "id": rid,
+                "real_acted": bool(real_acted),
+                "real_pnl": float(real_pnl) if real_pnl is not None else None,
+                "real_strategy": (real_strategy or "").strip() or None,
+                "won": (
+                    float(real_pnl) > 0 if real_pnl is not None else None
+                ),
+            }
+        finally:
+            conn.close()
+
+    def summarize_real_outcomes(
+        self,
+        rows: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """Win rate / avg P&L by structure match vs mismatch + Kelly caveat."""
+        from trading.portfolio.kelly_sample_disclosure import (
+            SMALL_SAMPLE_N,
+            assess_kelly_sample,
+        )
+
+        recs = rows if rows is not None else self.get_recommendations(
+            price_fn=lambda _: None
+        )
+        with_outcome = [
+            r for r in recs
+            if r.get("real_outcome_at") and r.get("real_pnl") is not None
+        ]
+
+        def _bucket(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+            if not items:
+                return {
+                    "n": 0,
+                    "wins": 0,
+                    "win_rate": None,
+                    "avg_pnl": None,
+                    "total_pnl": 0.0,
+                }
+            pnls = [float(x["real_pnl"]) for x in items]
+            wins = sum(1 for p in pnls if p > 0)
+            return {
+                "n": len(pnls),
+                "wins": wins,
+                "win_rate": round(wins / len(pnls), 4),
+                "avg_pnl": round(sum(pnls) / len(pnls), 2),
+                "total_pnl": round(sum(pnls), 2),
+            }
+
+        matched: List[Dict[str, Any]] = []
+        mismatched: List[Dict[str, Any]] = []
+        unknown: List[Dict[str, Any]] = []
+        for r in with_outcome:
+            sug = self.normalize_structure_key(r.get("structure_suggestion"))
+            act = self.normalize_structure_key(r.get("real_strategy"))
+            if not sug or not act:
+                unknown.append(r)
+            elif sug == act:
+                matched.append(r)
+            else:
+                mismatched.append(r)
+
+        overall = _bucket(with_outcome)
+        wr = overall["win_rate"] if overall["win_rate"] is not None else 0.0
+        assessment = assess_kelly_sample(
+            overall["n"],
+            float(wr),
+            defined_risk_premium_selling=False,
+        )
+        return {
+            "success": True,
+            "n_with_outcome": overall["n"],
+            "overall": overall,
+            "matched_structure": _bucket(matched),
+            "mismatched_structure": _bucket(mismatched),
+            "unknown_structure": _bucket(unknown),
+            "sample_size_flag": assessment.get("sample_size_flag"),
+            "sample_size_caveat": assessment.get("sample_size_caveat"),
+            "small_sample_threshold": assessment.get(
+                "small_sample_threshold", SMALL_SAMPLE_N
+            ),
+            "note": (
+                "Real-account outcomes are user-entered (no broker sync). "
+                "Match = real_strategy equals Evolve structure_suggestion "
+                "at track time."
+            ),
+        }
 
     def delete_recommendation(self, rec_id: str) -> Dict[str, Any]:
         conn = _connect()
@@ -568,7 +878,12 @@ class PaperPortfolio:
             rows = conn.execute(
                 "SELECT id, symbol, source, score, price_at_rec, note,"
                 " created_at, status, acted_at, acted_price,"
-                " closed_at, closed_price"
+                " closed_at, closed_price,"
+                " gex_regime, structure_suggestion,"
+                " kelly_recommended_fraction, kelly_recommended_dollars,"
+                " real_acted, real_strategy, real_entry_price,"
+                " real_entry_date, real_exit_price, real_exit_date,"
+                " real_pnl, real_notes, real_outcome_at"
                 " FROM recommendations WHERE user_id=?"
                 " ORDER BY CASE status"
                 " WHEN 'open' THEN 0 WHEN 'acted' THEN 1 ELSE 2 END,"
@@ -580,6 +895,8 @@ class PaperPortfolio:
         out: List[Dict[str, Any]] = []
         for r in rows:
             status = (r[7] or "open") if len(r) > 7 else "open"
+            real_acted_raw = r[16] if len(r) > 16 else None
+            real_pnl = r[22] if len(r) > 22 else None
             rec: Dict[str, Any] = {
                 "id": r[0], "symbol": r[1], "source": r[2], "score": r[3],
                 "price_at_rec": r[4], "note": r[5], "created_at": r[6],
@@ -588,6 +905,25 @@ class PaperPortfolio:
                 "acted_price": r[9] if len(r) > 9 else None,
                 "closed_at": r[10] if len(r) > 10 else None,
                 "closed_price": r[11] if len(r) > 11 else None,
+                "gex_regime": r[12] if len(r) > 12 else None,
+                "structure_suggestion": r[13] if len(r) > 13 else None,
+                "kelly_recommended_fraction": r[14] if len(r) > 14 else None,
+                "kelly_recommended_dollars": r[15] if len(r) > 15 else None,
+                "real_acted": (
+                    None if real_acted_raw is None
+                    else bool(int(real_acted_raw))
+                ),
+                "real_strategy": r[17] if len(r) > 17 else None,
+                "real_entry_price": r[18] if len(r) > 18 else None,
+                "real_entry_date": r[19] if len(r) > 19 else None,
+                "real_exit_price": r[20] if len(r) > 20 else None,
+                "real_exit_date": r[21] if len(r) > 21 else None,
+                "real_pnl": real_pnl,
+                "real_notes": r[23] if len(r) > 23 else None,
+                "real_outcome_at": r[24] if len(r) > 24 else None,
+                "real_won": (
+                    float(real_pnl) > 0 if real_pnl is not None else None
+                ),
                 "last_price": None, "change_pct": None,
                 "change_since_acted_pct": None,
             }

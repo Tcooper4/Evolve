@@ -35,6 +35,19 @@ class MonteCarloRequest(BaseModel):
     mean_block_length: Optional[float] = None
 
 
+class OptionsStructureBacktestRequest(BaseModel):
+    symbol: str = "SPY"
+    strategy: str = "iron_condor"
+    period: str = "2y"
+    dte: int = 37
+    short_delta: float = 0.20
+    wing_pct: float = 0.05
+    profit_take: float = 0.50
+    max_loss_mult: float = 2.0
+    exit_dte_floor: int = 8
+    sweep: bool = False
+
+
 class OptimizeRequest(BaseModel):
     strategy: str = "RSIStrategy"
     symbol: str = "SPY"
@@ -96,6 +109,25 @@ class TrackRecRequest(BaseModel):
     score: Optional[float] = None
     price_at_rec: Optional[float] = None
     note: str = ""
+    capture_guidance: bool = True
+    gex_regime: Optional[str] = None
+    structure_suggestion: Optional[str] = None
+    kelly_recommended_fraction: Optional[float] = None
+    kelly_recommended_dollars: Optional[float] = None
+
+
+class RealOutcomeRequest(BaseModel):
+    real_pnl: float
+    real_acted: bool = True
+    real_strategy: Optional[str] = None
+    real_entry_price: Optional[float] = None
+    real_entry_date: Optional[str] = None
+    real_exit_price: Optional[float] = None
+    real_exit_date: Optional[str] = None
+    real_notes: str = ""
+    # Optional alternate lookup when posting without path id
+    symbol: Optional[str] = None
+    rec_id: Optional[str] = None
 
 
 class NewsContextRequest(BaseModel):
@@ -1188,6 +1220,43 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
             logger.warning("gnn lab failed: %s", e)
             return {"success": False, "error": str(e)}
 
+    @router.post("/api/backtest/options-structure")
+    def options_structure_backtest(
+        req: OptionsStructureBacktestRequest,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """BS + VIX-proxy structure backtest (not historical option fills)."""
+        try:
+            from trading.services import agent_tools
+
+            return _json_safe(
+                agent_tools.run_options_structure_backtest(
+                    req.symbol,
+                    strategy=req.strategy,
+                    period=req.period,
+                    dte=req.dte,
+                    short_delta=req.short_delta,
+                    wing_pct=req.wing_pct,
+                    profit_take=req.profit_take,
+                    max_loss_mult=req.max_loss_mult,
+                    exit_dte_floor=req.exit_dte_floor,
+                    sweep=bool(req.sweep),
+                )
+            )
+        except Exception as e:
+            logger.warning("options-structure backtest failed: %s", e)
+            return {
+                "success": False,
+                "error": str(e),
+                "disclosure": (
+                    "Modeled via Black-Scholes on real underlying + VIX "
+                    "history, not real historical option quotes — "
+                    "informative about strategy structure and cost realism, "
+                    "not a precise historical fill replay."
+                ),
+                "recommend_live": False,
+            }
+
     @router.post("/api/monte-carlo")
     def monte_carlo(req: MonteCarloRequest,
                     user: str = Depends(current_user)) -> Dict[str, Any]:
@@ -1531,8 +1600,13 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
     def list_recs(user: str = Depends(current_user)) -> Dict[str, Any]:
         from trading.portfolio.paper_portfolio import PaperPortfolio
 
-        recs = PaperPortfolio(user_id=f"user:{user}").get_recommendations()
-        return {"success": True, "recommendations": recs}
+        pp = PaperPortfolio(user_id=f"user:{user}")
+        recs = pp.get_recommendations()
+        return {
+            "success": True,
+            "recommendations": recs,
+            "real_outcome_summary": pp.summarize_real_outcomes(recs),
+        }
 
     @router.post("/api/recs")
     def track_rec(req: TrackRecRequest,
@@ -1550,8 +1624,56 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
             except Exception:
                 price = None
         return pp.track_recommendation(
-            req.symbol, source=req.source, score=req.score,
-            price_at_rec=price, note=req.note,
+            req.symbol,
+            source=req.source,
+            score=req.score,
+            price_at_rec=price,
+            note=req.note,
+            capture_guidance=bool(req.capture_guidance),
+            gex_regime=req.gex_regime,
+            structure_suggestion=req.structure_suggestion,
+            kelly_recommended_fraction=req.kelly_recommended_fraction,
+            kelly_recommended_dollars=req.kelly_recommended_dollars,
+        )
+
+    @router.post("/api/recs/outcome")
+    def record_rec_outcome(
+        req: RealOutcomeRequest,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        return PaperPortfolio(user_id=f"user:{user}").record_real_outcome(
+            req.rec_id,
+            symbol=req.symbol,
+            real_acted=bool(req.real_acted),
+            real_strategy=req.real_strategy,
+            real_entry_price=req.real_entry_price,
+            real_entry_date=req.real_entry_date,
+            real_exit_price=req.real_exit_price,
+            real_exit_date=req.real_exit_date,
+            real_pnl=float(req.real_pnl),
+            real_notes=req.real_notes or "",
+        )
+
+    @router.post("/api/recs/{rec_id}/outcome")
+    def record_rec_outcome_by_id(
+        rec_id: str,
+        req: RealOutcomeRequest,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        return PaperPortfolio(user_id=f"user:{user}").record_real_outcome(
+            rec_id,
+            real_acted=bool(req.real_acted),
+            real_strategy=req.real_strategy,
+            real_entry_price=req.real_entry_price,
+            real_entry_date=req.real_entry_date,
+            real_exit_price=req.real_exit_price,
+            real_exit_date=req.real_exit_date,
+            real_pnl=float(req.real_pnl),
+            real_notes=req.real_notes or "",
         )
 
     @router.delete("/api/recs/{rec_id}")

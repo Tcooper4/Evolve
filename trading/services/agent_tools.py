@@ -638,6 +638,56 @@ def get_options_vix_sizing(
         return {"success": False, "error": str(e)}
 
 
+def run_options_structure_backtest(
+    symbol: str,
+    strategy: str = "iron_condor",
+    period: str = "2y",
+    dte: int = 37,
+    short_delta: float = 0.20,
+    wing_pct: float = 0.05,
+    profit_take: float = 0.50,
+    max_loss_mult: float = 2.0,
+    exit_dte_floor: int = 8,
+    sweep: bool = False,
+) -> Dict[str, Any]:
+    """Structure backtest: Iron Condor / credit spreads via BS + VIX proxy.
+
+    Not a historical option-fill replay — prices legs with Black-Scholes on
+    real underlying closes and VIX as IV proxy; costs use
+    ``modeled_half_spread_fraction``. Sweeps use purged OOS + Deflated Sharpe.
+    """
+    try:
+        from trading.backtesting.options_strategy_backtest import (
+            run_options_structure_backtest as _run,
+        )
+
+        return _run(
+            symbol,
+            strategy=strategy,  # type: ignore[arg-type]
+            period=period,
+            dte=int(dte),
+            short_delta=float(short_delta),
+            wing_pct=float(wing_pct),
+            profit_take=float(profit_take),
+            max_loss_mult=float(max_loss_mult),
+            exit_dte_floor=int(exit_dte_floor),
+            sweep=bool(sweep),
+        )
+    except Exception as e:
+        logger.exception("run_options_structure_backtest failed: %s", e)
+        return {
+            "success": False,
+            "error": str(e),
+            "disclosure": (
+                "Modeled via Black-Scholes on real underlying + VIX history, "
+                "not real historical option quotes — informative about "
+                "strategy structure and cost realism, not a precise "
+                "historical fill replay."
+            ),
+            "recommend_live": False,
+        }
+
+
 def get_evolve_platform_tool_registry():
     """
     Re-export for callers using ``from trading.services.agent_tools import …``.
@@ -977,11 +1027,17 @@ def record_paper_trade(symbol: str, side: str, quantity: float,
         return {"success": False, "error": str(e)}
 
 
-def track_recommendation(symbol: str, score: Optional[float] = None,
-                         note: str = "", source: str = "chat") -> Dict[str, Any]:
+def track_recommendation(
+    symbol: str,
+    score: Optional[float] = None,
+    note: str = "",
+    source: str = "chat",
+    capture_guidance: bool = True,
+) -> Dict[str, Any]:
     """Save an idea to the user's tracked list WITHOUT buying - so they can
     later see how ideas they liked actually performed. Captures the
-    current price for honest performance-since measurement."""
+    current price and (when available) GEX/structure/Kelly guidance snapshot
+    for honest performance-since + guidance-vs-real matching later."""
     try:
         from trading.portfolio.paper_portfolio import PaperPortfolio
 
@@ -994,20 +1050,70 @@ def track_recommendation(symbol: str, score: Optional[float] = None,
         except Exception:
             price = None
         return PaperPortfolio().track_recommendation(
-            symbol, source=source, score=score, price_at_rec=price, note=note,
+            symbol,
+            source=source,
+            score=score,
+            price_at_rec=price,
+            note=note,
+            capture_guidance=bool(capture_guidance),
         )
     except Exception as e:  # noqa: BLE001
         logger.exception("track_recommendation failed: %s", e)
         return {"success": False, "error": str(e)}
 
 
-def get_recommendations() -> Dict[str, Any]:
-    """The user's tracked ideas with performance since each was tracked."""
+def record_real_outcome(
+    real_pnl: float,
+    rec_id: str = "",
+    symbol: str = "",
+    real_strategy: str = "",
+    real_acted: bool = True,
+    real_entry_price: Optional[float] = None,
+    real_entry_date: str = "",
+    real_exit_price: Optional[float] = None,
+    real_exit_date: str = "",
+    real_notes: str = "",
+) -> Dict[str, Any]:
+    """Log a real-account outcome against a tracked recommendation.
+
+    Use when the user says they closed a live trade (e.g. 'closed AAPL
+    condor for +$140'). Pass ``symbol`` or ``rec_id``. Manual journal —
+    no brokerage sync.
+    """
     try:
         from trading.portfolio.paper_portfolio import PaperPortfolio
 
-        return {"success": True,
-                "recommendations": PaperPortfolio().get_recommendations()}
+        return PaperPortfolio().record_real_outcome(
+            rec_id or None,
+            symbol=symbol or None,
+            real_acted=bool(real_acted),
+            real_strategy=real_strategy or None,
+            real_entry_price=real_entry_price,
+            real_entry_date=real_entry_date or None,
+            real_exit_price=real_exit_price,
+            real_exit_date=real_exit_date or None,
+            real_pnl=float(real_pnl),
+            real_notes=real_notes or "",
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.exception("record_real_outcome failed: %s", e)
+        return {"success": False, "error": str(e)}
+
+
+def get_recommendations() -> Dict[str, Any]:
+    """The user's tracked ideas with performance since each was tracked,
+    plus a real-outcome summary (match vs mismatch) when any exist."""
+    try:
+        from trading.portfolio.paper_portfolio import PaperPortfolio
+
+        pp = PaperPortfolio()
+        recs = pp.get_recommendations()
+        summary = pp.summarize_real_outcomes(recs)
+        return {
+            "success": True,
+            "recommendations": recs,
+            "real_outcome_summary": summary,
+        }
     except Exception as e:  # noqa: BLE001
         logger.exception("get_recommendations failed: %s", e)
         return {"success": False, "error": str(e)}

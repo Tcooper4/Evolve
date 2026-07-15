@@ -1,11 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   adjustCash, cancelLimit, deleteAlert, deleteRec, getAccountRisk, getAlerts,
   rearmAlert,
   getCashbook, getPortfolio, getPortfolioTrades, getRecs, getRisk, placeLimit,
-  recordTrade, runAllocate, upsertAlert,
-  type AccountRisk, type PortfolioSummary, type TrackedRec,
+  recordRecOutcome, recordTrade, runAllocate, upsertAlert,
+  type AccountRisk, type PortfolioSummary, type RealOutcomeSummary, type TrackedRec,
 } from "./api";
+
+const REAL_STRATEGIES = [
+  { id: "iron_condor", label: "Iron condor" },
+  { id: "put_credit_spread", label: "Put credit" },
+  { id: "call_credit_spread", label: "Call credit" },
+  { id: "shares", label: "Shares" },
+  { id: "other", label: "Other" },
+] as const;
 
 export default function Portfolio() {
   const [data, setData] = useState<PortfolioSummary | null>(null);
@@ -21,7 +29,15 @@ export default function Portfolio() {
   const [acctRisk, setAcctRisk] = useState<AccountRisk | null>(null);
   const [acctRiskLoading, setAcctRiskLoading] = useState(false);
   const [recs, setRecs] = useState<TrackedRec[]>([]);
+  const [recsSummary, setRecsSummary] = useState<RealOutcomeSummary | null>(null);
   const [recsLoading, setRecsLoading] = useState(false);
+  const [outcomeRecId, setOutcomeRecId] = useState<string | null>(null);
+  const [outPnl, setOutPnl] = useState("");
+  const [outStrategy, setOutStrategy] = useState("iron_condor");
+  const [outEntry, setOutEntry] = useState("");
+  const [outExit, setOutExit] = useState("");
+  const [outNotes, setOutNotes] = useState("");
+  const [outBusy, setOutBusy] = useState(false);
   const [alerts, setAlerts] = useState<Record<string, unknown>[]>([]);
   const [triggered, setTriggered] = useState<Record<string, unknown>[]>([]);
   const [alertSym, setAlertSym] = useState("");
@@ -92,9 +108,54 @@ export default function Portfolio() {
 
   async function loadRecs() {
     setRecsLoading(true);
-    try { setRecs((await getRecs()).recommendations ?? []); }
-    catch { setRecs([]); }
-    finally { setRecsLoading(false); }
+    try {
+      const r = await getRecs();
+      setRecs(r.recommendations ?? []);
+      setRecsSummary(r.real_outcome_summary ?? null);
+    } catch {
+      setRecs([]);
+      setRecsSummary(null);
+    } finally {
+      setRecsLoading(false);
+    }
+  }
+
+  function openOutcomeForm(r: TrackedRec) {
+    setOutcomeRecId(r.id);
+    setOutPnl(r.real_pnl != null ? String(r.real_pnl) : "");
+    setOutStrategy(r.real_strategy || r.structure_suggestion || "iron_condor");
+    setOutEntry(r.real_entry_price != null ? String(r.real_entry_price) : "");
+    setOutExit(r.real_exit_price != null ? String(r.real_exit_price) : "");
+    setOutNotes(r.real_notes || "");
+  }
+
+  async function saveOutcome() {
+    if (!outcomeRecId || outPnl === "") {
+      setMsg("Real P&L required.");
+      return;
+    }
+    setOutBusy(true);
+    try {
+      const r = await recordRecOutcome(outcomeRecId, {
+        real_pnl: Number(outPnl),
+        real_acted: true,
+        real_strategy: outStrategy,
+        real_entry_price: outEntry ? Number(outEntry) : null,
+        real_exit_price: outExit ? Number(outExit) : null,
+        real_notes: outNotes,
+      });
+      if (!r.success) setMsg(`⚠ ${r.error ?? "Could not save outcome"}`);
+      else {
+        setMsg(r.won ? "Real outcome saved (win)." : "Real outcome saved.");
+        setOutcomeRecId(null);
+        await loadRecs();
+      }
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "outcome failed");
+    } finally {
+      setOutBusy(false);
+      setTimeout(() => setMsg(""), 4000);
+    }
   }
 
   async function removeRec(id: string) {
@@ -473,11 +534,62 @@ export default function Portfolio() {
         {!loading && tab === "tracked" && (
           <div className="card-pad">
             <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>
-              Track from Analyze (or chat "track NVDA"). Paper-buying an open
-              idea marks it Bought; selling the whole position marks it Closed
-              so you can see how the pick actually played out.
+              Track from Analyze (or chat "track NVDA"). Paper marks Bought/Closed
+              for paper fills. Log a real-account outcome separately — fast form
+              below each row (no brokerage sync).
             </div>
             {recsLoading && <div className="skeleton" style={{ height: 120 }} />}
+            {!recsLoading && recsSummary && (recsSummary.n_with_outcome ?? 0) > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                <div className="kpis" style={{ marginBottom: 8 }}>
+                  <div className="card kpi">
+                    <div className="label">Real outcomes</div>
+                    <div className="value num" style={{ fontSize: 16 }}>
+                      {recsSummary.n_with_outcome}
+                    </div>
+                  </div>
+                  <div className="card kpi">
+                    <div className="label">Matched structure WR</div>
+                    <div className="value num" style={{ fontSize: 16 }}>
+                      {recsSummary.matched_structure?.win_rate != null
+                        ? `${(recsSummary.matched_structure.win_rate * 100).toFixed(0)}%`
+                        : "—"}
+                      <span className="dim" style={{ fontSize: 11, marginLeft: 6 }}>
+                        n={recsSummary.matched_structure?.n ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="card kpi">
+                    <div className="label">Mismatched WR</div>
+                    <div className="value num" style={{ fontSize: 16 }}>
+                      {recsSummary.mismatched_structure?.win_rate != null
+                        ? `${(recsSummary.mismatched_structure.win_rate * 100).toFixed(0)}%`
+                        : "—"}
+                      <span className="dim" style={{ fontSize: 11, marginLeft: 6 }}>
+                        n={recsSummary.mismatched_structure?.n ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="card kpi">
+                    <div className="label">Avg P&L match / miss</div>
+                    <div className="value num" style={{ fontSize: 15 }}>
+                      {recsSummary.matched_structure?.avg_pnl != null
+                        ? `$${recsSummary.matched_structure.avg_pnl}`
+                        : "—"}
+                      {" / "}
+                      {recsSummary.mismatched_structure?.avg_pnl != null
+                        ? `$${recsSummary.mismatched_structure.avg_pnl}`
+                        : "—"}
+                    </div>
+                  </div>
+                </div>
+                {recsSummary.sample_size_caveat && (
+                  <div className="dim" style={{ fontSize: 12 }}>
+                    {recsSummary.sample_size_caveat}
+                  </div>
+                )}
+              </div>
+            )}
             {!recsLoading && recs.length === 0 && (
               <div className="empty" style={{ padding: "30px 0" }}>
                 Nothing tracked yet. On Analyze, hit "Track idea" after scoring
@@ -487,15 +599,16 @@ export default function Portfolio() {
             {!recsLoading && recs.length > 0 && (
               <table className="tbl">
                 <thead><tr>
-                  <th>Symbol</th><th>Status</th><th>Tracked</th><th>Score then</th>
-                  <th>Price then</th><th>Now / exit</th><th>Since track</th><th />
+                  <th>Symbol</th><th>Status</th><th>Guidance</th>
+                  <th>Tracked</th><th>Since track</th><th>Real P&L</th><th />
                 </tr></thead>
                 <tbody>
                   {recs.map((r) => {
                     const st = r.status || "open";
                     const stLabel = st === "acted" ? "Bought" : st === "closed" ? "Closed" : "Open";
                     return (
-                    <tr key={r.id} style={{ opacity: st === "closed" ? 0.72 : 1 }}>
+                    <Fragment key={r.id}>
+                    <tr style={{ opacity: st === "closed" && !r.real_outcome_at ? 0.72 : 1 }}>
                       <td style={{ fontWeight: 650 }}>{r.symbol}</td>
                       <td>
                         <span style={{
@@ -504,21 +617,85 @@ export default function Portfolio() {
                             : st === "closed" ? "var(--text-2)" : "var(--accent)",
                         }}>{stLabel}</span>
                       </td>
-                      <td className="dim">{r.created_at?.slice(0, 10)}</td>
-                      <td className="num">{r.score != null ? r.score.toFixed(1) : "—"}</td>
-                      <td className="num">{r.price_at_rec != null ? r.price_at_rec.toFixed(2) : "—"}</td>
-                      <td className="num">{r.last_price != null ? r.last_price.toFixed(2) : "—"}</td>
-                      <td className={`num ${r.change_pct != null ? (r.change_pct >= 0 ? "up" : "down") : ""}`}>
-                        {r.change_pct != null ? `${r.change_pct >= 0 ? "+" : ""}${r.change_pct.toFixed(2)}%` : "—"}
-                        {r.change_since_acted_pct != null && st !== "open" && (
-                          <div className="dim" style={{ fontSize: 10.5 }}>
-                            since buy {r.change_since_acted_pct >= 0 ? "+" : ""}
-                            {r.change_since_acted_pct.toFixed(1)}%
+                      <td className="dim" style={{ fontSize: 12 }}>
+                        {r.structure_suggestion
+                          ? r.structure_suggestion.replace(/_/g, " ")
+                          : "—"}
+                        {r.gex_regime && (
+                          <div style={{ fontSize: 10.5 }}>{r.gex_regime}</div>
+                        )}
+                        {r.kelly_recommended_fraction != null && (
+                          <div style={{ fontSize: 10.5 }}>
+                            Kelly ~{(r.kelly_recommended_fraction * 100).toFixed(1)}%
+                            {r.kelly_recommended_dollars != null
+                              ? ` ($${r.kelly_recommended_dollars})`
+                              : ""}
                           </div>
                         )}
                       </td>
-                      <td><button className="ghost" onClick={() => removeRec(r.id)}>Remove</button></td>
+                      <td className="dim">{r.created_at?.slice(0, 10)}</td>
+                      <td className={`num ${r.change_pct != null ? (r.change_pct >= 0 ? "up" : "down") : ""}`}>
+                        {r.change_pct != null ? `${r.change_pct >= 0 ? "+" : ""}${r.change_pct.toFixed(2)}%` : "—"}
+                      </td>
+                      <td className={`num ${r.real_pnl != null ? (r.real_pnl >= 0 ? "up" : "down") : ""}`}>
+                        {r.real_pnl != null
+                          ? `${r.real_pnl >= 0 ? "+" : ""}$${r.real_pnl.toFixed(0)}`
+                          : "—"}
+                        {r.real_strategy && (
+                          <div className="dim" style={{ fontSize: 10.5 }}>
+                            {r.real_strategy.replace(/_/g, " ")}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <button className="ghost" onClick={() => openOutcomeForm(r)}>
+                          {r.real_outcome_at ? "Edit real" : "Log real"}
+                        </button>
+                        <button className="ghost" onClick={() => removeRec(r.id)}>Remove</button>
+                      </td>
                     </tr>
+                    {outcomeRecId === r.id && (
+                      <tr>
+                        <td colSpan={7} style={{ padding: "10px 8px 16px" }}>
+                          <div className="row" style={{ flexWrap: "wrap", gap: 8, alignItems: "flex-end" }}>
+                            <div className="field" style={{ margin: 0 }}>
+                              <label>Real P&L $</label>
+                              <input inputMode="decimal" value={outPnl} style={{ width: 100 }}
+                                onChange={(e) => setOutPnl(e.target.value)} placeholder="140" />
+                            </div>
+                            <div className="field" style={{ margin: 0 }}>
+                              <label>Structure used</label>
+                              <select value={outStrategy} style={{ width: 140 }}
+                                onChange={(e) => setOutStrategy(e.target.value)}>
+                                {REAL_STRATEGIES.map((s) => (
+                                  <option key={s.id} value={s.id}>{s.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="field" style={{ margin: 0 }}>
+                              <label>Entry</label>
+                              <input inputMode="decimal" value={outEntry} style={{ width: 90 }}
+                                onChange={(e) => setOutEntry(e.target.value)} placeholder="opt." />
+                            </div>
+                            <div className="field" style={{ margin: 0 }}>
+                              <label>Exit</label>
+                              <input inputMode="decimal" value={outExit} style={{ width: 90 }}
+                                onChange={(e) => setOutExit(e.target.value)} placeholder="opt." />
+                            </div>
+                            <div className="field" style={{ margin: 0, flex: 1, minWidth: 120 }}>
+                              <label>Notes</label>
+                              <input value={outNotes}
+                                onChange={(e) => setOutNotes(e.target.value)} placeholder="optional" />
+                            </div>
+                            <button className="primary" disabled={outBusy} onClick={() => void saveOutcome()}>
+                              {outBusy ? "Saving…" : "Save"}
+                            </button>
+                            <button className="ghost" onClick={() => setOutcomeRecId(null)}>Cancel</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                     );
                   })}
                 </tbody>

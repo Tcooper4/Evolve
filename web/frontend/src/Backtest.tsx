@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   getStrategies, runBacktest, runModelBacktest, runOptimize, runTuneModels,
+  runOptionsStructureBacktest,
   type WalkForwardFold,
 } from "./api";
 import Sparkline from "./Sparkline";
@@ -104,9 +105,15 @@ function scoreLabel(model: string, score: unknown): string {
   return model === "garch" ? `AIC ${n.toFixed(1)}` : `RMSE ${n.toFixed(4)}`;
 }
 
-type Tab = "backtest" | "optimize" | "models";
+type Tab = "backtest" | "optimize" | "models" | "options";
 type Engine = "strategy" | "model";
 type ChartView = "equity" | "compare";
+
+const OPT_STRUCTURES = [
+  { id: "iron_condor", label: "Iron condor" },
+  { id: "put_credit_spread", label: "Put credit spread" },
+  { id: "call_credit_spread", label: "Call credit spread" },
+] as const;
 
 interface SavedRun {
   id: string;
@@ -167,6 +174,11 @@ export default function Backtest() {
   const [res, setRes] = useState<Record<string, unknown> | null>(null);
   const [opt, setOpt] = useState<Record<string, unknown> | null>(null);
   const [tune, setTune] = useState<Record<string, unknown> | null>(null);
+  const [optStruct, setOptStruct] = useState<Record<string, unknown> | null>(null);
+  const [optStrategy, setOptStrategy] = useState<string>("iron_condor");
+  const [optSweep, setOptSweep] = useState(false);
+  const [optDte, setOptDte] = useState(37);
+  const [optDelta, setOptDelta] = useState(0.20);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<SavedRun[]>([]);
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -244,6 +256,24 @@ export default function Backtest() {
     finally { setLoading(false); }
   }
 
+  async function runOptionsStructure() {
+    setLoading(true);
+    try {
+      setOptStruct(await runOptionsStructureBacktest({
+        symbol,
+        strategy: optStrategy,
+        period,
+        dte: optDte,
+        short_delta: optDelta,
+        sweep: optSweep,
+      }));
+    } catch (e) {
+      setOptStruct({ success: false, error: String(e) });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const isModel = res?.kind === "model";
   const metrics = res && res.success
     ? Object.entries(res).filter(([k, v]) => {
@@ -312,9 +342,10 @@ export default function Backtest() {
       </div>
 
       <div className="seg" style={{ marginBottom: 14 }}>
-        <button className={tab === "backtest" ? "active" : ""} onClick={() => { setTab("backtest"); setOpt(null); setTune(null); }}>Backtest</button>
-        <button className={tab === "optimize" ? "active" : ""} onClick={() => { setTab("optimize"); setRes(null); setTune(null); }}>Optimize</button>
-        <button className={tab === "models" ? "active" : ""} onClick={() => { setTab("models"); setRes(null); setOpt(null); }}>Model tune</button>
+        <button className={tab === "backtest" ? "active" : ""} onClick={() => { setTab("backtest"); setOpt(null); setTune(null); setOptStruct(null); }}>Backtest</button>
+        <button className={tab === "optimize" ? "active" : ""} onClick={() => { setTab("optimize"); setRes(null); setTune(null); setOptStruct(null); }}>Optimize</button>
+        <button className={tab === "models" ? "active" : ""} onClick={() => { setTab("models"); setRes(null); setOpt(null); setOptStruct(null); }}>Model tune</button>
+        <button className={tab === "options" ? "active" : ""} onClick={() => { setTab("options"); setRes(null); setOpt(null); setTune(null); }}>Options structure</button>
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 16 }}>
@@ -341,11 +372,33 @@ export default function Backtest() {
                 {FORECAST_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select></div>
           )}
-          {(tab === "backtest" || tab === "optimize") && (
+          {tab === "options" && (
+            <div className="field"><label>Structure</label>
+              <select value={optStrategy} onChange={(e) => setOptStrategy(e.target.value)}>
+                {OPT_STRUCTURES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select></div>
+          )}
+          {(tab === "backtest" || tab === "optimize" || tab === "options") && (
             <div className="field"><label>Period</label>
               <select value={period} onChange={(e) => setPeriod(e.target.value)}>
                 {PERIODS.map((p) => <option key={p}>{p}</option>)}
               </select></div>
+          )}
+          {tab === "options" && (
+            <>
+              <div className="field"><label>Entry DTE</label>
+                <input type="number" value={optDte}
+                  onChange={(e) => setOptDte(Number(e.target.value) || 37)} /></div>
+              <div className="field"><label>Short delta</label>
+                <input type="number" step="0.01" value={optDelta}
+                  onChange={(e) => setOptDelta(Number(e.target.value) || 0.2)} /></div>
+              <div className="field"><label>Sweep OOS + DSR</label>
+                <select value={optSweep ? "yes" : "no"}
+                  onChange={(e) => setOptSweep(e.target.value === "yes")}>
+                  <option value="no">Fixed params</option>
+                  <option value="yes">Sweep deltas / wings</option>
+                </select></div>
+            </>
           )}
           {tab === "optimize" && (
             <div className="field"><label>Goal</label>
@@ -358,6 +411,13 @@ export default function Backtest() {
         </div>
         {(tab === "backtest" || tab === "optimize") && (
           <UniverseBiasNote context="backtest" />
+        )}
+        {tab === "options" && (
+          <div className="dim" style={{ fontSize: 12.5, marginTop: 10 }}>
+            Modeled via Black-Scholes on real underlying + VIX history, not real
+            historical option quotes — informative about strategy structure and
+            cost realism, not a precise historical fill replay.
+          </div>
         )}
         <div style={{ marginTop: 14 }}>
           {tab === "backtest" && (
@@ -373,6 +433,11 @@ export default function Backtest() {
           {tab === "models" && (
             <button className="primary" onClick={tuneModels} disabled={loading}>
               {loading ? "Tuning…" : `Tune models on ${symbol}`}
+            </button>
+          )}
+          {tab === "options" && (
+            <button className="primary" onClick={runOptionsStructure} disabled={loading}>
+              {loading ? "Running…" : "Run structure backtest"}
             </button>
           )}
         </div>
@@ -695,6 +760,66 @@ export default function Backtest() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "options" && loading && (
+        <div className="skeleton" style={{ height: 160, marginBottom: 16 }} />
+      )}
+
+      {tab === "options" && !loading && optStruct && (
+        <div className="fade-in">
+          {optStruct.success === false ? (
+            <div className="card card-pad">
+              <div className="dim">{String(optStruct.error ?? "Structure backtest failed")}</div>
+            </div>
+          ) : (
+            <div className="card card-pad">
+              <div className="rail-label" style={{ marginTop: 0 }}>Modeled structure result</div>
+              <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>
+                {String(optStruct.disclosure ?? "")}
+              </div>
+              {typeof optStruct.note === "string" && optStruct.note && (
+                <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>{optStruct.note}</div>
+              )}
+              <div className="kpis" style={{ marginBottom: 14 }}>
+                {[
+                  ["Trades", (optStruct.n_trades as number | undefined)
+                    ?? ((optStruct.test as Record<string, unknown> | undefined)?.n_trades as number | undefined)],
+                  ["Win rate", (() => {
+                    const st = (optStruct.stats || (optStruct.test as Record<string, unknown> | undefined)?.stats) as
+                      Record<string, unknown> | undefined;
+                    const wr = st?.win_rate;
+                    return typeof wr === "number" ? `${(wr * 100).toFixed(1)}%` : "—";
+                  })()],
+                  ["Sharpe", (() => {
+                    const st = (optStruct.stats || (optStruct.test as Record<string, unknown> | undefined)?.stats) as
+                      Record<string, unknown> | undefined;
+                    const sh = st?.sharpe;
+                    return typeof sh === "number" ? sh.toFixed(2) : "—";
+                  })()],
+                  ["Live recommend", optStruct.recommend_live === true ? "yes*" : "no"],
+                ].map(([label, val]) => (
+                  <div className="card kpi" key={String(label)}>
+                    <div className="label">{label}</div>
+                    <div className="value num" style={{ fontSize: 16 }}>{val ?? "—"}</div>
+                  </div>
+                ))}
+              </div>
+              {optStruct.deflated_sharpe && typeof optStruct.deflated_sharpe === "object" && (
+                <div className="dim" style={{ fontSize: 12.5 }}>
+                  Deflated Sharpe:{" "}
+                  {String((optStruct.deflated_sharpe as Record<string, unknown>).deflated_sharpe ?? "—")}
+                  {" · "}trials: {String(optStruct.n_trials ?? "—")}
+                </div>
+              )}
+              {optStruct.recommend_live === true && (
+                <div className="dim" style={{ fontSize: 12.5, marginTop: 8 }}>
+                  *Cleared DSR bar on this run — still research-only; not auto-wired into live defaults.
+                </div>
+              )}
             </div>
           )}
         </div>

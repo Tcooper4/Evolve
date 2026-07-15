@@ -3058,6 +3058,39 @@ def get_evolve_platform_tool_registry():
             },
         },
         {
+            "name": "run_options_structure_backtest",
+            "description": (
+                "Backtest iron_condor / put_credit_spread / call_credit_spread "
+                "STRUCTURE via Black-Scholes on real underlying + VIX as IV "
+                "proxy (NOT real historical option quotes). Accepts fixed "
+                "params or sweep=true for purged OOS + Deflated Sharpe. "
+                "Always disclose the BS/VIX scoping; recommend_live stays off "
+                "unless DSR clears."
+            ),
+            "function": _agent_tools.run_options_structure_backtest,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string"},
+                    "strategy": {
+                        "type": "string",
+                        "description": (
+                            "iron_condor | put_credit_spread | call_credit_spread"
+                        ),
+                    },
+                    "period": {"type": "string"},
+                    "dte": {"type": "integer"},
+                    "short_delta": {"type": "number"},
+                    "wing_pct": {"type": "number"},
+                    "profit_take": {"type": "number"},
+                    "max_loss_mult": {"type": "number"},
+                    "exit_dte_floor": {"type": "integer"},
+                    "sweep": {"type": "boolean"},
+                },
+                "required": ["symbol"],
+            },
+        },
+        {
             "name": "detect_market_regime",
             "description": (
                 "Classify the current market regime for a symbol "
@@ -3255,8 +3288,10 @@ def get_evolve_platform_tool_registry():
             "name": "track_recommendation",
             "description": (
                 "Save an idea to the user's tracked list WITHOUT buying, so "
-                "they can later see how it performed. Use when they say "
-                "'track this', 'keep an eye on it', or 'remember this idea'."
+                "they can later see how it performed. Snapshots GEX regime, "
+                "structure suggestion, and Kelly guide when available. Use "
+                "when they say 'track this', 'keep an eye on it', or "
+                "'remember this idea'."
             ),
             "function": _agent_tools.track_recommendation,
             "parameters": {
@@ -3265,15 +3300,50 @@ def get_evolve_platform_tool_registry():
                     "symbol": {"type": "string"},
                     "score": {"type": "number"},
                     "note": {"type": "string"},
+                    "capture_guidance": {"type": "boolean"},
                 },
                 "required": ["symbol"],
             },
         },
         {
+            "name": "record_real_outcome",
+            "description": (
+                "Log a REAL-account trade outcome against a tracked "
+                "recommendation (manual journal — no brokerage). Use when "
+                "the user reports closing a live trade, e.g. 'I closed the "
+                "AAPL condor for +$140'. Pass symbol or rec_id plus "
+                "real_pnl and real_strategy when known."
+            ),
+            "function": _agent_tools.record_real_outcome,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "real_pnl": {"type": "number"},
+                    "rec_id": {"type": "string"},
+                    "symbol": {"type": "string"},
+                    "real_strategy": {
+                        "type": "string",
+                        "description": (
+                            "iron_condor | put_credit_spread | "
+                            "call_credit_spread | shares | …"
+                        ),
+                    },
+                    "real_acted": {"type": "boolean"},
+                    "real_entry_price": {"type": "number"},
+                    "real_entry_date": {"type": "string"},
+                    "real_exit_price": {"type": "number"},
+                    "real_exit_date": {"type": "string"},
+                    "real_notes": {"type": "string"},
+                },
+                "required": ["real_pnl"],
+            },
+        },
+        {
             "name": "get_recommendations",
             "description": (
-                "The user's tracked ideas with performance since tracked. "
-                "Use for 'how are my tracked ideas doing?'"
+                "The user's tracked ideas with performance since tracked, "
+                "guidance snapshots, real outcomes, and match-vs-mismatch "
+                "summary. Use for 'how are my tracked ideas doing?'"
             ),
             "function": _agent_tools.get_recommendations,
             "parameters": {"type": "object", "properties": {}},
