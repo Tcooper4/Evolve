@@ -35,6 +35,15 @@ Honesty
 Every public return dict includes ``disclosure``: this is delayed/free
 chain data (not real-time OPRA). Treat as directional context only —
 not a precise live dealer-positioning readout.
+
+The ``near_flip`` regime boundary (``NEAR_FLIP_PCT`` = 0.5% of spot from
+the gamma-flip level) is a **design choice**, not an Evolve-validated
+empirical threshold. Free yfinance chains do not supply historical dealer
+GEX, and ``data/options_cache.db`` is a TTL overwrite cache — not a time
+series — so a real OOS check of this boundary is not possible yet.
+Opt-in forward logging: ``EVOLVE_GEX_SNAPSHOT_LOG=1``
+(``trading.data.gex_snapshot_logger``); that builds a future dataset and
+validates nothing today.
 """
 
 from __future__ import annotations
@@ -52,10 +61,17 @@ logger = logging.getLogger(__name__)
 CONTRACT_MULTIPLIER = 100
 GEX_PCT_MOVE = 0.01  # 1% spot move scaling
 
+# Design choice — not Evolve OOS-validated (see module Honesty section).
+NEAR_FLIP_PCT = 0.005
+
 DATA_DISCLOSURE = (
     "Computed on delayed/free option-chain data (yfinance), not real-time "
     "OPRA. Treat net GEX, flip level, and pin strikes as directional "
-    "context only — not a precise live dealer-positioning readout."
+    "context only — not a precise live dealer-positioning readout. "
+    "near_flip uses a 0.5%-of-spot design-choice boundary around the "
+    "gamma-flip level — not an Evolve-validated empirical threshold "
+    "(historical GEX is unavailable from free yfinance; enable "
+    "EVOLVE_GEX_SNAPSHOT_LOG=1 to accumulate a future validation set)."
 )
 
 REGIME_LONG = (
@@ -212,9 +228,10 @@ def gamma_flip_point(gex_by_strike: Dict[float, float]) -> Optional[float]:
 
 
 def _regime_label(net_gex: float, flip: Optional[float], spot: float) -> str:
-    # Near flip if within ~0.5% of flip level
+    # Near flip if within NEAR_FLIP_PCT of flip level (design choice —
+    # not Evolve-validated; see module Honesty / NEAR_FLIP_PCT).
     if flip is not None and spot > 0:
-        if abs(spot - flip) / spot <= 0.005:
+        if abs(spot - flip) / spot <= NEAR_FLIP_PCT:
             return REGIME_NEAR_FLIP
     if abs(net_gex) < 1e-9:
         return REGIME_NEAR_FLIP
@@ -252,6 +269,8 @@ def compute_gex_profile(
         "gex_by_strike": [],
         "regime": REGIME_NEAR_FLIP,
         "regime_short": "near_flip",
+        "near_flip_pct": NEAR_FLIP_PCT,
+        "near_flip_validated": False,
         "sign_convention": (
             "calls=+gex, puts=-gex; "
             "gex=gamma*OI*multiplier*spot^2*0.01"
@@ -331,6 +350,12 @@ def compute_gex_profile(
         ],
         "regime": regime,
         "regime_short": short,
+        "near_flip_pct": NEAR_FLIP_PCT,
+        "near_flip_validated": False,
+        "near_flip_note": (
+            "near_flip boundary is a design choice (NEAR_FLIP_PCT), not "
+            "an Evolve-validated empirical threshold"
+        ),
         "sign_convention": base["sign_convention"],
         "disclosure": disclosure,
         "delayed_data": True,
@@ -363,6 +388,8 @@ def get_gamma_exposure(
         "gex_by_strike": [],
         "regime": REGIME_NEAR_FLIP,
         "regime_short": "near_flip",
+        "near_flip_pct": NEAR_FLIP_PCT,
+        "near_flip_validated": False,
         "disclosure": DATA_DISCLOSURE,
         "delayed_data": True,
         "source": "yfinance",
@@ -403,6 +430,7 @@ def get_gamma_exposure(
 __all__ = [
     "CONTRACT_MULTIPLIER",
     "DATA_DISCLOSURE",
+    "NEAR_FLIP_PCT",
     "black_scholes_gamma",
     "gex_contribution",
     "gamma_flip_point",

@@ -46,8 +46,14 @@ def meets_spike_thresholds(
     price_change_pct: float,
     volume_threshold: float = 2.0,
     price_threshold: float = 0.02,
+    *,
+    abs_move_or: Optional[float] = None,
 ) -> bool:
-    """Shared significant-volume rule: (2× vol AND |move|≥2%) OR ≥3× vol."""
+    """Shared significant-volume rule: (2× vol AND |move|≥2%) OR ≥3× vol.
+
+    Optional ``abs_move_or``: fire on a large absolute move even when the
+    volume-ratio baseline is distorted (see volume_baseline.py).
+    """
     import math
     try:
         vr = float(volume_ratio)
@@ -58,20 +64,36 @@ def meets_spike_thresholds(
         return False
     vol_and_move = (vr >= volume_threshold) and (abs(pc) >= price_threshold)
     vol_extreme = vr >= max(volume_threshold * 1.5, 3.0)
-    return bool(vol_and_move or vol_extreme)
+    if vol_and_move or vol_extreme:
+        return True
+    if abs_move_or is not None and abs(pc) >= float(abs_move_or):
+        return True
+    return False
 
 
 def detect_significant_candles(
     hist: pd.DataFrame,
     volume_threshold: float = 2.0,
     price_threshold: float = 0.02,
+    *,
+    baseline_method: Optional[str] = None,
+    abs_move_or: Optional[float] = None,
 ) -> pd.DataFrame:
     """
-    Returns rows where volume > N×avg AND |price change| > threshold.
+    Returns rows where volume > N× baseline AND |price change| > threshold.
     Adds columns: volume_ratio, price_change_pct, is_significant, candle_type.
+
+    Default baseline is the stress-gated trimmed mean (drop top-2 of the
+    20d window) — resistant to cluster inflation of the raw mean. Absolute
+    |move| OR is opt-in via ``abs_move_or`` (not default; see stress suite).
     """
     if hist is None or hist.empty:
         return pd.DataFrame()
+
+    from trading.analysis.volume_baseline import (
+        DEFAULT_BASELINE_METHOD,
+        rolling_volume_baseline,
+    )
 
     df = hist.copy()
 
@@ -92,12 +114,26 @@ def detect_significant_candles(
     if "close" not in df.columns or "volume" not in df.columns:
         return df
 
+    method = baseline_method or DEFAULT_BASELINE_METHOD
+    # None → abs-move OR off (stress suite: OR alone misses the 2.4% moderate
+    # event and raises FP when stacked on trimmed_mean). Pass >0 to enable.
+    if abs_move_or is None or float(abs_move_or) <= 0:
+        abs_or: Optional[float] = None
+    else:
+        abs_or = float(abs_move_or)
+
     df["price_change_pct"] = df["close"].pct_change()
-    rolling_vol = df["volume"].rolling(20, min_periods=5).mean()
+    rolling_vol = rolling_volume_baseline(
+        df["volume"], window=20, min_periods=5, method=method  # type: ignore[arg-type]
+    )
     df["volume_ratio"] = df["volume"] / rolling_vol.clip(lower=1)
     df["is_significant"] = [
         meets_spike_thresholds(
-            vr, pc, volume_threshold=volume_threshold, price_threshold=price_threshold
+            vr,
+            pc,
+            volume_threshold=volume_threshold,
+            price_threshold=price_threshold,
+            abs_move_or=abs_or,
         )
         for vr, pc in zip(df["volume_ratio"].tolist(), df["price_change_pct"].tolist())
     ]

@@ -4,6 +4,10 @@
 Correctness: fills/alerts must evaluate even with zero browsers open.
 Notification is secondary (NotificationHub). Kill switch:
 ``EVOLVE_BACKGROUND_JOBS=0|false|off|no``.
+
+Optional GEX dataset builder (off by default): ``EVOLVE_GEX_SNAPSHOT_LOG=1``
+runs at most once per calendar day inside the market-open tick — see
+``trading.data.gex_snapshot_logger`` (future validation only).
 """
 
 from __future__ import annotations
@@ -11,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -22,6 +26,7 @@ _KILL_VALUES = {"0", "false", "off", "no", "disabled"}
 
 _task: Optional[asyncio.Task] = None
 _stop: Optional[asyncio.Event] = None
+_last_gex_snapshot_day: Optional[date] = None
 
 
 def background_jobs_enabled() -> bool:
@@ -106,8 +111,6 @@ async def background_tick() -> Dict[str, int]:
     fills_n = 0
     alerts_n = 0
     targets = collect_target_session_ids()
-    if not targets:
-        return {"users": 0, "fills": 0, "alerts": 0}
 
     for session_id in targets:
         username = username_from_session_id(session_id)
@@ -165,7 +168,37 @@ async def background_tick() -> Dict[str, int]:
         except Exception as e:
             logger.warning("background_jobs: alerts %s: %s", session_id, e)
 
-    return {"users": len(targets), "fills": fills_n, "alerts": alerts_n}
+    # Opt-in GEX snapshot logger — at most once per calendar day
+    # (runs even with zero user sessions so the dataset can accumulate).
+    gex_logged = 0
+    try:
+        global _last_gex_snapshot_day
+        from trading.data.gex_snapshot_logger import (
+            gex_snapshot_logging_enabled,
+            log_daily_gex_snapshots,
+        )
+
+        today = date.today()
+        if gex_snapshot_logging_enabled() and _last_gex_snapshot_day != today:
+            gex_stats = await asyncio.to_thread(log_daily_gex_snapshots)
+            _last_gex_snapshot_day = today
+            gex_logged = int(gex_stats.get("logged") or 0)
+            if gex_logged or gex_stats.get("backfilled"):
+                logger.info(
+                    "background_jobs: gex_snapshot logged=%s backfilled=%s total=%s",
+                    gex_stats.get("logged"),
+                    gex_stats.get("backfilled"),
+                    gex_stats.get("total_rows"),
+                )
+    except Exception as e:
+        logger.debug("background_jobs: gex_snapshot skipped: %s", e)
+
+    return {
+        "users": len(targets),
+        "fills": fills_n,
+        "alerts": alerts_n,
+        "gex_snapshots": gex_logged,
+    }
 
 
 async def _loop(interval_sec: float) -> None:

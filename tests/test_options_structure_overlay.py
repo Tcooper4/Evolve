@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 from trading.analysis.options_structure_overlay import (
+    DISCLOSURE,
     STRUCTURE_CALL_CREDIT,
     STRUCTURE_IRON_CONDOR,
+    STRUCTURE_MAPPING_NOTE,
+    STRUCTURE_MAPPING_VALIDATED,
     STRUCTURE_PUT_CREDIT,
     STRUCTURE_WAIT,
     pick_options_structure,
@@ -48,3 +51,36 @@ class TestPickOptionsStructure:
         )
         assert p["structure"] == STRUCTURE_CALL_CREDIT
         assert p["mark_text"] == "CCS"
+
+
+class TestStructureMappingHonesty:
+    """Phase 3 — scoping only; mapping branches unchanged."""
+
+    def test_mapping_not_evolve_validated(self):
+        assert STRUCTURE_MAPPING_VALIDATED is False
+        assert "not" in STRUCTURE_MAPPING_NOTE.lower()
+        assert "validated" in STRUCTURE_MAPPING_NOTE.lower()
+        assert "research" in DISCLOSURE.lower()
+        assert "EVOLVE_GEX_SNAPSHOT_LOG" in DISCLOSURE
+
+    def test_every_pick_carries_unvalidated_meta(self):
+        for regime in ("long_gamma", "short_gamma", "near_flip"):
+            p = pick_options_structure(regime_short=regime)
+            assert p["mapping_validated"] is False
+            assert p["mapping_basis"] == "research_default"
+            assert "mapping_note" in p
+
+    def test_truth_table_unchanged_by_honesty_meta(self):
+        # Hand table — same as before Phase 3 disclosure work
+        assert (
+            pick_options_structure(regime_short="long_gamma")["structure"]
+            == STRUCTURE_IRON_CONDOR
+        )
+        assert (
+            pick_options_structure(regime_short="short_gamma")["structure"]
+            == STRUCTURE_WAIT
+        )
+        assert (
+            pick_options_structure(regime_short="near_flip")["structure"]
+            == STRUCTURE_WAIT
+        )

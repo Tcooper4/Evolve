@@ -32,6 +32,13 @@ class TestSpikeThresholdsShared:
         assert meets_spike_thresholds(3.0, 0.0) is True
         assert meets_spike_thresholds(2.9, 0.0) is False
 
+    def test_abs_move_or_branch(self):
+        # Low volume-ratio, but |move| ≥ abs_move_or fires independently
+        assert meets_spike_thresholds(1.0, 0.031, abs_move_or=0.03) is True
+        assert meets_spike_thresholds(1.0, 0.029, abs_move_or=0.03) is False
+        # Default (no abs_move_or) keeps legacy semantics
+        assert meets_spike_thresholds(1.0, 0.05) is False
+
 
 class TestBackgroundHelpers:
     def test_kill_switch(self, monkeypatch):

@@ -25,8 +25,17 @@ logger = logging.getLogger(__name__)
 PROVISIONAL_COLOR = "#F5A623"
 
 
-def prior_20d_avg_volume(hist: pd.DataFrame, as_of: Optional[datetime] = None) -> Optional[float]:
-    """Mean volume of up to 20 *completed* daily bars before ``as_of`` date."""
+def prior_20d_avg_volume(
+    hist: pd.DataFrame,
+    as_of: Optional[datetime] = None,
+    *,
+    baseline_method: Optional[str] = None,
+) -> Optional[float]:
+    """Robust baseline volume of up to 20 *completed* daily bars before ``as_of``.
+
+    Default method matches ``detect_significant_candles`` (trimmed mean) so
+    live provisional spikes use the same cluster-resistant baseline.
+    """
     if hist is None or hist.empty:
         return None
     df = hist.copy()
@@ -49,11 +58,18 @@ def prior_20d_avg_volume(hist: pd.DataFrame, as_of: Optional[datetime] = None) -
     if len(window) < 5:
         return None
     try:
-        avg = float(window[vol_col].mean())
+        from trading.analysis.volume_baseline import (
+            DEFAULT_BASELINE_METHOD,
+            prior_completed_baseline,
+        )
+
+        method = baseline_method or DEFAULT_BASELINE_METHOD
+        return prior_completed_baseline(
+            window[vol_col], method=method  # type: ignore[arg-type]
+        )
     except Exception as e:
-        logger.debug("prior_20d_avg_volume: mean failed: %s", e)
+        logger.debug("prior_20d_avg_volume: baseline failed: %s", e)
         return None
-    return avg if avg > 0 else None
 
 
 def evaluate_provisional_spike(

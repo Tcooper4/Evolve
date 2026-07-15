@@ -5,6 +5,36 @@ Maps *current* delayed GEX + IV-skew context to a defined-risk structure
 idea (iron condor, put/call credit, etc.). Not trade instructions and not
 historical signal backfill — last-bar guide only, same honesty bar as the
 strategy overlay / Kelly sample caveats.
+
+---------------------------------------------------------------------------
+Research basis vs Evolve validation (Phase 3 scoping)
+---------------------------------------------------------------------------
+The regime→structure table below is a **reasonable research-backed
+default**, grounded in documented dealer-hedging / GEX market-structure
+findings used elsewhere in this project (dealers net long gamma →
+counter-trend hedging → dampened / pinning-prone tape favors defined-risk
+short premium; dealers net short gamma → with-trend hedging → amplified
+moves — short iron condors / credit spreads are the wrong side; near
+gamma flip → unstable — wait):
+
+  long_gamma  → favor iron condor / defined-risk credit (skew can tilt PCS/CCS)
+  short_gamma → WAIT (do not favor short premium)
+  near_flip   → WAIT
+
+What is **not** claimed here:
+* This mapping has **not** been OOS-validated against Evolve's own GEX
+  calculations or paper-trade outcomes.
+* The GEX ``near_flip`` 0.5% boundary feeding the map is itself a
+  design choice (see ``gamma_exposure.NEAR_FLIP_PCT``), not Evolve-proven.
+* Free yfinance chains do not yield historical dealer GEX, so a past
+  backtest of this map is not feasible today. Forward snapshots via
+  ``EVOLVE_GEX_SNAPSHOT_LOG=1`` (``gex_snapshot_logger``) can later support
+  regime / structure / next-day realized-range checks — that logger does
+  not validate anything by itself.
+
+``STRUCTURE_MAPPING_VALIDATED = False`` until such evidence exists.
+Do not flip that flag on vibes; treat a null/no-improvement OOS result
+the same way as elsewhere in this codebase.
 """
 
 from __future__ import annotations
@@ -17,18 +47,41 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_OPTIONS_OVERLAY_ENABLED = False
 
+# Explicit honesty flag — do not set True without Evolve OOS evidence.
+STRUCTURE_MAPPING_VALIDATED = False
+
+STRUCTURE_MAPPING_NOTE = (
+    "Regime→structure map is a research-backed default (long_gamma → "
+    "defined-risk short premium; short_gamma / near_flip → wait), not an "
+    "Evolve OOS-validated rule for this codebase's GEX or trade book."
+)
+
 DISCLOSURE = (
     "Options structure research guide only — not trade instructions. "
     "Uses delayed/free option-chain GEX + IV skew (not OPRA). "
     "Suggested wing distances are rough percentage guides, not live "
     "fills or broker tickets. Defined-risk premium-selling is fat-tailed; "
-    "size with sample-size caveats in mind."
+    "size with sample-size caveats in mind. "
+    f"{STRUCTURE_MAPPING_NOTE} "
+    "GEX near_flip (0.5% of spot from gamma flip) is a design choice, "
+    "not an Evolve-validated empirical boundary — free yfinance chains "
+    "do not supply historical dealer GEX; EVOLVE_GEX_SNAPSHOT_LOG=1 "
+    "builds a future validation dataset only."
 )
 
 STRUCTURE_IRON_CONDOR = "iron_condor"
 STRUCTURE_PUT_CREDIT = "put_credit_spread"
 STRUCTURE_CALL_CREDIT = "call_credit_spread"
 STRUCTURE_WAIT = "wait_mixed"
+
+
+def _with_mapping_meta(pick: Dict[str, Any]) -> Dict[str, Any]:
+    """Attach validation scoping to every pick (does not alter structure)."""
+    out = dict(pick)
+    out["mapping_validated"] = STRUCTURE_MAPPING_VALIDATED
+    out["mapping_note"] = STRUCTURE_MAPPING_NOTE
+    out["mapping_basis"] = "research_default"
+    return out
 
 
 def pick_options_structure(
@@ -45,6 +98,9 @@ def pick_options_structure(
     long_gamma → favor short-premium defined-risk (condor / credit)
     short_gamma → do not favor naked/short-premium; wait
     near_flip → wait (regime unstable)
+
+    Mapping logic is unchanged from the research-backed default; every
+    return includes ``mapping_validated=False`` until Evolve OOS exists.
     """
     regime = str(regime_short or "").strip().lower()
     shape = str(skew_shape or "").strip().lower()
@@ -61,7 +117,7 @@ def pick_options_structure(
         spot_vs_flip = None
 
     if regime in ("short_gamma",):
-        return {
+        return _with_mapping_meta({
             "structure": STRUCTURE_WAIT,
             "label": "Wait / avoid short premium",
             "mark_text": "WAIT",
@@ -72,10 +128,10 @@ def pick_options_structure(
                 "this tape; wait or use defined-risk debit ideas separately."
             ),
             "wing_pct_guide": None,
-        }
+        })
 
     if regime in ("near_flip", "", "unknown"):
-        return {
+        return _with_mapping_meta({
             "structure": STRUCTURE_WAIT,
             "label": "Wait — near gamma flip / mixed",
             "mark_text": "WAIT",
@@ -85,7 +141,7 @@ def pick_options_structure(
                 "risk can flip quickly. No structure overlay recommendation."
             ),
             "wing_pct_guide": None,
-        }
+        })
 
     # long_gamma (and anything we treat as dampened / pin-prone)
     put_heavy = shape in ("put_smirk", "put_skew", "downside_skew") or (
@@ -98,7 +154,7 @@ def pick_options_structure(
     below_flip = spot_vs_flip is not None and spot_vs_flip < -0.005
 
     if put_heavy and above_flip:
-        return {
+        return _with_mapping_meta({
             "structure": STRUCTURE_PUT_CREDIT,
             "label": "Put credit spread (research)",
             "mark_text": "PCS",
@@ -111,10 +167,10 @@ def pick_options_structure(
             ),
             "wing_pct_guide": 0.03,
             "alternate": STRUCTURE_IRON_CONDOR,
-        }
+        })
 
     if call_heavy and below_flip:
-        return {
+        return _with_mapping_meta({
             "structure": STRUCTURE_CALL_CREDIT,
             "label": "Call credit spread (research)",
             "mark_text": "CCS",
@@ -126,9 +182,9 @@ def pick_options_structure(
             ),
             "wing_pct_guide": 0.03,
             "alternate": STRUCTURE_IRON_CONDOR,
-        }
+        })
 
-    return {
+    return _with_mapping_meta({
         "structure": STRUCTURE_IRON_CONDOR,
         "label": "Iron condor (research)",
         "mark_text": "IC",
@@ -143,7 +199,7 @@ def pick_options_structure(
             STRUCTURE_PUT_CREDIT if above_flip else STRUCTURE_CALL_CREDIT
             if below_flip else None
         ),
-    }
+    })
 
 
 def _levels_for_pick(
@@ -198,6 +254,8 @@ def build_options_structure_overlay(symbol: str) -> Dict[str, Any]:
         "gex": None,
         "skew": None,
         "disclosure": DISCLOSURE,
+        "mapping_validated": STRUCTURE_MAPPING_VALIDATED,
+        "mapping_note": STRUCTURE_MAPPING_NOTE,
         "default_on": DEFAULT_OPTIONS_OVERLAY_ENABLED,
         "framing": "options_structure_research_guide",
         "error": None,
@@ -262,7 +320,7 @@ def build_options_structure_overlay(symbol: str) -> Dict[str, Any]:
 
         title = (
             f"[{pick['mark_text']}] {pick['label']} — {pick['rationale']} "
-            f"(research guide; delayed chain)"
+            f"(research guide; mapping not Evolve-OOS-validated; delayed chain)"
         )
         out["markers"] = [{
             "time": today,
