@@ -408,6 +408,31 @@ export default function Portfolio() {
                 {acctRisk.stress_note && (
                   <div className="dim" style={{ fontSize: 12, marginBottom: 10 }}>{acctRisk.stress_note}</div>
                 )}
+                {acctRisk.concentration && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div className="rail-label">Concentration</div>
+                    <div className="dim" style={{ fontSize: 12, marginBottom: 8 }}>
+                      {acctRisk.concentration.note
+                        || acctRisk.concentration.threshold_note
+                        || "Pairwise correlation of current holdings."}
+                    </div>
+                    {(acctRisk.concentration.high_pairs?.length ?? 0) > 0 ? (
+                      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, lineHeight: 1.55 }}>
+                        {acctRisk.concentration.high_pairs!.map((p, i) => (
+                          <li key={`${p.symbol_a}-${p.symbol_b}-${i}`}>
+                            {p.message}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="dim" style={{ fontSize: 13 }}>
+                        {(acctRisk.concentration.n_symbols ?? 0) < 2
+                          ? "Need at least two holdings with price history."
+                          : "No highly correlated pairs flagged on this window."}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {acctRisk.portfolio_metrics && (
                   <div className="kpis" style={{ marginBottom: 14 }}>
                     {Object.entries(acctRisk.portfolio_metrics).slice(0, 8).map(([k, v]) => (

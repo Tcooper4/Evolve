@@ -3,7 +3,8 @@ Econometric Diagnostics
 ========================
 INTEGRATION NOTES:
 - Drop into: trading/analysis/econometric_diagnostics.py
-- Wire into: pages/2_Analyze.py as new "Diagnostics" tab
+- Wire into: Analyze page "Diagnostics" lab (API: /api/diagnostics/{symbol};
+  legacy alias /api/causal/{symbol})
 - Call pattern:
     from trading.analysis.econometric_diagnostics import EconometricDiagnostics
     diag = EconometricDiagnostics(symbol, hist_df)
@@ -11,6 +12,10 @@ INTEGRATION NOTES:
     diag.render_streamlit()  # renders full diagnostics UI
 
 Dependencies: statsmodels (already in requirements)
+
+Honesty: this module runs stationarity / WN / ACF / ARCH / normality /
+lag-order / structural-break diagnostics. It does **not** implement
+Granger causality or any other causal-identification procedure.
 """
 
 import logging
@@ -24,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class EconometricDiagnostics:
     """
-    Full suite of econometric diagnostic tests for time series analysis.
+    Suite of econometric diagnostic tests for a single return series.
 
     Tests included:
     - Stationarity: ADF, KPSS
@@ -34,18 +39,18 @@ class EconometricDiagnostics:
     - Normality: Jarque-Bera
     - Structural breaks: Chow test approximation
     - Optimal lag selection: AIC/BIC
-    - Granger causality (vs SPY)
+
+    Not included (do not claim otherwise): Granger causality or other
+    causal identification vs SPY / a benchmark.
     """
 
     def __init__(
         self,
         symbol: str,
         data: pd.DataFrame,
-        benchmark_data: Optional[pd.DataFrame] = None,
     ):
         self.symbol = symbol
         self.data = data
-        self.benchmark_data = benchmark_data
         self._results: Dict[str, Any] = {}
 
         # Resolve close column

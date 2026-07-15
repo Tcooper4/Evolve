@@ -418,7 +418,12 @@ def validate_options_vix_universe(
         "proxy_caveat": (
             "OOS uses underlying equity returns × VIX-conditional size as a "
             "risk-capital proxy — not a multi-leg 0DTE options fill replay "
-            "(paper book has no options trade history to validate against)."
+            "(paper book has no options trade history to validate against). "
+            "Equity-style ~5 bps spread assumptions understate liquid ATM "
+            "options costs by roughly 20–100×+; use "
+            "trading.backtesting.options_cost_model (ATM floor several %% "
+            "of option mid; observed bid/ask preferred). Full options-fill "
+            "replay remains out of scope."
         ),
         "results": rows,
     }

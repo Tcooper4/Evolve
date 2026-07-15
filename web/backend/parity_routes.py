@@ -30,6 +30,9 @@ class MonteCarloRequest(BaseModel):
     n_simulations: int = 400
     horizon_days: int = 63
     initial_capital: float = 10000.0
+    # iid (default) | stationary_block — see trading.analysis.block_bootstrap
+    method: str = "iid"
+    mean_block_length: Optional[float] = None
 
 
 class OptimizeRequest(BaseModel):
@@ -821,18 +824,22 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
 
         return build_options_structure_overlay(symbol)
 
-    @router.get("/api/causal/{symbol}")
-    def causal(symbol: str, user: str = Depends(current_user)) -> Dict[str, Any]:
+    @router.get("/api/diagnostics/{symbol}")
+    @router.get("/api/causal/{symbol}")  # legacy alias — not Granger / causal ID
+    def diagnostics(symbol: str, user: str = Depends(current_user)) -> Dict[str, Any]:
+        """Stationarity & structural diagnostics (ADF/KPSS/ARCH/etc).
+
+        Not Granger causality — the former ``Causal`` UI label was a misnomer.
+        """
         try:
             from trading.analysis.econometric_diagnostics import EconometricDiagnostics
             from trading.data.price_cache import get_history
 
             sym = (symbol or "").strip().upper()
             hist = get_history(sym, period="2y")
-            spy = get_history("SPY", period="2y")
             if hist is None or hist.empty:
                 return {"success": False, "error": "No history"}
-            diag = EconometricDiagnostics(sym, hist, benchmark_data=spy)
+            diag = EconometricDiagnostics(sym, hist)
             out = diag.run_all()
             summary = out.get("summary") or {}
             if isinstance(summary, dict):
@@ -851,15 +858,17 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 "flags": flags if isinstance(flags, list) else [],
                 "recommendations": recs if isinstance(recs, list) else [],
                 "complexity": complexity,
+                "framing": "econometric_diagnostics",
+                "disclosure": (
+                    "Stationarity and structural diagnostics (ADF/KPSS, "
+                    "white-noise, ACF/PACF, ARCH, normality, lag order, "
+                    "break scans). Not Granger causality and not causal "
+                    "identification vs SPY or any benchmark."
+                ),
             }
-            if hasattr(diag, "test_granger_causality"):
-                try:
-                    lean["granger"] = diag.test_granger_causality()
-                except Exception:
-                    pass
             return {"success": True, **_json_safe(lean)}
         except Exception as e:
-            logger.warning("causal failed: %s", e)
+            logger.warning("diagnostics failed: %s", e)
             return {"success": False, "error": str(e)}
 
     @router.get("/api/patterns/{symbol}")
@@ -1183,9 +1192,10 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
     def monte_carlo(req: MonteCarloRequest,
                     user: str = Depends(current_user)) -> Dict[str, Any]:
         try:
-            import numpy as np
-            import pandas as pd
-
+            from trading.analysis.block_bootstrap import (
+                DEFAULT_METHOD,
+                simulate_equity_paths,
+            )
             from trading.data.price_cache import get_history
 
             sym = (req.symbol or "SPY").strip().upper()
@@ -1194,34 +1204,48 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 return {"success": False, "error": f"No data for {sym}"}
             _cm = {str(c).lower(): c for c in hist.columns}
             cc = _cm.get("close", hist.columns[0])
+            import pandas as pd
+
             rets = pd.to_numeric(hist[cc], errors="coerce").pct_change().dropna()
             if len(rets) < 40:
                 return {"success": False, "error": "Need more return history"}
             n_sims = max(50, min(int(req.n_simulations or 400), 1500))
             horizon = max(5, min(int(req.horizon_days or 63), 252))
             capital = float(req.initial_capital or 10000)
-            rng = np.random.default_rng(42)
-            arr = rets.values.astype(float)
-            paths = []
-            for _ in range(n_sims):
-                draws = rng.choice(arr, size=horizon, replace=True)
-                equity = capital * np.cumprod(1.0 + draws)
-                paths.append(equity)
-            mat = np.asarray(paths)
-            finals = mat[:, -1]
-            p5, p50, p95 = np.percentile(finals, [5, 50, 95])
-            mean_path = mat.mean(axis=0)
+            method_raw = str(req.method or DEFAULT_METHOD).strip().lower()
+            method = (
+                "stationary_block"
+                if method_raw in ("stationary_block", "block", "sbb")
+                else "iid"
+            )
+            result = simulate_equity_paths(
+                rets.values.astype(float),
+                n_simulations=n_sims,
+                horizon=horizon,
+                initial_capital=capital,
+                method=method,  # type: ignore[arg-type]
+                mean_block_length=req.mean_block_length,
+                seed=42,
+            )
+            if not result.get("success"):
+                return {"success": False, "error": result.get("error") or "MC failed"}
+            mean_path = result["mean_path"]
+            step = max(1, horizon // 24)
             return {
                 "success": True,
                 "symbol": sym,
-                "n_simulations": n_sims,
-                "horizon_days": horizon,
+                "n_simulations": result["n_simulations"],
+                "horizon_days": result["horizon_days"],
                 "initial_capital": capital,
-                "final_p5": round(float(p5), 2),
-                "final_p50": round(float(p50), 2),
-                "final_p95": round(float(p95), 2),
-                "mean_path": [round(float(x), 2) for x in mean_path[:: max(1, horizon // 24)]],
-                "note": "Bootstrap of historical daily returns — not a price forecast.",
+                "method": result["method"],
+                "block": result.get("block") or {},
+                "final_p5": round(float(result["final_p5"]), 2),
+                "final_p50": round(float(result["final_p50"]), 2),
+                "final_p95": round(float(result["final_p95"]), 2),
+                "mean_path": [
+                    round(float(x), 2) for x in mean_path[::step]
+                ],
+                "note": result.get("note"),
             }
         except Exception as e:
             logger.warning("monte-carlo failed: %s", e)
@@ -1424,23 +1448,52 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
             if not positions:
                 out["portfolio_metrics"] = None
                 out["stress"] = None
+                out["concentration"] = {
+                    "success": True,
+                    "high_pairs": [],
+                    "n_symbols": 0,
+                    "note": "Need holdings to assess concentration.",
+                }
                 return out
 
             # Weighted portfolio return series from current holdings
             frames = {}
+            price_history = {}
             weights = {}
             total_cost = sum(p["quantity"] * p["avg_cost"] for p in positions)
             for p in positions:
-                h = get_history(p["symbol"], period="1y")
+                try:
+                    h = get_history(p["symbol"], period="1y")
+                except Exception as e:
+                    logger.debug("portfolio risk hist %s: %s", p.get("symbol"), e)
+                    continue
                 if h is None or h.empty:
                     continue
                 cm = {str(c).lower(): c for c in h.columns}
                 closes = h[cm.get("close", h.columns[0])].astype(float)
                 frames[p["symbol"]] = closes.pct_change()
+                price_history[p["symbol"]] = closes
                 weights[p["symbol"]] = (
                     p["quantity"] * p["avg_cost"] / total_cost
                     if total_cost else 0.0
                 )
+            # Concentration / pairwise correlation (graceful — never kill risk)
+            try:
+                from trading.portfolio.concentration import build_concentration_report
+
+                out["concentration"] = build_concentration_report(
+                    list(price_history.keys()),
+                    price_history,
+                )
+            except Exception as e:
+                logger.debug("portfolio concentration skipped: %s", e)
+                out["concentration"] = {
+                    "success": True,
+                    "high_pairs": [],
+                    "error": str(e),
+                    "note": "Correlation unavailable this pass.",
+                }
+
             if not frames:
                 out["portfolio_metrics"] = None
                 out["stress"] = None

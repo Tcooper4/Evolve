@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  getCausal, getChartEvents, getEarnings, getEdgar, getForecast, getHistory,
+  getDiagnostics, getChartEvents, getEarnings, getEdgar, getForecast, getHistory,
   getNews, getNewsContext, getOptionsContext, getPatterns, getPlaybook, getPrefs, getRisk, getScore,
   getSignalIc, runGnn, runMonteCarlo, trackRec,
   type Candle, type ChartEvent, type EdgarFiling, type ScoreResult,
@@ -73,7 +73,7 @@ function impactRank(impact?: string): number {
 
 type Mode = "long" | "short";
 type ToolTab = "main" | "monte" | "options" | "labs" | "filings";
-type LabTab = "ic" | "causal" | "patterns" | "gnn";
+type LabTab = "ic" | "diagnostics" | "patterns" | "gnn";
 
 export default function Analyze({
   initialSymbol = "SPY",
@@ -95,7 +95,7 @@ export default function Analyze({
   const [mc, setMc] = useState<Record<string, unknown> | null>(null);
   const [opts, setOpts] = useState<Record<string, unknown> | null>(null);
   const [ic, setIc] = useState<Record<string, unknown> | null>(null);
-  const [causal, setCausal] = useState<Record<string, unknown> | null>(null);
+  const [diagnostics, setDiagnostics] = useState<Record<string, unknown> | null>(null);
   const [patterns, setPatterns] = useState<Record<string, unknown> | null>(null);
   const [gnn, setGnn] = useState<Record<string, unknown> | null>(null);
   const [playbook, setPlaybook] = useState<Record<string, unknown> | null>(null);
@@ -130,7 +130,7 @@ export default function Analyze({
     setMc(null);
     setOpts(null);
     setIc(null);
-    setCausal(null);
+    setDiagnostics(null);
     setPatterns(null);
     setGnn(null);
     setPlaybook(null);
@@ -214,10 +214,10 @@ export default function Analyze({
     finally { setToolBusy(false); }
   }
 
-  async function loadCausal() {
+  async function loadDiagnostics() {
     setToolBusy(true);
-    try { setCausal(await getCausal(input)); }
-    catch (e) { setCausal({ success: false, error: String(e) }); }
+    try { setDiagnostics(await getDiagnostics(input)); }
+    catch (e) { setDiagnostics({ success: false, error: String(e) }); }
     finally { setToolBusy(false); }
   }
 
@@ -258,7 +258,7 @@ export default function Analyze({
     setLab(next);
     setTool("labs");
     if (next === "ic" && !ic) void loadIc();
-    if (next === "causal" && !causal) void loadCausal();
+    if (next === "diagnostics" && !diagnostics) void loadDiagnostics();
     if (next === "patterns" && !patterns) void loadPatterns();
     if (next === "gnn" && !gnn) void loadGnn();
   }
@@ -334,9 +334,9 @@ export default function Analyze({
   const alts = Array.isArray(strat?.recommended_strategies)
     ? (strat!.recommended_strategies as string[]).filter((s) => s !== primaryStrategy).slice(0, 2)
     : [];
-  const causalFlags = Array.isArray(causal?.flags) ? (causal!.flags as string[]) : [];
-  const causalRecs = Array.isArray(causal?.recommendations)
-    ? (causal!.recommendations as string[]) : [];
+  const diagFlags = Array.isArray(diagnostics?.flags) ? (diagnostics!.flags as string[]) : [];
+  const diagRecs = Array.isArray(diagnostics?.recommendations)
+    ? (diagnostics!.recommendations as string[]) : [];
   const nextEarn = (earnings?.next_earnings && typeof earnings.next_earnings === "object")
     ? earnings.next_earnings as Record<string, unknown>
     : null;
@@ -892,7 +892,7 @@ export default function Analyze({
             <div className="card card-pad">
               <div className="seg" style={{ marginBottom: 12, flexWrap: "wrap" }}>
                 <button className={lab === "ic" ? "active" : ""} onClick={() => openLab("ic")}>Signal IC</button>
-                <button className={lab === "causal" ? "active" : ""} onClick={() => openLab("causal")}>Causal</button>
+                <button className={lab === "diagnostics" ? "active" : ""} onClick={() => openLab("diagnostics")}>Diagnostics</button>
                 <button className={lab === "patterns" ? "active" : ""} onClick={() => openLab("patterns")}>Patterns</button>
                 <button className={lab === "gnn" ? "active" : ""} onClick={() => openLab("gnn")}>GNN</button>
               </div>
@@ -923,41 +923,47 @@ export default function Analyze({
                   )
               )}
 
-              {!toolBusy && lab === "causal" && causal && (
-                causal.success === false
-                  ? <div className="dim">{String(causal.error ?? "Unavailable")}</div>
+              {!toolBusy && lab === "diagnostics" && diagnostics && (
+                diagnostics.success === false
+                  ? <div className="dim">{String(diagnostics.error ?? "Unavailable")}</div>
                   : (
                     <>
                       <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>
-                        What the return series looks like statistically — informs which models fit.
-                        {causal.complexity != null && (
-                          <> Complexity: <b style={{ color: "var(--text)" }}>{String(causal.complexity)}</b>.</>
+                        Stationarity and structural diagnostics (ADF/KPSS, ARCH, normality, lags, breaks)
+                        — not Granger causality. Helps judge which model families fit this tape.
+                        {diagnostics.complexity != null && (
+                          <> Complexity: <b style={{ color: "var(--text)" }}>{String(diagnostics.complexity)}</b>.</>
                         )}
-                        {causal.n_observations != null && (
-                          <> · {Number(causal.n_observations)} observations</>
+                        {diagnostics.n_observations != null && (
+                          <> · {Number(diagnostics.n_observations)} observations</>
                         )}
                       </div>
-                      {causalFlags.length > 0 && (
+                      {typeof diagnostics.disclosure === "string" && diagnostics.disclosure && (
+                        <div className="dim" style={{ fontSize: 11.5, marginBottom: 10 }}>
+                          {String(diagnostics.disclosure)}
+                        </div>
+                      )}
+                      {diagFlags.length > 0 && (
                         <>
                           <div className="rail-label" style={{ marginTop: 0 }}>Findings</div>
                           <ul style={{ margin: "0 0 14px", paddingLeft: 18, fontSize: 13.5, lineHeight: 1.55 }}>
-                            {causalFlags.map((f, i) => (
+                            {diagFlags.map((f, i) => (
                               <li key={i}>{stripEmoji(String(f))}</li>
                             ))}
                           </ul>
                         </>
                       )}
-                      {causalRecs.length > 0 && (
+                      {diagRecs.length > 0 && (
                         <>
                           <div className="rail-label">Recommendations</div>
                           <ul style={{ margin: "0 0 14px", paddingLeft: 18, fontSize: 13.5, lineHeight: 1.55 }}>
-                            {causalRecs.map((f, i) => (
+                            {diagRecs.map((f, i) => (
                               <li key={i}>{stripEmoji(String(f))}</li>
                             ))}
                           </ul>
                         </>
                       )}
-                      {causalFlags.length === 0 && causalRecs.length === 0 && (
+                      {diagFlags.length === 0 && diagRecs.length === 0 && (
                         <div className="dim">No structured findings returned for this symbol.</div>
                       )}
                     </>

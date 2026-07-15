@@ -327,3 +327,29 @@ def get_crypto_cost_config() -> CostConfig:
         slippage_rate=0.0005,
         volatility_multiplier=2.0,
     )
+
+
+def get_options_retail_cost_config() -> CostConfig:
+    """Opt-in CostConfig for option *premium* notionals — not equity default.
+
+    ``spread_rate`` is the ATM liquid half-spread floor as a fraction of
+    option mid (several percent), not the equity 5 bps path. Does not
+    change ``Backtester`` defaults; pass ``cost_model=CostModel(this)``
+    explicitly when simulating options economics. Prefer
+    ``trading.backtesting.options_cost_model.estimate_option_half_spread``
+    when bid/ask or moneyness/DTE are known.
+    """
+    from trading.backtesting.options_cost_model import ATM_LIQUID_FLOOR, MAX_HALF_SPREAD
+
+    return CostConfig(
+        fee_model=FeeModel.PERCENTAGE,
+        fee_rate=0.0,  # commissions usually $0–0.65/contract — model separately
+        fixed_fee=0.65,
+        spread_model=SpreadModel.PROPORTIONAL,
+        spread_rate=ATM_LIQUID_FLOOR,
+        min_spread=ATM_LIQUID_FLOOR,
+        max_spread=MAX_HALF_SPREAD,
+        slippage_model=SlippageModel.PROPORTIONAL,
+        slippage_rate=ATM_LIQUID_FLOOR * 0.25,
+        max_slippage=0.05,
+    )

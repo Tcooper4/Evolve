@@ -100,8 +100,11 @@ export const getChartEvents = (symbol: string, period = "6mo") =>
     `/api/chart-events/${encodeURIComponent(symbol)}?period=${encodeURIComponent(period)}`,
   );
 
-export const getCausal = (symbol: string) =>
-  req<Record<string, unknown>>(`/api/causal/${encodeURIComponent(symbol)}`);
+export const getDiagnostics = (symbol: string) =>
+  req<Record<string, unknown>>(`/api/diagnostics/${encodeURIComponent(symbol)}`);
+
+/** @deprecated Use getDiagnostics — former "Causal" label was a misnomer. */
+export const getCausal = getDiagnostics;
 
 export const getPatterns = (symbol: string) =>
   req<Record<string, unknown>>(`/api/patterns/${encodeURIComponent(symbol)}`);
@@ -215,7 +218,12 @@ export const runPairs = (
     },
   );
 
-export const runMonteCarlo = (symbol: string, n_simulations = 400, horizon_days = 63) =>
+export const runMonteCarlo = (
+  symbol: string,
+  n_simulations = 400,
+  horizon_days = 63,
+  method: "iid" | "stationary_block" = "iid",
+) =>
   req<{
     success: boolean;
     error?: string;
@@ -226,10 +234,12 @@ export const runMonteCarlo = (symbol: string, n_simulations = 400, horizon_days 
     note?: string;
     n_simulations?: number;
     horizon_days?: number;
+    method?: string;
+    block?: Record<string, unknown>;
   }>("/api/monte-carlo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ symbol, n_simulations, horizon_days }),
+    body: JSON.stringify({ symbol, n_simulations, horizon_days, method }),
   });
 
 export const getOptions = (symbol: string) =>
@@ -654,6 +664,21 @@ export interface AccountRisk {
   portfolio_metrics?: Record<string, string | number> | null;
   stress?: Record<string, StressEntry> | null;
   stress_note?: string;
+  concentration?: {
+    success?: boolean;
+    threshold?: number;
+    threshold_note?: string;
+    high_pairs?: Array<{
+      symbol_a: string;
+      symbol_b: string;
+      correlation: number;
+      abs_correlation?: number;
+      message: string;
+    }>;
+    note?: string;
+    error?: string | null;
+    n_symbols?: number;
+  };
   error?: string;
 }
 export const getAccountRisk = () => req<AccountRisk>("/api/portfolio/risk");

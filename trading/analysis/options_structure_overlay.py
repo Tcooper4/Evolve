@@ -66,7 +66,10 @@ DISCLOSURE = (
     "GEX near_flip (0.5% of spot from gamma flip) is a design choice, "
     "not an Evolve-validated empirical boundary — free yfinance chains "
     "do not supply historical dealer GEX; EVOLVE_GEX_SNAPSHOT_LOG=1 "
-    "builds a future validation dataset only."
+    "builds a future validation dataset only. "
+    "Equity-style ~5 bps backtest spreads understate options trading "
+    "costs by roughly 20–100×+; see trading.backtesting.options_cost_model "
+    "(ATM floor several % of option mid; observed bid/ask preferred)."
 )
 
 STRUCTURE_IRON_CONDOR = "iron_condor"
@@ -260,6 +263,19 @@ def build_options_structure_overlay(symbol: str) -> Dict[str, Any]:
         "framing": "options_structure_research_guide",
         "error": None,
     }
+    try:
+        from trading.backtesting.options_cost_model import (
+            ATM_LIQUID_FLOOR,
+            DISCLOSURE as COST_DISCLOSURE,
+            equity_vs_options_spread_ratio,
+        )
+
+        out["options_cost_note"] = COST_DISCLOSURE
+        out["options_vs_equity_spread_ratio_atm"] = round(
+            equity_vs_options_spread_ratio(0.0005, ATM_LIQUID_FLOOR), 1
+        )
+    except Exception:
+        pass
     if not sym:
         out["error"] = "symbol required"
         return out
