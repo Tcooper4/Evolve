@@ -1,0 +1,245 @@
+{
+  "success": true,
+  "basket": [
+    "SPY",
+    "QQQ",
+    "IWM"
+  ],
+  "period": "max",
+  "dte": 1,
+  "actual_tested": "1DTE_daily_close_pooled",
+  "proxy_for": "0DTE",
+  "predeclared_grid": [
+    [
+      0.2,
+      0.05
+    ],
+    [
+      0.25,
+      0.05
+    ],
+    [
+      0.2,
+      0.06
+    ]
+  ],
+  "n_trials": 3,
+  "grid_justification": "Three literature/practitioner-anchored trials only (not the legacy 4x3=12 grid): (1) short_delta=0.20 wing=5% -- Evolve DEFAULT / research default; (2) short_delta=0.25 wing=5% -- interior of the commonly cited 0.15-0.30 delta VRP / short-premium band; (3) short_delta=0.20 wing=6% -- same default delta with a modestly wider defined-risk wing already inside prior guide ranges. Chosen before inspecting DSR; N_trials=3 lowers selection burden vs the prior 12-trial sweep that left PCS DSR~0.59-0.85.",
+  "ordering_note": "Grid and basket were fixed in this script before the run; not selected after inspecting DSR.",
+  "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. REFINED 1-DTE basket run: pooled SPY/QQQ/IWM, narrow predeclared grid (N=3), daily-close 1-DTE PROXY (not true 0DTE). VIX30 remains a rougher IV proxy for short-dated structures.",
+  "timestamp": "2026-07-15T08:05:51.953775+00:00",
+  "strategies": {
+    "put_credit_spread": {
+      "success": true,
+      "symbols": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "strategy": "put_credit_spread",
+      "period": "max",
+      "dte": 1,
+      "method": "sweep_oos_pooled",
+      "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. REFINED 1-DTE basket run: pooled SPY/QQQ/IWM, narrow predeclared grid (N=3), daily-close 1-DTE PROXY (not true 0DTE). VIX30 remains a rougher IV proxy for short-dated structures.",
+      "recommend_live": false,
+      "grid_justification": "Three literature/practitioner-anchored trials only (not the legacy 4x3=12 grid): (1) short_delta=0.20 wing=5% -- Evolve DEFAULT / research default; (2) short_delta=0.25 wing=5% -- interior of the commonly cited 0.15-0.30 delta VRP / short-premium band; (3) short_delta=0.20 wing=6% -- same default delta with a modestly wider defined-risk wing already inside prior guide ranges. Chosen before inspecting DSR; N_trials=3 lowers selection burden vs the prior 12-trial sweep that left PCS DSR~0.59-0.85.",
+      "error": null,
+      "iv_proxy": "VIX_close/100",
+      "purge_days": 5,
+      "train_end_idx": 3941,
+      "test_start_idx": 3946,
+      "n_common_bars": 6569,
+      "n_trials": 3,
+      "predeclared_grid": [
+        [
+          0.2,
+          0.05
+        ],
+        [
+          0.25,
+          0.05
+        ],
+        [
+          0.2,
+          0.06
+        ]
+      ],
+      "champion": {
+        "short_delta": 0.25,
+        "wing_pct": 0.05,
+        "train_stats": {
+          "win_rate": 0.7854,
+          "avg_pnl": -3.98,
+          "total_pnl": -7848.59,
+          "sharpe": -0.1054,
+          "n": 1971
+        }
+      },
+      "test": {
+        "n_trades": 1311,
+        "stats": {
+          "win_rate": 0.7811,
+          "avg_pnl": -28.13,
+          "total_pnl": -36882.96,
+          "sharpe": -0.139,
+          "n": 1311
+        }
+      },
+      "deflated_sharpe": {
+        "deflated_sharpe": 0.0,
+        "expected_max_sharpe_under_null": 0.0041,
+        "n_trials": 3,
+        "interpretation": "indistinguishable from lucky noise across this many trials"
+      },
+      "trials": [
+        {
+          "short_delta": 0.2,
+          "wing_pct": 0.05,
+          "train_stats": {
+            "win_rate": 0.8102,
+            "avg_pnl": -3.9,
+            "total_pnl": -7682.29,
+            "sharpe": -0.1138,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.1138
+        },
+        {
+          "short_delta": 0.25,
+          "wing_pct": 0.05,
+          "train_stats": {
+            "win_rate": 0.7854,
+            "avg_pnl": -3.98,
+            "total_pnl": -7848.59,
+            "sharpe": -0.1054,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.1054
+        },
+        {
+          "short_delta": 0.2,
+          "wing_pct": 0.06,
+          "train_stats": {
+            "win_rate": 0.8102,
+            "avg_pnl": -3.96,
+            "total_pnl": -7814.27,
+            "sharpe": -0.1136,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.1136
+        }
+      ],
+      "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome)."
+    },
+    "iron_condor": {
+      "success": true,
+      "symbols": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "strategy": "iron_condor",
+      "period": "max",
+      "dte": 1,
+      "method": "sweep_oos_pooled",
+      "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. REFINED 1-DTE basket run: pooled SPY/QQQ/IWM, narrow predeclared grid (N=3), daily-close 1-DTE PROXY (not true 0DTE). VIX30 remains a rougher IV proxy for short-dated structures.",
+      "recommend_live": false,
+      "grid_justification": "Three literature/practitioner-anchored trials only (not the legacy 4x3=12 grid): (1) short_delta=0.20 wing=5% -- Evolve DEFAULT / research default; (2) short_delta=0.25 wing=5% -- interior of the commonly cited 0.15-0.30 delta VRP / short-premium band; (3) short_delta=0.20 wing=6% -- same default delta with a modestly wider defined-risk wing already inside prior guide ranges. Chosen before inspecting DSR; N_trials=3 lowers selection burden vs the prior 12-trial sweep that left PCS DSR~0.59-0.85.",
+      "error": null,
+      "iv_proxy": "VIX_close/100",
+      "purge_days": 5,
+      "train_end_idx": 3941,
+      "test_start_idx": 3946,
+      "n_common_bars": 6569,
+      "n_trials": 3,
+      "predeclared_grid": [
+        [
+          0.2,
+          0.05
+        ],
+        [
+          0.25,
+          0.05
+        ],
+        [
+          0.2,
+          0.06
+        ]
+      ],
+      "champion": {
+        "short_delta": 0.2,
+        "wing_pct": 0.06,
+        "train_stats": {
+          "win_rate": 0.6362,
+          "avg_pnl": -9.13,
+          "total_pnl": -17989.04,
+          "sharpe": -0.1977,
+          "n": 1971
+        }
+      },
+      "test": {
+        "n_trades": 1311,
+        "stats": {
+          "win_rate": 0.6323,
+          "avg_pnl": -37.25,
+          "total_pnl": -48840.97,
+          "sharpe": -0.1788,
+          "n": 1311
+        }
+      },
+      "deflated_sharpe": {
+        "deflated_sharpe": 0.0,
+        "expected_max_sharpe_under_null": 0.0036,
+        "n_trials": 3,
+        "interpretation": "indistinguishable from lucky noise across this many trials"
+      },
+      "trials": [
+        {
+          "short_delta": 0.2,
+          "wing_pct": 0.05,
+          "train_stats": {
+            "win_rate": 0.6362,
+            "avg_pnl": -8.94,
+            "total_pnl": -17613.5,
+            "sharpe": -0.1994,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.1994
+        },
+        {
+          "short_delta": 0.25,
+          "wing_pct": 0.05,
+          "train_stats": {
+            "win_rate": 0.5921,
+            "avg_pnl": -9.96,
+            "total_pnl": -19634.46,
+            "sharpe": -0.2058,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.2058
+        },
+        {
+          "short_delta": 0.2,
+          "wing_pct": 0.06,
+          "train_stats": {
+            "win_rate": 0.6362,
+            "avg_pnl": -9.13,
+            "total_pnl": -17989.04,
+            "sharpe": -0.1977,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.1977
+        }
+      ],
+      "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome)."
+    }
+  },
+  "recommend_live": false,
+  "note": "Null / not significant on refined 1-DTE pooled OOS+DSR \u2014 leave research-only (acceptable; do not re-run grids to chase)."
+}

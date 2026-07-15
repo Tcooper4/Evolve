@@ -1,0 +1,334 @@
+{
+  "success": true,
+  "disclosure": "PEAD research harness: long-only on positive EPS surprise using earnings_reaction BMO/AMC timing; multi-week close-to-close holds with retail equity round-trip costs. Not a forecast; null OOS is expected and acceptable. Short-negative side intentionally omitted (retail borrow / hard-to-borrow asymmetry).",
+  "trial_justification": "Four trials only: hold 20 vs 40 trading days (~4 / ~8 weeks) \u00d7 entry lag 0 vs 1 session. Anchored on PEAD literature that drift concentrates early after the announcement while sometimes extending further, plus practical retail entry lag. Locked before any real-data DSR evaluation.",
+  "predeclared_trials": [
+    {
+      "hold_days": 20,
+      "entry_lag": 0
+    },
+    {
+      "hold_days": 20,
+      "entry_lag": 1
+    },
+    {
+      "hold_days": 40,
+      "entry_lag": 0
+    },
+    {
+      "hold_days": 40,
+      "entry_lag": 1
+    }
+  ],
+  "timestamp": "2026-07-15T08:01:50.984096+00:00",
+  "ordering_note": "Trial grid and baskets were fixed in source before this run; not selected after inspecting DSR.",
+  "large_cap": {
+    "success": true,
+    "label": "large_cap",
+    "universe": [
+      "AAPL",
+      "MSFT",
+      "GOOGL",
+      "AMZN",
+      "META",
+      "NVDA",
+      "TSLA",
+      "JPM",
+      "JNJ",
+      "XOM",
+      "BRK-B",
+      "UNH",
+      "V",
+      "MA",
+      "HD",
+      "PG",
+      "ABBV",
+      "MRK",
+      "LLY",
+      "PEP",
+      "AVGO",
+      "COST",
+      "WMT",
+      "BAC",
+      "KO",
+      "CVX",
+      "CRM",
+      "AMD",
+      "ORCL",
+      "ADBE"
+    ],
+    "disclosure": "PEAD research harness: long-only on positive EPS surprise using earnings_reaction BMO/AMC timing; multi-week close-to-close holds with retail equity round-trip costs. Not a forecast; null OOS is expected and acceptable. Short-negative side intentionally omitted (retail borrow / hard-to-borrow asymmetry).",
+    "recommend_live": false,
+    "predeclared_trials": [
+      {
+        "hold_days": 20,
+        "entry_lag": 0
+      },
+      {
+        "hold_days": 20,
+        "entry_lag": 1
+      },
+      {
+        "hold_days": 40,
+        "entry_lag": 0
+      },
+      {
+        "hold_days": 40,
+        "entry_lag": 1
+      }
+    ],
+    "trial_justification": "Four trials only: hold 20 vs 40 trading days (~4 / ~8 weeks) \u00d7 entry lag 0 vs 1 session. Anchored on PEAD literature that drift concentrates early after the announcement while sometimes extending further, plus practical retail entry lag. Locked before any real-data DSR evaluation.",
+    "short_side_policy": "long_only_positive_surprise",
+    "short_side_note": "Negative surprises skipped (avoid), not shorted \u2014 retail borrow costs and hard-to-borrow asymmetry make the academic short side unclean at this scale.",
+    "cost_rt": 0.0034000000000000002,
+    "timestamp": "2026-07-15T08:01:52.208782+00:00",
+    "error": null,
+    "n_events_positive_surprise": 105,
+    "purge_days": 40,
+    "train_end_idx": 63,
+    "n_train_events": 63,
+    "n_test_events": 33,
+    "n_trials": 4,
+    "champion": {
+      "hold_days": 40,
+      "entry_lag": 1,
+      "train_stats": {
+        "win_rate": 0.5873,
+        "avg_pnl": 0.029321,
+        "total_pnl": 1.847224,
+        "sharpe": 0.2834,
+        "n": 63
+      }
+    },
+    "test": {
+      "success": true,
+      "n_trades": 29,
+      "stats": {
+        "win_rate": 0.5862,
+        "avg_pnl": 0.088664,
+        "total_pnl": 2.571251,
+        "sharpe": 0.3217,
+        "n": 29
+      },
+      "params": {
+        "hold_days": 40,
+        "entry_lag": 1
+      },
+      "cost_rt": 0.0034000000000000002,
+      "disclosure": "PEAD research harness: long-only on positive EPS surprise using earnings_reaction BMO/AMC timing; multi-week close-to-close holds with retail equity round-trip costs. Not a forecast; null OOS is expected and acceptable. Short-negative side intentionally omitted (retail borrow / hard-to-borrow asymmetry).",
+      "recommend_live": false
+    },
+    "deflated_sharpe": {
+      "deflated_sharpe": 0.8868,
+      "expected_max_sharpe_under_null": 0.0873,
+      "n_trials": 4,
+      "interpretation": "uncertain - could be selection luck"
+    },
+    "trials": [
+      {
+        "hold_days": 20,
+        "entry_lag": 0,
+        "train_stats": {
+          "win_rate": 0.4921,
+          "avg_pnl": 0.014022,
+          "total_pnl": 0.883358,
+          "sharpe": 0.1451,
+          "n": 63
+        },
+        "n_trades": 63,
+        "score": 0.1451
+      },
+      {
+        "hold_days": 20,
+        "entry_lag": 1,
+        "train_stats": {
+          "win_rate": 0.4603,
+          "avg_pnl": 0.010987,
+          "total_pnl": 0.692185,
+          "sharpe": 0.1202,
+          "n": 63
+        },
+        "n_trades": 63,
+        "score": 0.1202
+      },
+      {
+        "hold_days": 40,
+        "entry_lag": 0,
+        "train_stats": {
+          "win_rate": 0.5873,
+          "avg_pnl": 0.028269,
+          "total_pnl": 1.780933,
+          "sharpe": 0.2661,
+          "n": 63
+        },
+        "n_trades": 63,
+        "score": 0.2661
+      },
+      {
+        "hold_days": 40,
+        "entry_lag": 1,
+        "train_stats": {
+          "win_rate": 0.5873,
+          "avg_pnl": 0.029321,
+          "total_pnl": 1.847224,
+          "sharpe": 0.2834,
+          "n": 63
+        },
+        "n_trades": 63,
+        "score": 0.2834
+      }
+    ],
+    "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome)."
+  },
+  "mid_less_covered": {
+    "success": true,
+    "label": "mid_less_covered",
+    "universe": [
+      "DECK",
+      "ETSY",
+      "POOL",
+      "WSM",
+      "RH",
+      "TXRH",
+      "WING",
+      "CROX",
+      "BLD",
+      "TOL",
+      "ZBRA",
+      "FIVE",
+      "MHK",
+      "LEG",
+      "SNA",
+      "GPC",
+      "PHM",
+      "DHI",
+      "NVR",
+      "MAS"
+    ],
+    "disclosure": "PEAD research harness: long-only on positive EPS surprise using earnings_reaction BMO/AMC timing; multi-week close-to-close holds with retail equity round-trip costs. Not a forecast; null OOS is expected and acceptable. Short-negative side intentionally omitted (retail borrow / hard-to-borrow asymmetry).",
+    "recommend_live": true,
+    "predeclared_trials": [
+      {
+        "hold_days": 20,
+        "entry_lag": 0
+      },
+      {
+        "hold_days": 20,
+        "entry_lag": 1
+      },
+      {
+        "hold_days": 40,
+        "entry_lag": 0
+      },
+      {
+        "hold_days": 40,
+        "entry_lag": 1
+      }
+    ],
+    "trial_justification": "Four trials only: hold 20 vs 40 trading days (~4 / ~8 weeks) \u00d7 entry lag 0 vs 1 session. Anchored on PEAD literature that drift concentrates early after the announcement while sometimes extending further, plus practical retail entry lag. Locked before any real-data DSR evaluation.",
+    "short_side_policy": "long_only_positive_surprise",
+    "short_side_note": "Negative surprises skipped (avoid), not shorted \u2014 retail borrow costs and hard-to-borrow asymmetry make the academic short side unclean at this scale.",
+    "cost_rt": 0.0034000000000000002,
+    "timestamp": "2026-07-15T08:02:10.730375+00:00",
+    "error": null,
+    "n_events_positive_surprise": 56,
+    "purge_days": 40,
+    "train_end_idx": 33,
+    "n_train_events": 33,
+    "n_test_events": 15,
+    "n_trials": 4,
+    "champion": {
+      "hold_days": 40,
+      "entry_lag": 0,
+      "train_stats": {
+        "win_rate": 0.6061,
+        "avg_pnl": 0.026417,
+        "total_pnl": 0.87177,
+        "sharpe": 0.2104,
+        "n": 33
+      }
+    },
+    "test": {
+      "success": true,
+      "n_trades": 15,
+      "stats": {
+        "win_rate": 0.8,
+        "avg_pnl": 0.113334,
+        "total_pnl": 1.700004,
+        "sharpe": 0.6847,
+        "n": 15
+      },
+      "params": {
+        "hold_days": 40,
+        "entry_lag": 0
+      },
+      "cost_rt": 0.0034000000000000002,
+      "disclosure": "PEAD research harness: long-only on positive EPS surprise using earnings_reaction BMO/AMC timing; multi-week close-to-close holds with retail equity round-trip costs. Not a forecast; null OOS is expected and acceptable. Short-negative side intentionally omitted (retail borrow / hard-to-borrow asymmetry).",
+      "recommend_live": false
+    },
+    "deflated_sharpe": {
+      "deflated_sharpe": 0.951,
+      "expected_max_sharpe_under_null": 0.1934,
+      "n_trials": 4,
+      "interpretation": "likely real edge (survives the search)"
+    },
+    "trials": [
+      {
+        "hold_days": 20,
+        "entry_lag": 0,
+        "train_stats": {
+          "win_rate": 0.5152,
+          "avg_pnl": 0.00209,
+          "total_pnl": 0.068959,
+          "sharpe": 0.0268,
+          "n": 33
+        },
+        "n_trades": 33,
+        "score": 0.0268
+      },
+      {
+        "hold_days": 20,
+        "entry_lag": 1,
+        "train_stats": {
+          "win_rate": 0.5152,
+          "avg_pnl": -0.016902,
+          "total_pnl": -0.557759,
+          "sharpe": -0.218,
+          "n": 33
+        },
+        "n_trades": 33,
+        "score": -0.218
+      },
+      {
+        "hold_days": 40,
+        "entry_lag": 0,
+        "train_stats": {
+          "win_rate": 0.6061,
+          "avg_pnl": 0.026417,
+          "total_pnl": 0.87177,
+          "sharpe": 0.2104,
+          "n": 33
+        },
+        "n_trades": 33,
+        "score": 0.2104
+      },
+      {
+        "hold_days": 40,
+        "entry_lag": 1,
+        "train_stats": {
+          "win_rate": 0.5455,
+          "avg_pnl": 0.014917,
+          "total_pnl": 0.492263,
+          "sharpe": 0.1161,
+          "n": 33
+        },
+        "n_trades": 33,
+        "score": 0.1161
+      }
+    ],
+    "note": "Champion cleared DSR>=0.95 on OOS \u2014 still research; not auto-wired."
+  },
+  "recommend_live": true,
+  "note": "At least one basket cleared the live bar \u2014 still research-only.",
+  "midcap_note": "Mid/less-covered basket expanded 10->20 names after initial pool had only 29 positive-surprise events (<30 min for OOS). The 4-trial hold/lag grid was never changed after seeing DSR \u2014 only universe size for event count. Literature crowding pattern appears in this run: mid OOS Sharpe/DSR beat large-cap; mid cleared DSR>=0.95 research bar (still not auto-wired live)."
+}

@@ -1,0 +1,280 @@
+{
+  "success": true,
+  "strategy": "call_credit_spread",
+  "period": "max",
+  "predeclared_grid": [
+    [
+      0.2,
+      0.05
+    ],
+    [
+      0.25,
+      0.05
+    ],
+    [
+      0.2,
+      0.06
+    ]
+  ],
+  "n_trials": 3,
+  "grid_justification": "Same Phase-2 predeclared N=3 literature grid: (0.20, 0.05) project default; (0.25, 0.05) interior 0.15-0.30 delta short-premium band; (0.20, 0.06) default delta with modestly wider wing. Not expanded after inspecting Phase-2 PCS/IC nulls.",
+  "ordering_note": "Grid fixed before this run; identical to Phase-2 refined set.",
+  "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. CALL CREDIT as its own structure (not buried inside IC). BS+VIX is flat-IV across strikes \u2014 equity put skew is NOT priced; real markets usually pad OTM puts vs calls at matched |delta|, so CCS vs PCS here understates the typical skew asymmetry favoring short puts. 1DTE leg is daily-close PROXY (not true 0DTE).",
+  "timestamp": "2026-07-15T14:07:08.893602+00:00",
+  "horizons": {
+    "spy_37dte": {
+      "success": true,
+      "symbols": [
+        "SPY"
+      ],
+      "strategy": "call_credit_spread",
+      "period": "max",
+      "dte": 37,
+      "method": "sweep_oos_pooled",
+      "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. CALL CREDIT as its own structure (not buried inside IC). BS+VIX is flat-IV across strikes \u2014 equity put skew is NOT priced; real markets usually pad OTM puts vs calls at matched |delta|, so CCS vs PCS here understates the typical skew asymmetry favoring short puts. 1DTE leg is daily-close PROXY (not true 0DTE).",
+      "recommend_live": false,
+      "grid_justification": "Same Phase-2 predeclared N=3 literature grid: (0.20, 0.05) project default; (0.25, 0.05) interior 0.15-0.30 delta short-premium band; (0.20, 0.06) default delta with modestly wider wing. Not expanded after inspecting Phase-2 PCS/IC nulls.",
+      "error": null,
+      "iv_proxy": "VIX_close/100",
+      "purge_days": 37,
+      "train_end_idx": 5052,
+      "test_start_idx": 5089,
+      "n_common_bars": 8420,
+      "n_trials": 3,
+      "predeclared_grid": [
+        [
+          0.2,
+          0.05
+        ],
+        [
+          0.25,
+          0.05
+        ],
+        [
+          0.2,
+          0.06
+        ]
+      ],
+      "champion": {
+        "short_delta": 0.2,
+        "wing_pct": 0.06,
+        "train_stats": {
+          "win_rate": 0.7562,
+          "avg_pnl": 3.9,
+          "total_pnl": 944.93,
+          "sharpe": 0.107,
+          "n": 242
+        }
+      },
+      "test": {
+        "n_trades": 149,
+        "stats": {
+          "win_rate": 0.698,
+          "avg_pnl": -19.98,
+          "total_pnl": -2976.82,
+          "sharpe": -0.0959,
+          "n": 149
+        }
+      },
+      "deflated_sharpe": {
+        "deflated_sharpe": 0.0274,
+        "expected_max_sharpe_under_null": 0.0623,
+        "n_trials": 3,
+        "interpretation": "indistinguishable from lucky noise across this many trials"
+      },
+      "trials": [
+        {
+          "short_delta": 0.2,
+          "wing_pct": 0.05,
+          "train_stats": {
+            "win_rate": 0.7625,
+            "avg_pnl": 1.48,
+            "total_pnl": 356.15,
+            "sharpe": 0.0407,
+            "n": 240
+          },
+          "n_trades": 240,
+          "score": 0.0407
+        },
+        {
+          "short_delta": 0.25,
+          "wing_pct": 0.05,
+          "train_stats": {
+            "win_rate": 0.7205,
+            "avg_pnl": -1.91,
+            "total_pnl": -437.37,
+            "sharpe": -0.0389,
+            "n": 229
+          },
+          "n_trades": 229,
+          "score": -0.0389
+        },
+        {
+          "short_delta": 0.2,
+          "wing_pct": 0.06,
+          "train_stats": {
+            "win_rate": 0.7562,
+            "avg_pnl": 3.9,
+            "total_pnl": 944.93,
+            "sharpe": 0.107,
+            "n": 242
+          },
+          "n_trades": 242,
+          "score": 0.107
+        }
+      ],
+      "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+      "horizon_label": "37DTE_SPY_narrow_grid"
+    },
+    "pooled_1dte": {
+      "success": true,
+      "symbols": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "strategy": "call_credit_spread",
+      "period": "max",
+      "dte": 1,
+      "method": "sweep_oos_pooled",
+      "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. CALL CREDIT as its own structure (not buried inside IC). BS+VIX is flat-IV across strikes \u2014 equity put skew is NOT priced; real markets usually pad OTM puts vs calls at matched |delta|, so CCS vs PCS here understates the typical skew asymmetry favoring short puts. 1DTE leg is daily-close PROXY (not true 0DTE).",
+      "recommend_live": false,
+      "grid_justification": "Same Phase-2 predeclared N=3 literature grid: (0.20, 0.05) project default; (0.25, 0.05) interior 0.15-0.30 delta short-premium band; (0.20, 0.06) default delta with modestly wider wing. Not expanded after inspecting Phase-2 PCS/IC nulls.",
+      "error": null,
+      "iv_proxy": "VIX_close/100",
+      "purge_days": 5,
+      "train_end_idx": 3942,
+      "test_start_idx": 3947,
+      "n_common_bars": 6570,
+      "n_trials": 3,
+      "predeclared_grid": [
+        [
+          0.2,
+          0.05
+        ],
+        [
+          0.25,
+          0.05
+        ],
+        [
+          0.2,
+          0.06
+        ]
+      ],
+      "champion": {
+        "short_delta": 0.2,
+        "wing_pct": 0.06,
+        "train_stats": {
+          "win_rate": 0.7788,
+          "avg_pnl": -5.16,
+          "total_pnl": -10175.54,
+          "sharpe": -0.1463,
+          "n": 1971
+        }
+      },
+      "test": {
+        "n_trades": 1311,
+        "stats": {
+          "win_rate": 0.7979,
+          "avg_pnl": -21.76,
+          "total_pnl": -28524.55,
+          "sharpe": -0.1476,
+          "n": 1311
+        }
+      },
+      "deflated_sharpe": {
+        "deflated_sharpe": 0.0,
+        "expected_max_sharpe_under_null": 0.0057,
+        "n_trials": 3,
+        "interpretation": "indistinguishable from lucky noise across this many trials"
+      },
+      "trials": [
+        {
+          "short_delta": 0.2,
+          "wing_pct": 0.05,
+          "train_stats": {
+            "win_rate": 0.7788,
+            "avg_pnl": -5.04,
+            "total_pnl": -9931.99,
+            "sharpe": -0.1478,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.1478
+        },
+        {
+          "short_delta": 0.25,
+          "wing_pct": 0.05,
+          "train_stats": {
+            "win_rate": 0.7453,
+            "avg_pnl": -5.98,
+            "total_pnl": -11785.75,
+            "sharpe": -0.1586,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.1586
+        },
+        {
+          "short_delta": 0.2,
+          "wing_pct": 0.06,
+          "train_stats": {
+            "win_rate": 0.7788,
+            "avg_pnl": -5.16,
+            "total_pnl": -10175.54,
+            "sharpe": -0.1463,
+            "n": 1971
+          },
+          "n_trades": 1971,
+          "score": -0.1463
+        }
+      ],
+      "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+      "horizon_label": "1DTE_daily_close_pooled"
+    }
+  },
+  "prior_put_credit_for_comparison": {
+    "spy_37dte_full_grid": {
+      "source": "options_structure_oos_real.json",
+      "n_trials": null,
+      "champion": null,
+      "oos_stats": null,
+      "deflated_sharpe": null,
+      "recommend_live": null,
+      "note": "Prior SPY 37DTE PCS used legacy 12-trial cartesian grid \u2014 not identical selection burden to this N=3 CCS run."
+    },
+    "pooled_1dte_narrow_grid": {
+      "source": "options_structure_refined_oos_real.json",
+      "basket": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "n_trials": 3,
+      "champion": {
+        "short_delta": 0.25,
+        "wing_pct": 0.05,
+        "train_stats": {
+          "win_rate": 0.7854,
+          "avg_pnl": -3.98,
+          "total_pnl": -7848.59,
+          "sharpe": -0.1054,
+          "n": 1971
+        }
+      },
+      "oos_stats": {
+        "win_rate": 0.7811,
+        "avg_pnl": -28.13,
+        "total_pnl": -36882.96,
+        "sharpe": -0.139,
+        "n": 1311
+      },
+      "deflated_sharpe": 0.0,
+      "recommend_live": false,
+      "note": "Same basket + same N=3 grid as this CCS 1DTE leg \u2014 fairest PCS comparison."
+    }
+  },
+  "recommend_live": false,
+  "skew_asymmetry_note": "Under flat BS+VIX, CCS and PCS should look similar; any OOS gap is mostly path / cost noise, not equity skew. Real OPRA fills would typically favor short puts (higher OTM put IV). This run \u2014 CCS 1DTE OOS Sharpe=-0.1476; prior PCS 1DTE OOS Sharpe=-0.139. Neither clears DSR>=0.95 live bar unless recommend_live flags say otherwise (CCS live=False).",
+  "note": "Null / not significant on CCS OOS+DSR across tested horizons \u2014 leave research-only (acceptable; do not re-grid to chase)."
+}

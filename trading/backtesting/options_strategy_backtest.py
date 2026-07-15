@@ -435,6 +435,8 @@ def _sweep_oos(
     apply_costs: bool,
     symbol: str,
     period: str,
+    grid_delta: Optional[Sequence[float]] = None,
+    grid_wing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     n = len(spot)
     # Embargo length = entry DTE (structure horizon); same purge= meaning
@@ -453,15 +455,17 @@ def _sweep_oos(
     spot_tr, iv_tr = spot.iloc[:train_end], iv.iloc[:train_end]
     spot_te, iv_te = spot.iloc[test_start:], iv.iloc[test_start:]
 
-    grid_delta = [0.15, 0.20, 0.25, 0.30]
-    grid_wing = [0.04, 0.05, 0.06]
+    # Default wide research grid (legacy). Callers may pass a narrower
+    # literature-justified set — must be fixed before inspecting DSR.
+    deltas = list(grid_delta) if grid_delta is not None else [0.15, 0.20, 0.25, 0.30]
+    wings = list(grid_wing) if grid_wing is not None else [0.04, 0.05, 0.06]
     trials: List[Dict[str, Any]] = []
     scores: List[float] = []
 
-    for sd in grid_delta:
-        for wp in grid_wing:
+    for sd in deltas:
+        for wp in wings:
             p = OptionsStructureParams(
-                **{**asdict(base), "short_delta": sd, "wing_pct": wp}
+                **{**asdict(base), "short_delta": float(sd), "wing_pct": float(wp)}
             )
             sim = simulate_structure_trades(
                 spot_tr, iv_tr, p, apply_costs=apply_costs
@@ -469,8 +473,8 @@ def _sweep_oos(
             sh = (sim.get("stats") or {}).get("sharpe")
             score = float(sh) if sh is not None else -999.0
             trials.append({
-                "short_delta": sd,
-                "wing_pct": wp,
+                "short_delta": float(sd),
+                "wing_pct": float(wp),
                 "train_stats": sim.get("stats"),
                 "n_trades": sim.get("n_trades"),
                 "score": score,
@@ -489,6 +493,7 @@ def _sweep_oos(
             "note": "No viable train-window trades — null result.",
             "trials": trials,
             "purge_days": purge,
+            "n_trials": len(trials),
         }
 
     champ = OptionsStructureParams(
@@ -555,6 +560,199 @@ def _sweep_oos(
     }
 
 
+def _slice_aligned(
+    spot: pd.Series, iv: pd.Series, idx: pd.DatetimeIndex
+) -> Tuple[pd.Series, pd.Series]:
+    s = spot.reindex(idx)
+    v = iv.reindex(idx)
+    mask = s.notna() & v.notna()
+    return s[mask], v[mask]
+
+
+def run_options_structure_oos_pooled(
+    symbols: Sequence[str],
+    *,
+    strategy: StrategyName = "put_credit_spread",
+    period: str = "max",
+    dte: int = 1,
+    exit_dte_floor: int = 0,
+    apply_costs: bool = True,
+    grid: Optional[Sequence[Tuple[float, float]]] = None,
+    grid_justification: str = "",
+) -> Dict[str, Any]:
+    """Pooled purged OOS across symbols (shared calendar split + DSR).
+
+    ``grid`` is a list of (short_delta, wing_pct) pairs fixed *before*
+    inspecting DSR. Trades from all symbols are pooled for train scoring
+    and OOS evaluation so more observations are genuine, not repeated
+    single-name runs averaged loosely.
+    """
+    syms = [str(s).strip().upper() for s in symbols if str(s).strip()]
+    out: Dict[str, Any] = {
+        "success": False,
+        "symbols": syms,
+        "strategy": strategy,
+        "period": period,
+        "dte": int(dte),
+        "method": "sweep_oos_pooled",
+        "disclosure": DISCLOSURE,
+        "recommend_live": False,
+        "grid_justification": grid_justification,
+        "error": None,
+    }
+    if not syms:
+        out["error"] = "symbols required"
+        return out
+
+    # Locked narrow grid (defaults) — Phase-2 literature set
+    if grid is None:
+        grid = (
+            (0.20, 0.05),
+            (0.25, 0.05),
+            (0.20, 0.06),
+        )
+
+    panels: Dict[str, Tuple[pd.Series, pd.Series]] = {}
+    common: Optional[pd.DatetimeIndex] = None
+    for sym in syms:
+        spot, iv, err = _aligned_spot_vix(sym, period=period)
+        if err or spot is None or iv is None:
+            out.setdefault("load_errors", {})[sym] = err or "unavailable"
+            continue
+        panels[sym] = (spot, iv)
+        idx = spot.index.intersection(iv.index)
+        common = idx if common is None else common.intersection(idx)
+
+    if not panels or common is None or len(common) < 120:
+        out["error"] = "insufficient aligned history across basket"
+        return out
+
+    common = common.sort_values()
+    purge = max(int(dte), 5)
+    train_end, test_start = _purged_split_indices(len(common), purge, train_frac=0.60)
+    if train_end < 60 or test_start >= len(common) - 20:
+        out["error"] = "not enough history for purged train/test split"
+        return out
+
+    train_idx = common[:train_end]
+    test_idx = common[test_start:]
+    base = OptionsStructureParams(
+        strategy=strategy,  # type: ignore[arg-type]
+        dte=int(dte),
+        exit_dte_floor=int(exit_dte_floor),
+    )
+
+    trials: List[Dict[str, Any]] = []
+    scores: List[float] = []
+    for sd, wp in grid:
+        params = OptionsStructureParams(
+            **{**asdict(base), "short_delta": float(sd), "wing_pct": float(wp)}
+        )
+        train_pnls: List[float] = []
+        n_tr = 0
+        for sym, (spot, iv) in panels.items():
+            sim = simulate_structure_trades(
+                *_slice_aligned(spot, iv, train_idx),
+                params,
+                apply_costs=apply_costs,
+            )
+            # Align: only use if both series share train_idx length roughly
+            for t in sim.get("trades") or []:
+                train_pnls.append(float(t["pnl_dollars"]))
+            n_tr += int(sim.get("n_trades") or 0)
+        arr = np.array(train_pnls, dtype=float)
+        st = _trade_stats(arr)
+        score = float(st["sharpe"]) if st.get("sharpe") is not None else -999.0
+        trials.append({
+            "short_delta": float(sd),
+            "wing_pct": float(wp),
+            "train_stats": st,
+            "n_trades": n_tr,
+            "score": score,
+        })
+        scores.append(score)
+
+    best = max(trials, key=lambda t: t["score"]) if trials else None
+    if best is None or best["score"] <= -998:
+        out.update({
+            "success": True,
+            "trials": trials,
+            "n_trials": len(trials),
+            "purge_days": purge,
+            "note": "No viable train-window trades — null result.",
+        })
+        return out
+
+    champ = OptionsStructureParams(
+        **{
+            **asdict(base),
+            "short_delta": best["short_delta"],
+            "wing_pct": best["wing_pct"],
+        }
+    )
+    test_pnls: List[float] = []
+    n_te = 0
+    for sym, (spot, iv) in panels.items():
+        sim = simulate_structure_trades(
+            *_slice_aligned(spot, iv, test_idx),
+            champ,
+            apply_costs=apply_costs,
+        )
+        for t in sim.get("trades") or []:
+            test_pnls.append(float(t["pnl_dollars"]))
+        n_te += int(sim.get("n_trades") or 0)
+    test_stats = _trade_stats(np.array(test_pnls, dtype=float))
+    n_obs = int(test_stats.get("n") or 0)
+    obs_sr = test_stats.get("sharpe")
+    dsr = None
+    if obs_sr is not None and n_obs > 1:
+        try:
+            from trading.optimization.deflated_sharpe import deflated_sharpe_ratio
+
+            dsr = deflated_sharpe_ratio(
+                float(obs_sr),
+                [s for s in scores if s > -998],
+                n_obs=n_obs,
+            )
+        except Exception as e:
+            logger.debug("pooled DSR failed: %s", e)
+
+    recommend = bool(
+        dsr
+        and float(dsr.get("deflated_sharpe") or 0) >= 0.95
+        and (obs_sr is not None and float(obs_sr) > 0)
+        and n_obs >= 10
+    )
+    out.update({
+        "success": True,
+        "iv_proxy": "VIX_close/100",
+        "purge_days": purge,
+        "train_end_idx": train_end,
+        "test_start_idx": test_start,
+        "n_common_bars": len(common),
+        "n_trials": len(trials),
+        "predeclared_grid": [list(x) for x in grid],
+        "champion": {
+            "short_delta": best["short_delta"],
+            "wing_pct": best["wing_pct"],
+            "train_stats": best["train_stats"],
+        },
+        "test": {"n_trades": n_te, "stats": test_stats},
+        "deflated_sharpe": dsr,
+        "recommend_live": recommend,
+        "trials": trials,
+        "note": (
+            "Champion cleared DSR>=0.95 on OOS — still research; not auto-wired."
+            if recommend
+            else (
+                "Null / not significant on OOS+DSR — leave research-only "
+                "(acceptable expected outcome)."
+            )
+        ),
+    })
+    return out
+
+
 def run_options_structure_backtest(
     symbol: str,
     *,
@@ -568,6 +766,8 @@ def run_options_structure_backtest(
     exit_dte_floor: int = DEFAULT_EXIT_DTE_FLOOR,
     sweep: bool = False,
     apply_costs: bool = True,
+    grid_delta: Optional[Sequence[float]] = None,
+    grid_wing: Optional[Sequence[float]] = None,
 ) -> Dict[str, Any]:
     """Public entry. ``sweep=True`` → purged train/test + DSR."""
     sym = (symbol or "").strip().upper()
@@ -606,7 +806,14 @@ def run_options_structure_backtest(
         return sim
 
     return _sweep_oos(
-        spot, iv, base, apply_costs=apply_costs, symbol=sym, period=period
+        spot,
+        iv,
+        base,
+        apply_costs=apply_costs,
+        symbol=sym,
+        period=period,
+        grid_delta=grid_delta,
+        grid_wing=grid_wing,
     )
 
 
@@ -621,4 +828,5 @@ __all__ = [
     "mark_structure",
     "simulate_structure_trades",
     "run_options_structure_backtest",
+    "run_options_structure_oos_pooled",
 ]
