@@ -454,6 +454,11 @@ export default function Chart({
             <span>L <b>{shown.l.toFixed(2)}</b></span>
             <span>C <b style={{ color: shown.c >= shown.o ? "var(--up)" : "var(--down)" }}>{shown.c.toFixed(2)}</b></span>
             <span>V <b>{formatVolume(Number(shown.v) || 0)}</b></span>
+            {shown.note && (
+              <span className="dim" title={shown.note} style={{ maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {shown.note.startsWith("[") ? shown.note.split(" — ")[0] : "Mark"}
+              </span>
+            )}
             {live && <span className="live-dot" title="Live last bar">LIVE</span>}
           </>
         ) : (
@@ -465,14 +470,14 @@ export default function Chart({
           padding: "0 18px 8px",
           fontSize: 12.5,
           lineHeight: 1.35,
-          minHeight: 44,
-          maxHeight: 44,
+          minHeight: 48,
+          maxHeight: 48,
           overflow: "hidden",
-          color: activeNote ? "var(--text-2, #c5d0e0)" : "transparent",
+          color: activeNote ? "var(--text-2, #c5d0e0)" : "var(--muted, #6b7c93)",
         }}
-        title={activeNote ?? undefined}
+        title={activeNote ?? "N = full volume spike · n = notable volume · E = large move (see hover for color meaning)"}
       >
-        {activeNote || "\u00a0"}
+        {activeNote || "Hover a marked day — N full spike · n notable · E large move (colors = up vs down day)"}
       </div>
       <div id="chart" ref={containerRef} />
     </div>

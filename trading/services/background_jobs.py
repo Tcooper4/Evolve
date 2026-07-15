@@ -131,11 +131,24 @@ async def background_tick() -> Dict[str, int]:
             logger.warning("background_jobs: limits %s: %s", session_id, e)
 
         try:
+            from trading.services.alert_push_policy import (
+                should_push_alert_notification,
+            )
+
             triggered = await asyncio.to_thread(
                 run_alert_checks_for_user, session_id
             )
             for row in triggered:
+                # Execution already happened inside check_alerts_for_user
+                # (one-shot stamp). Push is a separate, optional channel.
                 alerts_n += 1
+                do_push, reason = should_push_alert_notification(username, row)
+                if not do_push:
+                    logger.debug(
+                        "background_jobs: alert push skipped (%s) %s %s",
+                        reason, username, row.get("symbol"),
+                    )
+                    continue
                 await _publish(username, {
                     "type": "alert_trigger",
                     "symbol": row.get("symbol"),
@@ -143,6 +156,7 @@ async def background_tick() -> Dict[str, int]:
                     "threshold": row.get("threshold"),
                     "alert_id": row.get("alert_id"),
                     "current_price": row.get("current_price"),
+                    "mode": row.get("mode") or "action",
                     "message": (
                         f"Alert {row.get('symbol')} "
                         f"{row.get('condition')} {row.get('threshold')}"

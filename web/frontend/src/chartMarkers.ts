@@ -1,6 +1,44 @@
 /** Align daily news/strategy markers with whatever candle timeline is plotted. */
 
-import type { Candle } from "./api";
+import type { Candle, ChartEvent } from "./api";
+
+/** Letter + color meaning for volume/event marks (shown in chart hover note). */
+export function describeEventMark(e: ChartEvent): string {
+  const tier = String(e.tier || "significant");
+  const letter = String(
+    e.text
+      ?? (tier === "notable" ? "n" : tier === "event_move" ? "E" : tier === "provisional" ? "LIVE" : "N"),
+  );
+  const up = (e.price_change_pct ?? 0) >= 0
+    || (e.color || "").toLowerCase().includes("00ff")
+    || (e.color || "").toLowerCase().includes("7eb6")
+    || (e.color || "").toLowerCase().includes("f0c7");
+
+  let name = "Full volume spike";
+  let meaning =
+    "hit the full spike bar (≥~2× volume with ≥~2% move, or ≥~3× volume alone)";
+  let colorMeaning = up ? "green = up-day" : "red = down-day";
+
+  if (tier === "notable") {
+    name = "Notable volume";
+    meaning = "elevated volume below the full 2×/2% or 3× spike bar";
+    colorMeaning = up ? "gold = up-day" : "orange = down-day";
+  } else if (tier === "event_move") {
+    name = "Large session move";
+    meaning = "big price change (≥~1.2%) without extreme volume";
+    colorMeaning = up ? "blue = up-day" : "purple = down-day";
+  } else if (tier === "provisional") {
+    name = "Live volume spike";
+    meaning = "provisional intraday spike (may change by close)";
+    colorMeaning = "amber = live";
+  }
+
+  const vol = e.volume_ratio != null ? ` · ${Number(e.volume_ratio).toFixed(1)}× vol` : "";
+  const move = e.price_change_pct != null
+    ? ` · ${(Number(e.price_change_pct) * 100).toFixed(1)}%`
+    : "";
+  return `[${letter}] ${name}${vol}${move} — ${meaning}. Color: ${colorMeaning}.`;
+}
 
 /** Calendar day key for UTC/unix/ISO candle times and YYYY-MM-DD markers. */
 export function chartDayKey(time: string | number): string {

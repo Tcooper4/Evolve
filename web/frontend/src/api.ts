@@ -289,12 +289,31 @@ export const getAlerts = () =>
     "/api/alerts",
   );
 
-export const upsertAlert = (symbol: string, condition: string, threshold: number) =>
+export const upsertAlert = (
+  symbol: string,
+  condition: string,
+  threshold: number,
+  confirm?: string | null,
+  confirmThreshold?: number | null,
+  mode?: "watch" | "action" | null,
+) =>
   req<{ success: boolean; alerts: Record<string, unknown>[] }>("/api/alerts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ symbol, condition, threshold }),
+    body: JSON.stringify({
+      symbol,
+      condition,
+      threshold,
+      mode: mode || "watch",
+      ...(confirm ? { confirm, confirm_threshold: confirmThreshold ?? undefined } : {}),
+    }),
   });
+
+export const rearmAlert = (id: string) =>
+  req<{ success: boolean; alerts: Record<string, unknown>[]; error?: string }>(
+    `/api/alerts/${encodeURIComponent(id)}/rearm`,
+    { method: "POST" },
+  );
 
 export const deleteAlert = (id: string) =>
   req<{ success: boolean; alerts: Record<string, unknown>[] }>(
@@ -352,6 +371,24 @@ export const getStrategyOverlay = (
     `/api/strategy-overlay/${encodeURIComponent(symbol)}`
     + `?strategy=${encodeURIComponent(strategy)}`
     + `&period=${encodeURIComponent(period)}`,
+  );
+
+export type OptionsStructureOverlay = StrategyOverlay & {
+  pick?: {
+    structure?: string;
+    label?: string;
+    mark_text?: string;
+    rationale?: string;
+    wing_pct_guide?: number | null;
+    alternate?: string | null;
+  };
+  gex?: Record<string, unknown> | null;
+  skew?: Record<string, unknown> | null;
+};
+
+export const getOptionsStructureOverlay = (symbol: string) =>
+  req<OptionsStructureOverlay>(
+    `/api/options-structure-overlay/${encodeURIComponent(symbol)}`,
   );
 
 export const runBacktest = (symbol: string, strategy: string,
@@ -604,6 +641,14 @@ export interface AccountRisk {
     half_kelly_dollars_options_vix_adjusted?: number;
     options_vix_reason?: string; options_vix?: number;
     options_vix_live_wired?: boolean;
+    n_closed_trades?: number | null;
+    sample_size_flag?: string;
+    sample_size_caveat?: string | null;
+    recommended_fraction?: number;
+    recommended_dollars?: number;
+    recommended_basis?: string;
+    quarter_kelly_fraction?: number;
+    quarter_kelly_dollars?: number;
   } | null;
   kelly_note?: string;
   portfolio_metrics?: Record<string, string | number> | null;

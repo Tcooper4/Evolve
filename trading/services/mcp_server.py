@@ -367,14 +367,29 @@ def recommend_model(symbol: str = "SPY", horizon: int = 7) -> dict:
 
 
 @mcp.tool()
-def get_position_size(win_rate: float, avg_win_loss_ratio: float = 1.5,
-                      account_size: float = 10_000.0) -> dict:
-    """Kelly-criterion sizing: full and half Kelly (the practitioner
-    reference) with dollar amounts."""
+def get_position_size(
+    win_rate: float,
+    avg_win_loss_ratio: float = 1.5,
+    account_size: float = 10_000.0,
+    n_closed_trades: int = 0,
+    defined_risk_premium_selling: bool = False,
+) -> dict:
+    """Kelly-criterion sizing: full/half Kelly plus sample-size caveats.
+
+    Pass ``n_closed_trades`` from your paper stats. Set
+    ``defined_risk_premium_selling=True`` for iron-condor / credit-spread
+    style books to recommend quarter-Kelly (fat left-tail).
+    """
     from trading.services.agent_tools import get_position_size as _f
 
-    return _f(win_rate, avg_win_loss_ratio=avg_win_loss_ratio,
-              account_size=account_size)
+    n = n_closed_trades if n_closed_trades and n_closed_trades > 0 else None
+    return _f(
+        win_rate,
+        avg_win_loss_ratio=avg_win_loss_ratio,
+        account_size=account_size,
+        n_closed_trades=n,
+        defined_risk_premium_selling=bool(defined_risk_premium_selling),
+    )
 
 
 @mcp.tool()

@@ -593,14 +593,42 @@ def annotations_from_rows(
             for n in news:
                 claimed_titles.add(_normalize_title(str(n.get("title") or "")))
 
-        tier_note = ""
-        if tier == "notable":
+        bullish = row.get("candle_type") == "bullish"
+        if tier == "significant":
+            color = "#00FF88" if bullish else "#FF4444"
+            mark_text = "N"
+            mark_name = "Full volume spike"
+            color_meaning = (
+                "green = up-day spike" if bullish else "red = down-day spike"
+            )
             tier_note = (
-                "<br><i>Notable volume (below full 2×/2% or 3× spike bar)</i>"
+                f"<br><b>[{mark_text}] {mark_name}</b> — session hit the full "
+                "volume/move spike bar (≥~2× vol with ≥~2% move, or ≥~3× vol). "
+                f"Color: {color_meaning}."
             )
         elif tier == "event_move":
+            color = "#7EB6FF" if bullish else "#C084FC"
+            mark_text = "E"
+            mark_name = "Large session move"
+            color_meaning = (
+                "blue = up-day move" if bullish else "purple = down-day move"
+            )
             tier_note = (
-                "<br><i>Large session move (volume not extreme)</i>"
+                f"<br><b>[{mark_text}] {mark_name}</b> — big price change "
+                "(≥~1.2%) without extreme volume. "
+                f"Color: {color_meaning}."
+            )
+        else:
+            color = "#F0C75E" if bullish else "#E89B6B"
+            mark_text = "n"
+            mark_name = "Notable volume"
+            color_meaning = (
+                "gold = up-day notable" if bullish else "orange = down-day notable"
+            )
+            tier_note = (
+                f"<br><b>[{mark_text}] {mark_name}</b> — elevated volume "
+                "(below the full 2×/2% or 3× spike bar). "
+                f"Color: {color_meaning}."
             )
 
         if news:
@@ -648,16 +676,6 @@ def annotations_from_rows(
             )
         except Exception:
             price_val = float(row.get("close", 0) or 0)
-
-        if tier == "significant":
-            color = "#00FF88" if row.get("candle_type") == "bullish" else "#FF4444"
-            mark_text = "N"
-        elif tier == "event_move":
-            color = "#7EB6FF" if row.get("candle_type") == "bullish" else "#C084FC"
-            mark_text = "E"
-        else:
-            color = "#F0C75E" if row.get("candle_type") == "bullish" else "#E89B6B"
-            mark_text = "n"
 
         annotations.append(
             {

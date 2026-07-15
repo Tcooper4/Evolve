@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   adjustCash, cancelLimit, deleteAlert, deleteRec, getAccountRisk, getAlerts,
+  rearmAlert,
   getCashbook, getPortfolio, getPortfolioTrades, getRecs, getRisk, placeLimit,
   recordTrade, runAllocate, upsertAlert,
   type AccountRisk, type PortfolioSummary, type TrackedRec,
@@ -26,6 +27,9 @@ export default function Portfolio() {
   const [alertSym, setAlertSym] = useState("");
   const [alertThr, setAlertThr] = useState("");
   const [alertCond, setAlertCond] = useState("price_above");
+  const [alertConfirm, setAlertConfirm] = useState("");
+  const [alertConfirmThr, setAlertConfirmThr] = useState("2");
+  const [alertMode, setAlertMode] = useState<"watch" | "action">("watch");
   const [allocInput, setAllocInput] = useState("SPY, QQQ, TLT, GLD");
   const [alloc, setAlloc] = useState<Record<string, unknown> | null>(null);
   const [cash, setCash] = useState<number | null>(null);
@@ -108,13 +112,21 @@ export default function Portfolio() {
 
   async function addAlert() {
     if (!alertSym || !alertThr) return;
-    await upsertAlert(alertSym, alertCond, Number(alertThr));
+    const conf = alertConfirm.trim() || null;
+    const confThr = conf ? Number(alertConfirmThr) : null;
+    if (conf && !Number.isFinite(confThr as number)) return;
+    await upsertAlert(alertSym, alertCond, Number(alertThr), conf, confThr, alertMode);
     setAlertSym(""); setAlertThr("");
     await loadAlerts();
   }
 
   async function removeAlert(id: string) {
     await deleteAlert(id);
+    await loadAlerts();
+  }
+
+  async function rearm(id: string) {
+    await rearmAlert(id);
     await loadAlerts();
   }
 
@@ -316,18 +328,28 @@ export default function Portfolio() {
               <>
                 <div className="kpis" style={{ marginBottom: 12 }}>
                   <div className="card kpi">
-                    <div className="label">Sizing guide (half Kelly)</div>
+                    <div className="label">
+                      Sizing guide
+                      {acctRisk.kelly?.recommended_basis === "quarter_kelly"
+                        ? " (quarter Kelly)"
+                        : " (half Kelly)"}
+                    </div>
                     <div className="value num" style={{ fontSize: 18 }}>
-                      {acctRisk.kelly?.half_kelly_dollars != null
-                        ? `$${acctRisk.kelly.half_kelly_dollars.toLocaleString()}`
-                        : "—"}
+                      {acctRisk.kelly?.recommended_dollars != null
+                        ? `$${Number(acctRisk.kelly.recommended_dollars).toLocaleString()}`
+                        : acctRisk.kelly?.half_kelly_dollars != null
+                          ? `$${acctRisk.kelly.half_kelly_dollars.toLocaleString()}`
+                          : "—"}
                     </div>
                     <div className="sub">
-                      {acctRisk.kelly?.half_kelly_dollars != null
-                        ? `from your ${acctRisk.trade_stats?.closed_trades ?? 0} closed paper trades`
-                        : (acctRisk.trade_stats?.closed_trades ?? 0) < 5
-                          ? "close a few more paper trades and this fills in from your real stats"
-                          : "needs both wins and losses to size from"}
+                      {acctRisk.kelly?.sample_size_caveat
+                        ? String(acctRisk.kelly.sample_size_caveat).slice(0, 120)
+                          + (String(acctRisk.kelly.sample_size_caveat).length > 120 ? "…" : "")
+                        : acctRisk.kelly?.half_kelly_dollars != null
+                          ? `from your ${acctRisk.trade_stats?.closed_trades ?? 0} closed paper trades`
+                          : (acctRisk.trade_stats?.closed_trades ?? 0) < 5
+                            ? "close a few more paper trades and this fills in from your real stats"
+                            : "needs both wins and losses to size from"}
                     </div>
                   </div>
                   {acctRisk.kelly?.half_kelly_dollars_vol_adjusted != null && (
@@ -481,7 +503,7 @@ export default function Portfolio() {
         )}
         {!loading && tab === "alerts" && (
           <div className="card-pad">
-            <div className="row" style={{ marginBottom: 14, flexWrap: "wrap" }}>
+            <div className="row" style={{ marginBottom: 8, flexWrap: "wrap" }}>
               <input placeholder="Symbol" value={alertSym} style={{ width: 100 }}
                 onChange={(e) => setAlertSym(e.target.value.toUpperCase())} />
               <select value={alertCond} onChange={(e) => setAlertCond(e.target.value)} style={{ width: 140 }}>
@@ -494,25 +516,89 @@ export default function Portfolio() {
                 onChange={(e) => setAlertThr(e.target.value)} />
               <button className="primary" onClick={addAlert}>Add alert</button>
             </div>
+            <div className="row" style={{ marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+              <span className="dim" style={{ fontSize: 12.5 }}>Confirming factor (optional AND)</span>
+              <select
+                value={alertConfirm}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setAlertConfirm(v);
+                  if (v === "volume_ge") setAlertConfirmThr("2");
+                  else if (v.startsWith("rsi_")) setAlertConfirmThr("30");
+                }}
+                style={{ width: 200 }}
+              >
+                <option value="">None — single price/score trigger</option>
+                <option value="volume_ge">AND volume ≥ Nx average</option>
+                <option value="rsi_le">AND RSI ≤ threshold</option>
+                <option value="rsi_ge">AND RSI ≥ threshold</option>
+              </select>
+              {alertConfirm && (
+                <input
+                  placeholder={alertConfirm === "volume_ge" ? "N (e.g. 2)" : "RSI (e.g. 30)"}
+                  value={alertConfirmThr}
+                  style={{ width: 110 }}
+                  onChange={(e) => setAlertConfirmThr(e.target.value)}
+                />
+              )}
+              <select
+                value={alertMode}
+                onChange={(e) => setAlertMode(e.target.value as "watch" | "action")}
+                style={{ width: 160 }}
+                title="Watch = in-app only. Action = live push (opt-in)."
+              >
+                <option value="watch">Watch (no push)</option>
+                <option value="action">Action (live push)</option>
+              </select>
+            </div>
             {triggered.length > 0 && (
               <div className="dim" style={{ marginBottom: 10, fontSize: 12.5 }}>
-                Triggered now: {triggered.map((t) => String(t.symbol)).join(", ")}
+                Just fired: {triggered.map((t) => String(t.symbol)).join(", ")} — one-shot; re-arm to watch again.
               </div>
             )}
             {alerts.length === 0 ? (
               <div className="dim">No alerts yet — price/score watches stay in your prefs.</div>
             ) : (
               <table className="tbl">
-                <thead><tr><th>Symbol</th><th>Condition</th><th>Threshold</th><th /></tr></thead>
+                <thead><tr><th>Symbol</th><th>Condition</th><th>Threshold</th><th>Confirm</th><th>Mode</th><th>Status</th><th /></tr></thead>
                 <tbody>
-                  {alerts.map((a) => (
-                    <tr key={String(a.id)}>
-                      <td style={{ fontWeight: 650 }}>{String(a.symbol)}</td>
-                      <td>{String(a.condition).replace(/_/g, " ")}</td>
-                      <td className="num">{String(a.threshold)}</td>
-                      <td><button className="ghost" onClick={() => removeAlert(String(a.id))}>Remove</button></td>
-                    </tr>
-                  ))}
+                  {alerts.map((a) => {
+                    const fired = String(a.status || "active") === "triggered";
+                    const when = a.triggered_at ? String(a.triggered_at) : "";
+                    const atPx = a.triggered_price != null ? `$${Number(a.triggered_price).toFixed(2)}` : "";
+                    const conf = a.confirm ? String(a.confirm) : "";
+                    const confThr = a.confirm_threshold != null ? String(a.confirm_threshold) : "";
+                    const confLabel = !conf
+                      ? "—"
+                      : conf === "volume_ge"
+                        ? `vol ≥ ${confThr}x`
+                        : conf === "rsi_le"
+                          ? `RSI ≤ ${confThr}`
+                          : conf === "rsi_ge"
+                            ? `RSI ≥ ${confThr}`
+                            : conf;
+                    const modeLabel = String(a.mode || "action") === "watch" ? "Watch" : "Action";
+                    return (
+                      <tr key={String(a.id)}>
+                        <td style={{ fontWeight: 650 }}>{String(a.symbol)}</td>
+                        <td>{String(a.condition).replace(/_/g, " ")}</td>
+                        <td className="num">{String(a.threshold)}</td>
+                        <td className="dim" style={{ fontSize: 12 }}>{confLabel}</td>
+                        <td className="dim" style={{ fontSize: 12 }}>{modeLabel}</td>
+                        <td className="dim" style={{ fontSize: 12 }}>
+                          {fired
+                            ? `Fired${atPx ? ` at ${atPx}` : ""}${when ? ` · ${when}` : ""}`
+                            : "Armed"}
+                        </td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          {fired && (
+                            <button className="ghost" onClick={() => rearm(String(a.id))}>Re-arm</button>
+                          )}
+                          <button className="ghost" onClick={() => removeAlert(String(a.id))}>Remove</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

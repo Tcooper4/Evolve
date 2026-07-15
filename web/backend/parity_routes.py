@@ -53,6 +53,12 @@ class AlertUpsertRequest(BaseModel):
     condition: str = "price_above"
     threshold: float = 0.0
     id: Optional[str] = None
+    # Optional AND factor (Phase 2). Omit / null = single-factor (legacy default).
+    # confirm: volume_ge | rsi_le | rsi_ge
+    confirm: Optional[str] = None
+    confirm_threshold: Optional[float] = None
+    # Phase 3: watch (in-app only) vs action (live push). New alerts default watch.
+    mode: Optional[str] = "watch"
 
 
 class LimitOrderRequest(BaseModel):
@@ -803,6 +809,18 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
             symbol, strategy, period=period or "6mo",
         )
 
+    @router.get("/api/options-structure-overlay/{symbol}")
+    def options_structure_overlay(
+        symbol: str,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """Iron condor / credit-spread research guide from delayed GEX + skew."""
+        from trading.analysis.options_structure_overlay import (
+            build_options_structure_overlay,
+        )
+
+        return build_options_structure_overlay(symbol)
+
     @router.get("/api/causal/{symbol}")
     def causal(symbol: str, user: str = Depends(current_user)) -> Dict[str, Any]:
         try:
@@ -1373,6 +1391,10 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                     # until validate_conditional_vol_universe shows a broad win.
                     symbol="SPY",
                     apply_vol_overlay=True,
+                    n_closed_trades=stats.get("closed_trades"),
+                    # Paper ledger is buy/sell — not multi-leg; premium-selling
+                    # quarter-Kelly is an explicit tool flag, not auto-inferred.
+                    defined_risk_premium_selling=False,
                 )
                 # Options-VIX overlay: dual display only (live flag off)
                 try:
@@ -1585,13 +1607,15 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
         from trading.services.alert_checker import check_alerts_for_user
 
         uid = f"user:{user}"
-        prefs = load_user_preferences(uid) or {}
-        alerts = prefs.get("evolve_alerts") or []
+        # check_alerts_for_user may mark one-shot alerts triggered in prefs
         triggered = []
         try:
             triggered = check_alerts_for_user(uid) or []
         except Exception as e:
             logger.debug("alert check: %s", e)
+        # Reload after check so status/triggered_at are current
+        prefs = load_user_preferences(uid) or {}
+        alerts = prefs.get("evolve_alerts") or []
         return {"success": True, "alerts": alerts, "triggered": triggered}
 
     @router.post("/api/alerts")
@@ -1605,17 +1629,43 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
         prefs = dict(load_user_preferences(uid) or {})
         alerts = list(prefs.get("evolve_alerts") or [])
         aid = req.id or str(uuid.uuid4())[:8]
-        row = {
+        from trading.services.alert_push_policy import (
+            MODE_WATCH,
+            normalize_alert_mode,
+        )
+
+        row: Dict[str, Any] = {
             "id": aid,
             "symbol": req.symbol.strip().upper(),
             "condition": req.condition,
             "threshold": float(req.threshold),
+            "status": "active",
+            # Explicit opt-in for live push; API default is watch.
+            "mode": normalize_alert_mode(req.mode, default=MODE_WATCH),
         }
+        # Persist confirm only when explicitly requested — never invent defaults
+        # that would change the meaning of existing single-factor alerts.
+        conf = (req.confirm or "").strip().lower() if req.confirm else ""
+        if conf and conf not in ("none", "off", "null"):
+            row["confirm"] = conf
+            if req.confirm_threshold is not None:
+                row["confirm_threshold"] = float(req.confirm_threshold)
         alerts = [a for a in alerts if isinstance(a, dict) and a.get("id") != aid]
         alerts.append(row)
         prefs["evolve_alerts"] = alerts[-50:]
         save_user_preferences(uid, prefs)
         return {"success": True, "alerts": prefs["evolve_alerts"]}
+
+    @router.post("/api/alerts/{alert_id}/rearm")
+    def rearm_alert(alert_id: str, user: str = Depends(current_user)) -> Dict[str, Any]:
+        """Explicit re-arm after a one-shot fire — never automatic."""
+        from trading.services.alert_checker import rearm_alert_for_user
+
+        uid = f"user:{user}"
+        ok, alerts, err = rearm_alert_for_user(uid, alert_id)
+        if not ok:
+            return {"success": False, "error": err or "rearm failed", "alerts": alerts}
+        return {"success": True, "alerts": alerts}
 
     @router.delete("/api/alerts/{alert_id}")
     def delete_alert(alert_id: str, user: str = Depends(current_user)) -> Dict[str, Any]:

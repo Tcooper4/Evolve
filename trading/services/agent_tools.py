@@ -863,6 +863,8 @@ def get_position_size(
     account_size: float = 10_000.0,
     symbol: Optional[str] = None,
     apply_vol_overlay: bool = True,
+    n_closed_trades: Optional[int] = None,
+    defined_risk_premium_selling: bool = False,
 ) -> Dict[str, Any]:
     """Kelly-criterion position sizing from a strategy's stats (the 'Kelly
     tool' the position-sizing skill references). win_rate in [0,1] (or
@@ -874,8 +876,18 @@ def get_position_size(
     *conditional* vol multiplier (cut size only in extreme-high realized
     vol; never leverage up). Raw Kelly fields stay; vol-adjusted fields
     are additive.
+
+    ``n_closed_trades`` drives an explicit sample-size caveat (see
+    ``kelly_sample_disclosure``). ``defined_risk_premium_selling`` is an
+    explicit opt-in flag (paper ledger is not multi-leg aware) that
+    recommends quarter-Kelly as the guided size.
     """
     try:
+        from trading.portfolio.kelly_sample_disclosure import (
+            assess_kelly_sample,
+            attach_kelly_recommendation,
+        )
+
         p = float(win_rate)
         if p > 1.0:  # tolerate percentages
             p = p / 100.0
@@ -886,18 +898,25 @@ def get_position_size(
         kelly = p - (1.0 - p) / b  # f* = p - q/b
         kelly = max(0.0, kelly)
         half = kelly / 2.0
+        acct = float(account_size)
         out: Dict[str, Any] = {
             "success": True,
             "full_kelly_fraction": round(kelly, 4),
             "half_kelly_fraction": round(half, 4),
-            "half_kelly_dollars": round(half * float(account_size), 2),
+            "half_kelly_dollars": round(half * acct, 2),
             "note": (
                 "Guide only — half Kelly from YOUR closed paper trades "
-                "(not live broker fills). Paper edge ≠ live edge; size "
-                "down further if your sample is small or one-sided. "
+                "(not live broker fills). Paper edge ≠ live edge. "
                 "Full Kelly is a ceiling, not a target."
             ),
         }
+        assessment = assess_kelly_sample(
+            n_closed_trades,
+            p,
+            defined_risk_premium_selling=bool(defined_risk_premium_selling),
+        )
+        out = attach_kelly_recommendation(out, assessment, acct)
+
         if apply_vol_overlay and symbol:
             try:
                 from trading.portfolio.conditional_vol_sizing import (

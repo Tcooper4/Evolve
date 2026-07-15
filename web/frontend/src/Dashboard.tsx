@@ -3,6 +3,7 @@ import {
   addToWatchlist,
   getBreakingNews,
   getChartEvents,
+  getOptionsStructureOverlay,
   getHistory,
   getMarketSignals,
   getNews,
@@ -21,12 +22,14 @@ import {
   type GprSignal,
   type Quote,
   type RevisionBreadth,
+  type OptionsStructureOverlay,
   type StrategyOverlay,
 } from "./api";
 import Chart from "./Chart";
 import Sparkline from "./Sparkline";
 import {
   alignOverlaySeriesToCandles,
+  describeEventMark,
   filterMarkersToCandles,
 } from "./chartMarkers";
 import { loadCachedChartTimezone, cacheChartTimezone } from "./chartTime";
@@ -118,6 +121,10 @@ export default function Dashboard({
   ]);
   const [overlay, setOverlay] = useState<StrategyOverlay | null>(null);
   const [overlayBusy, setOverlayBusy] = useState(false);
+  // Options structure guide — also OFF by default (research only)
+  const [optOverlayOn, setOptOverlayOn] = useState(false);
+  const [optOverlay, setOptOverlay] = useState<OptionsStructureOverlay | null>(null);
+  const [optOverlayBusy, setOptOverlayBusy] = useState(false);
 
   useEffect(() => { symbolRef.current = symbol; }, [symbol]);
   useEffect(() => { periodRef.current = period; }, [period]);
@@ -157,6 +164,28 @@ export default function Dashboard({
       .finally(() => { if (!cancelled) setOverlayBusy(false); });
     return () => { cancelled = true; };
   }, [overlayOn, overlayStrategy, symbol, period]);
+
+  useEffect(() => {
+    if (!optOverlayOn) {
+      setOptOverlay(null);
+      setOptOverlayBusy(false);
+      return;
+    }
+    let cancelled = false;
+    setOptOverlayBusy(true);
+    getOptionsStructureOverlay(symbol)
+      .then((r) => { if (!cancelled) setOptOverlay(r); })
+      .catch((e) => {
+        if (!cancelled) {
+          setOptOverlay({
+            success: false,
+            error: e instanceof Error ? e.message : "options overlay failed",
+          });
+        }
+      })
+      .finally(() => { if (!cancelled) setOptOverlayBusy(false); });
+    return () => { cancelled = true; };
+  }, [optOverlayOn, symbol]);
 
   const load = useCallback(async (sym: string, per: Period, iv?: DayInterval, soft = false) => {
     if (!soft) setLoading(true);
@@ -365,20 +394,15 @@ export default function Dashboard({
   // (API may use a longer lookback for the 20d volume baseline.)
   const visibleNews = filterMarkersToCandles(
     events.map((e) => {
+      const legend = describeEventMark(e);
       const fallback = e.link_quality === "fallback_recent";
       const honesty = fallback ? " · may not be same-day headline" : "";
-      const notable = e.tier === "notable"
-        ? " · notable volume (below full spike bar)"
-        : "";
-      const provisional = e.tier === "provisional"
-        ? " · provisional live (may change by close)"
-        : "";
+      const headline = e.title ? `${e.title}${honesty}` : "";
       return {
         time: e.time,
-        title: e.title
-          ? `${e.title}${honesty}${notable}${provisional}`
-          : (fallback ? "Volume mark · may not be same-day headline" : undefined),
-        text: e.text ?? (e.tier === "notable" ? "n" : e.tier === "provisional" ? "LIVE" : "N"),
+        // Legend first so hover panel always explains letter + color
+        title: headline ? `${legend} · ${headline}` : legend,
+        text: e.text ?? (e.tier === "notable" ? "n" : e.tier === "event_move" ? "E" : e.tier === "provisional" ? "LIVE" : "N"),
         color: e.color,
         shape: "circle" as const,
       };
@@ -389,10 +413,17 @@ export default function Dashboard({
     (overlayOn && overlay?.success && overlay.markers) ? overlay.markers : [],
     candles,
   );
+  const visibleOptMarks = filterMarkersToCandles(
+    (optOverlayOn && optOverlay?.success && optOverlay.markers) ? optOverlay.markers : [],
+    candles,
+  );
   const visibleOverlays = alignOverlaySeriesToCandles(
-    (overlayOn && overlay?.success && overlay.overlay_series)
-      ? overlay.overlay_series
-      : [],
+    [
+      ...((overlayOn && overlay?.success && overlay.overlay_series)
+        ? overlay.overlay_series : []),
+      ...((optOverlayOn && optOverlay?.success && optOverlay.overlay_series)
+        ? optOverlay.overlay_series : []),
+    ],
     candles,
   );
 
@@ -532,6 +563,18 @@ export default function Dashboard({
                 ))}
               </select>
             )}
+            <label
+              className="dim"
+              style={{ fontSize: 12, display: "inline-flex", gap: 6, alignItems: "center" }}
+              title="Iron condor / credit-spread research guide from delayed GEX + skew"
+            >
+              <input
+                type="checkbox"
+                checked={optOverlayOn}
+                onChange={(e) => setOptOverlayOn(e.target.checked)}
+              />
+              Options structure
+            </label>
             {period === "1d" && (
               <div className="seg">
                 {DAY_INTERVALS.map((iv) => (
@@ -565,7 +608,7 @@ export default function Dashboard({
               ...filterMarkersToCandles(
                 liveSpike ? [{
                   time: liveSpike.time,
-                  title: liveSpike.title,
+                  title: describeEventMark({ ...liveSpike, tier: "provisional" }),
                   text: liveSpike.text ?? "LIVE",
                   color: liveSpike.color ?? "#F5A623",
                   shape: (liveSpike.shape as "circle" | "square" | "arrowUp" | "arrowDown" | undefined) ?? "circle",
@@ -573,10 +616,42 @@ export default function Dashboard({
                 candles,
               ),
               ...visibleStrategy,
+              ...visibleOptMarks,
             ]}
           />
         ) : (
           <div className="empty">No chart data — check the symbol or your connection.</div>
+        )}
+        {optOverlayOn && (
+          <div style={{ padding: "0 18px 10px" }}>
+            <div className="dim" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 6 }}>
+              {optOverlay?.disclosure
+                ?? "Options structure research guide only — not trade instructions."}
+            </div>
+            {optOverlayBusy && <div className="dim" style={{ fontSize: 12 }}>Loading options structure…</div>}
+            {!optOverlayBusy && optOverlay && optOverlay.success === false && (
+              <div className="dim" style={{ fontSize: 12 }}>
+                Options guide unavailable{optOverlay.error ? ` — ${optOverlay.error}` : ""}
+              </div>
+            )}
+            {!optOverlayBusy && optOverlay?.success && (
+              <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
+                <b>{String(optOverlay.pick?.label ?? optOverlay.markers?.[0]?.text ?? "Structure")}</b>
+                {" — "}
+                {String(optOverlay.pick?.rationale ?? optOverlay.markers?.[0]?.title ?? "")}
+                {(optOverlay.reference_levels?.levels?.length ?? 0) > 0 && (
+                  <div style={{ marginTop: 4 }}>
+                    Guides:{" "}
+                    {optOverlay.reference_levels!.levels!.map((l) => (
+                      <span key={l.key} style={{ marginRight: 10 }}>
+                        {l.label} <b className="num">{l.value}</b>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
         {overlayOn && (
           <div style={{ padding: "0 18px 14px" }}>
