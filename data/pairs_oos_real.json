@@ -1,0 +1,235 @@
+{
+  "success": true,
+  "signal_name": "pairs_eg_zscore",
+  "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Pairs research: Engle\u2013Granger gate + z-score mean reversion on predeclared ETF pairs. Synthetic NAV Close carries the return-spread book so harness forward_return payoffs equal hedged pairs P&L. recommend_live never auto-wires.",
+  "period": "5y",
+  "predeclared_pairs": [
+    [
+      "SPY",
+      "QQQ"
+    ],
+    [
+      "IWM",
+      "SPY"
+    ],
+    [
+      "GLD",
+      "SLV"
+    ],
+    [
+      "TLT",
+      "HYG"
+    ]
+  ],
+  "predeclared_trials": [
+    {
+      "label": "lb60_z2",
+      "lookback_period": 60,
+      "z_score_threshold": 2.0,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05
+    },
+    {
+      "label": "lb120_z2",
+      "lookback_period": 120,
+      "z_score_threshold": 2.0,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05
+    },
+    {
+      "label": "lb252_z2",
+      "lookback_period": 252,
+      "z_score_threshold": 2.0,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05
+    },
+    {
+      "label": "lb120_z25",
+      "lookback_period": 120,
+      "z_score_threshold": 2.5,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05
+    }
+  ],
+  "n_trials": 4,
+  "trial_justification": "Four trials only on a fixed ex-ante ETF pair basket (SPY/QQQ, IWM/SPY, GLD/SLV, TLT/HYG) \u2014 no in-sample pair discovery. Lookbacks {60, 120, 252} \u00d7 z_entry {2.0, 2.5} with 252/2.0 matching PairsTradingEngine defaults and 2.5 as the conservative entry; rolling hedge=60, z_window=20, corr\u22650.7, p<0.05 locked to engine. Hold=10 / step=5 for short-horizon mean-reversion. Not expanded after inspecting DSR.",
+  "ordering_note": "Pair basket and trial grid fixed before this run; not selected after inspecting DSR. No post-hoc pair discovery.",
+  "hold_days": 10,
+  "step_size": 5,
+  "timestamp": "2026-07-16T01:54:48.785923+00:00",
+  "recommend_live": false,
+  "error": null,
+  "target": {
+    "kind": "forward_return",
+    "horizon": 10,
+    "benchmark": null,
+    "vol_window": null
+  },
+  "universe": [
+    "SPY_QQQ",
+    "IWM_SPY",
+    "GLD_SLV",
+    "TLT_HYG"
+  ],
+  "purge_bars": 10,
+  "train_frac": 0.6,
+  "deflated_sharpe": null,
+  "champion": {
+    "params": {
+      "lookback_period": 120,
+      "z_score_threshold": 2.0,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05
+    },
+    "label": "lb120_z2",
+    "train_stats": {
+      "win_rate": 0.3333,
+      "avg_pnl": -0.088763,
+      "total_pnl": -0.266288,
+      "sharpe": -0.527,
+      "n": 3
+    }
+  },
+  "test": null,
+  "trials": [
+    {
+      "label": "lb60_z2",
+      "lookback_period": 60,
+      "z_score_threshold": 2.0,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05,
+      "train_stats": {
+        "win_rate": 0.1667,
+        "avg_pnl": -0.129803,
+        "total_pnl": -0.778819,
+        "sharpe": -0.7413,
+        "n": 6
+      },
+      "n_obs": 6,
+      "score": -0.7413
+    },
+    {
+      "label": "lb120_z2",
+      "lookback_period": 120,
+      "z_score_threshold": 2.0,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05,
+      "train_stats": {
+        "win_rate": 0.3333,
+        "avg_pnl": -0.088763,
+        "total_pnl": -0.266288,
+        "sharpe": -0.527,
+        "n": 3
+      },
+      "n_obs": 3,
+      "score": -0.527
+    },
+    {
+      "label": "lb252_z2",
+      "lookback_period": 252,
+      "z_score_threshold": 2.0,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05,
+      "train_stats": {
+        "win_rate": 0.0,
+        "avg_pnl": -0.023095,
+        "total_pnl": -0.092379,
+        "sharpe": -1.0666,
+        "n": 4
+      },
+      "n_obs": 4,
+      "score": -1.0666
+    },
+    {
+      "label": "lb120_z25",
+      "lookback_period": 120,
+      "z_score_threshold": 2.5,
+      "rolling_window": 60,
+      "z_window": 20,
+      "hold": 10,
+      "step_size": 5,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05,
+      "train_stats": {
+        "win_rate": null,
+        "avg_pnl": null,
+        "total_pnl": 0.0,
+        "sharpe": null,
+        "n": 0
+      },
+      "n_obs": 0,
+      "score": -999.0
+    }
+  ],
+  "note": "Champion train n=3 < min_train_obs=20 \u2014 null / underpowered.",
+  "extra": {
+    "pairs": [
+      "SPY_QQQ",
+      "IWM_SPY",
+      "GLD_SLV",
+      "TLT_HYG"
+    ],
+    "engine_defaults_locked": {
+      "rolling_window": 60,
+      "z_window": 20,
+      "min_correlation": 0.7,
+      "max_p_value": 0.05
+    }
+  },
+  "train_end_idx": 752,
+  "test_start_idx": 762,
+  "n_common_dates": 1254,
+  "date_range": {
+    "start": "2021-07-16",
+    "end": "2026-07-15",
+    "train_end": "2024-07-12",
+    "test_start": "2024-07-29"
+  },
+  "legs_loaded": [
+    "GLD",
+    "HYG",
+    "IWM",
+    "QQQ",
+    "SLV",
+    "SPY",
+    "TLT"
+  ],
+  "pairs_evaluated": [
+    "SPY_QQQ",
+    "IWM_SPY",
+    "GLD_SLV",
+    "TLT_HYG"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "success": true,
+  "signal_name": "news_headline_sentiment",
+  "disclosure": "Headline-sentiment research: requires forward-accumulated daily snapshots from get_news_headline_sentiment (FinBERT+VADER when available). Live news is not a historical archive \u2014 null/deferred until the store clears the locked floor. recommend_live never auto-wires.",
+  "timestamp": "2026-07-16T01:48:05.446959+00:00",
+  "ordering_note": "Horizons {1,3} and floor 30/symbol locked before any DSR; floor not lowered after this audit.",
+  "basket": [
+    "SPY",
+    "QQQ",
+    "IWM"
+  ],
+  "trial_justification_when_ready": "Two trials only when data clears: hold horizons {1, 3} trading days (short-lived sentiment predictive window; not a long-horizon grid). Signal = stored daily sentiment_score; purge matches horizon; universe SPY/QQQ/IWM. Floor 30 filled rows/symbol locked before DSR.",
+  "availability": {
+    "db_path": "C:\\Users\\Thomas\\OneDrive\\Desktop\\Dashboard\\evolve_clean\\data\\news_sentiment_snapshots.db",
+    "db_exists": false,
+    "total_rows": 0,
+    "by_symbol": {},
+    "filled_return_1d_by_symbol": {},
+    "filled_return_3d_by_symbol": {},
+    "date_range": null,
+    "min_rows_per_symbol_required": 30,
+    "symbols_meeting_floor": [],
+    "enough_for_oos": false,
+    "logging_hint": "Set EVOLVE_NEWS_SENTIMENT_SNAPSHOT_LOG=1 (symbols via EVOLVE_NEWS_SENTIMENT_SNAPSHOT_SYMBOLS=SPY,QQQ,IWM).",
+    "predeclared_horizons_when_ready": [
+      1,
+      3
+    ],
+    "trial_justification_when_ready": "Two trials only when data clears: hold horizons {1, 3} trading days (short-lived sentiment predictive window; not a long-horizon grid). Signal = stored daily sentiment_score; purge matches horizon; universe SPY/QQQ/IWM. Floor 30 filled rows/symbol locked before DSR.",
+    "reason": "News-sentiment snapshot DB missing or empty \u2014 zero forward headline-sentiment observations. Live get_news_headline_sentiment cannot be replayed historically. Edge test deferred."
+  },
+  "recommend_live": false,
+  "oos": null,
+  "status": "insufficient_data",
+  "deferred": true,
+  "note": "News-sentiment snapshot DB missing or empty \u2014 zero forward headline-sentiment observations. Live get_news_headline_sentiment cannot be replayed historically. Edge test deferred."
+}

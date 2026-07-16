@@ -107,6 +107,34 @@ class TestRefinedGridLock:
         assert (0.20, 0.05) in grid
 
 
+class TestIVPercentileEntryGate:
+    def test_high_threshold_blocks_entries_on_falling_iv(self):
+        """IV declines over time → late bars have low trailing percentile."""
+        n = 320
+        idx = pd.bdate_range("2020-01-02", periods=n)
+        spot = pd.Series(np.full(n, 100.0), index=idx)
+        # High early, low late → end-of-sample percentile near 0
+        iv = pd.Series(np.linspace(0.40, 0.10, n), index=idx)
+        params = OptionsStructureParams(
+            strategy="put_credit_spread",
+            dte=5,
+            short_delta=0.20,
+            wing_pct=0.05,
+            reentry_gap_days=5,
+            exit_dte_floor=1,
+            min_iv_percentile=0.90,
+            iv_percentile_lookback=252,
+        )
+        sim = simulate_structure_trades(spot, iv, params, apply_costs=False)
+        assert sim["success"] is True
+        # With 90th-pct gate on a steadily falling IV path, few/no entries
+        assert int(sim["n_trades"]) <= 5
+
+    def test_no_gate_matches_legacy_none(self):
+        params = OptionsStructureParams(strategy="put_credit_spread", dte=10)
+        assert params.min_iv_percentile is None
+
+
 class TestCallCreditSpreadLegs:
     """Hand-checkable call-credit geometry (mirror of put credit)."""
 

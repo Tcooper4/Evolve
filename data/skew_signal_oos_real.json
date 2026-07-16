@@ -1,0 +1,51 @@
+{
+  "success": true,
+  "signal_name": "iv_skew",
+  "disclosure": "IV-skew research: requires forward-accumulated daily snapshots from get_options_skew (\u00b15% moneyness put-call skew_diff / butterfly proxy \u2014 not true 25\u0394 RR/BF). Live chains are not a historical archive \u2014 null/deferred until the store clears the locked floor. recommend_live never auto-wires.",
+  "timestamp": "2026-07-16T01:57:39.028360+00:00",
+  "ordering_note": "Trials {skew_h5, skew_h21, bfly_h5} and floor 60/symbol locked before any DSR; floor not lowered after this audit.",
+  "basket": [
+    "SPY",
+    "QQQ"
+  ],
+  "trial_justification_when_ready": "Three trials only when data clears: (1) skew_diff \u2192 forward_return horizon=5; (2) skew_diff \u2192 forward_return horizon=21; (3) butterfly_proxy \u2192 forward_return horizon=5. Universe SPY/QQQ. Metric is \u00b15% moneyness proxy (honest \u2014 free chains lack reliable delta). Floor MIN_ROWS_PER_SYMBOL=60 locked before DSR; not lowered after inspecting thin samples.",
+  "availability": {
+    "db_path": "C:\\Users\\Thomas\\OneDrive\\Desktop\\Dashboard\\evolve_clean\\data\\skew_snapshots.db",
+    "db_exists": false,
+    "total_rows": 0,
+    "by_symbol": {},
+    "filled_return_5d_by_symbol": {},
+    "filled_return_21d_by_symbol": {},
+    "date_range": null,
+    "min_rows_per_symbol_required": 60,
+    "preferred_rows_per_symbol": 120,
+    "symbols_meeting_floor": [],
+    "enough_for_oos": false,
+    "logging_hint": "Set EVOLVE_SKEW_SNAPSHOT_LOG=1 (symbols via EVOLVE_SKEW_SNAPSHOT_SYMBOLS=SPY,QQQ).",
+    "predeclared_trials_when_ready": [
+      {
+        "signal": "skew_diff",
+        "horizon": 5,
+        "label": "skew_h5"
+      },
+      {
+        "signal": "skew_diff",
+        "horizon": 21,
+        "label": "skew_h21"
+      },
+      {
+        "signal": "butterfly_proxy",
+        "horizon": 5,
+        "label": "bfly_h5"
+      }
+    ],
+    "trial_justification_when_ready": "Three trials only when data clears: (1) skew_diff \u2192 forward_return horizon=5; (2) skew_diff \u2192 forward_return horizon=21; (3) butterfly_proxy \u2192 forward_return horizon=5. Universe SPY/QQQ. Metric is \u00b15% moneyness proxy (honest \u2014 free chains lack reliable delta). Floor MIN_ROWS_PER_SYMBOL=60 locked before DSR; not lowered after inspecting thin samples.",
+    "metric_honesty": "skew_diff / butterfly from \u00b15% moneyness \u2014 not 25\u0394 risk reversal or 25\u0394 butterfly.",
+    "reason": "IV-skew snapshot DB missing or empty \u2014 zero forward skew observations. Live get_options_skew cannot be replayed historically. Edge test deferred."
+  },
+  "recommend_live": false,
+  "oos": null,
+  "status": "insufficient_data",
+  "deferred": true,
+  "note": "IV-skew snapshot DB missing or empty \u2014 zero forward skew observations. Live get_options_skew cannot be replayed historically. Edge test deferred."
+}

@@ -8,6 +8,14 @@ Notification is secondary (NotificationHub). Kill switch:
 Optional GEX dataset builder (off by default): ``EVOLVE_GEX_SNAPSHOT_LOG=1``
 runs at most once per calendar day inside the market-open tick — see
 ``trading.data.gex_snapshot_logger`` (future validation only).
+
+Optional news-sentiment dataset builder (off by default):
+``EVOLVE_NEWS_SENTIMENT_SNAPSHOT_LOG=1`` — see
+``trading.data.news_sentiment_snapshot_logger`` (future FinBERT OOS only).
+
+Optional IV-skew dataset builder (off by default):
+``EVOLVE_SKEW_SNAPSHOT_LOG=1`` — see
+``trading.data.skew_snapshot_logger`` (future skew OOS only).
 """
 
 from __future__ import annotations
@@ -27,6 +35,8 @@ _KILL_VALUES = {"0", "false", "off", "no", "disabled"}
 _task: Optional[asyncio.Task] = None
 _stop: Optional[asyncio.Event] = None
 _last_gex_snapshot_day: Optional[date] = None
+_last_news_sentiment_snapshot_day: Optional[date] = None
+_last_skew_snapshot_day: Optional[date] = None
 
 
 def background_jobs_enabled() -> bool:
@@ -243,11 +253,69 @@ async def background_tick() -> Dict[str, int]:
     except Exception as e:
         logger.debug("background_jobs: gex_snapshot skipped: %s", e)
 
+    # Opt-in news-sentiment snapshot logger — at most once per calendar day.
+    news_logged = 0
+    try:
+        global _last_news_sentiment_snapshot_day
+        from trading.data.news_sentiment_snapshot_logger import (
+            log_daily_news_sentiment_snapshots,
+            news_sentiment_snapshot_logging_enabled,
+        )
+
+        today = date.today()
+        if (
+            news_sentiment_snapshot_logging_enabled()
+            and _last_news_sentiment_snapshot_day != today
+        ):
+            news_stats = await asyncio.to_thread(
+                log_daily_news_sentiment_snapshots
+            )
+            _last_news_sentiment_snapshot_day = today
+            news_logged = int(news_stats.get("logged") or 0)
+            if news_logged or news_stats.get("backfilled"):
+                logger.info(
+                    "background_jobs: news_sentiment logged=%s backfilled=%s total=%s",
+                    news_stats.get("logged"),
+                    news_stats.get("backfilled"),
+                    news_stats.get("total_rows"),
+                )
+    except Exception as e:
+        logger.debug("background_jobs: news_sentiment skipped: %s", e)
+
+    # Opt-in IV-skew snapshot logger — at most once per calendar day.
+    skew_logged = 0
+    try:
+        global _last_skew_snapshot_day
+        from trading.data.skew_snapshot_logger import (
+            log_daily_skew_snapshots,
+            skew_snapshot_logging_enabled,
+        )
+
+        today = date.today()
+        if (
+            skew_snapshot_logging_enabled()
+            and _last_skew_snapshot_day != today
+        ):
+            skew_stats = await asyncio.to_thread(log_daily_skew_snapshots)
+            _last_skew_snapshot_day = today
+            skew_logged = int(skew_stats.get("logged") or 0)
+            if skew_logged or skew_stats.get("backfilled"):
+                logger.info(
+                    "background_jobs: skew_snapshot logged=%s backfilled=%s total=%s",
+                    skew_stats.get("logged"),
+                    skew_stats.get("backfilled"),
+                    skew_stats.get("total_rows"),
+                )
+    except Exception as e:
+        logger.debug("background_jobs: skew_snapshot skipped: %s", e)
+
     return {
         "users": len(targets),
         "fills": fills_n,
         "alerts": alerts_n,
         "gex_snapshots": gex_logged,
+        "news_sentiment_snapshots": news_logged,
+        "skew_snapshots": skew_logged,
     }
 
 

@@ -102,8 +102,10 @@ class TestMultiUserBackgroundConcurrency:
             "trading.services.background_jobs._publish",
             capture,
         )
-        # Avoid optional GEX path side effects
+        # Avoid optional snapshot-logger side effects
         monkeypatch.setenv("EVOLVE_GEX_SNAPSHOT_LOG", "0")
+        monkeypatch.setenv("EVOLVE_NEWS_SENTIMENT_SNAPSHOT_LOG", "0")
+        monkeypatch.setenv("EVOLVE_SKEW_SNAPSHOT_LOG", "0")
 
         t_tick0 = time.perf_counter()
         stats = asyncio.run(background_tick())
@@ -200,6 +202,8 @@ class TestMultiUserBackgroundConcurrency:
             lambda: users,
         )
         monkeypatch.setenv("EVOLVE_GEX_SNAPSHOT_LOG", "0")
+        monkeypatch.setenv("EVOLVE_NEWS_SENTIMENT_SNAPSHOT_LOG", "0")
+        monkeypatch.setenv("EVOLVE_SKEW_SNAPSHOT_LOG", "0")
 
         def limits(uid: str):
             time.sleep(0.35)  # network-ish delay per user

@@ -1,0 +1,388 @@
+{
+  "success": true,
+  "signal_name": "momentum",
+  "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Momentum research: ETF time-series and small-basket cross-sectional relative strength. Monthly decision dates. Skew / stress diagnostics are situational awareness for diversification vs vol-selling \u2014 not a second live gate. recommend_live never auto-wires.",
+  "period": "5y",
+  "predeclared_trials": [
+    {
+      "label": "form_12_1",
+      "formation": "12_1",
+      "lookback": 252,
+      "skip": 21,
+      "hold": 21,
+      "step_size": 21
+    },
+    {
+      "label": "form_3_1",
+      "formation": "3_1",
+      "lookback": 63,
+      "skip": 21,
+      "hold": 21,
+      "step_size": 21
+    }
+  ],
+  "n_trials": 2,
+  "trial_justification": "Two trials only: formation 12_1 (lookback=252, skip=21) citing Jegadeesh & Titman (1993) and Moskowitz, Ooi & Pedersen (2012) TSMOM; formation 3_1 (lookback=63, skip=21) as the shorter retail monthly-rebalance analogue with the same skip-month. Hold/step=21 fixed. Not expanded after inspecting DSR.",
+  "ordering_note": "Formation windows and baskets fixed before this run; not selected after inspecting DSR.",
+  "hold_days": 21,
+  "step_size": 21,
+  "timestamp": "2026-07-16T01:36:25.209052+00:00",
+  "sections": {
+    "etf_tsmom": {
+      "success": true,
+      "signal_name": "momentum_etf_tsmom",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Momentum research: ETF time-series and small-basket cross-sectional relative strength. Monthly decision dates. Skew / stress diagnostics are situational awareness for diversification vs vol-selling \u2014 not a second live gate. recommend_live never auto-wires.",
+      "target": {
+        "kind": "forward_return",
+        "horizon": 21,
+        "benchmark": null,
+        "vol_window": null
+      },
+      "universe": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "form_12_1",
+          "formation": "12_1",
+          "lookback": 252,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21
+        },
+        {
+          "label": "form_3_1",
+          "formation": "3_1",
+          "lookback": 63,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21
+        }
+      ],
+      "trial_justification": "Two trials only: formation 12_1 (lookback=252, skip=21) citing Jegadeesh & Titman (1993) and Moskowitz, Ooi & Pedersen (2012) TSMOM; formation 3_1 (lookback=63, skip=21) as the shorter retail monthly-rebalance analogue with the same skip-month. Hold/step=21 fixed. Not expanded after inspecting DSR.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 21,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": false,
+      "deflated_sharpe": {
+        "deflated_sharpe": 0.92,
+        "expected_max_sharpe_under_null": 0.1144,
+        "n_trials": 2,
+        "interpretation": "uncertain - could be selection luck"
+      },
+      "champion": {
+        "params": {
+          "formation": "12_1",
+          "lookback": 252,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21
+        },
+        "label": "form_12_1",
+        "train_stats": {
+          "win_rate": 0.4722,
+          "avg_pnl": 0.006184,
+          "total_pnl": 0.445244,
+          "sharpe": 0.1194,
+          "n": 72
+        }
+      },
+      "test": {
+        "n_obs": 66,
+        "stats": {
+          "win_rate": 0.6515,
+          "avg_pnl": 0.01383,
+          "total_pnl": 0.912767,
+          "sharpe": 0.2924,
+          "n": 66
+        }
+      },
+      "trials": [
+        {
+          "label": "form_12_1",
+          "formation": "12_1",
+          "lookback": 252,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21,
+          "train_stats": {
+            "win_rate": 0.4722,
+            "avg_pnl": 0.006184,
+            "total_pnl": 0.445244,
+            "sharpe": 0.1194,
+            "n": 72
+          },
+          "n_obs": 72,
+          "score": 0.1194
+        },
+        {
+          "label": "form_3_1",
+          "formation": "3_1",
+          "lookback": 63,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21,
+          "train_stats": {
+            "win_rate": 0.4242,
+            "avg_pnl": -0.010008,
+            "total_pnl": -0.990759,
+            "sharpe": -0.192,
+            "n": 99
+          },
+          "n_obs": 99,
+          "score": -0.192
+        }
+      ],
+      "timestamp": "2026-07-16T01:36:27.399137+00:00",
+      "error": null,
+      "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+      "extra": {
+        "mode": "tsmom",
+        "basket": [
+          "SPY",
+          "QQQ",
+          "IWM"
+        ]
+      },
+      "train_end_idx": 752,
+      "test_start_idx": 773,
+      "n_common_dates": 1254,
+      "date_range": {
+        "start": "2021-07-16",
+        "end": "2026-07-15",
+        "train_end": "2024-07-12",
+        "test_start": "2024-08-13"
+      },
+      "basket": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "mode": "tsmom",
+      "diversifier_vs_vol_selling": {
+        "oos_skew": 0.469497256904883,
+        "oos_stats_diagnostic": {
+          "win_rate": 0.6515,
+          "avg_pnl": 0.01383,
+          "total_pnl": 0.912767,
+          "sharpe": 0.2924,
+          "n": 66
+        },
+        "stress_split": {
+          "high_vol": {
+            "win_rate": 0.1667,
+            "avg_pnl": -0.02744,
+            "total_pnl": -0.329281,
+            "sharpe": -0.8643,
+            "n": 12
+          },
+          "low_vol": {
+            "win_rate": 0.7593,
+            "avg_pnl": 0.023001,
+            "total_pnl": 1.242048,
+            "sharpe": 0.5064,
+            "n": 54
+          },
+          "high_vol_skew": 0.666729438972419,
+          "low_vol_skew": 0.43261431298229963,
+          "n_high_vol": 12,
+          "n_low_vol": 54
+        },
+        "note": "Vol-selling structures previously tested are characteristically negative-skew / steamroller. Momentum is hypothesized to show positive skew and better stress behavior (diversifier). OOS payoff skew=0.469 is POSITIVE \u2014 risk shape differs from vol-selling in the expected direction. High-vol-window OOS Sharpe (-0.8643) < low-vol (0.5064) \u2014 does not show stress outperformance in this sample."
+      }
+    },
+    "equity_xs": {
+      "success": true,
+      "signal_name": "momentum_equity_xs",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Momentum research: ETF time-series and small-basket cross-sectional relative strength. Monthly decision dates. Skew / stress diagnostics are situational awareness for diversification vs vol-selling \u2014 not a second live gate. recommend_live never auto-wires.",
+      "target": {
+        "kind": "forward_return",
+        "horizon": 21,
+        "benchmark": null,
+        "vol_window": null
+      },
+      "universe": [
+        "AAPL",
+        "MSFT",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "NVDA",
+        "JPM",
+        "JNJ",
+        "XOM",
+        "WMT"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "form_12_1",
+          "formation": "12_1",
+          "lookback": 252,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21
+        },
+        {
+          "label": "form_3_1",
+          "formation": "3_1",
+          "lookback": 63,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21
+        }
+      ],
+      "trial_justification": "Two trials only: formation 12_1 (lookback=252, skip=21) citing Jegadeesh & Titman (1993) and Moskowitz, Ooi & Pedersen (2012) TSMOM; formation 3_1 (lookback=63, skip=21) as the shorter retail monthly-rebalance analogue with the same skip-month. Hold/step=21 fixed. Not expanded after inspecting DSR.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 21,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": false,
+      "deflated_sharpe": {
+        "deflated_sharpe": 0.013,
+        "expected_max_sharpe_under_null": 0.0282,
+        "n_trials": 2,
+        "interpretation": "indistinguishable from lucky noise across this many trials"
+      },
+      "champion": {
+        "params": {
+          "formation": "3_1",
+          "lookback": 63,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21
+        },
+        "label": "form_3_1",
+        "train_stats": {
+          "win_rate": 0.503,
+          "avg_pnl": 0.006478,
+          "total_pnl": 2.137676,
+          "sharpe": 0.0693,
+          "n": 330
+        }
+      },
+      "test": {
+        "n_obs": 220,
+        "stats": {
+          "win_rate": 0.4409,
+          "avg_pnl": -0.01009,
+          "total_pnl": -2.219825,
+          "sharpe": -0.1229,
+          "n": 220
+        }
+      },
+      "trials": [
+        {
+          "label": "form_12_1",
+          "formation": "12_1",
+          "lookback": 252,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21,
+          "train_stats": {
+            "win_rate": 0.4667,
+            "avg_pnl": -0.000661,
+            "total_pnl": -0.158626,
+            "sharpe": -0.0074,
+            "n": 240
+          },
+          "n_obs": 240,
+          "score": -0.0074
+        },
+        {
+          "label": "form_3_1",
+          "formation": "3_1",
+          "lookback": 63,
+          "skip": 21,
+          "hold": 21,
+          "step_size": 21,
+          "train_stats": {
+            "win_rate": 0.503,
+            "avg_pnl": 0.006478,
+            "total_pnl": 2.137676,
+            "sharpe": 0.0693,
+            "n": 330
+          },
+          "n_obs": 330,
+          "score": 0.0693
+        }
+      ],
+      "timestamp": "2026-07-16T01:36:29.439686+00:00",
+      "error": null,
+      "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+      "extra": {
+        "mode": "xs",
+        "basket": [
+          "AAPL",
+          "MSFT",
+          "GOOGL",
+          "AMZN",
+          "META",
+          "NVDA",
+          "JPM",
+          "JNJ",
+          "XOM",
+          "WMT"
+        ]
+      },
+      "train_end_idx": 752,
+      "test_start_idx": 773,
+      "n_common_dates": 1254,
+      "date_range": {
+        "start": "2021-07-16",
+        "end": "2026-07-15",
+        "train_end": "2024-07-12",
+        "test_start": "2024-08-13"
+      },
+      "basket": [
+        "AAPL",
+        "MSFT",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "NVDA",
+        "JPM",
+        "JNJ",
+        "XOM",
+        "WMT"
+      ],
+      "mode": "xs",
+      "diversifier_vs_vol_selling": {
+        "oos_skew": -0.40835734346941194,
+        "oos_stats_diagnostic": {
+          "win_rate": 0.4409,
+          "avg_pnl": -0.01009,
+          "total_pnl": -2.219825,
+          "sharpe": -0.1229,
+          "n": 220
+        },
+        "stress_split": {
+          "high_vol": {
+            "win_rate": 0.4375,
+            "avg_pnl": -0.013869,
+            "total_pnl": -1.109534,
+            "sharpe": -0.1696,
+            "n": 80
+          },
+          "low_vol": {
+            "win_rate": 0.4429,
+            "avg_pnl": -0.007931,
+            "total_pnl": -1.110291,
+            "sharpe": -0.0961,
+            "n": 140
+          },
+          "high_vol_skew": -0.1254724491784386,
+          "low_vol_skew": -0.5642064577045274,
+          "n_high_vol": 80,
+          "n_low_vol": 140
+        },
+        "note": "Vol-selling structures previously tested are characteristically negative-skew / steamroller. Momentum is hypothesized to show positive skew and better stress behavior (diversifier). OOS payoff skew=-0.408 is NEGATIVE \u2014 does NOT exhibit the classic momentum positive-skew diversifier property here. High-vol-window OOS Sharpe (-0.1696) < low-vol (-0.0961) \u2014 does not show stress outperformance in this sample."
+      }
+    }
+  },
+  "recommend_live": false,
+  "error": null,
+  "note": "Null / not significant on momentum OOS+DSR across predeclared formations \u2014 leave research-only (acceptable). Skew/stress diagnostics still reported when observations exist."
+}

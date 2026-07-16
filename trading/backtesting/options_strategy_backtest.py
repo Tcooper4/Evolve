@@ -68,6 +68,12 @@ class OptionsStructureParams:
     reentry_gap_days: int = DEFAULT_REENTRY_GAP_DAYS
     risk_free: float = RISK_FREE_DEFAULT
     multiplier: float = 100.0
+    # Optional entry gate: require trailing IV/VIX percentile >= threshold.
+    # None = no regime filter (legacy behavior). Uses
+    # ``options_vix_sizing.vix_trailing_percentile`` on the IV series
+    # (percentile is scale-invariant, so VIX/100 panels are fine).
+    min_iv_percentile: Optional[float] = None
+    iv_percentile_lookback: int = 252
 
 
 def black_scholes_price(
@@ -331,6 +337,8 @@ def simulate_structure_trades(
     trades: List[Dict[str, Any]] = []
     i = 0
     max_i = len(dates) - int(params.dte) - 2
+    min_pct = params.min_iv_percentile
+    lookback = int(params.iv_percentile_lookback or 252)
     while i < max_i:
         d0 = dates[i]
         s0 = float(spot.loc[d0])
@@ -338,6 +346,30 @@ def simulate_structure_trades(
         if s0 <= 0 or iv0 <= 0:
             i += 1
             continue
+
+        # Causal IV-percentile entry gate (Bakshi–Kapadia-style elevated-vol filter)
+        if min_pct is not None:
+            try:
+                from trading.portfolio.options_vix_sizing import (
+                    vix_trailing_percentile,
+                )
+
+                # Only history through entry bar (no peek-ahead)
+                iv_hist = iv.iloc[: i + 1]
+                stats = vix_trailing_percentile(iv_hist, lookback=lookback)
+                pct = stats.get("percentile")
+                if (
+                    not stats.get("sufficient")
+                    or pct is None
+                    or float(pct) < float(min_pct)
+                ):
+                    i += 1
+                    continue
+            except Exception as e:
+                logger.debug("IV percentile gate failed at %s: %s", d0, e)
+                i += 1
+                continue
+
         legs = build_structure_legs(params, s0, iv0)
         if not legs:
             i += 1
@@ -385,7 +417,7 @@ def simulate_structure_trades(
             exit_i, exit_reason = j, "expiry_window"
 
         pnl_dollars = float(pnl_credit_units) * float(params.multiplier)
-        trades.append({
+        trade_row = {
             "entry_date": str(pd.Timestamp(d0).date()),
             "exit_date": str(pd.Timestamp(dates[exit_i]).date()),
             "entry_credit": round(entry_credit, 4),
@@ -395,7 +427,10 @@ def simulate_structure_trades(
             "strikes": {lg.name: lg.strike for lg in legs},
             "entry_spot": round(s0, 4),
             "exit_spot": round(float(spot.iloc[exit_i]), 4),
-        })
+        }
+        if min_pct is not None:
+            trade_row["min_iv_percentile"] = float(min_pct)
+        trades.append(trade_row)
         i = exit_i + max(1, int(params.reentry_gap_days))
 
     pnls = np.array([t["pnl_dollars"] for t in trades], dtype=float)
@@ -579,6 +614,8 @@ def run_options_structure_oos_pooled(
     apply_costs: bool = True,
     grid: Optional[Sequence[Tuple[float, float]]] = None,
     grid_justification: str = "",
+    min_iv_percentile: Optional[float] = None,
+    iv_percentile_lookback: int = 252,
 ) -> Dict[str, Any]:
     """Pooled purged OOS across symbols (shared calendar split + DSR).
 
@@ -586,6 +623,9 @@ def run_options_structure_oos_pooled(
     inspecting DSR. Trades from all symbols are pooled for train scoring
     and OOS evaluation so more observations are genuine, not repeated
     single-name runs averaged loosely.
+
+    ``min_iv_percentile`` optionally gates entries via causal trailing
+    VIX/IV percentile (see ``OptionsStructureParams``).
     """
     syms = [str(s).strip().upper() for s in symbols if str(s).strip()]
     out: Dict[str, Any] = {
@@ -598,6 +638,8 @@ def run_options_structure_oos_pooled(
         "disclosure": DISCLOSURE,
         "recommend_live": False,
         "grid_justification": grid_justification,
+        "min_iv_percentile": min_iv_percentile,
+        "iv_percentile_lookback": int(iv_percentile_lookback),
         "error": None,
     }
     if not syms:
@@ -640,6 +682,10 @@ def run_options_structure_oos_pooled(
         strategy=strategy,  # type: ignore[arg-type]
         dte=int(dte),
         exit_dte_floor=int(exit_dte_floor),
+        min_iv_percentile=(
+            None if min_iv_percentile is None else float(min_iv_percentile)
+        ),
+        iv_percentile_lookback=int(iv_percentile_lookback),
     )
 
     trials: List[Dict[str, Any]] = []

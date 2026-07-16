@@ -1,0 +1,149 @@
+{
+  "success": true,
+  "signal_name": "put_credit_iv_filtered",
+  "basket": [
+    "SPY",
+    "QQQ",
+    "IWM"
+  ],
+  "period": "max",
+  "dte": 1,
+  "actual_tested": "1DTE_daily_close_pooled_iv_filtered",
+  "proxy_for": "0DTE",
+  "strategy": "put_credit_spread",
+  "predeclared_grid": [
+    [
+      0.2,
+      0.05
+    ],
+    [
+      0.25,
+      0.05
+    ],
+    [
+      0.2,
+      0.06
+    ]
+  ],
+  "n_trials": 3,
+  "grid_justification": "Same Phase-2 refined N=3 delta/wing grid as options_structure_refined (not expanded). This run tests a NEW entry-regime hypothesis only.",
+  "min_iv_percentile": 0.5,
+  "iv_percentile_lookback": 252,
+  "iv_gate_justification": "Single predeclared threshold min_iv_percentile=0.50 (lookback=252 via vix_trailing_percentile): midpoint of the practitioner 40\u201360 IV-percentile short-premium entry band; Bakshi & Kapadia (2003) predict larger VRP in elevated-vol regimes. Not retuned after DSR.",
+  "hypothesis": "NEW hypothesis test (IV-regime filtered entry on put credit), NOT a re-grid of the prior unfiltered PCS OOS. A null here means the regime-filter idea does not rescue this structure \u2014 do not chase alternate thresholds on the same window.",
+  "ordering_note": "Grid, basket, and IV threshold fixed before this run; threshold will not be re-tuned after inspecting DSR.",
+  "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. IV-FILTERED PCS: causal trailing VIX percentile gate (min=0.5, lookback=252) before entry. 1DTE daily-close proxy; pooled SPY/QQQ/IWM; same N=3 structure grid.",
+  "timestamp": "2026-07-16T01:42:56.912609+00:00",
+  "result": {
+    "success": true,
+    "symbols": [
+      "SPY",
+      "QQQ",
+      "IWM"
+    ],
+    "strategy": "put_credit_spread",
+    "period": "max",
+    "dte": 1,
+    "method": "sweep_oos_pooled",
+    "disclosure": "Modeled via Black-Scholes on real underlying + VIX history, not real historical option quotes \u2014 informative about strategy structure and cost realism, not a precise historical fill replay. IV-FILTERED PCS: causal trailing VIX percentile gate (min=0.5, lookback=252) before entry. 1DTE daily-close proxy; pooled SPY/QQQ/IWM; same N=3 structure grid.",
+    "recommend_live": false,
+    "grid_justification": "Same Phase-2 refined N=3 delta/wing grid as options_structure_refined (not expanded). This run tests a NEW entry-regime hypothesis only.",
+    "min_iv_percentile": 0.5,
+    "iv_percentile_lookback": 252,
+    "error": null,
+    "iv_proxy": "VIX_close/100",
+    "purge_days": 5,
+    "train_end_idx": 3942,
+    "test_start_idx": 3947,
+    "n_common_bars": 6571,
+    "n_trials": 3,
+    "predeclared_grid": [
+      [
+        0.2,
+        0.05
+      ],
+      [
+        0.25,
+        0.05
+      ],
+      [
+        0.2,
+        0.06
+      ]
+    ],
+    "champion": {
+      "short_delta": 0.25,
+      "wing_pct": 0.05,
+      "train_stats": {
+        "win_rate": 0.7493,
+        "avg_pnl": -11.52,
+        "total_pnl": -11856.7,
+        "sharpe": -0.2056,
+        "n": 1029
+      }
+    },
+    "test": {
+      "n_trades": 717,
+      "stats": {
+        "win_rate": 0.8061,
+        "avg_pnl": -10.99,
+        "total_pnl": -7882.7,
+        "sharpe": -0.0636,
+        "n": 717
+      }
+    },
+    "deflated_sharpe": {
+      "deflated_sharpe": 0.0411,
+      "expected_max_sharpe_under_null": 0.0014,
+      "n_trials": 3,
+      "interpretation": "indistinguishable from lucky noise across this many trials"
+    },
+    "trials": [
+      {
+        "short_delta": 0.2,
+        "wing_pct": 0.05,
+        "train_stats": {
+          "win_rate": 0.7707,
+          "avg_pnl": -11.04,
+          "total_pnl": -11364.4,
+          "sharpe": -0.2089,
+          "n": 1029
+        },
+        "n_trades": 1029,
+        "score": -0.2089
+      },
+      {
+        "short_delta": 0.25,
+        "wing_pct": 0.05,
+        "train_stats": {
+          "win_rate": 0.7493,
+          "avg_pnl": -11.52,
+          "total_pnl": -11856.7,
+          "sharpe": -0.2056,
+          "n": 1029
+        },
+        "n_trades": 1029,
+        "score": -0.2056
+      },
+      {
+        "short_delta": 0.2,
+        "wing_pct": 0.06,
+        "train_stats": {
+          "win_rate": 0.7707,
+          "avg_pnl": -11.37,
+          "total_pnl": -11701.53,
+          "sharpe": -0.2078,
+          "n": 1029
+        },
+        "n_trades": 1029,
+        "score": -0.2078
+      }
+    ],
+    "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+    "hypothesis": "NEW hypothesis test (IV-regime filtered entry on put credit), NOT a re-grid of the prior unfiltered PCS OOS. A null here means the regime-filter idea does not rescue this structure \u2014 do not chase alternate thresholds on the same window.",
+    "iv_gate_justification": "Single predeclared threshold min_iv_percentile=0.50 (lookback=252 via vix_trailing_percentile): midpoint of the practitioner 40\u201360 IV-percentile short-premium entry band; Bakshi & Kapadia (2003) predict larger VRP in elevated-vol regimes. Not retuned after DSR.",
+    "ordering_note": "Grid, basket, and IV threshold fixed before this run; threshold will not be re-tuned after inspecting DSR."
+  },
+  "recommend_live": false,
+  "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome)."
+}
