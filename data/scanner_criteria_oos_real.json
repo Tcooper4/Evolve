@@ -1,0 +1,1170 @@
+{
+  "success": true,
+  "signal_name": "scanner_quick_technical",
+  "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Scanner Phase 5: causal quick_technical re-screen of DEFAULT_UNIVERSE vs same-universe random control. Live scan_market is last-bar only; this module reimplements the price Quick-Score path as-of each T. recommend_live never auto-wires.",
+  "filters": [
+    "quick_technical"
+  ],
+  "universe_size": 58,
+  "universe": [
+    "AAPL",
+    "ABBV",
+    "ABT",
+    "ACN",
+    "ADBE",
+    "AMD",
+    "AMGN",
+    "AMZN",
+    "AVGO",
+    "BAC",
+    "BLK",
+    "CB",
+    "COST",
+    "CRM",
+    "CSCO",
+    "CVX",
+    "DHR",
+    "EEM",
+    "GLD",
+    "GOOGL",
+    "GS",
+    "HD",
+    "HYG",
+    "INTC",
+    "INTU",
+    "ISRG",
+    "IWM",
+    "JNJ",
+    "JPM",
+    "KO",
+    "LIN",
+    "LLY",
+    "MA",
+    "MCD",
+    "META",
+    "MRK",
+    "MSFT",
+    "NFLX",
+    "NKE",
+    "NOW",
+    "NVDA",
+    "ORCL",
+    "PEP",
+    "PG",
+    "PLD",
+    "QCOM",
+    "QQQ",
+    "SLV",
+    "SPGI",
+    "SPY",
+    "TLT",
+    "TMO",
+    "TSLA",
+    "TXN",
+    "UNH",
+    "V",
+    "WMT",
+    "XOM"
+  ],
+  "period": "2y",
+  "predeclared_trials": [
+    {
+      "label": "qs6.0_h5",
+      "filters": "quick_technical",
+      "min_quick_score": 6.0,
+      "horizon": 5
+    },
+    {
+      "label": "qs6.0_h10",
+      "filters": "quick_technical",
+      "min_quick_score": 6.0,
+      "horizon": 10
+    },
+    {
+      "label": "qs6.0_h20",
+      "filters": "quick_technical",
+      "min_quick_score": 6.0,
+      "horizon": 20
+    },
+    {
+      "label": "qs6.5_h5",
+      "filters": "quick_technical",
+      "min_quick_score": 6.5,
+      "horizon": 5
+    },
+    {
+      "label": "qs6.5_h10",
+      "filters": "quick_technical",
+      "min_quick_score": 6.5,
+      "horizon": 10
+    },
+    {
+      "label": "qs6.5_h20",
+      "filters": "quick_technical",
+      "min_quick_score": 6.5,
+      "horizon": 20
+    }
+  ],
+  "n_trials": 6,
+  "trial_justification": "Six trials only: min_quick_score {6.0, 6.5} \u00d7 hold horizons {5, 10, 20}. Filter locked to quick_technical (scan_market default). 6.0 is the code default threshold; 6.5 is the Scanner UI default slider. Horizons cover ~1\u20134 weeks after a pass \u2014 aligned with the scanner's 20d lookbacks. Universe = DEFAULT_UNIVERSE; control = same-universe count-matched random (seed=42). Alt-data filters excluded (not causal as-of T). Locked before any real-data DSR evaluation.",
+  "ordering_note": "Thresholds, horizons, universe, and control seed fixed before this run; not selected after inspecting DSR.",
+  "control_seed": 42,
+  "timestamp": "2026-07-16T01:09:10.319035+00:00",
+  "real": {
+    "5": {
+      "success": true,
+      "signal_name": "scanner_real_h5",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Scanner Phase 5: causal quick_technical re-screen of DEFAULT_UNIVERSE vs same-universe random control. Live scan_market is last-bar only; this module reimplements the price Quick-Score path as-of each T. recommend_live never auto-wires.",
+      "target": {
+        "kind": "forward_return",
+        "horizon": 5,
+        "benchmark": null,
+        "vol_window": null
+      },
+      "universe": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "V",
+        "XOM",
+        "UNH",
+        "LLY",
+        "JNJ",
+        "WMT",
+        "MA",
+        "PG",
+        "HD",
+        "MRK",
+        "CVX",
+        "ABBV",
+        "ORCL",
+        "BAC",
+        "COST",
+        "PEP",
+        "KO",
+        "CSCO",
+        "CRM",
+        "MCD",
+        "NKE",
+        "TMO",
+        "ABT",
+        "ACN",
+        "LIN",
+        "DHR",
+        "TXN",
+        "INTC",
+        "QCOM",
+        "AMD",
+        "NFLX",
+        "ADBE",
+        "NOW",
+        "INTU",
+        "ISRG",
+        "AMGN",
+        "PLD",
+        "CB",
+        "SPGI",
+        "GS",
+        "BLK",
+        "SPY",
+        "QQQ",
+        "IWM",
+        "GLD",
+        "SLV",
+        "TLT",
+        "HYG",
+        "EEM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "qs6.0_h5",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 5
+        },
+        {
+          "label": "qs6.5_h5",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 5
+        }
+      ],
+      "trial_justification": "Six trials only: min_quick_score {6.0, 6.5} \u00d7 hold horizons {5, 10, 20}. Filter locked to quick_technical (scan_market default). 6.0 is the code default threshold; 6.5 is the Scanner UI default slider. Horizons cover ~1\u20134 weeks after a pass \u2014 aligned with the scanner's 20d lookbacks. Universe = DEFAULT_UNIVERSE; control = same-universe count-matched random (seed=42). Alt-data filters excluded (not causal as-of T). Locked before any real-data DSR evaluation.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 5,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": true,
+      "deflated_sharpe": {
+        "deflated_sharpe": 1.0,
+        "expected_max_sharpe_under_null": 0.0029,
+        "n_trials": 2,
+        "interpretation": "likely real edge (survives the search)"
+      },
+      "champion": {
+        "params": {
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 5
+        },
+        "label": "qs6.0_h5",
+        "train_stats": {
+          "win_rate": 0.5383,
+          "avg_pnl": 0.00261,
+          "total_pnl": 16.071457,
+          "sharpe": 0.0644,
+          "n": 6158
+        }
+      },
+      "test": {
+        "n_obs": 4598,
+        "stats": {
+          "win_rate": 0.5226,
+          "avg_pnl": 0.004046,
+          "total_pnl": 18.603396,
+          "sharpe": 0.0756,
+          "n": 4598
+        }
+      },
+      "trials": [
+        {
+          "label": "qs6.0_h5",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 5,
+          "train_stats": {
+            "win_rate": 0.5383,
+            "avg_pnl": 0.00261,
+            "total_pnl": 16.071457,
+            "sharpe": 0.0644,
+            "n": 6158
+          },
+          "n_obs": 6158,
+          "score": 0.0644
+        },
+        {
+          "label": "qs6.5_h5",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 5,
+          "train_stats": {
+            "win_rate": 0.546,
+            "avg_pnl": 0.002424,
+            "total_pnl": 8.031438,
+            "sharpe": 0.0566,
+            "n": 3313
+          },
+          "n_obs": 3313,
+          "score": 0.0566
+        }
+      ],
+      "timestamp": "2026-07-16T01:09:39.054673+00:00",
+      "error": null,
+      "note": "Champion cleared DSR>=0.95 on OOS \u2014 still research; not auto-wired.",
+      "extra": {
+        "arm": "real",
+        "horizon": 5,
+        "filters": [
+          "quick_technical"
+        ]
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 305,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-02"
+      }
+    },
+    "10": {
+      "success": true,
+      "signal_name": "scanner_real_h10",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Scanner Phase 5: causal quick_technical re-screen of DEFAULT_UNIVERSE vs same-universe random control. Live scan_market is last-bar only; this module reimplements the price Quick-Score path as-of each T. recommend_live never auto-wires.",
+      "target": {
+        "kind": "forward_return",
+        "horizon": 10,
+        "benchmark": null,
+        "vol_window": null
+      },
+      "universe": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "V",
+        "XOM",
+        "UNH",
+        "LLY",
+        "JNJ",
+        "WMT",
+        "MA",
+        "PG",
+        "HD",
+        "MRK",
+        "CVX",
+        "ABBV",
+        "ORCL",
+        "BAC",
+        "COST",
+        "PEP",
+        "KO",
+        "CSCO",
+        "CRM",
+        "MCD",
+        "NKE",
+        "TMO",
+        "ABT",
+        "ACN",
+        "LIN",
+        "DHR",
+        "TXN",
+        "INTC",
+        "QCOM",
+        "AMD",
+        "NFLX",
+        "ADBE",
+        "NOW",
+        "INTU",
+        "ISRG",
+        "AMGN",
+        "PLD",
+        "CB",
+        "SPGI",
+        "GS",
+        "BLK",
+        "SPY",
+        "QQQ",
+        "IWM",
+        "GLD",
+        "SLV",
+        "TLT",
+        "HYG",
+        "EEM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "qs6.0_h10",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 10
+        },
+        {
+          "label": "qs6.5_h10",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 10
+        }
+      ],
+      "trial_justification": "Six trials only: min_quick_score {6.0, 6.5} \u00d7 hold horizons {5, 10, 20}. Filter locked to quick_technical (scan_market default). 6.0 is the code default threshold; 6.5 is the Scanner UI default slider. Horizons cover ~1\u20134 weeks after a pass \u2014 aligned with the scanner's 20d lookbacks. Universe = DEFAULT_UNIVERSE; control = same-universe count-matched random (seed=42). Alt-data filters excluded (not causal as-of T). Locked before any real-data DSR evaluation.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 10,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": true,
+      "deflated_sharpe": {
+        "deflated_sharpe": 1.0,
+        "expected_max_sharpe_under_null": 0.001,
+        "n_trials": 2,
+        "interpretation": "likely real edge (survives the search)"
+      },
+      "champion": {
+        "params": {
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 10
+        },
+        "label": "qs6.0_h10",
+        "train_stats": {
+          "win_rate": 0.5502,
+          "avg_pnl": 0.004996,
+          "total_pnl": 30.763078,
+          "sharpe": 0.0877,
+          "n": 6158
+        }
+      },
+      "test": {
+        "n_obs": 4315,
+        "stats": {
+          "win_rate": 0.5377,
+          "avg_pnl": 0.008178,
+          "total_pnl": 35.289538,
+          "sharpe": 0.1068,
+          "n": 4315
+        }
+      },
+      "trials": [
+        {
+          "label": "qs6.0_h10",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 10,
+          "train_stats": {
+            "win_rate": 0.5502,
+            "avg_pnl": 0.004996,
+            "total_pnl": 30.763078,
+            "sharpe": 0.0877,
+            "n": 6158
+          },
+          "n_obs": 6158,
+          "score": 0.0877
+        },
+        {
+          "label": "qs6.5_h10",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 10,
+          "train_stats": {
+            "win_rate": 0.5554,
+            "avg_pnl": 0.005117,
+            "total_pnl": 16.953052,
+            "sharpe": 0.0849,
+            "n": 3313
+          },
+          "n_obs": 3313,
+          "score": 0.0849
+        }
+      ],
+      "timestamp": "2026-07-16T01:09:40.153740+00:00",
+      "error": null,
+      "note": "Champion cleared DSR>=0.95 on OOS \u2014 still research; not auto-wired.",
+      "extra": {
+        "arm": "real",
+        "horizon": 10,
+        "filters": [
+          "quick_technical"
+        ]
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 310,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-09"
+      }
+    },
+    "20": {
+      "success": true,
+      "signal_name": "scanner_real_h20",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Scanner Phase 5: causal quick_technical re-screen of DEFAULT_UNIVERSE vs same-universe random control. Live scan_market is last-bar only; this module reimplements the price Quick-Score path as-of each T. recommend_live never auto-wires.",
+      "target": {
+        "kind": "forward_return",
+        "horizon": 20,
+        "benchmark": null,
+        "vol_window": null
+      },
+      "universe": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "V",
+        "XOM",
+        "UNH",
+        "LLY",
+        "JNJ",
+        "WMT",
+        "MA",
+        "PG",
+        "HD",
+        "MRK",
+        "CVX",
+        "ABBV",
+        "ORCL",
+        "BAC",
+        "COST",
+        "PEP",
+        "KO",
+        "CSCO",
+        "CRM",
+        "MCD",
+        "NKE",
+        "TMO",
+        "ABT",
+        "ACN",
+        "LIN",
+        "DHR",
+        "TXN",
+        "INTC",
+        "QCOM",
+        "AMD",
+        "NFLX",
+        "ADBE",
+        "NOW",
+        "INTU",
+        "ISRG",
+        "AMGN",
+        "PLD",
+        "CB",
+        "SPGI",
+        "GS",
+        "BLK",
+        "SPY",
+        "QQQ",
+        "IWM",
+        "GLD",
+        "SLV",
+        "TLT",
+        "HYG",
+        "EEM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "qs6.0_h20",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 20
+        },
+        {
+          "label": "qs6.5_h20",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 20
+        }
+      ],
+      "trial_justification": "Six trials only: min_quick_score {6.0, 6.5} \u00d7 hold horizons {5, 10, 20}. Filter locked to quick_technical (scan_market default). 6.0 is the code default threshold; 6.5 is the Scanner UI default slider. Horizons cover ~1\u20134 weeks after a pass \u2014 aligned with the scanner's 20d lookbacks. Universe = DEFAULT_UNIVERSE; control = same-universe count-matched random (seed=42). Alt-data filters excluded (not causal as-of T). Locked before any real-data DSR evaluation.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 20,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": true,
+      "deflated_sharpe": {
+        "deflated_sharpe": 1.0,
+        "expected_max_sharpe_under_null": 0.0064,
+        "n_trials": 2,
+        "interpretation": "likely real edge (survives the search)"
+      },
+      "champion": {
+        "params": {
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 20
+        },
+        "label": "qs6.0_h20",
+        "train_stats": {
+          "win_rate": 0.5674,
+          "avg_pnl": 0.011281,
+          "total_pnl": 69.46918,
+          "sharpe": 0.1335,
+          "n": 6158
+        }
+      },
+      "test": {
+        "n_obs": 3826,
+        "stats": {
+          "win_rate": 0.5227,
+          "avg_pnl": 0.015313,
+          "total_pnl": 58.585732,
+          "sharpe": 0.1245,
+          "n": 3826
+        }
+      },
+      "trials": [
+        {
+          "label": "qs6.0_h20",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 20,
+          "train_stats": {
+            "win_rate": 0.5674,
+            "avg_pnl": 0.011281,
+            "total_pnl": 69.46918,
+            "sharpe": 0.1335,
+            "n": 6158
+          },
+          "n_obs": 6158,
+          "score": 0.1335
+        },
+        {
+          "label": "qs6.5_h20",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 20,
+          "train_stats": {
+            "win_rate": 0.5581,
+            "avg_pnl": 0.010412,
+            "total_pnl": 34.496529,
+            "sharpe": 0.1162,
+            "n": 3313
+          },
+          "n_obs": 3313,
+          "score": 0.1162
+        }
+      ],
+      "timestamp": "2026-07-16T01:09:41.161888+00:00",
+      "error": null,
+      "note": "Champion cleared DSR>=0.95 on OOS \u2014 still research; not auto-wired.",
+      "extra": {
+        "arm": "real",
+        "horizon": 20,
+        "filters": [
+          "quick_technical"
+        ]
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 320,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-23"
+      }
+    }
+  },
+  "random_control": {
+    "5": {
+      "success": true,
+      "signal_name": "scanner_random_control_h5",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Scanner Phase 5: causal quick_technical re-screen of DEFAULT_UNIVERSE vs same-universe random control. Live scan_market is last-bar only; this module reimplements the price Quick-Score path as-of each T. recommend_live never auto-wires.",
+      "target": {
+        "kind": "forward_return",
+        "horizon": 5,
+        "benchmark": null,
+        "vol_window": null
+      },
+      "universe": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "V",
+        "XOM",
+        "UNH",
+        "LLY",
+        "JNJ",
+        "WMT",
+        "MA",
+        "PG",
+        "HD",
+        "MRK",
+        "CVX",
+        "ABBV",
+        "ORCL",
+        "BAC",
+        "COST",
+        "PEP",
+        "KO",
+        "CSCO",
+        "CRM",
+        "MCD",
+        "NKE",
+        "TMO",
+        "ABT",
+        "ACN",
+        "LIN",
+        "DHR",
+        "TXN",
+        "INTC",
+        "QCOM",
+        "AMD",
+        "NFLX",
+        "ADBE",
+        "NOW",
+        "INTU",
+        "ISRG",
+        "AMGN",
+        "PLD",
+        "CB",
+        "SPGI",
+        "GS",
+        "BLK",
+        "SPY",
+        "QQQ",
+        "IWM",
+        "GLD",
+        "SLV",
+        "TLT",
+        "HYG",
+        "EEM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "qs6.0_h5",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 5
+        },
+        {
+          "label": "qs6.5_h5",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 5
+        }
+      ],
+      "trial_justification": "Six trials only: min_quick_score {6.0, 6.5} \u00d7 hold horizons {5, 10, 20}. Filter locked to quick_technical (scan_market default). 6.0 is the code default threshold; 6.5 is the Scanner UI default slider. Horizons cover ~1\u20134 weeks after a pass \u2014 aligned with the scanner's 20d lookbacks. Universe = DEFAULT_UNIVERSE; control = same-universe count-matched random (seed=42). Alt-data filters excluded (not causal as-of T). Locked before any real-data DSR evaluation.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 5,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": true,
+      "deflated_sharpe": {
+        "deflated_sharpe": 0.9999,
+        "expected_max_sharpe_under_null": 0.0118,
+        "n_trials": 2,
+        "interpretation": "likely real edge (survives the search)"
+      },
+      "champion": {
+        "params": {
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 5
+        },
+        "label": "qs6.0_h5",
+        "train_stats": {
+          "win_rate": 0.5388,
+          "avg_pnl": 0.002842,
+          "total_pnl": 17.499402,
+          "sharpe": 0.0642,
+          "n": 6158
+        }
+      },
+      "test": {
+        "n_obs": 4598,
+        "stats": {
+          "win_rate": 0.5254,
+          "avg_pnl": 0.003587,
+          "total_pnl": 16.492648,
+          "sharpe": 0.0691,
+          "n": 4598
+        }
+      },
+      "trials": [
+        {
+          "label": "qs6.0_h5",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 5,
+          "train_stats": {
+            "win_rate": 0.5388,
+            "avg_pnl": 0.002842,
+            "total_pnl": 17.499402,
+            "sharpe": 0.0642,
+            "n": 6158
+          },
+          "n_obs": 6158,
+          "score": 0.0642
+        },
+        {
+          "label": "qs6.5_h5",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 5,
+          "train_stats": {
+            "win_rate": 0.5243,
+            "avg_pnl": 0.001324,
+            "total_pnl": 4.387923,
+            "sharpe": 0.0322,
+            "n": 3313
+          },
+          "n_obs": 3313,
+          "score": 0.0322
+        }
+      ],
+      "timestamp": "2026-07-16T01:09:42.149228+00:00",
+      "error": null,
+      "note": "Champion cleared DSR>=0.95 on OOS \u2014 still research; not auto-wired.",
+      "extra": {
+        "arm": "random_control",
+        "horizon": 5,
+        "filters": [
+          "quick_technical"
+        ]
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 305,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-02"
+      }
+    },
+    "10": {
+      "success": true,
+      "signal_name": "scanner_random_control_h10",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Scanner Phase 5: causal quick_technical re-screen of DEFAULT_UNIVERSE vs same-universe random control. Live scan_market is last-bar only; this module reimplements the price Quick-Score path as-of each T. recommend_live never auto-wires.",
+      "target": {
+        "kind": "forward_return",
+        "horizon": 10,
+        "benchmark": null,
+        "vol_window": null
+      },
+      "universe": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "V",
+        "XOM",
+        "UNH",
+        "LLY",
+        "JNJ",
+        "WMT",
+        "MA",
+        "PG",
+        "HD",
+        "MRK",
+        "CVX",
+        "ABBV",
+        "ORCL",
+        "BAC",
+        "COST",
+        "PEP",
+        "KO",
+        "CSCO",
+        "CRM",
+        "MCD",
+        "NKE",
+        "TMO",
+        "ABT",
+        "ACN",
+        "LIN",
+        "DHR",
+        "TXN",
+        "INTC",
+        "QCOM",
+        "AMD",
+        "NFLX",
+        "ADBE",
+        "NOW",
+        "INTU",
+        "ISRG",
+        "AMGN",
+        "PLD",
+        "CB",
+        "SPGI",
+        "GS",
+        "BLK",
+        "SPY",
+        "QQQ",
+        "IWM",
+        "GLD",
+        "SLV",
+        "TLT",
+        "HYG",
+        "EEM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "qs6.0_h10",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 10
+        },
+        {
+          "label": "qs6.5_h10",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 10
+        }
+      ],
+      "trial_justification": "Six trials only: min_quick_score {6.0, 6.5} \u00d7 hold horizons {5, 10, 20}. Filter locked to quick_technical (scan_market default). 6.0 is the code default threshold; 6.5 is the Scanner UI default slider. Horizons cover ~1\u20134 weeks after a pass \u2014 aligned with the scanner's 20d lookbacks. Universe = DEFAULT_UNIVERSE; control = same-universe count-matched random (seed=42). Alt-data filters excluded (not causal as-of T). Locked before any real-data DSR evaluation.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 10,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": true,
+      "deflated_sharpe": {
+        "deflated_sharpe": 1.0,
+        "expected_max_sharpe_under_null": 0.0082,
+        "n_trials": 2,
+        "interpretation": "likely real edge (survives the search)"
+      },
+      "champion": {
+        "params": {
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 10
+        },
+        "label": "qs6.0_h10",
+        "train_stats": {
+          "win_rate": 0.5411,
+          "avg_pnl": 0.005671,
+          "total_pnl": 34.922252,
+          "sharpe": 0.0927,
+          "n": 6158
+        }
+      },
+      "test": {
+        "n_obs": 4315,
+        "stats": {
+          "win_rate": 0.5265,
+          "avg_pnl": 0.005938,
+          "total_pnl": 25.62344,
+          "sharpe": 0.0797,
+          "n": 4315
+        }
+      },
+      "trials": [
+        {
+          "label": "qs6.0_h10",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 10,
+          "train_stats": {
+            "win_rate": 0.5411,
+            "avg_pnl": 0.005671,
+            "total_pnl": 34.922252,
+            "sharpe": 0.0927,
+            "n": 6158
+          },
+          "n_obs": 6158,
+          "score": 0.0927
+        },
+        {
+          "label": "qs6.5_h10",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 10,
+          "train_stats": {
+            "win_rate": 0.5334,
+            "avg_pnl": 0.00419,
+            "total_pnl": 13.882187,
+            "sharpe": 0.0703,
+            "n": 3313
+          },
+          "n_obs": 3313,
+          "score": 0.0703
+        }
+      ],
+      "timestamp": "2026-07-16T01:09:45.302178+00:00",
+      "error": null,
+      "note": "Champion cleared DSR>=0.95 on OOS \u2014 still research; not auto-wired.",
+      "extra": {
+        "arm": "random_control",
+        "horizon": 10,
+        "filters": [
+          "quick_technical"
+        ]
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 310,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-09"
+      }
+    },
+    "20": {
+      "success": true,
+      "signal_name": "scanner_random_control_h20",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Scanner Phase 5: causal quick_technical re-screen of DEFAULT_UNIVERSE vs same-universe random control. Live scan_market is last-bar only; this module reimplements the price Quick-Score path as-of each T. recommend_live never auto-wires.",
+      "target": {
+        "kind": "forward_return",
+        "horizon": 20,
+        "benchmark": null,
+        "vol_window": null
+      },
+      "universe": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "V",
+        "XOM",
+        "UNH",
+        "LLY",
+        "JNJ",
+        "WMT",
+        "MA",
+        "PG",
+        "HD",
+        "MRK",
+        "CVX",
+        "ABBV",
+        "ORCL",
+        "BAC",
+        "COST",
+        "PEP",
+        "KO",
+        "CSCO",
+        "CRM",
+        "MCD",
+        "NKE",
+        "TMO",
+        "ABT",
+        "ACN",
+        "LIN",
+        "DHR",
+        "TXN",
+        "INTC",
+        "QCOM",
+        "AMD",
+        "NFLX",
+        "ADBE",
+        "NOW",
+        "INTU",
+        "ISRG",
+        "AMGN",
+        "PLD",
+        "CB",
+        "SPGI",
+        "GS",
+        "BLK",
+        "SPY",
+        "QQQ",
+        "IWM",
+        "GLD",
+        "SLV",
+        "TLT",
+        "HYG",
+        "EEM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "qs6.0_h20",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 20
+        },
+        {
+          "label": "qs6.5_h20",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 20
+        }
+      ],
+      "trial_justification": "Six trials only: min_quick_score {6.0, 6.5} \u00d7 hold horizons {5, 10, 20}. Filter locked to quick_technical (scan_market default). 6.0 is the code default threshold; 6.5 is the Scanner UI default slider. Horizons cover ~1\u20134 weeks after a pass \u2014 aligned with the scanner's 20d lookbacks. Universe = DEFAULT_UNIVERSE; control = same-universe count-matched random (seed=42). Alt-data filters excluded (not causal as-of T). Locked before any real-data DSR evaluation.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 20,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": true,
+      "deflated_sharpe": {
+        "deflated_sharpe": 0.9909,
+        "expected_max_sharpe_under_null": 0.0155,
+        "n_trials": 2,
+        "interpretation": "likely real edge (survives the search)"
+      },
+      "champion": {
+        "params": {
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 20
+        },
+        "label": "qs6.0_h20",
+        "train_stats": {
+          "win_rate": 0.5554,
+          "avg_pnl": 0.010773,
+          "total_pnl": 66.343065,
+          "sharpe": 0.1248,
+          "n": 6158
+        }
+      },
+      "test": {
+        "n_obs": 3826,
+        "stats": {
+          "win_rate": 0.5052,
+          "avg_pnl": 0.006,
+          "total_pnl": 22.955639,
+          "sharpe": 0.0537,
+          "n": 3826
+        }
+      },
+      "trials": [
+        {
+          "label": "qs6.0_h20",
+          "filters": "quick_technical",
+          "min_quick_score": 6.0,
+          "horizon": 20,
+          "train_stats": {
+            "win_rate": 0.5554,
+            "avg_pnl": 0.010773,
+            "total_pnl": 66.343065,
+            "sharpe": 0.1248,
+            "n": 6158
+          },
+          "n_obs": 6158,
+          "score": 0.1248
+        },
+        {
+          "label": "qs6.5_h20",
+          "filters": "quick_technical",
+          "min_quick_score": 6.5,
+          "horizon": 20,
+          "train_stats": {
+            "win_rate": 0.5433,
+            "avg_pnl": 0.007008,
+            "total_pnl": 23.217264,
+            "sharpe": 0.0827,
+            "n": 3313
+          },
+          "n_obs": 3313,
+          "score": 0.0827
+        }
+      ],
+      "timestamp": "2026-07-16T01:09:46.765970+00:00",
+      "error": null,
+      "note": "Champion cleared DSR>=0.95 on OOS \u2014 still research; not auto-wired.",
+      "extra": {
+        "arm": "random_control",
+        "horizon": 20,
+        "filters": [
+          "quick_technical"
+        ]
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 320,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-23"
+      }
+    }
+  },
+  "recommend_live": false,
+  "error": null,
+  "pass_census": {
+    "qs_6.0": {
+      "n_pass_events": 11022,
+      "mean_daily_pass_rate": 21.95617529880478
+    },
+    "qs_6.5": {
+      "n_pass_events": 6279,
+      "mean_daily_pass_rate": 12.50796812749004
+    }
+  },
+  "real_clears_gate": true,
+  "control_clears_gate": true,
+  "note": "Real scanner passes cleared DSR but so did the same-universe random control \u2014 screening timing not isolated from universe drift; leave research-only."
+}

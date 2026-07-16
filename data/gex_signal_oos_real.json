@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "signal_name": "gex_regime",
+  "disclosure": "GEX signal research: requires forward-accumulated daily snapshots in data/gex_regime_snapshots.db (free chains have no historical GEX). Null / deferred is expected until the store clears the locked floor. recommend_live never auto-wires.",
+  "timestamp": "2026-07-16T00:55:58.666802+00:00",
+  "ordering_note": "Availability floor and future trial justification were fixed before inspecting DSR; floor not lowered after this audit.",
+  "trial_justification_when_ready": "When data clears the floor: trials will be predeclared over regime encodings (e.g. long_gamma=+1 / short_gamma=-1 / near_flip=0 as a vol-regime score, plus a near_flip vs not binary) \u00d7 targets {next_day_abs_return, directional_persistence} with horizon=1 and purge=1. Floor MIN_ROWS_PER_SYMBOL=60 locked to the logger docstring; not lowered after inspecting thin samples.",
+  "availability": {
+    "db_path": "C:\\Users\\Thomas\\OneDrive\\Desktop\\Dashboard\\evolve_clean\\data\\gex_regime_snapshots.db",
+    "db_exists": true,
+    "total_rows": 0,
+    "by_symbol": {},
+    "date_range": null,
+    "rows_with_next_day_abs_return": 0,
+    "rows_with_next_day_range_pct": 0,
+    "min_rows_per_symbol_required": 60,
+    "preferred_rows_per_symbol": 120,
+    "symbols_meeting_floor": [],
+    "enough_for_oos": false,
+    "logging_hint": "Set EVOLVE_GEX_SNAPSHOT_LOG=1 (and optional EVOLVE_GEX_SNAPSHOT_SYMBOLS=SPY,QQQ) then let background jobs accumulate daily rows.",
+    "reason": "Snapshot DB exists but has 0 rows \u2014 zero forward-accumulated GEX observations. Edge test deferred."
+  },
+  "recommend_live": false,
+  "oos": null,
+  "status": "insufficient_data",
+  "deferred": true,
+  "note": "Snapshot DB exists but has 0 rows \u2014 zero forward-accumulated GEX observations. Edge test deferred."
+}

@@ -1,22 +1,14 @@
 {
-  "success": true,
-  "total_rows": 107,
-  "return_7d_filled_after_backfill": 96,
-  "return_7d_still_null_too_young": 11,
-  "symbols": 90,
+  "timestamp": "2026-07-16T01:02:23.173210+00:00",
   "symbols_clearing_min_rows_30": 0,
-  "global_pool_clears_min_rows_100": false,
-  "max_filled_per_symbol_approx": 4,
+  "return_7d_filled_after_backfill": 0,
+  "return_7d_still_null_too_young": 0,
+  "max_filled_per_symbol_approx": 0,
   "thresholds": {
     "per_symbol_min_rows": 30,
     "global_min_rows": 100
   },
   "ic_active": false,
-  "spot_check_spy_weights": {
-    "technical": 0.3,
-    "momentum": 0.35,
-    "sentiment": 0.2,
-    "fundamental": 0.15
-  },
-  "finding": "NOT enough real data for IC-weighting. After backfilling 96 eligible return_7d rows, still 0 symbols at >=30 filled and global pool 96 < 100. IC path falls back to static weights (Technical 30 / Momentum 35 / Sentiment 20 / Fundamental 15). Calendar-time accumulation \u2014 not a bug."
+  "finding": "signal_scores.db does not exist \u2014 zero filled score\u2192return pairs. Edge test deferred.",
+  "source": "trading.research.ai_score_edge.audit_ai_score_availability"
 }

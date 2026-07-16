@@ -1,0 +1,775 @@
+{
+  "success": true,
+  "signal_name": "chart_patterns",
+  "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Chart-pattern Phase 2: causal expanding-window ChartPatternDetector with peak_confirm_lag=7. Full-series detect_all() is NOT used for scoring. Shuffle-date control included. recommend_live never auto-wires.",
+  "basket": [
+    "SPY",
+    "QQQ",
+    "IWM"
+  ],
+  "period": "2y",
+  "predeclared_trials": [
+    {
+      "label": "classic_reversal_h5",
+      "pattern_set": "classic_reversal",
+      "horizon": 5,
+      "min_confidence": 0.6,
+      "peak_lag": 7,
+      "scan_step": 5
+    },
+    {
+      "label": "classic_reversal_h10",
+      "pattern_set": "classic_reversal",
+      "horizon": 10,
+      "min_confidence": 0.6,
+      "peak_lag": 7,
+      "scan_step": 5
+    },
+    {
+      "label": "classic_reversal_h20",
+      "pattern_set": "classic_reversal",
+      "horizon": 20,
+      "min_confidence": 0.6,
+      "peak_lag": 7,
+      "scan_step": 5
+    },
+    {
+      "label": "triangles_h5",
+      "pattern_set": "triangles",
+      "horizon": 5,
+      "min_confidence": 0.6,
+      "peak_lag": 7,
+      "scan_step": 5
+    },
+    {
+      "label": "triangles_h10",
+      "pattern_set": "triangles",
+      "horizon": 10,
+      "min_confidence": 0.6,
+      "peak_lag": 7,
+      "scan_step": 5
+    },
+    {
+      "label": "triangles_h20",
+      "pattern_set": "triangles",
+      "horizon": 20,
+      "min_confidence": 0.6,
+      "peak_lag": 7,
+      "scan_step": 5
+    }
+  ],
+  "n_trials": 6,
+  "trial_justification": "Six trials only: pattern_set {classic_reversal, triangles} \u00d7 hold horizons {5, 10, 20}. classic_reversal = H&S / inverse H&S / double top / double bottom (most-cited TA reversals); triangles = ascending/descending (classic breakout structures). Horizons cover ~1\u20134 weeks post-completion. min_confidence=0.6, peak_lag=7, scan_step=5 fixed (detector signal floor + peak-window confirmation + weekly causal rescan). Shuffle control seed=42 locked. Not expanded after inspecting DSR.",
+  "ordering_note": "Trial set, pattern families, horizons, and shuffle seed were fixed before this run; not selected after inspecting DSR.",
+  "peak_confirm_lag": 7,
+  "scan_step": 5,
+  "min_confidence": 0.6,
+  "shuffle_seed": 42,
+  "timestamp": "2026-07-16T00:51:56.056059+00:00",
+  "real": {
+    "5": {
+      "success": true,
+      "signal_name": "chart_patterns_real_h5",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Chart-pattern Phase 2: causal expanding-window ChartPatternDetector with peak_confirm_lag=7. Full-series detect_all() is NOT used for scoring. Shuffle-date control included. recommend_live never auto-wires.",
+      "target": {
+        "kind": "hit_miss",
+        "horizon": 5,
+        "benchmark": "zero",
+        "vol_window": null
+      },
+      "universe": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "classic_reversal_h5",
+          "pattern_set": "classic_reversal",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        {
+          "label": "triangles_h5",
+          "pattern_set": "triangles",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        }
+      ],
+      "trial_justification": "Six trials only: pattern_set {classic_reversal, triangles} \u00d7 hold horizons {5, 10, 20}. classic_reversal = H&S / inverse H&S / double top / double bottom (most-cited TA reversals); triangles = ascending/descending (classic breakout structures). Horizons cover ~1\u20134 weeks post-completion. min_confidence=0.6, peak_lag=7, scan_step=5 fixed (detector signal floor + peak-window confirmation + weekly causal rescan). Shuffle control seed=42 locked. Not expanded after inspecting DSR.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 5,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": false,
+      "deflated_sharpe": null,
+      "champion": {
+        "params": {
+          "pattern_set": "triangles",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        "label": "triangles_h5",
+        "train_stats": {
+          "win_rate": 0.5,
+          "avg_pnl": 0.0,
+          "total_pnl": 0.0,
+          "sharpe": 0.0,
+          "n": 2
+        }
+      },
+      "test": null,
+      "trials": [
+        {
+          "label": "classic_reversal_h5",
+          "pattern_set": "classic_reversal",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": null,
+            "avg_pnl": null,
+            "total_pnl": 0.0,
+            "sharpe": null,
+            "n": 0
+          },
+          "n_obs": 0,
+          "score": -999.0
+        },
+        {
+          "label": "triangles_h5",
+          "pattern_set": "triangles",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": 0.5,
+            "avg_pnl": 0.0,
+            "total_pnl": 0.0,
+            "sharpe": 0.0,
+            "n": 2
+          },
+          "n_obs": 2,
+          "score": 0.0
+        }
+      ],
+      "timestamp": "2026-07-16T00:51:56.056059+00:00",
+      "error": null,
+      "note": "Champion train n=2 < min_train_obs=8 \u2014 null / underpowered.",
+      "extra": {
+        "arm": "real",
+        "horizon": 5,
+        "peak_lag": 7,
+        "scan_step": 5
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 305,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-02"
+      }
+    },
+    "10": {
+      "success": true,
+      "signal_name": "chart_patterns_real_h10",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Chart-pattern Phase 2: causal expanding-window ChartPatternDetector with peak_confirm_lag=7. Full-series detect_all() is NOT used for scoring. Shuffle-date control included. recommend_live never auto-wires.",
+      "target": {
+        "kind": "hit_miss",
+        "horizon": 10,
+        "benchmark": "zero",
+        "vol_window": null
+      },
+      "universe": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "classic_reversal_h10",
+          "pattern_set": "classic_reversal",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        {
+          "label": "triangles_h10",
+          "pattern_set": "triangles",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        }
+      ],
+      "trial_justification": "Six trials only: pattern_set {classic_reversal, triangles} \u00d7 hold horizons {5, 10, 20}. classic_reversal = H&S / inverse H&S / double top / double bottom (most-cited TA reversals); triangles = ascending/descending (classic breakout structures). Horizons cover ~1\u20134 weeks post-completion. min_confidence=0.6, peak_lag=7, scan_step=5 fixed (detector signal floor + peak-window confirmation + weekly causal rescan). Shuffle control seed=42 locked. Not expanded after inspecting DSR.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 10,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": false,
+      "deflated_sharpe": null,
+      "champion": {
+        "params": {
+          "pattern_set": "triangles",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        "label": "triangles_h10",
+        "train_stats": {
+          "win_rate": 1.0,
+          "avg_pnl": 1.0,
+          "total_pnl": 2.0,
+          "sharpe": 10.0,
+          "n": 2
+        }
+      },
+      "test": null,
+      "trials": [
+        {
+          "label": "classic_reversal_h10",
+          "pattern_set": "classic_reversal",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": null,
+            "avg_pnl": null,
+            "total_pnl": 0.0,
+            "sharpe": null,
+            "n": 0
+          },
+          "n_obs": 0,
+          "score": -999.0
+        },
+        {
+          "label": "triangles_h10",
+          "pattern_set": "triangles",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": 1.0,
+            "avg_pnl": 1.0,
+            "total_pnl": 2.0,
+            "sharpe": 10.0,
+            "n": 2
+          },
+          "n_obs": 2,
+          "score": 10.0
+        }
+      ],
+      "timestamp": "2026-07-16T00:52:00.472625+00:00",
+      "error": null,
+      "note": "Champion train n=2 < min_train_obs=8 \u2014 null / underpowered.",
+      "extra": {
+        "arm": "real",
+        "horizon": 10,
+        "peak_lag": 7,
+        "scan_step": 5
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 310,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-09"
+      }
+    },
+    "20": {
+      "success": true,
+      "signal_name": "chart_patterns_real_h20",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Chart-pattern Phase 2: causal expanding-window ChartPatternDetector with peak_confirm_lag=7. Full-series detect_all() is NOT used for scoring. Shuffle-date control included. recommend_live never auto-wires.",
+      "target": {
+        "kind": "hit_miss",
+        "horizon": 20,
+        "benchmark": "zero",
+        "vol_window": null
+      },
+      "universe": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "classic_reversal_h20",
+          "pattern_set": "classic_reversal",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        {
+          "label": "triangles_h20",
+          "pattern_set": "triangles",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        }
+      ],
+      "trial_justification": "Six trials only: pattern_set {classic_reversal, triangles} \u00d7 hold horizons {5, 10, 20}. classic_reversal = H&S / inverse H&S / double top / double bottom (most-cited TA reversals); triangles = ascending/descending (classic breakout structures). Horizons cover ~1\u20134 weeks post-completion. min_confidence=0.6, peak_lag=7, scan_step=5 fixed (detector signal floor + peak-window confirmation + weekly causal rescan). Shuffle control seed=42 locked. Not expanded after inspecting DSR.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 20,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": false,
+      "deflated_sharpe": null,
+      "champion": {
+        "params": {
+          "pattern_set": "triangles",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        "label": "triangles_h20",
+        "train_stats": {
+          "win_rate": 1.0,
+          "avg_pnl": 1.0,
+          "total_pnl": 2.0,
+          "sharpe": 10.0,
+          "n": 2
+        }
+      },
+      "test": null,
+      "trials": [
+        {
+          "label": "classic_reversal_h20",
+          "pattern_set": "classic_reversal",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": null,
+            "avg_pnl": null,
+            "total_pnl": 0.0,
+            "sharpe": null,
+            "n": 0
+          },
+          "n_obs": 0,
+          "score": -999.0
+        },
+        {
+          "label": "triangles_h20",
+          "pattern_set": "triangles",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": 1.0,
+            "avg_pnl": 1.0,
+            "total_pnl": 2.0,
+            "sharpe": 10.0,
+            "n": 2
+          },
+          "n_obs": 2,
+          "score": 10.0
+        }
+      ],
+      "timestamp": "2026-07-16T00:52:00.501591+00:00",
+      "error": null,
+      "note": "Champion train n=2 < min_train_obs=8 \u2014 null / underpowered.",
+      "extra": {
+        "arm": "real",
+        "horizon": 20,
+        "peak_lag": 7,
+        "scan_step": 5
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 320,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-23"
+      }
+    }
+  },
+  "shuffle_control": {
+    "5": {
+      "success": true,
+      "signal_name": "chart_patterns_shuffle_control_h5",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Chart-pattern Phase 2: causal expanding-window ChartPatternDetector with peak_confirm_lag=7. Full-series detect_all() is NOT used for scoring. Shuffle-date control included. recommend_live never auto-wires.",
+      "target": {
+        "kind": "hit_miss",
+        "horizon": 5,
+        "benchmark": "zero",
+        "vol_window": null
+      },
+      "universe": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "classic_reversal_h5",
+          "pattern_set": "classic_reversal",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        {
+          "label": "triangles_h5",
+          "pattern_set": "triangles",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        }
+      ],
+      "trial_justification": "Six trials only: pattern_set {classic_reversal, triangles} \u00d7 hold horizons {5, 10, 20}. classic_reversal = H&S / inverse H&S / double top / double bottom (most-cited TA reversals); triangles = ascending/descending (classic breakout structures). Horizons cover ~1\u20134 weeks post-completion. min_confidence=0.6, peak_lag=7, scan_step=5 fixed (detector signal floor + peak-window confirmation + weekly causal rescan). Shuffle control seed=42 locked. Not expanded after inspecting DSR.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 5,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": false,
+      "deflated_sharpe": null,
+      "champion": {
+        "params": {
+          "pattern_set": "triangles",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        "label": "triangles_h5",
+        "train_stats": {
+          "win_rate": 1.0,
+          "avg_pnl": 1.0,
+          "total_pnl": 3.0,
+          "sharpe": 10.0,
+          "n": 3
+        }
+      },
+      "test": null,
+      "trials": [
+        {
+          "label": "classic_reversal_h5",
+          "pattern_set": "classic_reversal",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": null,
+            "avg_pnl": null,
+            "total_pnl": 0.0,
+            "sharpe": null,
+            "n": 0
+          },
+          "n_obs": 0,
+          "score": -999.0
+        },
+        {
+          "label": "triangles_h5",
+          "pattern_set": "triangles",
+          "horizon": 5,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": 1.0,
+            "avg_pnl": 1.0,
+            "total_pnl": 3.0,
+            "sharpe": 10.0,
+            "n": 3
+          },
+          "n_obs": 3,
+          "score": 10.0
+        }
+      ],
+      "timestamp": "2026-07-16T00:52:00.529471+00:00",
+      "error": null,
+      "note": "Champion train n=3 < min_train_obs=8 \u2014 null / underpowered.",
+      "extra": {
+        "arm": "shuffle_control",
+        "horizon": 5,
+        "peak_lag": 7,
+        "scan_step": 5
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 305,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-02"
+      }
+    },
+    "10": {
+      "success": true,
+      "signal_name": "chart_patterns_shuffle_control_h10",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Chart-pattern Phase 2: causal expanding-window ChartPatternDetector with peak_confirm_lag=7. Full-series detect_all() is NOT used for scoring. Shuffle-date control included. recommend_live never auto-wires.",
+      "target": {
+        "kind": "hit_miss",
+        "horizon": 10,
+        "benchmark": "zero",
+        "vol_window": null
+      },
+      "universe": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "classic_reversal_h10",
+          "pattern_set": "classic_reversal",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        {
+          "label": "triangles_h10",
+          "pattern_set": "triangles",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        }
+      ],
+      "trial_justification": "Six trials only: pattern_set {classic_reversal, triangles} \u00d7 hold horizons {5, 10, 20}. classic_reversal = H&S / inverse H&S / double top / double bottom (most-cited TA reversals); triangles = ascending/descending (classic breakout structures). Horizons cover ~1\u20134 weeks post-completion. min_confidence=0.6, peak_lag=7, scan_step=5 fixed (detector signal floor + peak-window confirmation + weekly causal rescan). Shuffle control seed=42 locked. Not expanded after inspecting DSR.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 10,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": false,
+      "deflated_sharpe": null,
+      "champion": {
+        "params": {
+          "pattern_set": "triangles",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        "label": "triangles_h10",
+        "train_stats": {
+          "win_rate": 1.0,
+          "avg_pnl": 1.0,
+          "total_pnl": 3.0,
+          "sharpe": 10.0,
+          "n": 3
+        }
+      },
+      "test": null,
+      "trials": [
+        {
+          "label": "classic_reversal_h10",
+          "pattern_set": "classic_reversal",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": null,
+            "avg_pnl": null,
+            "total_pnl": 0.0,
+            "sharpe": null,
+            "n": 0
+          },
+          "n_obs": 0,
+          "score": -999.0
+        },
+        {
+          "label": "triangles_h10",
+          "pattern_set": "triangles",
+          "horizon": 10,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": 1.0,
+            "avg_pnl": 1.0,
+            "total_pnl": 3.0,
+            "sharpe": 10.0,
+            "n": 3
+          },
+          "n_obs": 3,
+          "score": 10.0
+        }
+      ],
+      "timestamp": "2026-07-16T00:52:04.523047+00:00",
+      "error": null,
+      "note": "Champion train n=3 < min_train_obs=8 \u2014 null / underpowered.",
+      "extra": {
+        "arm": "shuffle_control",
+        "horizon": 10,
+        "peak_lag": 7,
+        "scan_step": 5
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 310,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-09"
+      }
+    },
+    "20": {
+      "success": true,
+      "signal_name": "chart_patterns_shuffle_control_h20",
+      "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Chart-pattern Phase 2: causal expanding-window ChartPatternDetector with peak_confirm_lag=7. Full-series detect_all() is NOT used for scoring. Shuffle-date control included. recommend_live never auto-wires.",
+      "target": {
+        "kind": "hit_miss",
+        "horizon": 20,
+        "benchmark": "zero",
+        "vol_window": null
+      },
+      "universe": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "predeclared_trials": [
+        {
+          "label": "classic_reversal_h20",
+          "pattern_set": "classic_reversal",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        {
+          "label": "triangles_h20",
+          "pattern_set": "triangles",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        }
+      ],
+      "trial_justification": "Six trials only: pattern_set {classic_reversal, triangles} \u00d7 hold horizons {5, 10, 20}. classic_reversal = H&S / inverse H&S / double top / double bottom (most-cited TA reversals); triangles = ascending/descending (classic breakout structures). Horizons cover ~1\u20134 weeks post-completion. min_confidence=0.6, peak_lag=7, scan_step=5 fixed (detector signal floor + peak-window confirmation + weekly causal rescan). Shuffle control seed=42 locked. Not expanded after inspecting DSR.",
+      "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+      "purge_bars": 20,
+      "train_frac": 0.6,
+      "n_trials": 2,
+      "recommend_live": false,
+      "deflated_sharpe": null,
+      "champion": {
+        "params": {
+          "pattern_set": "triangles",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5
+        },
+        "label": "triangles_h20",
+        "train_stats": {
+          "win_rate": 1.0,
+          "avg_pnl": 1.0,
+          "total_pnl": 3.0,
+          "sharpe": 10.0,
+          "n": 3
+        }
+      },
+      "test": null,
+      "trials": [
+        {
+          "label": "classic_reversal_h20",
+          "pattern_set": "classic_reversal",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": null,
+            "avg_pnl": null,
+            "total_pnl": 0.0,
+            "sharpe": null,
+            "n": 0
+          },
+          "n_obs": 0,
+          "score": -999.0
+        },
+        {
+          "label": "triangles_h20",
+          "pattern_set": "triangles",
+          "horizon": 20,
+          "min_confidence": 0.6,
+          "peak_lag": 7,
+          "scan_step": 5,
+          "train_stats": {
+            "win_rate": 1.0,
+            "avg_pnl": 1.0,
+            "total_pnl": 3.0,
+            "sharpe": 10.0,
+            "n": 3
+          },
+          "n_obs": 3,
+          "score": 10.0
+        }
+      ],
+      "timestamp": "2026-07-16T00:52:08.428864+00:00",
+      "error": null,
+      "note": "Champion train n=3 < min_train_obs=8 \u2014 null / underpowered.",
+      "extra": {
+        "arm": "shuffle_control",
+        "horizon": 20,
+        "peak_lag": 7,
+        "scan_step": 5
+      },
+      "train_end_idx": 300,
+      "test_start_idx": 320,
+      "n_common_dates": 501,
+      "date_range": {
+        "start": "2024-07-16",
+        "end": "2026-07-15",
+        "train_end": "2025-09-24",
+        "test_start": "2025-10-23"
+      }
+    }
+  },
+  "recommend_live": false,
+  "error": null,
+  "real_clears_gate": false,
+  "shuffle_clears_gate": false,
+  "note": "Insufficient causal pattern fires under the locked protocol (classic_reversal=0, triangles=6 on 2y SPY/QQQ/IWM with weekly scan + peak_lag=7). OOS+DSR is underpowered \u2014 defer meaningful edge claims until more events accumulate (longer history / denser scan would be a new predeclared experiment, not a post-hoc re-grid). recommend_live=false.",
+  "event_counts": {
+    "classic_reversal": {
+      "per_symbol": {
+        "SPY": 0,
+        "QQQ": 0,
+        "IWM": 0
+      },
+      "total": 0
+    },
+    "triangles": {
+      "per_symbol": {
+        "SPY": 0,
+        "QQQ": 6,
+        "IWM": 0
+      },
+      "total": 6
+    }
+  },
+  "status": "insufficient_events"
+}

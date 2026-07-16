@@ -1,0 +1,84 @@
+{
+  "success": true,
+  "signal_name": "ai_score_composite",
+  "disclosure": "AI Score signal research: requires filled score\u2192return_7d pairs in data/signal_scores.db. Prior IC audit found 0 symbols at 30+ filled; this phase re-checks. Null / deferred is expected until calendar time accumulates. recommend_live never auto-wires.",
+  "timestamp": "2026-07-16T01:02:08.412516+00:00",
+  "ordering_note": "Availability floors (30/symbol, 100 global) match the prior IC audit and were not lowered after this re-check.",
+  "trial_justification_when_ready": "When data clears the floor: trials will be predeclared over score sources {overall, technical, momentum, sentiment, fundamental} with target=forward_return horizon=7 (native store fill) and purge=7. Universe = symbols clearing 30 filled pairs (or global pool if that path activates first). Floors 30/100 locked to IC activation gates \u2014 not lowered after inspecting thin samples.",
+  "prior_audit_reference": "data/ic_score_audit.json",
+  "availability": {
+    "db_path": "data\\signal_scores.db",
+    "db_exists": true,
+    "min_rows_per_symbol_required": 30,
+    "global_min_rows_required": 100,
+    "just_filled": 0,
+    "total_rows": 107,
+    "return_7d_filled": 96,
+    "return_7d_still_null_too_young": 11,
+    "symbols": 90,
+    "symbols_clearing_min_rows_30": 0,
+    "symbols_meeting_floor": [],
+    "global_pool_clears_min_rows_100": false,
+    "max_filled_per_symbol": 4,
+    "top10_by_filled": [
+      {
+        "symbol": "AAPL",
+        "n_filled": 4,
+        "n_rows": 5
+      },
+      {
+        "symbol": "ADI",
+        "n_filled": 3,
+        "n_rows": 3
+      },
+      {
+        "symbol": "ANET",
+        "n_filled": 2,
+        "n_rows": 3
+      },
+      {
+        "symbol": "CF",
+        "n_filled": 2,
+        "n_rows": 2
+      },
+      {
+        "symbol": "FRT",
+        "n_filled": 2,
+        "n_rows": 2
+      },
+      {
+        "symbol": "RL",
+        "n_filled": 2,
+        "n_rows": 2
+      },
+      {
+        "symbol": "^GSPC",
+        "n_filled": 1,
+        "n_rows": 2
+      },
+      {
+        "symbol": "A",
+        "n_filled": 1,
+        "n_rows": 1
+      },
+      {
+        "symbol": "ABBV",
+        "n_filled": 1,
+        "n_rows": 1
+      },
+      {
+        "symbol": "ABNB",
+        "n_filled": 1,
+        "n_rows": 1
+      }
+    ],
+    "enough_for_oos": false,
+    "ic_active": false,
+    "reason": "NOT enough real data for AI Score edge OOS. 0 symbols at >=30 filled (max per symbol=4); global filled 96 < 100. Calendar-time accumulation \u2014 not a bug. Edge test deferred."
+  },
+  "recommend_live": false,
+  "oos": null,
+  "status": "insufficient_data",
+  "deferred": true,
+  "note": "NOT enough real data for AI Score edge OOS. 0 symbols at >=30 filled (max per symbol=4); global filled 96 < 100. Calendar-time accumulation \u2014 not a bug. Edge test deferred."
+}

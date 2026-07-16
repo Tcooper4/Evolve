@@ -1,0 +1,762 @@
+{
+  "success": true,
+  "signal_name": "base_ensemble_consensus",
+  "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. BASE ensemble Phase 1: ForecastRouter.get_consensus_forecast directional band (\u00b10.5% vs last close) on SPY/QQQ/IWM. Expanding causal context only; monthly step_size \u2014 denser sampling would be a different (costlier) experiment, not a post-hoc re-grid of this one.",
+  "basket": [
+    "SPY",
+    "QQQ",
+    "IWM"
+  ],
+  "period": "2y",
+  "predeclared_trials": [
+    {
+      "label": "h5_core3",
+      "horizon": 5,
+      "models": "core3",
+      "step_size": 21
+    },
+    {
+      "label": "h5_base5",
+      "horizon": 5,
+      "models": "base5",
+      "step_size": 21
+    },
+    {
+      "label": "h7_core3",
+      "horizon": 7,
+      "models": "core3",
+      "step_size": 21
+    },
+    {
+      "label": "h7_base5",
+      "horizon": 7,
+      "models": "base5",
+      "step_size": 21
+    }
+  ],
+  "n_trials": 4,
+  "trial_justification": "Four trials only: horizons {5, 7} \u00d7 voter sets {core3, base5}. horizon=5 matches existing real-ticker / GNN baseline OOS; horizon=7 matches live consensus default; core3 is REAL_OOS_ENSEMBLE (arima/xgboost/ridge); base5 is DEFAULT_ENSEMBLE (adds catboost/prophet). step_size=21 fixed (monthly decision dates) to keep causal refits tractable \u2014 not a free parameter. Locked before any real-data DSR evaluation. Each horizon is scored with a matching forward target horizon so the 5d and 7d cells are not cross-contaminated.",
+  "ordering_note": "Trial set and justification fixed before this run; not selected after inspecting DSR.",
+  "step_size": 21,
+  "min_train_bars": 180,
+  "timestamp": "2026-07-16T00:37:00.128112+00:00",
+  "targets": {
+    "directional_vs_zero": {
+      "note": "hit_miss vs zero: does sign(consensus) match sign(fwd return)?",
+      "by_horizon": {
+        "5": {
+          "success": true,
+          "signal_name": "base_ensemble_directional_vs_zero_h5",
+          "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. BASE ensemble Phase 1: ForecastRouter.get_consensus_forecast directional band (\u00b10.5% vs last close) on SPY/QQQ/IWM. Expanding causal context only; monthly step_size \u2014 denser sampling would be a different (costlier) experiment, not a post-hoc re-grid of this one.",
+          "target": {
+            "kind": "hit_miss",
+            "horizon": 5,
+            "benchmark": "zero",
+            "vol_window": null
+          },
+          "universe": [
+            "SPY",
+            "QQQ",
+            "IWM"
+          ],
+          "predeclared_trials": [
+            {
+              "label": "h5_core3",
+              "horizon": 5,
+              "models": "core3",
+              "step_size": 21
+            },
+            {
+              "label": "h5_base5",
+              "horizon": 5,
+              "models": "base5",
+              "step_size": 21
+            }
+          ],
+          "trial_justification": "Four trials only: horizons {5, 7} \u00d7 voter sets {core3, base5}. horizon=5 matches existing real-ticker / GNN baseline OOS; horizon=7 matches live consensus default; core3 is REAL_OOS_ENSEMBLE (arima/xgboost/ridge); base5 is DEFAULT_ENSEMBLE (adds catboost/prophet). step_size=21 fixed (monthly decision dates) to keep causal refits tractable \u2014 not a free parameter. Locked before any real-data DSR evaluation. Each horizon is scored with a matching forward target horizon so the 5d and 7d cells are not cross-contaminated.",
+          "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+          "purge_bars": 5,
+          "train_frac": 0.6,
+          "n_trials": 2,
+          "recommend_live": false,
+          "deflated_sharpe": {
+            "deflated_sharpe": 0.6726,
+            "expected_max_sharpe_under_null": 0.1378,
+            "n_trials": 2,
+            "interpretation": "indistinguishable from lucky noise across this many trials"
+          },
+          "champion": {
+            "params": {
+              "horizon": 5,
+              "models": "core3",
+              "step_size": 21
+            },
+            "label": "h5_core3",
+            "train_stats": {
+              "win_rate": 0.3077,
+              "avg_pnl": -0.384615,
+              "total_pnl": -5.0,
+              "sharpe": -0.4003,
+              "n": 13
+            }
+          },
+          "test": {
+            "n_obs": 21,
+            "stats": {
+              "win_rate": 0.619,
+              "avg_pnl": 0.238095,
+              "total_pnl": 5.0,
+              "sharpe": 0.2392,
+              "n": 21
+            }
+          },
+          "trials": [
+            {
+              "label": "h5_core3",
+              "horizon": 5,
+              "models": "core3",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.3077,
+                "avg_pnl": -0.384615,
+                "total_pnl": -5.0,
+                "sharpe": -0.4003,
+                "n": 13
+              },
+              "n_obs": 13,
+              "score": -0.4003
+            },
+            {
+              "label": "h5_base5",
+              "horizon": 5,
+              "models": "base5",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.1875,
+                "avg_pnl": -0.625,
+                "total_pnl": -10.0,
+                "sharpe": -0.7752,
+                "n": 16
+              },
+              "n_obs": 16,
+              "score": -0.7752
+            }
+          ],
+          "timestamp": "2026-07-16T00:37:00.128112+00:00",
+          "error": null,
+          "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+          "extra": {
+            "step_size": 21,
+            "period": "2y",
+            "section": "directional_vs_zero"
+          },
+          "train_end_idx": 300,
+          "test_start_idx": 305,
+          "n_common_dates": 501,
+          "date_range": {
+            "start": "2024-07-16",
+            "end": "2026-07-15",
+            "train_end": "2025-09-24",
+            "test_start": "2025-10-02"
+          }
+        },
+        "7": {
+          "success": true,
+          "signal_name": "base_ensemble_directional_vs_zero_h7",
+          "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. BASE ensemble Phase 1: ForecastRouter.get_consensus_forecast directional band (\u00b10.5% vs last close) on SPY/QQQ/IWM. Expanding causal context only; monthly step_size \u2014 denser sampling would be a different (costlier) experiment, not a post-hoc re-grid of this one.",
+          "target": {
+            "kind": "hit_miss",
+            "horizon": 7,
+            "benchmark": "zero",
+            "vol_window": null
+          },
+          "universe": [
+            "SPY",
+            "QQQ",
+            "IWM"
+          ],
+          "predeclared_trials": [
+            {
+              "label": "h7_core3",
+              "horizon": 7,
+              "models": "core3",
+              "step_size": 21
+            },
+            {
+              "label": "h7_base5",
+              "horizon": 7,
+              "models": "base5",
+              "step_size": 21
+            }
+          ],
+          "trial_justification": "Four trials only: horizons {5, 7} \u00d7 voter sets {core3, base5}. horizon=5 matches existing real-ticker / GNN baseline OOS; horizon=7 matches live consensus default; core3 is REAL_OOS_ENSEMBLE (arima/xgboost/ridge); base5 is DEFAULT_ENSEMBLE (adds catboost/prophet). step_size=21 fixed (monthly decision dates) to keep causal refits tractable \u2014 not a free parameter. Locked before any real-data DSR evaluation. Each horizon is scored with a matching forward target horizon so the 5d and 7d cells are not cross-contaminated.",
+          "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+          "purge_bars": 7,
+          "train_frac": 0.6,
+          "n_trials": 2,
+          "recommend_live": false,
+          "deflated_sharpe": {
+            "deflated_sharpe": 0.6386,
+            "expected_max_sharpe_under_null": 0.0402,
+            "n_trials": 2,
+            "interpretation": "indistinguishable from lucky noise across this many trials"
+          },
+          "champion": {
+            "params": {
+              "horizon": 7,
+              "models": "core3",
+              "step_size": 21
+            },
+            "label": "h7_core3",
+            "train_stats": {
+              "win_rate": 0.3077,
+              "avg_pnl": -0.384615,
+              "total_pnl": -5.0,
+              "sharpe": -0.4003,
+              "n": 13
+            }
+          },
+          "test": {
+            "n_obs": 14,
+            "stats": {
+              "win_rate": 0.5714,
+              "avg_pnl": 0.142857,
+              "total_pnl": 2.0,
+              "sharpe": 0.1391,
+              "n": 14
+            }
+          },
+          "trials": [
+            {
+              "label": "h7_core3",
+              "horizon": 7,
+              "models": "core3",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.3077,
+                "avg_pnl": -0.384615,
+                "total_pnl": -5.0,
+                "sharpe": -0.4003,
+                "n": 13
+              },
+              "n_obs": 13,
+              "score": -0.4003
+            },
+            {
+              "label": "h7_base5",
+              "horizon": 7,
+              "models": "base5",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.2667,
+                "avg_pnl": -0.466667,
+                "total_pnl": -7.0,
+                "sharpe": -0.5098,
+                "n": 15
+              },
+              "n_obs": 15,
+              "score": -0.5098
+            }
+          ],
+          "timestamp": "2026-07-16T00:41:34.794958+00:00",
+          "error": null,
+          "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+          "extra": {
+            "step_size": 21,
+            "period": "2y",
+            "section": "directional_vs_zero"
+          },
+          "train_end_idx": 300,
+          "test_start_idx": 307,
+          "n_common_dates": 501,
+          "date_range": {
+            "start": "2024-07-16",
+            "end": "2026-07-15",
+            "train_end": "2025-09-24",
+            "test_start": "2025-10-06"
+          }
+        }
+      },
+      "recommend_live": false
+    },
+    "vs_persistence": {
+      "note": "hit_miss vs persistence (last 1d return as random-walk benchmark).",
+      "by_horizon": {
+        "5": {
+          "success": true,
+          "signal_name": "base_ensemble_vs_persistence_h5",
+          "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. BASE ensemble Phase 1: ForecastRouter.get_consensus_forecast directional band (\u00b10.5% vs last close) on SPY/QQQ/IWM. Expanding causal context only; monthly step_size \u2014 denser sampling would be a different (costlier) experiment, not a post-hoc re-grid of this one.",
+          "target": {
+            "kind": "hit_miss",
+            "horizon": 5,
+            "benchmark": "persistence",
+            "vol_window": null
+          },
+          "universe": [
+            "SPY",
+            "QQQ",
+            "IWM"
+          ],
+          "predeclared_trials": [
+            {
+              "label": "h5_core3",
+              "horizon": 5,
+              "models": "core3",
+              "step_size": 21
+            },
+            {
+              "label": "h5_base5",
+              "horizon": 5,
+              "models": "base5",
+              "step_size": 21
+            }
+          ],
+          "trial_justification": "Four trials only: horizons {5, 7} \u00d7 voter sets {core3, base5}. horizon=5 matches existing real-ticker / GNN baseline OOS; horizon=7 matches live consensus default; core3 is REAL_OOS_ENSEMBLE (arima/xgboost/ridge); base5 is DEFAULT_ENSEMBLE (adds catboost/prophet). step_size=21 fixed (monthly decision dates) to keep causal refits tractable \u2014 not a free parameter. Locked before any real-data DSR evaluation. Each horizon is scored with a matching forward target horizon so the 5d and 7d cells are not cross-contaminated.",
+          "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+          "purge_bars": 5,
+          "train_frac": 0.6,
+          "n_trials": 2,
+          "recommend_live": false,
+          "deflated_sharpe": {
+            "deflated_sharpe": 0.6211,
+            "expected_max_sharpe_under_null": 0.0552,
+            "n_trials": 2,
+            "interpretation": "indistinguishable from lucky noise across this many trials"
+          },
+          "champion": {
+            "params": {
+              "horizon": 5,
+              "models": "base5",
+              "step_size": 21
+            },
+            "label": "h5_base5",
+            "train_stats": {
+              "win_rate": 0.375,
+              "avg_pnl": -0.25,
+              "total_pnl": -4.0,
+              "sharpe": -0.25,
+              "n": 16
+            }
+          },
+          "test": {
+            "n_obs": 25,
+            "stats": {
+              "win_rate": 0.56,
+              "avg_pnl": 0.12,
+              "total_pnl": 3.0,
+              "sharpe": 0.1184,
+              "n": 25
+            }
+          },
+          "trials": [
+            {
+              "label": "h5_core3",
+              "horizon": 5,
+              "models": "core3",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.3077,
+                "avg_pnl": -0.384615,
+                "total_pnl": -5.0,
+                "sharpe": -0.4003,
+                "n": 13
+              },
+              "n_obs": 13,
+              "score": -0.4003
+            },
+            {
+              "label": "h5_base5",
+              "horizon": 5,
+              "models": "base5",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.375,
+                "avg_pnl": -0.25,
+                "total_pnl": -4.0,
+                "sharpe": -0.25,
+                "n": 16
+              },
+              "n_obs": 16,
+              "score": -0.25
+            }
+          ],
+          "timestamp": "2026-07-16T00:42:50.296346+00:00",
+          "error": null,
+          "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+          "extra": {
+            "step_size": 21,
+            "period": "2y",
+            "section": "vs_persistence"
+          },
+          "train_end_idx": 300,
+          "test_start_idx": 305,
+          "n_common_dates": 501,
+          "date_range": {
+            "start": "2024-07-16",
+            "end": "2026-07-15",
+            "train_end": "2025-09-24",
+            "test_start": "2025-10-02"
+          }
+        },
+        "7": {
+          "success": true,
+          "signal_name": "base_ensemble_vs_persistence_h7",
+          "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. BASE ensemble Phase 1: ForecastRouter.get_consensus_forecast directional band (\u00b10.5% vs last close) on SPY/QQQ/IWM. Expanding causal context only; monthly step_size \u2014 denser sampling would be a different (costlier) experiment, not a post-hoc re-grid of this one.",
+          "target": {
+            "kind": "hit_miss",
+            "horizon": 7,
+            "benchmark": "persistence",
+            "vol_window": null
+          },
+          "universe": [
+            "SPY",
+            "QQQ",
+            "IWM"
+          ],
+          "predeclared_trials": [
+            {
+              "label": "h7_core3",
+              "horizon": 7,
+              "models": "core3",
+              "step_size": 21
+            },
+            {
+              "label": "h7_base5",
+              "horizon": 7,
+              "models": "base5",
+              "step_size": 21
+            }
+          ],
+          "trial_justification": "Four trials only: horizons {5, 7} \u00d7 voter sets {core3, base5}. horizon=5 matches existing real-ticker / GNN baseline OOS; horizon=7 matches live consensus default; core3 is REAL_OOS_ENSEMBLE (arima/xgboost/ridge); base5 is DEFAULT_ENSEMBLE (adds catboost/prophet). step_size=21 fixed (monthly decision dates) to keep causal refits tractable \u2014 not a free parameter. Locked before any real-data DSR evaluation. Each horizon is scored with a matching forward target horizon so the 5d and 7d cells are not cross-contaminated.",
+          "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+          "purge_bars": 7,
+          "train_frac": 0.6,
+          "n_trials": 2,
+          "recommend_live": true,
+          "deflated_sharpe": {
+            "deflated_sharpe": 0.9518,
+            "expected_max_sharpe_under_null": 0.1531,
+            "n_trials": 2,
+            "interpretation": "likely real edge (survives the search)"
+          },
+          "champion": {
+            "params": {
+              "horizon": 7,
+              "models": "base5",
+              "step_size": 21
+            },
+            "label": "h7_base5",
+            "train_stats": {
+              "win_rate": 0.4,
+              "avg_pnl": -0.2,
+              "total_pnl": -3.0,
+              "sharpe": -0.1972,
+              "n": 15
+            }
+          },
+          "test": {
+            "n_obs": 17,
+            "stats": {
+              "win_rate": 0.7647,
+              "avg_pnl": 0.529412,
+              "total_pnl": 9.0,
+              "sharpe": 0.6054,
+              "n": 17
+            }
+          },
+          "trials": [
+            {
+              "label": "h7_core3",
+              "horizon": 7,
+              "models": "core3",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.2308,
+                "avg_pnl": -0.538462,
+                "total_pnl": -7.0,
+                "sharpe": -0.6139,
+                "n": 13
+              },
+              "n_obs": 13,
+              "score": -0.6139
+            },
+            {
+              "label": "h7_base5",
+              "horizon": 7,
+              "models": "base5",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.4,
+                "avg_pnl": -0.2,
+                "total_pnl": -3.0,
+                "sharpe": -0.1972,
+                "n": 15
+              },
+              "n_obs": 15,
+              "score": -0.1972
+            }
+          ],
+          "timestamp": "2026-07-16T00:42:50.335983+00:00",
+          "error": null,
+          "note": "Champion cleared DSR>=0.95 on OOS \u2014 still research; not auto-wired.",
+          "extra": {
+            "step_size": 21,
+            "period": "2y",
+            "section": "vs_persistence"
+          },
+          "train_end_idx": 300,
+          "test_start_idx": 307,
+          "n_common_dates": 501,
+          "date_range": {
+            "start": "2024-07-16",
+            "end": "2026-07-15",
+            "train_end": "2025-09-24",
+            "test_start": "2025-10-06"
+          }
+        }
+      },
+      "recommend_live": true
+    },
+    "vs_buy_hold": {
+      "note": "Excess vs buy-and-hold on directional-call days: (pos-1)*fwd. Bullish ties BH; bearish beats BH iff market falls.",
+      "by_horizon": {
+        "5": {
+          "success": true,
+          "signal_name": "base_ensemble_vs_buy_hold_h5",
+          "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. BASE ensemble Phase 1: ForecastRouter.get_consensus_forecast directional band (\u00b10.5% vs last close) on SPY/QQQ/IWM. Expanding causal context only; monthly step_size \u2014 denser sampling would be a different (costlier) experiment, not a post-hoc re-grid of this one.",
+          "target": {
+            "kind": "forward_return",
+            "horizon": 5,
+            "benchmark": null,
+            "vol_window": null
+          },
+          "universe": [
+            "SPY",
+            "QQQ",
+            "IWM"
+          ],
+          "predeclared_trials": [
+            {
+              "label": "h5_core3",
+              "horizon": 5,
+              "models": "core3",
+              "step_size": 21
+            },
+            {
+              "label": "h5_base5",
+              "horizon": 5,
+              "models": "base5",
+              "step_size": 21
+            }
+          ],
+          "trial_justification": "Four trials only: horizons {5, 7} \u00d7 voter sets {core3, base5}. horizon=5 matches existing real-ticker / GNN baseline OOS; horizon=7 matches live consensus default; core3 is REAL_OOS_ENSEMBLE (arima/xgboost/ridge); base5 is DEFAULT_ENSEMBLE (adds catboost/prophet). step_size=21 fixed (monthly decision dates) to keep causal refits tractable \u2014 not a free parameter. Locked before any real-data DSR evaluation. Each horizon is scored with a matching forward target horizon so the 5d and 7d cells are not cross-contaminated.",
+          "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+          "purge_bars": 5,
+          "train_frac": 0.6,
+          "n_trials": 2,
+          "recommend_live": false,
+          "deflated_sharpe": {
+            "deflated_sharpe": 0.068,
+            "expected_max_sharpe_under_null": 0.0719,
+            "n_trials": 2,
+            "interpretation": "indistinguishable from lucky noise across this many trials"
+          },
+          "champion": {
+            "params": {
+              "horizon": 5,
+              "models": "base5",
+              "step_size": 21
+            },
+            "label": "h5_base5",
+            "train_stats": {
+              "win_rate": 0.0,
+              "avg_pnl": -0.028842,
+              "total_pnl": -0.461477,
+              "sharpe": -0.8554,
+              "n": 16
+            }
+          },
+          "test": {
+            "n_obs": 25,
+            "stats": {
+              "win_rate": 0.2,
+              "avg_pnl": -0.00791,
+              "total_pnl": -0.197745,
+              "sharpe": -0.2366,
+              "n": 25
+            }
+          },
+          "trials": [
+            {
+              "label": "h5_core3",
+              "horizon": 5,
+              "models": "core3",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.0,
+                "avg_pnl": -0.036644,
+                "total_pnl": -0.476366,
+                "sharpe": -1.0511,
+                "n": 13
+              },
+              "n_obs": 13,
+              "score": -1.0511
+            },
+            {
+              "label": "h5_base5",
+              "horizon": 5,
+              "models": "base5",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.0,
+                "avg_pnl": -0.028842,
+                "total_pnl": -0.461477,
+                "sharpe": -0.8554,
+                "n": 16
+              },
+              "n_obs": 16,
+              "score": -0.8554
+            }
+          ],
+          "timestamp": "2026-07-16T00:42:50.376064+00:00",
+          "error": null,
+          "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+          "extra": {
+            "step_size": 21,
+            "period": "2y",
+            "section": "vs_buy_hold"
+          },
+          "train_end_idx": 300,
+          "test_start_idx": 305,
+          "n_common_dates": 501,
+          "date_range": {
+            "start": "2024-07-16",
+            "end": "2026-07-15",
+            "train_end": "2025-09-24",
+            "test_start": "2025-10-02"
+          }
+        },
+        "7": {
+          "success": true,
+          "signal_name": "base_ensemble_vs_buy_hold_h7",
+          "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. BASE ensemble Phase 1: ForecastRouter.get_consensus_forecast directional band (\u00b10.5% vs last close) on SPY/QQQ/IWM. Expanding causal context only; monthly step_size \u2014 denser sampling would be a different (costlier) experiment, not a post-hoc re-grid of this one.",
+          "target": {
+            "kind": "forward_return",
+            "horizon": 7,
+            "benchmark": null,
+            "vol_window": null
+          },
+          "universe": [
+            "SPY",
+            "QQQ",
+            "IWM"
+          ],
+          "predeclared_trials": [
+            {
+              "label": "h7_core3",
+              "horizon": 7,
+              "models": "core3",
+              "step_size": 21
+            },
+            {
+              "label": "h7_base5",
+              "horizon": 7,
+              "models": "base5",
+              "step_size": 21
+            }
+          ],
+          "trial_justification": "Four trials only: horizons {5, 7} \u00d7 voter sets {core3, base5}. horizon=5 matches existing real-ticker / GNN baseline OOS; horizon=7 matches live consensus default; core3 is REAL_OOS_ENSEMBLE (arima/xgboost/ridge); base5 is DEFAULT_ENSEMBLE (adds catboost/prophet). step_size=21 fixed (monthly decision dates) to keep causal refits tractable \u2014 not a free parameter. Locked before any real-data DSR evaluation. Each horizon is scored with a matching forward target horizon so the 5d and 7d cells are not cross-contaminated.",
+          "ordering_note": "Trial set and justification were fixed before this run; not selected after inspecting DSR.",
+          "purge_bars": 7,
+          "train_frac": 0.6,
+          "n_trials": 2,
+          "recommend_live": false,
+          "deflated_sharpe": {
+            "deflated_sharpe": 0.3869,
+            "expected_max_sharpe_under_null": 0.0007,
+            "n_trials": 2,
+            "interpretation": "indistinguishable from lucky noise across this many trials"
+          },
+          "champion": {
+            "params": {
+              "horizon": 7,
+              "models": "base5",
+              "step_size": 21
+            },
+            "label": "h7_base5",
+            "train_stats": {
+              "win_rate": 0.0667,
+              "avg_pnl": -0.029048,
+              "total_pnl": -0.435713,
+              "sharpe": -0.6848,
+              "n": 15
+            }
+          },
+          "test": {
+            "n_obs": 17,
+            "stats": {
+              "win_rate": 0.1176,
+              "avg_pnl": -0.001535,
+              "total_pnl": -0.026101,
+              "sharpe": -0.0713,
+              "n": 17
+            }
+          },
+          "trials": [
+            {
+              "label": "h7_core3",
+              "horizon": 7,
+              "models": "core3",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.0769,
+                "avg_pnl": -0.032698,
+                "total_pnl": -0.42507,
+                "sharpe": -0.6866,
+                "n": 13
+              },
+              "n_obs": 13,
+              "score": -0.6866
+            },
+            {
+              "label": "h7_base5",
+              "horizon": 7,
+              "models": "base5",
+              "step_size": 21,
+              "train_stats": {
+                "win_rate": 0.0667,
+                "avg_pnl": -0.029048,
+                "total_pnl": -0.435713,
+                "sharpe": -0.6848,
+                "n": 15
+              },
+              "n_obs": 15,
+              "score": -0.6848
+            }
+          ],
+          "timestamp": "2026-07-16T00:42:50.424981+00:00",
+          "error": null,
+          "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+          "extra": {
+            "step_size": 21,
+            "period": "2y",
+            "section": "vs_buy_hold"
+          },
+          "train_end_idx": 300,
+          "test_start_idx": 307,
+          "n_common_dates": 501,
+          "date_range": {
+            "start": "2024-07-16",
+            "end": "2026-07-15",
+            "train_end": "2025-09-24",
+            "test_start": "2025-10-06"
+          }
+        }
+      },
+      "recommend_live": false
+    }
+  },
+  "recommend_live": true,
+  "error": null,
+  "note": "At least one BASE-ensemble target/horizon cleared OOS+DSR \u2014 still research-only; not auto-wired."
+}
