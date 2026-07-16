@@ -69,7 +69,13 @@ export async function login(username: string, password: string) {
 export const getQuote = (symbol: string) => req<Quote>(`/api/quote/${symbol}`);
 
 export const getHistory = (symbol: string, period = "6mo", interval = "") =>
-  req<{ symbol: string; candles: Candle[]; interval?: string }>(
+  req<{
+    symbol: string;
+    candles: Candle[];
+    interval?: string;
+    resolved_from?: string | null;
+    suggestion?: string | null;
+  }>(
     `/api/history/${symbol}?period=${encodeURIComponent(period)}${interval ? `&interval=${encodeURIComponent(interval)}` : ""}`,
   );
 

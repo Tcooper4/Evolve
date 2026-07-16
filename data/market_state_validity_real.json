@@ -1,0 +1,70 @@
+{
+  "success": true,
+  "signal_name": "market_state_validity",
+  "disclosure": "Market-state validity research: situational-awareness check only (elevated/critical vs calm/watchful \u2192 subsequent realized vol / drawdown risk). Not a directional prediction test. Requires forward-accumulated GEX (and ideally skew) snapshots \u2014 live get_market_state cannot be replayed historically. recommend_live never auto-wires.",
+  "timestamp": "2026-07-16T05:33:20.303226+00:00",
+  "ordering_note": "Validity design (stressed vs quiet \u2192 fwd vol/DD, not direction) and floor MIN_ROWS_GEX=60 locked before this audit; floor not lowered after inspecting counts.",
+  "trial_justification_when_ready": "When data clears: three validity contrasts only \u2014 stressed (elevated|critical) vs quiet (calm|watchful) on targets {forward_realized_vol h=5, forward_realized_vol h=21, forward_abs_drawdown h=21}. Universe SPY (primary composite symbol). No directional return target. Floor MIN_ROWS_GEX=60 locked before any comparison; not lowered after inspecting thin samples.",
+  "availability": {
+    "gex": {
+      "db_path": "C:\\Users\\Thomas\\OneDrive\\Desktop\\Dashboard\\evolve_clean\\data\\gex_regime_snapshots.db",
+      "db_exists": true,
+      "total_rows": 0,
+      "min_rows_required": 60,
+      "preferred_rows": 120,
+      "logging_hint": "Set EVOLVE_GEX_SNAPSHOT_LOG=1 (EVOLVE_GEX_SNAPSHOT_SYMBOLS=SPY,QQQ)."
+    },
+    "skew": {
+      "db_path": "C:\\Users\\Thomas\\OneDrive\\Desktop\\Dashboard\\evolve_clean\\data\\skew_snapshots.db",
+      "db_exists": true,
+      "total_rows": 0,
+      "min_rows_required": 60,
+      "logging_hint": "Set EVOLVE_SKEW_SNAPSHOT_LOG=1 (EVOLVE_SKEW_SNAPSHOT_SYMBOLS=SPY,QQQ)."
+    },
+    "news_severity_archive": {
+      "available": false,
+      "note": "Event-severity leg is live-only (breaking headlines + FinBERT/VADER). No durable dated severity panel exists yet \u2014 even with GEX filled, full composite replay needs a future news-severity snapshot or a reduced test using GEX+vol legs only (predeclare that reduction before running)."
+    },
+    "market_state_snapshot_store": {
+      "exists": false,
+      "note": "No dedicated market_state daily snapshot DB \u2014 composite is computed live via get_market_state."
+    },
+    "enough_for_validity_oos": false,
+    "predeclared_when_ready": {
+      "stressed_levels": [
+        "elevated",
+        "critical"
+      ],
+      "quiet_levels": [
+        "calm",
+        "watchful"
+      ],
+      "targets": [
+        {
+          "kind": "forward_realized_vol",
+          "horizon": 5
+        },
+        {
+          "kind": "forward_realized_vol",
+          "horizon": 21
+        },
+        {
+          "kind": "forward_abs_drawdown",
+          "horizon": 21
+        }
+      ],
+      "directional_return_target": false
+    },
+    "trial_justification_when_ready": "When data clears: three validity contrasts only \u2014 stressed (elevated|critical) vs quiet (calm|watchful) on targets {forward_realized_vol h=5, forward_realized_vol h=21, forward_abs_drawdown h=21}. Universe SPY (primary composite symbol). No directional return target. Floor MIN_ROWS_GEX=60 locked before any comparison; not lowered after inspecting thin samples.",
+    "reason": "GEX snapshots=0, skew snapshots=0 (need GEX>=60 filled). Market-state composite cannot be replayed historically from live get_market_state. Validity test deferred \u2014 do not fabricate an elevated-vs-calm panel on empty/live-only data."
+  },
+  "recommend_live": false,
+  "validity_oos": null,
+  "real_counts": {
+    "gex_snapshot_rows": 0,
+    "skew_snapshot_rows": 0
+  },
+  "status": "insufficient_data",
+  "deferred": true,
+  "note": "GEX snapshots=0, skew snapshots=0 (need GEX>=60 filled). Market-state composite cannot be replayed historically from live get_market_state. Validity test deferred \u2014 do not fabricate an elevated-vs-calm panel on empty/live-only data."
+}

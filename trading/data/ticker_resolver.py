@@ -3,11 +3,15 @@ Smart ticker resolution.
 Tries multiple symbol formats to find
 valid price data from yfinance.
 Handles indices (^), crypto (-USD),
-futures (=F), forex (=X), and common
-aliases automatically.
+futures (=F), forex (=X), common
+aliases, frequent typos, and near-miss
+matches against liquid names.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Iterable, List, Optional, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,25 @@ _ALIASES = {
     "ZF": "ZF=F",
 }
 
+# Frequent fat-finger typos (edit distance 1 / transposition) for mega-caps.
+# Applied in normalize_ticker so the dashboard search bar stays fast.
+_COMMON_TYPOS = {
+    "APPL": "AAPL",
+    "AAPPL": "AAPL",
+    "APAL": "AAPL",
+    "NVDIA": "NVDA",
+    "NVDAA": "NVDA",
+    "TSLAA": "TSLA",
+    "TSAL": "TSLA",
+    "GOOGLL": "GOOGL",
+    "AMZNN": "AMZN",
+    "MSFTT": "MSFT",
+    "METAA": "META",
+    "NFLXX": "NFLX",
+    "QQQQ": "QQQ",
+    "SPYY": "SPY",
+}
+
 # Suffixes to probe automatically
 # if exact match fails
 _PROBE_SUFFIXES = [
@@ -66,6 +89,99 @@ _PROBE_SUFFIXES = [
     lambda s: f"{s}=F",  # futures
     lambda s: f"{s}=X",  # forex
 ]
+
+
+def _liquid_universe() -> List[str]:
+    """Liquid names for near-miss suggestions (no network)."""
+    try:
+        from trading.analysis.market_scanner import DEFAULT_UNIVERSE
+
+        return [str(s).upper() for s in DEFAULT_UNIVERSE]
+    except Exception as e:
+        logger.debug("liquid universe fallback: %s", e)
+        return [
+            "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA",
+            "SPY", "QQQ", "IWM", "AMD", "NFLX", "JPM", "V",
+        ]
+
+
+def _edit_distance(a: str, b: str) -> int:
+    """Levenshtein distance; short-circuit for |len| gap > 1."""
+    if a == b:
+        return 0
+    la, lb = len(a), len(b)
+    if abs(la - lb) > 1:
+        return 99
+    # DP for small strings only
+    prev = list(range(lb + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            ins = cur[j - 1] + 1
+            delete = prev[j] + 1
+            sub = prev[j - 1] + (0 if ca == cb else 1)
+            cur.append(min(ins, delete, sub))
+        prev = cur
+    return int(prev[lb])
+
+
+def suggest_ticker(
+    symbol: str,
+    *,
+    candidates: Optional[Sequence[str]] = None,
+    max_distance: int = 1,
+) -> Optional[str]:
+    """Best near-miss ticker (distance ≤ max_distance), or None."""
+    sym = (symbol or "").strip().upper()
+    if not sym or len(sym) < 2:
+        return None
+    pool = list(candidates) if candidates is not None else _liquid_universe()
+    best: Optional[str] = None
+    best_d = max_distance + 1
+    for cand in pool:
+        c = str(cand).strip().upper()
+        if not c or c == sym:
+            continue
+        d = _edit_distance(sym, c)
+        if d < best_d:
+            best_d = d
+            best = c
+            if d == 0:
+                break
+    if best is not None and best_d <= max_distance:
+        return best
+    return None
+
+
+def normalize_ticker(symbol: str) -> str:
+    """
+    Fast normalization without yfinance
+    validation. Alias + common-typo lookup.
+    Use for search bars and inputs
+    where latency matters.
+    """
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        return sym
+    if sym in _ALIASES:
+        return _ALIASES[sym]
+    if sym in _COMMON_TYPOS:
+        return _COMMON_TYPOS[sym]
+    return sym
+
+
+def _has_live_price(candidate: str) -> bool:
+    try:
+        import yfinance as yf
+
+        info = yf.Ticker(candidate).fast_info
+        return bool(
+            hasattr(info, "last_price")
+            and info.last_price
+            and float(info.last_price) > 0
+        )
+    except Exception:
+        return False
 
 
 def resolve_ticker(
@@ -77,10 +193,10 @@ def resolve_ticker(
     a valid yfinance symbol.
 
     Steps:
-    1. Normalize (strip, uppercase)
-    2. Check alias table
-    3. If validate=True, probe yfinance
+    1. Normalize (strip, uppercase, aliases, common typos)
+    2. If validate=True, probe yfinance
        with suffixes until data found
+    3. Near-miss against liquid universe (edit distance ≤ 1)
     4. Return best match or original
 
     Args:
@@ -92,22 +208,13 @@ def resolve_ticker(
     Returns:
         Resolved yfinance symbol string
     """
-    sym = (symbol or "").strip().upper()
-    if not sym:
-        return sym
+    raw = (symbol or "").strip().upper()
+    if not raw:
+        return raw
 
-    # Step 1: Check alias table
-    if sym in _ALIASES:
-        resolved = _ALIASES[sym]
-        logger.debug(
-            "Ticker alias: %s -> %s",
-            sym,
-            resolved,
-        )
-        return resolved
+    sym = normalize_ticker(raw)
 
-    # Step 2: If already has ^ or =
-    # or -, return as-is
+    # Already structured (index/crypto/fx/futures)
     if (
         sym.startswith("^")
         or "=" in sym
@@ -115,63 +222,46 @@ def resolve_ticker(
     ):
         return sym
 
-    # Step 3: If validate=False,
-    # return as-is (trust the user)
     if not validate:
         return sym
 
-    # Step 4: Probe yfinance with
-    # the original symbol first
-    try:
-        import yfinance as yf
+    # Probe normalized symbol first
+    if _has_live_price(sym):
+        return sym
 
-        _t = yf.Ticker(sym)
-        _info = _t.fast_info
-        # fast_info raises or returns
-        # empty if ticker invalid
-        if (
-            hasattr(_info, "last_price")
-            and _info.last_price
-            and _info.last_price > 0
-        ):
-            return sym
-    except Exception:
-        pass
+    # Probe with suffixes on the normalized form
+    for suffix_fn in _PROBE_SUFFIXES:
+        candidate = suffix_fn(sym)
+        if _has_live_price(candidate):
+            logger.debug("Ticker probe: %s -> %s", raw, candidate)
+            return candidate
 
-    # Step 5: Probe with suffixes
-    for _suffix_fn in _PROBE_SUFFIXES:
-        _candidate = _suffix_fn(sym)
-        try:
-            import yfinance as yf
+    # Near-miss (e.g. unknown typo not in _COMMON_TYPOS)
+    suggestion = suggest_ticker(sym)
+    if suggestion and _has_live_price(suggestion):
+        logger.info(
+            "Ticker near-miss: %s -> %s",
+            raw,
+            suggestion,
+        )
+        return suggestion
 
-            _t = yf.Ticker(_candidate)
-            _info = _t.fast_info
-            if (
-                hasattr(_info, "last_price")
-                and _info.last_price
-                and _info.last_price > 0
-            ):
-                logger.debug(
-                    "Ticker probe: %s -> %s",
-                    sym,
-                    _candidate,
-                )
-                return _candidate
-        except Exception:
-            continue
+    # Also try near-miss on the raw pre-normalize form if different
+    if raw != sym:
+        suggestion = suggest_ticker(raw)
+        if suggestion and _has_live_price(suggestion):
+            logger.info(
+                "Ticker near-miss: %s -> %s",
+                raw,
+                suggestion,
+            )
+            return suggestion
 
-    # Step 6: Return original if
-    # nothing worked — let yfinance
-    # produce its own error
     return sym
 
 
-def normalize_ticker(symbol: str) -> str:
-    """
-    Fast normalization without yfinance
-    validation. Alias lookup only.
-    Use for search bars and inputs
-    where latency matters.
-    """
-    sym = (symbol or "").strip().upper()
-    return _ALIASES.get(sym, sym)
+__all__ = [
+    "normalize_ticker",
+    "resolve_ticker",
+    "suggest_ticker",
+]

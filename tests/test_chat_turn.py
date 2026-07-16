@@ -7,13 +7,34 @@ from trading.services.chat_turn import run_chat_turn, STANDARD_TOOLS
 
 
 class TestSharedChatTurn:
-    def test_no_llm_degrades_to_clean_error(self):
+    def test_no_llm_degrades_to_clean_error(self, monkeypatch):
+        # Isolate from ambient API keys / billing so this stays a
+        # degradation-path unit test (not a live network call).
+        import agents.llm.active_llm_calls as alc
+        import agents.llm.tool_executor as te
+
+        class EmptyTools:
+            text = ""
+            tool_captions: list = []
+
+        monkeypatch.setattr(te, "execute_with_tools", lambda **kw: EmptyTools())
+        monkeypatch.setattr(alc, "call_active_llm_chat", lambda *a, **k: "")
+
         r = run_chat_turn("hello")
         assert r["success"] is False
         assert "API key" in (r["error"] or "")
         assert r["tool_captions"] == []
 
-    def test_shape_is_stable(self):
+    def test_shape_is_stable(self, monkeypatch):
+        import agents.llm.active_llm_calls as alc
+        import agents.llm.tool_executor as te
+
+        class EmptyTools:
+            text = ""
+            tool_captions: list = []
+
+        monkeypatch.setattr(te, "execute_with_tools", lambda **kw: EmptyTools())
+        monkeypatch.setattr(alc, "call_active_llm_chat", lambda *a, **k: "")
         r = run_chat_turn("hello")
         assert set(r) == {"success", "reply", "tool_captions", "error"}
 

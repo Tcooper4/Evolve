@@ -113,6 +113,8 @@ class HistoryResponse(BaseModel):
     symbol: str
     interval: str
     candles: List[Candle]
+    resolved_from: Optional[str] = None
+    suggestion: Optional[str] = None
 
 
 class WatchlistItem(BaseModel):
@@ -234,9 +236,16 @@ def history(symbol: str, period: str = "6mo", interval: str = "",
             user: str = Depends(current_user)) -> HistoryResponse:
     import yfinance as yf
 
-    from trading.data.ticker_resolver import normalize_ticker
+    from trading.data.ticker_resolver import (
+        normalize_ticker,
+        resolve_ticker,
+        suggest_ticker,
+    )
 
+    raw_in = (symbol or "").strip().upper()
+    # Fast path: aliases + common typos (APPL→AAPL) without network.
     sym = normalize_ticker(symbol)
+    resolved_from: Optional[str] = raw_in if raw_in and raw_in != sym else None
     per = (period or "6mo").strip().lower()
     user_iv = (interval or "").strip().lower()
     # Denser bars on short lookbacks so 1M/3M don't look fat vs 6M/1Y.
@@ -263,10 +272,31 @@ def history(symbol: str, period: str = "6mo", interval: str = "",
     iv = user_iv if user_iv in allowed_iv else default_iv
     if iv == "1m" and per not in ("1d", "5d"):
         per = "5d"
+
+    def _fetch(ticker: str):
+        return yf.Ticker(ticker).history(period=per, interval=iv)
+
     try:
-        df = yf.Ticker(sym).history(period=per, interval=iv)
+        df = _fetch(sym)
+        # Empty after normalize → validate / near-miss resolve once, then retry.
         if df is None or df.empty:
-            return HistoryResponse(symbol=sym, interval=iv, candles=[])
+            resolved = resolve_ticker(raw_in or sym, validate=True)
+            if resolved and resolved != sym:
+                resolved_from = raw_in or sym
+                sym = resolved
+                df = _fetch(sym)
+
+        if df is None or df.empty:
+            hint = suggest_ticker(raw_in or sym)
+            if hint and hint == sym:
+                hint = None
+            return HistoryResponse(
+                symbol=sym,
+                interval=iv,
+                candles=[],
+                resolved_from=resolved_from,
+                suggestion=hint,
+            )
         # Normalize to UTC so clients can display in any chosen timezone.
         # yfinance intraday indexes are usually exchange-local (US/Eastern).
         if hasattr(df.index, "tz") and df.index.tz is not None:
@@ -313,10 +343,26 @@ def history(symbol: str, period: str = "6mo", interval: str = "",
                     )
             except Exception as e:  # noqa: BLE001
                 logger.debug("live bar volume infer failed for %s: %s", sym, e)
-        return HistoryResponse(symbol=sym, interval=iv, candles=candles)
+        return HistoryResponse(
+            symbol=sym,
+            interval=iv,
+            candles=candles,
+            resolved_from=resolved_from,
+        )
     except Exception as e:  # noqa: BLE001
         logger.warning("history failed for %s: %s", sym, e)
-        return HistoryResponse(symbol=sym, interval=iv, candles=[])
+        hint = None
+        try:
+            hint = suggest_ticker(raw_in or sym)
+        except Exception:
+            hint = None
+        return HistoryResponse(
+            symbol=sym,
+            interval=iv,
+            candles=[],
+            resolved_from=resolved_from,
+            suggestion=hint if hint and hint != sym else None,
+        )
 
 
 # --------------------------------------------------------------------------

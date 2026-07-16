@@ -78,8 +78,27 @@ class TestMarketRoutes:
         assert r.status_code == 200
         assert r.json()["symbol"] == "^GSPC"  # alias resolution ran
 
-    def test_history_degrades_gracefully_offline(self, client):
+    def test_history_degrades_gracefully_offline(self, client, monkeypatch):
+        """Empty Yahoo frame → empty candles (not a 500)."""
+        import pandas as pd
+        import web.backend.main as main_mod
+
+        class FakeTicker:
+            def history(self, *a, **k):
+                return pd.DataFrame()
+
+        monkeypatch.setattr(
+            "yfinance.Ticker",
+            lambda *_a, **_k: FakeTicker(),
+        )
+        # history() imports yfinance inside the handler — patch there too
+        import yfinance as yf
+
+        monkeypatch.setattr(yf, "Ticker", lambda *_a, **_k: FakeTicker())
+
         H = _token(client)
         r = client.get("/api/history/SPY", headers=H)
         assert r.status_code == 200
-        assert r.json()["candles"] == []
+        body = r.json()
+        assert body["candles"] == []
+        assert body["symbol"] == "SPY"

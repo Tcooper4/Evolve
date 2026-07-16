@@ -1,0 +1,222 @@
+{
+  "success": true,
+  "signal_name": "portfolio_construction",
+  "disclosure": "Signal-edge research harness: purged train/test + predeclared trials + Deflated Sharpe gate. Per-observation Sharpe is not annualized. Null OOS is expected and acceptable. recommend_live never auto-wires product defaults. Portfolio-construction research: synthetic NAV Close carries rebalanced basket P&L so harness forward_return payoffs equal period portfolio returns. Max drawdown is a diagnostic outside the harness. recommend_live never auto-wires.",
+  "period": "5y",
+  "basket": [
+    "SPY",
+    "QQQ",
+    "IWM",
+    "EFA",
+    "TLT"
+  ],
+  "predeclared_trials": [
+    {
+      "label": "equal_weight",
+      "method": "equal_weight",
+      "lookback": 252,
+      "hold": 21,
+      "step_size": 21
+    },
+    {
+      "label": "risk_parity",
+      "method": "risk_parity",
+      "lookback": 252,
+      "hold": 21,
+      "step_size": 21
+    },
+    {
+      "label": "conditional_vol",
+      "method": "conditional_vol",
+      "lookback": 252,
+      "hold": 21,
+      "step_size": 21
+    }
+  ],
+  "n_trials": 3,
+  "trial_justification": "Three construction methods only on fixed ETF basket SPY/QQQ/IWM/EFA/TLT: equal_weight (1/N baseline), risk_parity (causal 252d covariance via PortfolioOptimizer simple risk-parity fallback \u2014 the production path when CVXPY fails DCP), and conditional_vol (1/N returns \u00d7 high-vol exposure cut 0.50 from conditional_vol_sizing). Monthly rebalance hold/step/purge=21. Not expanded after inspecting DSR.",
+  "ordering_note": "Methods and basket fixed before this run; not selected after inspecting DSR. Honest null vs 1/N is acceptable.",
+  "hold_days": 21,
+  "step_size": 21,
+  "lookback_cov": 252,
+  "timestamp": "2026-07-16T05:31:20.671955+00:00",
+  "recommend_live": false,
+  "error": null,
+  "target": {
+    "kind": "forward_return",
+    "horizon": 21,
+    "benchmark": null,
+    "vol_window": null
+  },
+  "universe": [
+    "PORTFOLIO_EQUAL_WEIGHT",
+    "PORTFOLIO_RISK_PARITY",
+    "PORTFOLIO_CONDITIONAL_VOL"
+  ],
+  "purge_bars": 21,
+  "train_frac": 0.6,
+  "deflated_sharpe": {
+    "deflated_sharpe": 0.9195,
+    "expected_max_sharpe_under_null": 0.0371,
+    "n_trials": 3,
+    "interpretation": "uncertain - could be selection luck"
+  },
+  "champion": {
+    "params": {
+      "method": "conditional_vol",
+      "lookback": 252,
+      "hold": 21,
+      "step_size": 21
+    },
+    "label": "conditional_vol",
+    "train_stats": {
+      "win_rate": 0.7083,
+      "avg_pnl": 0.012971,
+      "total_pnl": 0.311302,
+      "sharpe": 0.2997,
+      "n": 24
+    }
+  },
+  "test": {
+    "n_obs": 22,
+    "stats": {
+      "win_rate": 0.7273,
+      "avg_pnl": 0.010218,
+      "total_pnl": 0.224804,
+      "sharpe": 0.3523,
+      "n": 22
+    }
+  },
+  "trials": [
+    {
+      "label": "equal_weight",
+      "method": "equal_weight",
+      "lookback": 252,
+      "hold": 21,
+      "step_size": 21,
+      "train_stats": {
+        "win_rate": 0.7083,
+        "avg_pnl": 0.012863,
+        "total_pnl": 0.308709,
+        "sharpe": 0.2516,
+        "n": 24
+      },
+      "n_obs": 24,
+      "score": 0.2516
+    },
+    {
+      "label": "risk_parity",
+      "method": "risk_parity",
+      "lookback": 252,
+      "hold": 21,
+      "step_size": 21,
+      "train_stats": {
+        "win_rate": 0.6667,
+        "avg_pnl": 0.009981,
+        "total_pnl": 0.239535,
+        "sharpe": 0.2129,
+        "n": 24
+      },
+      "n_obs": 24,
+      "score": 0.2129
+    },
+    {
+      "label": "conditional_vol",
+      "method": "conditional_vol",
+      "lookback": 252,
+      "hold": 21,
+      "step_size": 21,
+      "train_stats": {
+        "win_rate": 0.7083,
+        "avg_pnl": 0.012971,
+        "total_pnl": 0.311302,
+        "sharpe": 0.2997,
+        "n": 24
+      },
+      "n_obs": 24,
+      "score": 0.2997
+    }
+  ],
+  "note": "Null / not significant on OOS+DSR \u2014 leave research-only (acceptable expected outcome).",
+  "extra": {
+    "basket": [
+      "SPY",
+      "QQQ",
+      "IWM",
+      "EFA",
+      "TLT"
+    ],
+    "methods": [
+      "equal_weight",
+      "risk_parity",
+      "conditional_vol"
+    ],
+    "harness_note": "Synthetic NAV per method; signal=+1 on monthly steps; payoff = period portfolio return."
+  },
+  "train_end_idx": 752,
+  "test_start_idx": 773,
+  "n_common_dates": 1254,
+  "date_range": {
+    "start": "2021-07-16",
+    "end": "2026-07-15",
+    "train_end": "2024-07-12",
+    "test_start": "2024-08-13"
+  },
+  "methods_evaluated": [
+    "PORTFOLIO_equal_weight",
+    "PORTFOLIO_risk_parity",
+    "PORTFOLIO_conditional_vol"
+  ],
+  "oos_max_drawdown_by_method": {
+    "PORTFOLIO_equal_weight": {
+      "oos_max_drawdown": -0.156989,
+      "oos_n_bars": 481,
+      "oos_end_nav": 147.89103643228626,
+      "oos_start_nav": 109.10964630261537
+    },
+    "PORTFOLIO_risk_parity": {
+      "oos_max_drawdown": -0.131981,
+      "oos_n_bars": 481,
+      "oos_end_nav": 129.2431125216363,
+      "oos_start_nav": 102.58882033634664
+    },
+    "PORTFOLIO_conditional_vol": {
+      "oos_max_drawdown": -0.118629,
+      "oos_n_bars": 481,
+      "oos_end_nav": 139.013214317611,
+      "oos_start_nav": 109.74945780459544
+    }
+  },
+  "per_method_oos": {
+    "equal_weight": {
+      "oos_stats": {
+        "win_rate": 0.7273,
+        "avg_pnl": 0.012937,
+        "total_pnl": 0.284625,
+        "sharpe": 0.36,
+        "n": 22
+      },
+      "oos_max_drawdown": -0.156989
+    },
+    "risk_parity": {
+      "oos_stats": {
+        "win_rate": 0.7273,
+        "avg_pnl": 0.009789,
+        "total_pnl": 0.215352,
+        "sharpe": 0.3343,
+        "n": 22
+      },
+      "oos_max_drawdown": -0.131981
+    },
+    "conditional_vol": {
+      "oos_stats": {
+        "win_rate": 0.7273,
+        "avg_pnl": 0.010218,
+        "total_pnl": 0.224804,
+        "sharpe": 0.3523,
+        "n": 22
+      },
+      "oos_max_drawdown": -0.118629
+    }
+  }
+}

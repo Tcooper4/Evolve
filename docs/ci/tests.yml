@@ -29,6 +29,7 @@ jobs:
             tests/test_web_api.py \
             tests/test_optimization \
             tests/test_chat_turn.py \
+            tests/test_chat_orchestration_honesty.py \
             tests/test_session_b_depth.py \
             tests/test_stub_sweep.py \
             tests/test_beginner_advisor.py \

@@ -95,6 +95,7 @@ export default function Dashboard({
   const [dayInterval, setDayInterval] = useState<DayInterval>("5m");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
+  const [chartHint, setChartHint] = useState<string | null>(null);
   const [events, setEvents] = useState<ChartEvent[]>([]);
   const [liveSpike, setLiveSpike] = useState<ChartEvent | null>(null);
   const [watchlist, setWatchlist] = useState<WlEntry[]>([]);
@@ -210,6 +211,16 @@ export default function Dashboard({
       setCandles(withLiveBarVolume(h.candles, q.volume));
       if (!soft) {
         setEvents(ev.events ?? []);
+        if (!h.candles?.length) {
+          const sug = h.suggestion ? String(h.suggestion) : null;
+          setChartHint(
+            sug
+              ? `No chart data for ${h.symbol}. Did you mean ${sug}?`
+              : `No chart data for ${h.symbol} — check the symbol or your connection.`,
+          );
+        } else {
+          setChartHint(null);
+        }
       }
       setSymbol(h.symbol);
       setInput(h.symbol);
@@ -294,6 +305,7 @@ export default function Dashboard({
       if (!soft) {
         setQuote(null);
         setCandles([]);
+        setChartHint("No chart data — check the symbol or your connection.");
       }
       setChartLive(false);
     } finally {
@@ -647,7 +659,25 @@ export default function Dashboard({
             ]}
           />
         ) : (
-          <div className="empty">No chart data — check the symbol or your connection.</div>
+          <div className="empty">
+            {chartHint ?? "No chart data — check the symbol or your connection."}
+            {chartHint?.includes("Did you mean") && (() => {
+              const m = /Did you mean ([A-Z0-9.^=-]+)\?/.exec(chartHint);
+              const sug = m?.[1];
+              if (!sug) return null;
+              return (
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => load(sug, period)}
+                  >
+                    Load {sug}
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
         )}
         {optOverlayOn && (
           <div style={{ padding: "0 18px 10px" }}>
