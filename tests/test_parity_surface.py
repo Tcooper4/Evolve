@@ -266,6 +266,7 @@ PARITY_GET_ROUTES = [
     "/api/risk/SPY",
     "/api/strategies",
     "/api/settings/prefs",
+    "/api/settings/tours",
     "/api/chart-events/SPY",
     "/api/strategy-overlay/SPY?strategy=RSIStrategy&period=6mo",
     "/api/causal/SPY",
@@ -307,6 +308,8 @@ PARITY_POST_ROUTES = [
     ("/api/alerts", {"symbol": "SPY", "condition": "price_above",
                      "threshold": 100.0}),
     ("/api/settings/prefs", {"scoring_style": "balanced"}),
+    ("/api/settings/tours/seen", {"page_id": "dashboard"}),
+    ("/api/settings/tours/reset", {}),
     ("/api/recs", {"symbol": "SPY", "score": 7.0, "price_at_rec": 100.0,
                    "capture_guidance": False}),
     ("/api/recs/outcome", {

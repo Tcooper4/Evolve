@@ -6,6 +6,7 @@ import {
   recordRecOutcome, recordTrade, runAllocate, upsertAlert,
   type AccountRisk, type PortfolioSummary, type RealOutcomeSummary, type TrackedRec,
 } from "./api";
+import PageTour from "./PageTour";
 
 const REAL_STRATEGIES = [
   { id: "iron_condor", label: "Iron condor" },
@@ -228,6 +229,7 @@ export default function Portfolio() {
 
   return (
     <div className="fade-in">
+      <PageTour pageId="portfolio" />
       <div className="greeting">
         Portfolio <small>paper only — practice with zero risk, tracked like the real thing</small>
       </div>
@@ -253,7 +255,7 @@ export default function Portfolio() {
         </div>
       )}
 
-      <div className="card card-pad" style={{ marginBottom: 16 }}>
+      <div className="card card-pad" data-tour="portfolio-trade" style={{ marginBottom: 16 }}>
         <div className="row" style={{ flexWrap: "wrap" }}>
           <input placeholder="Symbol" value={symbol} style={{ width: 110 }}
             onChange={(e) => setSymbol(e.target.value.toUpperCase())} />
@@ -267,11 +269,17 @@ export default function Portfolio() {
         </div>
       </div>
 
-      <div className="seg" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+      <div className="seg" data-tour="portfolio-tabs" style={{ marginBottom: 12, flexWrap: "wrap" }}>
         <button className={tab === "positions" ? "active" : ""} onClick={() => setTab("positions")}>Positions</button>
         <button className={tab === "trades" ? "active" : ""} onClick={() => setTab("trades")}>Trade ledger</button>
         <button className={tab === "cash" ? "active" : ""} onClick={() => { setTab("cash"); void loadCash(); }}>Cash / limits</button>
-        <button className={tab === "risk" ? "active" : ""} onClick={() => { setTab("risk"); if (!acctRisk) void loadAcctRisk(); }}>Risk</button>
+        <button
+          data-tour="portfolio-risk"
+          className={tab === "risk" ? "active" : ""}
+          onClick={() => { setTab("risk"); if (!acctRisk) void loadAcctRisk(); }}
+        >
+          Risk
+        </button>
         <button className={tab === "tracked" ? "active" : ""} onClick={() => { setTab("tracked"); void loadRecs(); }}>Tracked ideas</button>
         <button className={tab === "alerts" ? "active" : ""} onClick={() => { setTab("alerts"); void loadAlerts(); }}>Alerts</button>
         <button className={tab === "allocate" ? "active" : ""} onClick={() => setTab("allocate")}>Allocate</button>

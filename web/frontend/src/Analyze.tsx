@@ -8,6 +8,7 @@ import {
 import Chart, { type ChartMarker } from "./Chart";
 import Sparkline from "./Sparkline";
 import { cacheChartTimezone, loadCachedChartTimezone } from "./chartTime";
+import PageTour from "./PageTour";
 
 function ScoreRing({ score }: { score: number }) {
   const pct = Math.max(0, Math.min(1, score / 10));
@@ -351,6 +352,7 @@ export default function Analyze({
 
   return (
     <div className="fade-in">
+      <PageTour pageId="analyze" />
       <div className="greeting">
         Analyze <small>AI Score, forecast, news & risk</small>
       </div>
@@ -371,16 +373,28 @@ export default function Analyze({
       </div>
 
       {!loading && !res && (
-        <div className="card card-pad empty">
-          Enter a symbol for score, forecast, headlines, and risk.
-        </div>
+        <>
+          <div className="card card-pad empty" data-tour="analyze-score">
+            Enter a symbol for score, forecast, headlines, and risk.
+          </div>
+          <div className="card card-pad empty" data-tour="analyze-chart" style={{ marginTop: 12 }}>
+            Chart and news marks appear here after Analyze.
+          </div>
+          <div className="seg" data-tour="analyze-tools" style={{ marginTop: 12, flexWrap: "wrap", opacity: 0.75 }}>
+            <button type="button" disabled>Overview</button>
+            <button type="button" disabled>Monte Carlo</button>
+            <button type="button" disabled>Options</button>
+            <button type="button" disabled>Filings</button>
+            <button type="button" disabled>Labs</button>
+          </div>
+        </>
       )}
 
       {loading && <div className="skeleton" style={{ height: 220, marginBottom: 16 }} />}
 
       {!loading && res && res.score != null && (
         <>
-          <div className="card card-pad" style={{ marginBottom: 16 }}>
+          <div className="card card-pad" data-tour="analyze-score" style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", gap: 28, alignItems: "center", flexWrap: "wrap" }}>
               <ScoreRing score={Number(res.score)} />
               <div style={{ flex: 1, minWidth: 200 }}>
@@ -446,7 +460,7 @@ export default function Analyze({
             )}
           </div>
 
-          <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card" data-tour="analyze-chart" style={{ marginBottom: 16 }}>
             <div className="chart-head">
               <div className="legend"><b>{res.symbol}</b> · 6mo daily</div>
             </div>
@@ -488,7 +502,7 @@ export default function Analyze({
             )}
           </div>
 
-          <div className="seg" style={{ marginBottom: 12 }}>
+          <div className="seg" data-tour="analyze-tools" style={{ marginBottom: 12 }}>
             <button className={tool === "main" ? "active" : ""} onClick={() => setTool("main")}>Overview</button>
             <button className={tool === "monte" ? "active" : ""} onClick={() => { setTool("monte"); if (!mc) void loadMonte(); }}>Monte Carlo</button>
             <button className={tool === "options" ? "active" : ""} onClick={() => { setTool("options"); if (!opts) void loadOptions(); }}>Options</button>

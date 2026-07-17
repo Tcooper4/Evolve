@@ -36,6 +36,7 @@ import {
 } from "./chartMarkers";
 import { loadCachedChartTimezone, cacheChartTimezone } from "./chartTime";
 import { runDashboardLoad } from "./dashboardLoad";
+import PageTour from "./PageTour";
 
 const PERIODS = ["1d", "5d", "1mo", "3mo", "6mo", "1y", "max"] as const;
 type Period = (typeof PERIODS)[number];
@@ -477,6 +478,7 @@ export default function Dashboard({
 
   return (
     <div className="fade-in">
+      <PageTour pageId="dashboard" />
       <div className="greeting">{greet}, {displayName} <small>markets at a glance — live</small></div>
 
       <div className="topbar">
@@ -589,7 +591,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      <div className="card fade-in">
+      <div className="card fade-in" data-tour="dashboard-chart">
         <div className="chart-head">
           <div className="legend">
             <b>{symbol}</b>
@@ -780,7 +782,7 @@ export default function Dashboard({
       </div>
 
       <div className="form-grid" style={{ marginTop: 16 }}>
-        <div className="card card-pad">
+        <div className="card card-pad" data-tour="dashboard-headlines">
           <div className="rail-label" style={{ marginTop: 0 }}>Headlines · {symbol}</div>
           <div className="dim" style={{ fontSize: 11.5, marginBottom: 6 }}>
             LLM blurbs (when keyed) are context only — not a call.
@@ -855,7 +857,11 @@ export default function Dashboard({
       </div>
 
       <div className="rail-label" style={{ margin: "18px 0 8px" }}>Watchlist</div>
-      <div className="wl" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+      <div
+        className="wl"
+        data-tour="dashboard-watchlist"
+        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}
+      >
         {watchlist.map((w) => (
           <div key={w.symbol}
             className={`wl-card fade-in ${w.symbol === symbol ? "active" : ""}`}

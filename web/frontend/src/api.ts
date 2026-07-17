@@ -577,6 +577,37 @@ export const savePrefs = (prefs: Record<string, unknown>) =>
     body: JSON.stringify(prefs),
   });
 
+/** App.tsx page ids — keep in sync with backend TOUR_PAGE_IDS. */
+export type TourPageId =
+  | "dashboard"
+  | "analyze"
+  | "scanner"
+  | "portfolio"
+  | "backtest"
+  | "chat"
+  | "settings";
+
+export const getTours = () =>
+  req<{ success: boolean; tours_seen: Record<string, boolean>; error?: string }>(
+    "/api/settings/tours",
+  );
+
+export const markTourSeen = (page_id: TourPageId) =>
+  req<{ success: boolean; tours_seen: Record<string, boolean>; error?: string }>(
+    "/api/settings/tours/seen",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page_id }),
+    },
+  );
+
+export const resetTours = () =>
+  req<{ success: boolean; tours_seen: Record<string, boolean>; error?: string }>(
+    "/api/settings/tours/reset",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+  );
+
 export interface GprSignal {
   current: number;
   level?: string;

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import {
   getKeys, getMarketSignals, getPrefs, loadGpr, loadRevisionBreadth,
-  saveKeys, savePrefs, type GprSignal, type RevisionBreadth,
+  resetTours, saveKeys, savePrefs, type GprSignal, type RevisionBreadth,
 } from "./api";
 import { CHART_TIMEZONES, cacheChartTimezone } from "./chartTime";
+import PageTour from "./PageTour";
 
 const SCORE_STYLES = [
   "Balanced (default)",
@@ -24,7 +25,7 @@ const RISK_TOLERANCES = [
   { id: "aggressive", label: "Aggressive" },
 ] as const;
 
-export default function Settings() {
+export default function Settings({ onToast }: { onToast?: (msg: string) => void }) {
   const [saved, setSaved] = useState({
     anthropic: false, openai: false, news: false, reddit: false, twitter: false,
   });
@@ -49,6 +50,7 @@ export default function Settings() {
   const [gprBusy, setGprBusy] = useState(false);
   const [rbBusy, setRbBusy] = useState(false);
   const [sigMsg, setSigMsg] = useState("");
+  const [tourBusy, setTourBusy] = useState(false);
 
   useEffect(() => {
     getKeys().then((k) => setSaved({
@@ -107,6 +109,22 @@ export default function Settings() {
     setTimeout(() => setMsg(""), 3500);
   }
 
+  async function restartTour() {
+    setTourBusy(true);
+    try {
+      const r = await resetTours();
+      if (r.success) {
+        onToast?.("Tour reset — it'll replay as you visit each page.");
+      } else {
+        onToast?.(r.error ?? "Could not reset tour.");
+      }
+    } catch (e) {
+      onToast?.(e instanceof Error ? e.message : "Could not reset tour.");
+    } finally {
+      setTourBusy(false);
+    }
+  }
+
   const Field = ({ label, val, set, has }: {
     label: string; val: string; set: (v: string) => void; has: boolean;
   }) => (
@@ -119,9 +137,10 @@ export default function Settings() {
 
   return (
     <div className="fade-in">
+      <PageTour pageId="settings" />
       <div className="greeting">Settings <small>keys, scoring style, briefing defaults</small></div>
 
-      <div className="card card-pad" style={{ maxWidth: 560, marginBottom: 16 }}>
+      <div className="card card-pad" data-tour="settings-keys" style={{ maxWidth: 560, marginBottom: 16 }}>
         <div className="rail-label" style={{ marginTop: 0 }}>API keys</div>
         <Field label="Anthropic API key" val={anthropic} set={setAnthropic} has={saved.anthropic} />
         <Field label="OpenAI API key" val={openai} set={setOpenai} has={saved.openai} />
@@ -138,7 +157,7 @@ export default function Settings() {
         </p>
       </div>
 
-      <div className="card card-pad" style={{ maxWidth: 560, marginBottom: 16 }}>
+      <div className="card card-pad" data-tour="settings-risk" style={{ maxWidth: 560, marginBottom: 16 }}>
         <div className="rail-label" style={{ marginTop: 0 }}>Research preferences</div>
         <div className="form-grid">
           <div className="field">
@@ -212,6 +231,17 @@ export default function Settings() {
           Default is US Eastern (NYSE session).
         </p>        <button className="primary" onClick={save} style={{ marginTop: 14 }}>Save settings</button>
         {msg && <div style={{ color: "var(--up)", marginTop: 10, fontSize: 13 }}>{msg}</div>}
+      </div>
+
+      <div className="card card-pad" data-tour="settings-restart" style={{ maxWidth: 560, marginBottom: 16 }}>
+        <div className="rail-label" style={{ marginTop: 0 }}>Spotlight tour</div>
+        <p style={{ fontSize: 12.5, color: "var(--text-2)", margin: "0 0 12px", lineHeight: 1.45 }}>
+          First-visit tips on each page. Restart clears seen state so spotlights replay
+          when you visit Dashboard, Analyze, and the rest again.
+        </p>
+        <button className="primary" disabled={tourBusy} onClick={() => void restartTour()}>
+          {tourBusy ? "Resetting…" : "Restart tour"}
+        </button>
       </div>
 
       <div className="card card-pad" style={{ maxWidth: 560, marginBottom: 16 }}>

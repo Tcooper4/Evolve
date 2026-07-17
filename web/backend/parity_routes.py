@@ -103,6 +103,11 @@ class PrefsRequest(BaseModel):
     preferred_dte_max: Optional[int] = None
 
 
+class TourSeenRequest(BaseModel):
+    """Mark a single App.tsx page tour as seen (does not affect other pages)."""
+    page_id: str
+
+
 class AllocateRequest(BaseModel):
     symbols: List[str] = Field(default_factory=list)
     period: str = "1y"
@@ -587,6 +592,48 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 prefs[k] = v
         save_user_preferences(uid, prefs)
         return {"ok": True, "prefs": prefs}
+
+    @router.get("/api/settings/tours")
+    def get_tours(user: str = Depends(current_user)) -> Dict[str, Any]:
+        """Per-user spotlight tour progress (server-side prefs)."""
+        from trading.services.tour_state import load_tours_seen
+
+        try:
+            tours_seen = load_tours_seen(f"user:{user}")
+            return {"success": True, "tours_seen": tours_seen}
+        except Exception as e:
+            logger.warning("get_tours failed: %s", e)
+            # Fail open — frontend skips tour without blocking the page.
+            return {"success": False, "tours_seen": {}, "error": str(e)}
+
+    @router.post("/api/settings/tours/seen")
+    def mark_tour_seen(
+        req: TourSeenRequest,
+        user: str = Depends(current_user),
+    ) -> Dict[str, Any]:
+        """Mark one page's tour seen; other pages remain unchanged."""
+        from trading.services.tour_state import save_mark_page_seen
+
+        try:
+            tours_seen = save_mark_page_seen(f"user:{user}", req.page_id)
+            return {"success": True, "tours_seen": tours_seen}
+        except ValueError as e:
+            return {"success": False, "tours_seen": {}, "error": str(e)}
+        except Exception as e:
+            logger.warning("mark_tour_seen failed: %s", e)
+            return {"success": False, "tours_seen": {}, "error": str(e)}
+
+    @router.post("/api/settings/tours/reset")
+    def reset_tours(user: str = Depends(current_user)) -> Dict[str, Any]:
+        """Clear all tours_seen so the full first-time tour can replay."""
+        from trading.services.tour_state import save_reset_tours
+
+        try:
+            tours_seen = save_reset_tours(f"user:{user}")
+            return {"success": True, "tours_seen": tours_seen}
+        except Exception as e:
+            logger.warning("reset_tours failed: %s", e)
+            return {"success": False, "tours_seen": {}, "error": str(e)}
 
     @router.get("/api/market-signals")
     def market_signals(user: str = Depends(current_user)) -> Dict[str, Any]:

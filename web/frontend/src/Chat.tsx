@@ -1,7 +1,16 @@
 import { useRef, useState } from "react";
 import { sendChat } from "./api";
+import PageTour from "./PageTour";
 
 interface Msg { role: "user" | "bot"; text: string; tools?: string[]; }
+
+const STARTERS = [
+  "What stocks should I consider buying today?",
+  "Is now a good time to buy?",
+  "Explain what's happening in the market like I'm new",
+  "Check the risk on my watchlist",
+  "Run a morning briefing summary",
+];
 
 export default function Chat() {
   const [msgs, setMsgs] = useState<Msg[]>([
@@ -34,10 +43,11 @@ export default function Chat() {
 
   return (
     <div className="fade-in">
+      <PageTour pageId="chat" />
       <div className="greeting">Chat <small>your assistant, your memory, your API key</small></div>
 
       <div className="card">
-        <div className="chat-box" ref={box}>
+        <div className="chat-box" data-tour="chat-box" ref={box}>
           {msgs.map((m, i) => (
             <div key={i} className={`msg ${m.role} fade-in`}>
               {m.tools && m.tools.length > 0 && (
@@ -50,23 +60,18 @@ export default function Chat() {
           ))}
           {busy && <div className="msg bot dim">thinking…</div>}
         </div>
-        {msgs.length <= 1 && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "0 18px 12px" }}>
-            {[
-              "What stocks should I consider buying today?",
-              "Is now a good time to buy?",
-              "Explain what's happening in the market like I'm new",
-              "Check the risk on my watchlist",
-              "Run a morning briefing summary",
-            ].map((q) => (
-              <button key={q} className="ghost" style={{ fontSize: 12.5, border: "1px solid var(--border)" }}
-                onClick={() => { setInput(q); }}>
-                {q}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="row" style={{ padding: 14, borderTop: "1px solid var(--border)" }}>
+        <div
+          data-tour="chat-starters"
+          style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "0 18px 12px" }}
+        >
+          {STARTERS.map((q) => (
+            <button key={q} className="ghost" style={{ fontSize: 12.5, border: "1px solid var(--border)" }}
+              onClick={() => { setInput(q); }}>
+              {q}
+            </button>
+          ))}
+        </div>
+        <div className="row" data-tour="chat-input" style={{ padding: 14, borderTop: "1px solid var(--border)" }}>
           <input style={{ flex: 1 }} value={input} placeholder="Ask about a ticker, risk, news…"
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()} />

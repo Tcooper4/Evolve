@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getScore, runPairs, runScan, type ScoreResult } from "./api";
 import UniverseBiasNote from "./UniverseBiasNote";
+import PageTour from "./PageTour";
 
 const FILTERS = ["momentum", "oversold", "breakout", "high_short", "insider_buying", "quick_technical"];
 
@@ -181,6 +182,7 @@ export default function Scanner({
 
   return (
     <div className="fade-in">
+      <PageTour pageId="scanner" />
       <div className="greeting">
         Scanner{" "}
         <small>
@@ -223,8 +225,8 @@ export default function Scanner({
             </>
           )}
         </div>
-        {tab === "scan" && (
-          <div className="field" style={{ marginTop: 14 }}>
+        {tab === "scan" ? (
+          <div className="field" style={{ marginTop: 14 }} data-tour="scanner-filters">
             <label>Filters</label>
             <div className="seg" style={{ display: "inline-flex", flexWrap: "wrap", width: "fit-content", maxWidth: "100%" }}>
               {FILTERS.map((f) => (
@@ -235,8 +237,15 @@ export default function Scanner({
               ))}
             </div>
           </div>
+        ) : (
+          <div className="dim" data-tour="scanner-filters" style={{ marginTop: 14, fontSize: 12.5 }}>
+            Pair screen uses cointegration + correlation ≥ 0.7 (filters apply on the Scanner tab).
+          </div>
         )}
-        <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div
+          data-tour="scanner-run"
+          style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}
+        >
           {tab === "scan"
             ? <button className="primary" onClick={run} disabled={loading}>{loading ? "Scanning…" : "Scan"}</button>
             : <button className="primary" onClick={runPairScreen} disabled={loading}>
@@ -271,7 +280,7 @@ export default function Scanner({
       </div>
 
       {meta && !loading && <div className="dim" style={{ marginBottom: 10, fontSize: 12.5 }}>{meta}</div>}
-      <div className="card">
+      <div className="card" data-tour="scanner-results">
         {loading && <div className="skeleton" style={{ height: 260, margin: 16 }} />}
         {!loading && tab === "scan" && rows.length > 0 && (
           <table className="tbl">

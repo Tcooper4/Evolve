@@ -118,7 +118,12 @@ export default function App() {
         {page === "portfolio" && <Portfolio />}
         {page === "backtest" && <Backtest />}
         {page === "chat" && <Chat />}
-        {page === "settings" && <Settings />}
+        {page === "settings" && (
+          <Settings onToast={(msg) => {
+            setToast(msg);
+            window.setTimeout(() => setToast(null), 8000);
+          }} />
+        )}
       </main>
     </div>
   );

@@ -6,6 +6,7 @@ import {
 } from "./api";
 import Sparkline from "./Sparkline";
 import UniverseBiasNote from "./UniverseBiasNote";
+import PageTour from "./PageTour";
 
 const PCT_KEYS = new Set([
   "total_return", "annualized_return", "max_drawdown", "buy_hold_return",
@@ -337,6 +338,7 @@ export default function Backtest() {
 
   return (
     <div className="fade-in">
+      <PageTour pageId="backtest" />
       <div className="greeting">
         Backtest <small>strategies, models, and tuning</small>
       </div>
@@ -348,7 +350,7 @@ export default function Backtest() {
         <button className={tab === "options" ? "active" : ""} onClick={() => { setTab("options"); setRes(null); setOpt(null); setTune(null); }}>Options structure</button>
       </div>
 
-      <div className="card card-pad" style={{ marginBottom: 16 }}>
+      <div className="card card-pad" data-tour="backtest-strategy" style={{ marginBottom: 16 }}>
         {tab === "backtest" && (
           <div className="seg" style={{ marginBottom: 14 }}>
             <button className={engine === "strategy" ? "active" : ""}
@@ -442,6 +444,25 @@ export default function Backtest() {
           )}
         </div>
       </div>
+
+      {tab === "backtest" && (
+        <>
+          <div className="card card-pad" data-tour="backtest-folds" style={{ marginBottom: 12 }}>
+            <div className="rail-label" style={{ marginTop: 0 }}>
+              Fold by fold — does it hold up across time?
+            </div>
+            <div className="dim" style={{ fontSize: 12.5 }}>
+              After a model backtest, each chip is one out-of-sample window — does the edge hold across time, or just one era?
+            </div>
+          </div>
+          <div className="card card-pad" data-tour="backtest-honesty" style={{ marginBottom: 16 }}>
+            <div className="rail-label" style={{ marginTop: 0 }}>OOS &amp; DSR</div>
+            <div className="dim" style={{ fontSize: 12.5 }}>
+              OOS means held-out time. DSR adjusts Sharpe for how many trials you ran — still research-only; not auto-wired into live defaults.
+            </div>
+          </div>
+        </>
+      )}
 
       {tab === "backtest" && history.length > 0 && (
         <div className="card card-pad" style={{ marginBottom: 16 }}>

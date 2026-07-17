@@ -33,6 +33,7 @@ jobs:
             tests/test_dashboard_first_paint.py \
             tests/test_news_fanout_parallel.py \
             tests/test_llm_http_timeouts.py \
+            tests/test_tour_state.py \
             tests/test_session_b_depth.py \
             tests/test_stub_sweep.py \
             tests/test_beginner_advisor.py \
