@@ -244,7 +244,7 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
         </button>
       </div>
 
-      <div className="card card-pad" style={{ maxWidth: 560, marginBottom: 16 }}>
+      <div className="card card-pad" data-tour="settings-market" style={{ maxWidth: 560, marginBottom: 16 }}>
         <div className="rail-label" style={{ marginTop: 0 }}>Market signals</div>
         <p style={{ fontSize: 12.5, color: "var(--text-2)", margin: "0 0 12px", lineHeight: 1.45 }}>
           Manual load only — results save to your profile and show on the Dashboard pulse.

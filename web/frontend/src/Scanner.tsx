@@ -192,12 +192,12 @@ export default function Scanner({
         </small>
       </div>
 
-      <div className="seg" style={{ marginBottom: 14 }}>
+      <div className="seg" data-tour="scanner-mode" style={{ marginBottom: 14 }}>
         <button className={tab === "scan" ? "active" : ""} onClick={() => setTab("scan")}>Scanner</button>
         <button className={tab === "pairs" ? "active" : ""} onClick={() => setTab("pairs")}>Pairs trading</button>
       </div>
 
-      <div className="card card-pad" style={{ marginBottom: 16 }}>
+      <div className="card card-pad" data-tour="scanner-setup" style={{ marginBottom: 16 }}>
         <div className="form-grid">
           <div className="field">
             <label>Universe</label>

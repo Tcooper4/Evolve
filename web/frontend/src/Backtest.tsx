@@ -343,7 +343,7 @@ export default function Backtest() {
         Backtest <small>strategies, models, and tuning</small>
       </div>
 
-      <div className="seg" style={{ marginBottom: 14 }}>
+      <div className="seg" data-tour="backtest-tabs" style={{ marginBottom: 14 }}>
         <button className={tab === "backtest" ? "active" : ""} onClick={() => { setTab("backtest"); setOpt(null); setTune(null); setOptStruct(null); }}>Backtest</button>
         <button className={tab === "optimize" ? "active" : ""} onClick={() => { setTab("optimize"); setRes(null); setTune(null); setOptStruct(null); }}>Optimize</button>
         <button className={tab === "models" ? "active" : ""} onClick={() => { setTab("models"); setRes(null); setOpt(null); setOptStruct(null); }}>Model tune</button>

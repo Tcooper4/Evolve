@@ -356,7 +356,7 @@ export default function Analyze({
       <div className="greeting">
         Analyze <small>AI Score, forecast, news & risk</small>
       </div>
-      <div className="topbar">
+      <div className="topbar" data-tour="analyze-controls">
         <div className="search">
           <span className="icon">⌕</span>
           <input value={input}
@@ -386,6 +386,13 @@ export default function Analyze({
             <button type="button" disabled>Options</button>
             <button type="button" disabled>Filings</button>
             <button type="button" disabled>Labs</button>
+          </div>
+          <div className="form-grid" data-tour="analyze-forecast-risk" style={{ marginTop: 12 }}>
+            <div className="card card-pad empty">Forecast and risk cards appear here after Analyze.</div>
+            <div className="card card-pad empty">Risk metrics appear here after Analyze.</div>
+          </div>
+          <div className="card card-pad empty" data-tour="analyze-news" style={{ marginTop: 12 }}>
+            Symbol headlines and context appear here after Analyze.
           </div>
         </>
       )}
@@ -584,7 +591,7 @@ export default function Analyze({
                 )
               )}
 
-              <div className="form-grid" style={{ marginBottom: 16 }}>
+              <div className="form-grid" data-tour="analyze-forecast-risk" style={{ marginBottom: 16 }}>
                 <div className="card card-pad">
                   <div className="rail-label" style={{ marginTop: 0 }}>Forecast</div>
                   {extrasLoading && !forecast && (
@@ -698,7 +705,7 @@ export default function Analyze({
                 </div>
               </div>
 
-              <div className="card card-pad">
+              <div className="card card-pad" data-tour="analyze-news">
                 <div className="rail-label" style={{ marginTop: 0 }}>News · {input}</div>
                 <div className="dim" style={{ fontSize: 11.5, marginBottom: 8 }}>
                   Optional LLM blurbs are context only — not a trade call.

@@ -234,26 +234,28 @@ export default function Portfolio() {
         Portfolio <small>paper only — practice with zero risk, tracked like the real thing</small>
       </div>
 
-      {data && (
-        <div className="kpis">
-          <div className="card kpi"><div className="label">Total equity</div>
-            <div className="value num">${data.total_equity.toLocaleString()}</div>
-            <div className="sub">cash + market value</div>
+      <div data-tour="portfolio-summary">
+        {data && (
+          <div className="kpis">
+            <div className="card kpi"><div className="label">Total equity</div>
+              <div className="value num">${data.total_equity.toLocaleString()}</div>
+              <div className="sub">cash + market value</div>
+            </div>
+            <div className="card kpi"><div className="label">Cash available</div>
+              <div className="value num">${data.cash.toLocaleString()}</div>
+              {!data.all_prices_live && <div className="sub">some prices unavailable — showing cost</div>}
+            </div>
+            <div className="card kpi"><div className="label">Unrealized P&L</div>
+              <div className={`value num ${pnlCls(data.total_unrealized_pnl)}`}>
+                {data.total_unrealized_pnl >= 0 ? "+" : ""}${data.total_unrealized_pnl.toLocaleString()}
+              </div><div className="sub">open positions</div></div>
+            <div className="card kpi"><div className="label">Realized P&L</div>
+              <div className={`value num ${pnlCls(data.realized_pnl)}`}>
+                {data.realized_pnl >= 0 ? "+" : ""}${data.realized_pnl.toLocaleString()}
+              </div><div className="sub">closed trades, all time</div></div>
           </div>
-          <div className="card kpi"><div className="label">Cash available</div>
-            <div className="value num">${data.cash.toLocaleString()}</div>
-            {!data.all_prices_live && <div className="sub">some prices unavailable — showing cost</div>}
-          </div>
-          <div className="card kpi"><div className="label">Unrealized P&L</div>
-            <div className={`value num ${pnlCls(data.total_unrealized_pnl)}`}>
-              {data.total_unrealized_pnl >= 0 ? "+" : ""}${data.total_unrealized_pnl.toLocaleString()}
-            </div><div className="sub">open positions</div></div>
-          <div className="card kpi"><div className="label">Realized P&L</div>
-            <div className={`value num ${pnlCls(data.realized_pnl)}`}>
-              {data.realized_pnl >= 0 ? "+" : ""}${data.realized_pnl.toLocaleString()}
-            </div><div className="sub">closed trades, all time</div></div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="card card-pad" data-tour="portfolio-trade" style={{ marginBottom: 16 }}>
         <div className="row" style={{ flexWrap: "wrap" }}>
@@ -285,7 +287,7 @@ export default function Portfolio() {
         <button className={tab === "allocate" ? "active" : ""} onClick={() => setTab("allocate")}>Allocate</button>
       </div>
 
-      <div className="card">
+      <div className="card" data-tour="portfolio-content">
         {loading && <div className="skeleton" style={{ height: 160, margin: 16 }} />}
         {!loading && tab === "positions" && data && data.positions.length > 0 && (
           <table className="tbl">

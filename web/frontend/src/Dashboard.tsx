@@ -481,7 +481,7 @@ export default function Dashboard({
       <PageTour pageId="dashboard" />
       <div className="greeting">{greet}, {displayName} <small>markets at a glance — live</small></div>
 
-      <div className="topbar">
+      <div className="topbar" data-tour="dashboard-controls">
         <div className="search">
           <span className="icon">⌕</span>
           <input
@@ -503,7 +503,7 @@ export default function Dashboard({
         </button>
       </div>
 
-      <div className="kpis">
+      <div className="kpis" data-tour="dashboard-pulse">
         <div className="card kpi fade-in">
           <div className="label">{symbol}</div>
           {loading ? (
@@ -831,7 +831,7 @@ export default function Dashboard({
             </>
           )}
         </div>
-        <div className="card card-pad">
+        <div className="card card-pad" data-tour="dashboard-briefing">
           <div className="rail-label" style={{ marginTop: 0 }}>Morning briefing</div>
           {!brief && !briefBusy && (
             <div className="dim">Generate a briefing to surface top long/short candidates from the S&P 100.</div>
