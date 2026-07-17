@@ -822,8 +822,14 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 lq = a.get("link_quality") or (
                     "same_day" if a.get("date_confirmed") else "fallback_recent"
                 )
-                if not headlines and a.get("tier") != "provisional":
-                    lq = "same_day"  # no headline claim either way
+                # Empty headlines: don't invent a fallback claim — but keep
+                # explicit degradation flags (e.g. news_lookup_timeout).
+                if (
+                    not headlines
+                    and a.get("tier") != "provisional"
+                    and lq not in ("news_lookup_timeout", "fallback_recent")
+                ):
+                    lq = "same_day"
                 events.append({
                     "time": str(a.get("date") or "")[:10],
                     "price": a.get("price"),
@@ -837,12 +843,19 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                     "date_confirmed": bool(a.get("date_confirmed")),
                     "tier": a.get("tier") or "significant",
                 })
+            news_status = "ok"
+            if any(
+                str(e.get("link_quality") or "") == "news_lookup_timeout"
+                for e in events
+            ):
+                news_status = "timeout_volume_only"
             return {
                 "success": True,
                 "symbol": sym,
                 "period": per,
                 "events": events,
                 "window_start": win_start.isoformat() if win_start else None,
+                "news_status": news_status,
             }
         except Exception as e:
             logger.warning("chart-events failed: %s", e)

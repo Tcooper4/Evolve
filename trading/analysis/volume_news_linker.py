@@ -13,6 +13,7 @@ re-attaching the same recent Yahoo blurb to every historical volume day
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import re
 from datetime import datetime, timedelta
@@ -27,6 +28,12 @@ logger = logging.getLogger(__name__)
 
 LINK_SAME_DAY = "same_day"
 LINK_FALLBACK = "fallback_recent"
+# Fan-out budget exceeded — volume marks kept, headlines omitted (honest).
+LINK_NEWS_TIMEOUT = "news_lookup_timeout"
+
+# Parallel per-mark news/GDELT fan-out. Sized above one real GDELT round-trip
+# (~14s) with headroom; not a truncation of coverage on the happy path.
+NEWS_FANOUT_BUDGET_S = 22.0
 
 # Handles that often print the *why* of a move before wire recycle pieces.
 _BREAKING_SOURCE_HINTS = (
@@ -585,6 +592,211 @@ def select_chart_event_rows(
     return rows
 
 
+def _fetch_news_for_marks_parallel(
+    jobs: List[Dict[str, Any]],
+    *,
+    timeout_s: float,
+) -> Tuple[Dict[str, List[Dict]], bool]:
+    """Fetch ``get_news_for_date`` for every mark concurrently.
+
+    Returns ``(news_by_date, degraded)``. Uses a thread pool (not
+    ``asyncio.to_thread``) so a wall-clock budget can abandon without
+    waiting for in-flight GDELT threads to finish — matching the
+    fail-open contract.
+    """
+    if not jobs:
+        return {}, False
+
+    def _one(job: Dict[str, Any]) -> Tuple[str, List[Dict]]:
+        date_str = str(job["date_str"])
+        try:
+            news = get_news_for_date(
+                job["symbol"],
+                date_str,
+                job.get("n_articles", 4),
+                allow_fallback=job.get("allow_fallback", True),
+                price_change_pct=job.get("price_change_pct"),
+                exclude_titles=None,  # deconflict titles after fan-out
+                include_archives=job.get("include_archives", True),
+            )
+            return date_str, list(news or [])
+        except Exception as e:
+            logger.debug("parallel news fetch failed for %s: %s", date_str, e)
+            return date_str, []
+
+    news_by_date: Dict[str, List[Dict]] = {}
+    workers = min(16, max(1, len(jobs)))
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+    try:
+        futures = {pool.submit(_one, job): job for job in jobs}
+        done, not_done = concurrent.futures.wait(
+            set(futures.keys()),
+            timeout=float(timeout_s),
+            return_when=concurrent.futures.ALL_COMPLETED,
+        )
+        for fut in done:
+            try:
+                date_str, news = fut.result()
+                news_by_date[date_str] = news
+            except Exception as e:
+                logger.debug("parallel news future failed: %s", e)
+        degraded = bool(not_done)
+        for fut in not_done:
+            fut.cancel()
+        return news_by_date, degraded
+    finally:
+        # Do not block on still-running GDELT/news calls after the budget.
+        pool.shutdown(wait=False, cancel_futures=True)
+
+
+def _deconflict_news(
+    news: List[Dict],
+    claimed_titles: Set[str],
+    *,
+    limit: int = 4,
+) -> List[Dict]:
+    """Drop headlines already used on earlier marks; claim the rest."""
+    out: List[Dict] = []
+    for a in news or []:
+        if not isinstance(a, dict):
+            continue
+        key = _normalize_title(str(a.get("title") or ""))
+        if key and key in claimed_titles:
+            continue
+        out.append(a)
+        if key:
+            claimed_titles.add(key)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _annotation_from_row(
+    date_str: str,
+    row: Any,
+    tier: str,
+    news: List[Dict],
+    *,
+    link_quality_override: Optional[str] = None,
+    skip_news: bool = False,
+) -> Dict[str, Any]:
+    """Build one chart annotation dict (hover, color, honesty flags)."""
+    link_quality = LINK_SAME_DAY
+    if link_quality_override:
+        link_quality = link_quality_override
+    elif news:
+        link_quality = str(news[0].get("link_quality") or LINK_SAME_DAY)
+
+    bullish = row.get("candle_type") == "bullish"
+    if tier == "significant":
+        color = "#00FF88" if bullish else "#FF4444"
+        mark_text = "N"
+        mark_name = "Full volume spike"
+        color_meaning = (
+            "green = up-day spike" if bullish else "red = down-day spike"
+        )
+        tier_note = (
+            f"<br><b>[{mark_text}] {mark_name}</b> — session hit the full "
+            "volume/move spike bar (≥~2× vol with ≥~2% move, or ≥~3× vol). "
+            f"Color: {color_meaning}."
+        )
+    elif tier == "event_move":
+        color = "#7EB6FF" if bullish else "#C084FC"
+        mark_text = "E"
+        mark_name = "Large session move"
+        color_meaning = (
+            "blue = up-day move" if bullish else "purple = down-day move"
+        )
+        tier_note = (
+            f"<br><b>[{mark_text}] {mark_name}</b> — big price change "
+            "(≥~1.2%) without extreme volume. "
+            f"Color: {color_meaning}."
+        )
+    else:
+        color = "#F0C75E" if bullish else "#E89B6B"
+        mark_text = "n"
+        mark_name = "Notable volume"
+        color_meaning = (
+            "gold = up-day notable" if bullish else "orange = down-day notable"
+        )
+        tier_note = (
+            f"<br><b>[{mark_text}] {mark_name}</b> — elevated volume "
+            "(below the full 2×/2% or 3× spike bar). "
+            f"Color: {color_meaning}."
+        )
+
+    if link_quality_override == LINK_NEWS_TIMEOUT:
+        hover = (
+            f"<b>{date_str}</b><br>"
+            f"Vol: {row['volume_ratio']:.1f}x avg<br>"
+            f"Move: {row['price_change_pct'] * 100:+.1f}%<br>"
+            "<i>Headlines unavailable — news lookup timed out "
+            "(volume marks only)</i>"
+            + tier_note
+        )
+        link_quality = LINK_NEWS_TIMEOUT
+    elif news:
+        news_lines = []
+        for a in news[:4]:
+            title = str(a.get("title", ""))[:80]
+            src = a.get("source", "")
+            q = a.get("link_quality") or LINK_SAME_DAY
+            tag = "" if q == LINK_SAME_DAY else " [may not be same-day]"
+            score = a.get("event_link_score")
+            score_s = f" · link {score:.2f}" if isinstance(score, (int, float)) else ""
+            news_lines.append(f"• {title} [{src}]{tag}{score_s}")
+        honesty = (
+            ""
+            if link_quality == LINK_SAME_DAY
+            else "<br><i>Headlines may not be same-day (fallback)</i>"
+        )
+        hover = (
+            f"<b>{date_str}</b><br>"
+            f"Vol: {row['volume_ratio']:.1f}x avg<br>"
+            f"Move: {row['price_change_pct'] * 100:+.1f}%<br><br>"
+            + "<br>".join(news_lines)
+            + honesty
+            + tier_note
+        )
+    else:
+        hover = (
+            f"<b>{date_str}</b><br>"
+            f"Vol: {row['volume_ratio']:.1f}x avg<br>"
+            f"Move: {row['price_change_pct'] * 100:+.1f}%<br>"
+            + (
+                "No dated breaking news found for this session"
+                " (feeds are recent-only — not a historical archive)"
+                if not skip_news
+                else "Volume/price mark"
+            )
+            + tier_note
+        )
+        if link_quality != LINK_NEWS_TIMEOUT:
+            link_quality = LINK_SAME_DAY
+
+    high_val = row.get("High") or row.get("high") or row.get("close")
+    try:
+        price_val = float(high_val) * 1.005 if high_val is not None else float(
+            row.get("close", 0)
+        )
+    except Exception:
+        price_val = float(row.get("close", 0) or 0)
+
+    return {
+        "date": date_str,
+        "price": price_val,
+        "text": mark_text,
+        "hover": hover,
+        "color": color,
+        "volume_ratio": float(row["volume_ratio"]),
+        "price_change_pct": float(row["price_change_pct"]),
+        "news": news,
+        "link_quality": link_quality,
+        "date_confirmed": link_quality == LINK_SAME_DAY and bool(news),
+        "tier": tier,
+    }
+
+
 def annotations_from_rows(
     rows: List[Tuple[Any, Any, str]],
     symbol: str,
@@ -592,143 +804,96 @@ def annotations_from_rows(
     skip_news: bool = False,
     include_archives: bool = True,
 ) -> List[Dict]:
-    """Attach headlines (unless ``skip_news``) and build annotation dicts."""
+    """Attach headlines (unless ``skip_news``) and build annotation dicts.
+
+    Per-mark news/GDELT lookups run concurrently (thread pool) so wall-clock
+    tracks one lookup (~14s) rather than N× serial. A generous
+    ``NEWS_FANOUT_BUDGET_S`` backstop fails open: unfinished marks stay as
+    volume-only with ``link_quality=news_lookup_timeout`` — never silently
+    dropped. Completed marks in the same fan-out still get their headlines.
+    """
     if not rows:
         return []
 
-    claimed_titles: Set[str] = set()
     today = datetime.utcnow().date()
-    annotations: List[Dict] = []
+
+    if skip_news:
+        return [
+            _annotation_from_row(
+                str(date.date()) if hasattr(date, "date") else str(date)[:10],
+                row,
+                tier,
+                [],
+                skip_news=True,
+            )
+            for date, row, tier in rows
+        ]
+
+    jobs: List[Dict[str, Any]] = []
+    meta: List[Tuple[str, Any, str]] = []
     for date, row, tier in rows:
         date_str = str(date.date()) if hasattr(date, "date") else str(date)[:10]
         try:
             age_days = (today - datetime.strptime(date_str, "%Y-%m-%d").date()).days
         except Exception:
             age_days = 999
-        allow_fb = age_days <= 2
         try:
             pc = float(row["price_change_pct"])
         except Exception:
             pc = None
-
-        news: List[Dict] = []
-        if not skip_news:
-            news = get_news_for_date(
-                symbol,
-                date_str,
-                n_articles=4,
-                allow_fallback=allow_fb,
-                price_change_pct=pc,
-                exclude_titles=list(claimed_titles),
-                include_archives=include_archives,
-            )
-
-        link_quality = LINK_SAME_DAY
-        if news:
-            link_quality = str(news[0].get("link_quality") or LINK_SAME_DAY)
-            for n in news:
-                claimed_titles.add(_normalize_title(str(n.get("title") or "")))
-
-        bullish = row.get("candle_type") == "bullish"
-        if tier == "significant":
-            color = "#00FF88" if bullish else "#FF4444"
-            mark_text = "N"
-            mark_name = "Full volume spike"
-            color_meaning = (
-                "green = up-day spike" if bullish else "red = down-day spike"
-            )
-            tier_note = (
-                f"<br><b>[{mark_text}] {mark_name}</b> — session hit the full "
-                "volume/move spike bar (≥~2× vol with ≥~2% move, or ≥~3× vol). "
-                f"Color: {color_meaning}."
-            )
-        elif tier == "event_move":
-            color = "#7EB6FF" if bullish else "#C084FC"
-            mark_text = "E"
-            mark_name = "Large session move"
-            color_meaning = (
-                "blue = up-day move" if bullish else "purple = down-day move"
-            )
-            tier_note = (
-                f"<br><b>[{mark_text}] {mark_name}</b> — big price change "
-                "(≥~1.2%) without extreme volume. "
-                f"Color: {color_meaning}."
-            )
-        else:
-            color = "#F0C75E" if bullish else "#E89B6B"
-            mark_text = "n"
-            mark_name = "Notable volume"
-            color_meaning = (
-                "gold = up-day notable" if bullish else "orange = down-day notable"
-            )
-            tier_note = (
-                f"<br><b>[{mark_text}] {mark_name}</b> — elevated volume "
-                "(below the full 2×/2% or 3× spike bar). "
-                f"Color: {color_meaning}."
-            )
-
-        if news:
-            news_lines = []
-            for a in news[:4]:
-                title = str(a.get("title", ""))[:80]
-                src = a.get("source", "")
-                q = a.get("link_quality") or LINK_SAME_DAY
-                tag = "" if q == LINK_SAME_DAY else " [may not be same-day]"
-                score = a.get("event_link_score")
-                score_s = f" · link {score:.2f}" if isinstance(score, (int, float)) else ""
-                news_lines.append(f"• {title} [{src}]{tag}{score_s}")
-            honesty = (
-                ""
-                if link_quality == LINK_SAME_DAY
-                else "<br><i>Headlines may not be same-day (fallback)</i>"
-            )
-            hover = (
-                f"<b>{date_str}</b><br>"
-                f"Vol: {row['volume_ratio']:.1f}x avg<br>"
-                f"Move: {row['price_change_pct'] * 100:+.1f}%<br><br>"
-                + "<br>".join(news_lines)
-                + honesty
-                + tier_note
-            )
-        else:
-            hover = (
-                f"<b>{date_str}</b><br>"
-                f"Vol: {row['volume_ratio']:.1f}x avg<br>"
-                f"Move: {row['price_change_pct'] * 100:+.1f}%<br>"
-                + (
-                    "No dated breaking news found for this session"
-                    " (feeds are recent-only — not a historical archive)"
-                    if not skip_news
-                    else "Volume/price mark"
-                )
-                + tier_note
-            )
-            link_quality = LINK_SAME_DAY
-
-        high_val = row.get("High") or row.get("high") or row.get("close")
-        try:
-            price_val = float(high_val) * 1.005 if high_val is not None else float(
-                row.get("close", 0)
-            )
-        except Exception:
-            price_val = float(row.get("close", 0) or 0)
-
-        annotations.append(
+        meta.append((date_str, row, tier))
+        jobs.append(
             {
-                "date": date_str,
-                "price": price_val,
-                "text": mark_text,
-                "hover": hover,
-                "color": color,
-                "volume_ratio": float(row["volume_ratio"]),
-                "price_change_pct": float(row["price_change_pct"]),
-                "news": news,
-                "link_quality": link_quality,
-                "date_confirmed": link_quality == LINK_SAME_DAY and bool(news),
-                "tier": tier,
+                "symbol": symbol,
+                "date_str": date_str,
+                "n_articles": 4,
+                "allow_fallback": age_days <= 2,
+                "price_change_pct": pc,
+                "include_archives": include_archives,
             }
         )
 
+    news_by_date: Dict[str, List[Dict]] = {}
+    degraded = False
+    try:
+        news_by_date, degraded = _fetch_news_for_marks_parallel(
+            jobs,
+            timeout_s=float(NEWS_FANOUT_BUDGET_S),
+        )
+        if degraded:
+            logger.warning(
+                "chart news fan-out exceeded %.0fs budget for %s (%d marks) — "
+                "returning volume-only marks",
+                NEWS_FANOUT_BUDGET_S,
+                symbol,
+                len(jobs),
+            )
+    except Exception as e:
+        degraded = True
+        logger.warning("chart news fan-out failed for %s: %s", symbol, e)
+
+    claimed_titles: Set[str] = set()
+    annotations: List[Dict] = []
+    for date_str, row, tier in meta:
+        if date_str not in news_by_date:
+            # Budget tripped before this mark finished (or total fan-out
+            # failure) — keep the volume mark, disclose honestly.
+            annotations.append(
+                _annotation_from_row(
+                    date_str,
+                    row,
+                    tier,
+                    [],
+                    link_quality_override=LINK_NEWS_TIMEOUT,
+                )
+            )
+            continue
+        news = _deconflict_news(
+            news_by_date.get(date_str, []),
+            claimed_titles,
+            limit=4,
+        )
+        annotations.append(_annotation_from_row(date_str, row, tier, news))
     return annotations
 
 

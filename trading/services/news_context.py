@@ -12,6 +12,10 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# One-line headline gloss on the Dashboard overlay path — keep tight so a
+# stuck Anthropic call cannot stall news cards (SDK default is multi-minute).
+ANTHROPIC_TIMEOUT_S = 15.0
+
 _HEDGE_PROMPT = (
     "You are a market research assistant helping a trader skim headlines.\n"
     "In ONE short sentence, what context might this headline provide?\n"
@@ -44,7 +48,7 @@ def _complete(prompt: str, user_id: Optional[str] = None) -> str:
         try:
             import anthropic
 
-            client = anthropic.Anthropic(api_key=anthropic_key)
+            client = anthropic.Anthropic(api_key=anthropic_key, timeout=ANTHROPIC_TIMEOUT_S)
             msg = client.messages.create(
                 model="claude-3-5-haiku-20241022",
                 max_tokens=80,

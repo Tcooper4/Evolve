@@ -57,6 +57,13 @@ class ResearchResult:
 
 logger = logging.getLogger(__name__)
 
+# Search-style HTTP: 12s sits in the 10–15s band — enough for GitHub/arXiv,
+# short enough not to freeze a research turn if either API hangs.
+SEARCH_HTTP_TIMEOUT_S = 12.0
+# Research summarize / code suggestion: longer than intent classify, still
+# bounded for a sync agent step (SDK default is multi-minute).
+ANTHROPIC_TIMEOUT_S = 45.0
+
 
 class ResearchAgent(BaseAgent):
     def __init__(self, config: Optional[AgentConfig] = None):
@@ -242,7 +249,11 @@ class ResearchAgent(BaseAgent):
     def search_github(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         """Search GitHub for repositories related to the query."""
         url = f"https://api.github.com/search/repositories?q={query}&sort=stars&order=desc&per_page={max_results}"
-        resp = requests.get(url)
+        try:
+            resp = requests.get(url, timeout=SEARCH_HTTP_TIMEOUT_S)
+        except requests.RequestException as e:
+            logger.warning("GitHub search failed: %s", e)
+            return []
         if resp.status_code == 200:
             items = resp.json().get("items", [])
             return [
@@ -284,7 +295,11 @@ class ResearchAgent(BaseAgent):
             logger.warning(f"Vector search failed, falling back to keyword search: {e}")
 
         url = f"http://export.arxiv.org/api/query?search_query=all:{query}&start=0&max_results={max_results}"
-        resp = requests.get(url)
+        try:
+            resp = requests.get(url, timeout=SEARCH_HTTP_TIMEOUT_S)
+        except requests.RequestException as e:
+            logger.warning("arXiv search failed: %s", e)
+            return []
         if resp.status_code == 200:
             import xml.etree.ElementTree as ET
 
@@ -310,7 +325,10 @@ class ResearchAgent(BaseAgent):
         try:
             if getattr(self, "anthropic_api_key", None):
                 import anthropic
-                client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+                client = anthropic.Anthropic(
+                    api_key=self.anthropic_api_key,
+                    timeout=ANTHROPIC_TIMEOUT_S,
+                )
                 model = CLAUDE_PRIMARY_MODEL
                 if get_llm_config:
                     model = getattr(get_llm_config(), "primary_model", model)
@@ -331,7 +349,10 @@ class ResearchAgent(BaseAgent):
         try:
             if getattr(self, "anthropic_api_key", None):
                 import anthropic
-                client = anthropic.Anthropic(api_key=self.anthropic_api_key)
+                client = anthropic.Anthropic(
+                    api_key=self.anthropic_api_key,
+                    timeout=ANTHROPIC_TIMEOUT_S,
+                )
                 model = CLAUDE_PRIMARY_MODEL
                 if get_llm_config:
                     model = getattr(get_llm_config(), "primary_model", model)

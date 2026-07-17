@@ -48,6 +48,10 @@ from trading.agents.prompt_templates import format_template
 
 logger = logging.getLogger(__name__)
 
+# Intent classify is a short JSON reply on the chat routing path — 20s is
+# enough for Haiku/Sonnet classify, far below the SDK multi-minute default.
+ANTHROPIC_INTENT_TIMEOUT_S = 20.0
+
 
 @dataclass
 class ParsedIntent:
@@ -358,7 +362,7 @@ class EnhancedPromptRouterAgent:
             api_key = self.anthropic_api_key or llm.anthropic_api_key
             if not api_key:
                 return None
-            client = anthropic.Anthropic(api_key=api_key)
+            client = anthropic.Anthropic(api_key=api_key, timeout=ANTHROPIC_INTENT_TIMEOUT_S)
             model = getattr(llm, "primary_model", CLAUDE_PRIMARY_MODEL)
             system = (
                 "You are an intent classifier for the Evolve trading system. "

@@ -35,6 +35,7 @@ import {
   filterMarkersToCandles,
 } from "./chartMarkers";
 import { loadCachedChartTimezone, cacheChartTimezone } from "./chartTime";
+import { runDashboardLoad } from "./dashboardLoad";
 
 const PERIODS = ["1d", "5d", "1mo", "3mo", "6mo", "1y", "max"] as const;
 type Period = (typeof PERIODS)[number];
@@ -112,6 +113,7 @@ export default function Dashboard({
   const searchRef = useRef<HTMLInputElement>(null);
   const prevPrice = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const loadGenRef = useRef(0);
   const symbolRef = useRef(symbol);
   const periodRef = useRef(period);
   const dayIntervalRef = useRef(dayInterval);
@@ -192,125 +194,142 @@ export default function Dashboard({
   }, [optOverlayOn, symbol]);
 
   const load = useCallback(async (sym: string, per: Period, iv?: DayInterval, soft = false) => {
+    const gen = ++loadGenRef.current;
     if (!soft) setLoading(true);
-    try {
-      const interval = per === "1d" ? (iv ?? dayIntervalRef.current) : "";
-      // Soft polls only refresh quote+history — chart-events does GDELT/Twitter
-      // per mark and was adding multi-second stalls every 20–45s on 1D/1W.
-      const [q, h, n, ev, br, ms] = await Promise.all([
-        getQuote(sym),
-        getHistory(sym, per, interval),
-        soft ? Promise.resolve({ items: [] as unknown[] }) : getNews(sym, 5).catch(() => ({ items: [] })),
-        soft ? Promise.resolve({ events: [] as ChartEvent[] }) : getChartEvents(sym, per).catch(() => ({ events: [] })),
-        soft ? Promise.resolve({ items: [] as unknown[] }) : getBreakingNews(5).catch(() => ({ items: [] })),
-        soft
-          ? Promise.resolve(null as MarketState | null)
-          : getMarketState(sym).catch(() => null),
-      ]);
-      setQuote(q);
-      setCandles(withLiveBarVolume(h.candles, q.volume));
-      if (!soft) {
-        setEvents(ev.events ?? []);
-        if (!h.candles?.length) {
-          const sug = h.suggestion ? String(h.suggestion) : null;
-          setChartHint(
-            sug
-              ? `No chart data for ${h.symbol}. Did you mean ${sug}?`
-              : `No chart data for ${h.symbol} — check the symbol or your connection.`,
-          );
-        } else {
-          setChartHint(null);
-        }
-      }
-      setSymbol(h.symbol);
-      setInput(h.symbol);
-      if (q.price != null) prevPrice.current = q.price;
+    const interval = per === "1d" ? (iv ?? dayIntervalRef.current) : "";
 
-      if (soft) {
-        // Keep existing websocket; only refresh bar history (+ live volume)
-        return;
-      }
-
-      setLiveSpike(null);
-      setNews((n.items as Record<string, unknown>[]) ?? []);
-      setNewsWhy({});
-      const titles = ((n.items as Record<string, unknown>[]) ?? [])
-        .map((it) => String(it.title ?? it.headline ?? "").trim())
-        .filter(Boolean)
-        .slice(0, 5);
-      if (titles.length) {
-        getNewsContext(titles)
-          .then((ctx) => {
-            const map: Record<string, string> = {};
-            for (const it of ctx.items ?? []) {
-              if (it.title && it.why) map[it.title] = it.why;
-            }
-            setNewsWhy(map);
-          })
-          .catch(() => {});
-      }
-      setBreaking((br.items as Record<string, unknown>[]) ?? []);
-      setMarketState(ms);
-      if (q.price != null && prevPrice.current != null && q.price !== prevPrice.current) {
-        setFlash(q.price > prevPrice.current ? "flash-up" : "flash-down");
-        setTimeout(() => setFlash(""), 700);
-      }
-      prevPrice.current = q.price;
-      wsRef.current?.close();
-      setChartLive(true);
-      wsRef.current = quoteSocket(h.symbol, (wq) => {
-        if (wq.type === "volume_spike") {
-          if (wq.active === false) {
+    // Critical path (quote+history+news) clears the spinner; chart-events /
+    // breaking / market-state overlay in a second pass so a cold GDELT fan-out
+    // cannot block first paint. Soft polls still skip that overlay entirely.
+    await runDashboardLoad({
+      symbol: sym,
+      period: per,
+      interval,
+      soft,
+      fetchers: {
+        getQuote,
+        getHistory,
+        getNews,
+        getChartEvents,
+        getBreakingNews,
+        getMarketState,
+      },
+      hooks: {
+        onCritical: ({ quote: q, history: h, news: n }) => {
+          if (gen !== loadGenRef.current) return;
+          setQuote(q);
+          setCandles(withLiveBarVolume(h.candles as Candle[], q.volume));
+          if (!soft) {
+            // Clear stale marks until overlay arrives for this symbol
+            setEvents([]);
             setLiveSpike(null);
+            if (!h.candles?.length) {
+              const sug = h.suggestion ? String(h.suggestion) : null;
+              setChartHint(
+                sug
+                  ? `No chart data for ${h.symbol}. Did you mean ${sug}?`
+                  : `No chart data for ${h.symbol} — check the symbol or your connection.`,
+              );
+            } else {
+              setChartHint(null);
+            }
+          }
+          setSymbol(h.symbol);
+          setInput(h.symbol);
+
+          if (soft) {
+            if (q.price != null) prevPrice.current = q.price;
+            // Keep existing websocket; only refresh bar history (+ live volume)
             return;
           }
-          const fallback = wq.link_quality === "fallback_recent";
-          const honesty = fallback ? " · may not be same-day headline" : "";
-          const baseTitle = String(wq.title ?? "Provisional live volume spike");
-          setLiveSpike({
-            time: String(wq.time ?? new Date().toISOString().slice(0, 10)),
-            title: `${baseTitle}${honesty.includes("may not") && !baseTitle.includes("may not") ? honesty : ""}`,
-            text: String(wq.text ?? "LIVE"),
-            color: String(wq.color ?? "#F5A623"),
-            shape: typeof wq.shape === "string" ? wq.shape : "circle",
-            provisional: true,
-            link_quality: typeof wq.link_quality === "string" ? wq.link_quality : undefined,
-            date_confirmed: Boolean(wq.date_confirmed),
-            volume_ratio: typeof wq.volume_ratio === "number" ? wq.volume_ratio : undefined,
-            price_change_pct: typeof wq.price_change_pct === "number" ? wq.price_change_pct : undefined,
+
+          setNews((n.items as Record<string, unknown>[]) ?? []);
+          setNewsWhy({});
+          const titles = ((n.items as Record<string, unknown>[]) ?? [])
+            .map((it) => String(it.title ?? it.headline ?? "").trim())
+            .filter(Boolean)
+            .slice(0, 5);
+          if (titles.length) {
+            getNewsContext(titles)
+              .then((ctx) => {
+                if (gen !== loadGenRef.current) return;
+                const map: Record<string, string> = {};
+                for (const it of ctx.items ?? []) {
+                  if (it.title && it.why) map[it.title] = it.why;
+                }
+                setNewsWhy(map);
+              })
+              .catch(() => {});
+          }
+          if (q.price != null && prevPrice.current != null && q.price !== prevPrice.current) {
+            setFlash(q.price > prevPrice.current ? "flash-up" : "flash-down");
+            setTimeout(() => setFlash(""), 700);
+          }
+          prevPrice.current = q.price;
+          wsRef.current?.close();
+          setChartLive(true);
+          wsRef.current = quoteSocket(h.symbol, (wq) => {
+            if (wq.type === "volume_spike") {
+              if (wq.active === false) {
+                setLiveSpike(null);
+                return;
+              }
+              const fallback = wq.link_quality === "fallback_recent";
+              const honesty = fallback ? " · may not be same-day headline" : "";
+              const baseTitle = String(wq.title ?? "Provisional live volume spike");
+              setLiveSpike({
+                time: String(wq.time ?? new Date().toISOString().slice(0, 10)),
+                title: `${baseTitle}${honesty.includes("may not") && !baseTitle.includes("may not") ? honesty : ""}`,
+                text: String(wq.text ?? "LIVE"),
+                color: String(wq.color ?? "#F5A623"),
+                shape: typeof wq.shape === "string" ? wq.shape : "circle",
+                provisional: true,
+                link_quality: typeof wq.link_quality === "string" ? wq.link_quality : undefined,
+                date_confirmed: Boolean(wq.date_confirmed),
+                volume_ratio: typeof wq.volume_ratio === "number" ? wq.volume_ratio : undefined,
+                price_change_pct: typeof wq.price_change_pct === "number" ? wq.price_change_pct : undefined,
+              });
+              return;
+            }
+            if (wq.price == null) return;
+            setQuote((prev) => prev ? { ...prev, price: wq.price as number, change_pct: wq.change_pct as number | null } : prev);
+            setCandles((prev) => {
+              if (!prev.length) return prev;
+              const next = prev.slice();
+              const last = { ...next[next.length - 1] };
+              const px = Number(wq.price);
+              last.close = px;
+              last.high = Math.max(last.high, px);
+              last.low = Math.min(last.low, px);
+              next[next.length - 1] = last;
+              return next;
+            });
+            if (prevPrice.current != null && wq.price !== prevPrice.current) {
+              setFlash(wq.price > prevPrice.current ? "flash-up" : "flash-down");
+              setTimeout(() => setFlash(""), 700);
+            }
+            prevPrice.current = wq.price as number;
           });
-          return;
-        }
-        if (wq.price == null) return;
-        setQuote((prev) => prev ? { ...prev, price: wq.price as number, change_pct: wq.change_pct as number | null } : prev);
-        // Live last-bar movement: update OHLC of the open candle in place
-        setCandles((prev) => {
-          if (!prev.length) return prev;
-          const next = prev.slice();
-          const last = { ...next[next.length - 1] };
-          const px = Number(wq.price);
-          last.close = px;
-          last.high = Math.max(last.high, px);
-          last.low = Math.min(last.low, px);
-          next[next.length - 1] = last;
-          return next;
-        });
-        if (prevPrice.current != null && wq.price !== prevPrice.current) {
-          setFlash(wq.price > prevPrice.current ? "flash-up" : "flash-down");
-          setTimeout(() => setFlash(""), 700);
-        }
-        prevPrice.current = wq.price as number;
-      });
-    } catch {
-      if (!soft) {
-        setQuote(null);
-        setCandles([]);
-        setChartHint("No chart data — check the symbol or your connection.");
-      }
-      setChartLive(false);
-    } finally {
-      if (!soft) setLoading(false);
-    }
+          setLoading(false);
+        },
+        onOverlay: ({ events: ev, breaking: br, marketState: ms }) => {
+          if (gen !== loadGenRef.current) return;
+          setEvents(ev as ChartEvent[]);
+          setBreaking((br as Record<string, unknown>[]) ?? []);
+          setMarketState(ms as MarketState | null);
+        },
+        onCriticalError: () => {
+          if (gen !== loadGenRef.current) return;
+          if (!soft) {
+            setQuote(null);
+            setCandles([]);
+            setChartHint("No chart data — check the symbol or your connection.");
+            setLoading(false);
+          }
+          setChartLive(false);
+        },
+      },
+    });
   }, []);
 
   const refreshWatchlist = useCallback(async () => {
@@ -415,7 +434,12 @@ export default function Dashboard({
     events.map((e) => {
       const legend = describeEventMark(e);
       const fallback = e.link_quality === "fallback_recent";
-      const honesty = fallback ? " · may not be same-day headline" : "";
+      const timedOut = e.link_quality === "news_lookup_timeout";
+      const honesty = timedOut
+        ? " · headlines timed out (volume mark only)"
+        : fallback
+          ? " · may not be same-day headline"
+          : "";
       const headline = e.title ? `${e.title}${honesty}` : "";
       return {
         time: e.time,

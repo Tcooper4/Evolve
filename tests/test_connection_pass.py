@@ -93,7 +93,7 @@ class TestFullSurfaceParity:
 
     def test_streamlit_chat_is_registry_derived(self):
         # the page must not carry its own hardcoded tool list
-        src = open("pages/6_Chat.py").read()
+        src = open("pages/6_Chat.py", encoding="utf-8", errors="replace").read()
         assert "available_tools=_standard_tools()" in src
         assert 'available_tools=[' not in src
 
@@ -111,7 +111,9 @@ class TestFullSurfaceParity:
     def test_run_backtest_consults_adopted_params(self):
         # the learning loop must feed back: run_backtest passes adopted
         # champion params into strategy execution
-        src = open("trading/services/agent_tools.py").read()
+        src = open(
+            "trading/services/agent_tools.py", encoding="utf-8", errors="replace"
+        ).read()
         assert "get_adopted_params" in src
         assert "parameters=_adopted" in src
 

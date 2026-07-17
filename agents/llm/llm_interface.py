@@ -31,6 +31,10 @@ except ImportError:
 # Get logger
 logger = get_logger(__name__)
 
+# Sync chat-turn / executor fallback path — 45s bounds a normal reply without
+# relying on the Anthropic SDK's multi-minute default.
+ANTHROPIC_TIMEOUT_S = 45.0
+
 
 class LLMInterface:
     """Advanced LLM interface with agent-based processing and tool support."""
@@ -188,7 +192,10 @@ class LLMInterface:
             loop = asyncio.get_event_loop()
             def _call_claude() -> str:
                 import anthropic
-                client = anthropic.Anthropic(api_key=llm.anthropic_api_key)
+                client = anthropic.Anthropic(
+                    api_key=llm.anthropic_api_key,
+                    timeout=ANTHROPIC_TIMEOUT_S,
+                )
                 msg = client.messages.create(
                     model=model,
                     max_tokens=2048,
