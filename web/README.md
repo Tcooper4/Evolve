@@ -67,6 +67,18 @@ event mark keys (N / n / E).
 Both frontends call `trading/services/chat_turn.py` (memory + skills +
 platform tools). Tool usage renders as chips above the reply in React.
 
+## Install as an app (PWA)
+
+The React UI is an installable PWA (standalone window, home-screen icon,
+static-shell precache for fast repeat loads). Live data (`/api/*`,
+`/ws/*`) is never cached — network-only — so quotes and portfolio stay
+fresh; a small "Update available — refresh" prompt appears on new builds.
+
+**HTTPS is required in production.** The service worker and install
+prompt only work over a secure origin: `https://` or `http://localhost`.
+Plain-HTTP LAN IPs won't install — front it with TLS or a tunnel. See
+`docs/DEPLOYMENT.md` → "HTTPS is required for the installable app (PWA)".
+
 ## Auth & multi-user
 
 JWT against the shared accounts DB. Per-request identity scopes API keys,

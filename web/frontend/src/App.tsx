@@ -8,6 +8,8 @@ import Login from "./Login";
 import MarketTicker from "./MarketTicker";
 import Portfolio from "./Portfolio";
 import Scanner from "./Scanner";
+import ReloadPrompt from "./ReloadPrompt";
+import InsecureContextNotice from "./InsecureContextNotice";
 import Settings from "./Settings";
 
 const PAGES = [
@@ -42,10 +44,14 @@ export default function App() {
 
   if (!name) {
     return (
-      <Login onLogin={(n) => {
-        sessionStorage.setItem("evolve_name", n);
-        setName(n);
-      }} />
+      <>
+        <Login onLogin={(n) => {
+          sessionStorage.setItem("evolve_name", n);
+          setName(n);
+        }} />
+        <ReloadPrompt />
+        <InsecureContextNotice />
+      </>
     );
   }
 
@@ -125,6 +131,8 @@ export default function App() {
           }} />
         )}
       </main>
+      <ReloadPrompt />
+      <InsecureContextNotice />
     </div>
   );
 }

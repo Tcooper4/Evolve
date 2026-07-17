@@ -90,6 +90,36 @@ Caddy provisions and renews the certificate automatically. **Never expose
 port 8501 directly** — only Caddy should be reachable (e.g.
 `ufw allow 80,443/tcp` and nothing else).
 
+### 4b. HTTPS is required for the installable app (PWA)
+
+The React UI (`docker compose`, port 8000) ships as a **Progressive Web
+App**: browsers let users "Install" it to the home screen / dock and it
+runs in its own standalone window. The service worker that powers this
+(precaches the static app shell for fast repeat loads) **only registers
+over a secure origin**:
+
+- **HTTPS in production** — the service worker, install prompt, and
+  `Add to Home Screen` are silently disabled on plain `http://` origins.
+  Terminate TLS at your reverse proxy (the Caddy step above gives you a
+  valid cert automatically; nginx/Traefik + Let's Encrypt work too).
+- **`http://localhost` is exempt** — browsers treat localhost as a
+  secure context, so local dev and `docker compose up` on your own
+  machine install fine without a cert.
+- **LAN IPs (e.g. `http://192.168.x.x`) are NOT secure contexts** — the
+  PWA will not install. Put a tunnel (Cloudflare Tunnel, Tailscale
+  Funnel, ngrok) or a reverse proxy with a real cert in front if you want
+  to install from another device on your network.
+
+What the PWA does **not** do: it never caches live data. `/api/*` and
+`/ws/*` are network-only, so quotes, portfolio, chat, and alerts are
+always fresh — the offline shell only serves the static UI, and a small
+non-intrusive "Update available — refresh" prompt appears when a new
+build is deployed.
+
+If a user opens the site over plain HTTP outside localhost, the app shows
+a small dismissible banner explaining that install/offline features need
+HTTPS, rather than failing silently.
+
 ### 5. Create accounts
 
 ```bash
