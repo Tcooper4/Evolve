@@ -166,6 +166,49 @@ export async function createInvite(expires_in_days = 14): Promise<{
   }>;
 }
 
+export type SharedKeysStatus = {
+  allowed: boolean;
+  source: "env" | "persisted" | string;
+  env_default: boolean;
+  persisted: boolean;
+};
+
+/** Returns policy for admins, or null when the caller is not admin (403). */
+export async function getSharedKeys(): Promise<SharedKeysStatus | null> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch("/api/admin/shared-keys", { headers });
+  if (res.status === 401) {
+    setToken(null);
+    throw new Error("unauthorized");
+  }
+  if (res.status === 403) return null;
+  if (!res.ok) {
+    throw new Error(await readApiDetail(res, "Could not load shared-keys policy"));
+  }
+  return res.json() as Promise<SharedKeysStatus>;
+}
+
+export async function setSharedKeys(allowed: boolean): Promise<SharedKeysStatus> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch("/api/admin/shared-keys", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ allowed }),
+  });
+  if (res.status === 401) {
+    setToken(null);
+    throw new Error("unauthorized");
+  }
+  if (!res.ok) {
+    throw new Error(await readApiDetail(res, "Could not update shared-keys policy"));
+  }
+  return res.json() as Promise<SharedKeysStatus>;
+}
+
 export const getQuote = (symbol: string) => req<Quote>(`/api/quote/${symbol}`);
 
 export const getHistory = (symbol: string, period = "6mo", interval = "") =>

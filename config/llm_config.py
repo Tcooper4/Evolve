@@ -25,14 +25,14 @@ class _NoKeyError(Exception):
 
 
 def llm_available() -> bool:
-    """True if at least one of Anthropic or OpenAI keys is available (session, env, or LLMConfig)."""
-    if os.environ.get("ANTHROPIC_API_KEY", "").strip():
-        return True
-    if os.environ.get("OPENAI_API_KEY", "").strip():
-        return True
+    """True if Anthropic or OpenAI is available for the *current* user
+    (via resolve_api_key — respects shared-keys policy)."""
     try:
-        cfg = get_llm_config()
-        if cfg.anthropic_api_key or cfg.openai_api_key:
+        from config.api_keys import resolve_api_key
+
+        if (resolve_api_key("ANTHROPIC_API_KEY") or "").strip():
+            return True
+        if (resolve_api_key("OPENAI_API_KEY") or "").strip():
             return True
     except Exception:
         pass

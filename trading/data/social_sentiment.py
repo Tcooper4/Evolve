@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import statistics
 import threading
 import time
@@ -266,27 +265,15 @@ def _fetch_subreddit_search(
 
 
 def _reddit_creds_from_runtime() -> Tuple[str, str]:
-    """resolve_api_key first, then env, then Streamlit session (Cloud)."""
-    rid_e = ""
-    sec_e = ""
+    """Per-user Reddit OAuth via resolve_api_key only (shared-keys aware)."""
     try:
         from config.api_keys import resolve_api_key
 
-        rid_e = (resolve_api_key("REDDIT_CLIENT_ID") or "").strip()
-        sec_e = (resolve_api_key("REDDIT_CLIENT_SECRET") or "").strip()
+        rid = (resolve_api_key("REDDIT_CLIENT_ID") or "").strip()
+        sec = (resolve_api_key("REDDIT_CLIENT_SECRET") or "").strip()
+        return rid, sec
     except Exception:
-        rid_e = (os.environ.get("REDDIT_CLIENT_ID") or "").strip()
-        sec_e = (os.environ.get("REDDIT_CLIENT_SECRET") or "").strip()
-    rid_s = ""
-    sec_s = ""
-    try:
-        import streamlit as st
-
-        rid_s = (st.session_state.get("user_key_REDDIT_CLIENT_ID") or "").strip()
-        sec_s = (st.session_state.get("user_key_REDDIT_CLIENT_SECRET") or "").strip()
-    except Exception:
-        pass
-    return rid_e or rid_s, sec_e or sec_s
+        return "", ""
 
 
 def _reddit_use_praw(reddit_id: str, reddit_secret: str) -> bool:

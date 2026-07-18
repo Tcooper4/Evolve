@@ -18,9 +18,10 @@ Resolution priority for ``resolve_api_key(name)``:
    Cloud where the store may lag a save within the same rerun).
 3. The server environment — the operator's own keys — ONLY when the
    shared-keys policy allows it: always in personal mode; in live mode
-   (``EVOLVE_REQUIRE_LOGIN=1``) unless ``EVOLVE_SHARED_KEYS=0``. Setting
-   ``EVOLVE_SHARED_KEYS=0`` on a hosted site means users MUST supply
-   their own keys and can never spend the operator's quota.
+   (``EVOLVE_REQUIRE_LOGIN=1``) when the admin live toggle (persisted in
+   accounts.db) says so, else when ``EVOLVE_SHARED_KEYS`` env allows
+   (default on). Setting the toggle or env to off means users MUST
+   supply their own keys and can never spend the operator's quota.
 
 Alias handling: NEWS_API_KEY / NEWSAPI_KEY and GOOGLE_API_KEY /
 GEMINI_API_KEY are treated as the same credential.
@@ -40,6 +41,8 @@ _ALIASES: Dict[str, List[str]] = {
     "GOOGLE_API_KEY": ["GOOGLE_API_KEY", "GEMINI_API_KEY"],
     "GEMINI_API_KEY": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
     "HUGGINGFACE_API_KEY": ["HUGGINGFACE_API_KEY", "HF_TOKEN"],
+    "TWITTER_BEARER_TOKEN": ["TWITTER_BEARER_TOKEN", "TWITTER_API_KEY"],
+    "TWITTER_API_KEY": ["TWITTER_API_KEY", "TWITTER_BEARER_TOKEN"],
 }
 
 
@@ -57,14 +60,33 @@ def current_user_id() -> str:
     return os.getenv("EVOLVE_SESSION_ID") or "local"
 
 
+def _env_shared_keys_allowed() -> bool:
+    return os.getenv("EVOLVE_SHARED_KEYS", "1").strip().lower() not in (
+        "0", "false", "no",
+    )
+
+
 def shared_keys_allowed() -> bool:
-    """May requests fall back to the server's own env keys?"""
-    require_login = os.getenv("EVOLVE_REQUIRE_LOGIN", "0").strip() in (
+    """May requests fall back to the server's own env keys?
+
+    Live mode: admin persisted override (if ever set) wins; otherwise
+    ``EVOLVE_SHARED_KEYS`` env (default on). Personal mode: always
+    allowed — env keys are the operator's own keys.
+    """
+    require_login = os.getenv("EVOLVE_REQUIRE_LOGIN", "0").strip().lower() in (
         "1", "true", "yes",
     )
     if not require_login:
         return True  # personal mode: env keys are the user's own keys
-    return os.getenv("EVOLVE_SHARED_KEYS", "1").strip() not in ("0", "false", "no")
+    try:
+        from trading.auth.admin_settings import get_shared_keys_override
+
+        override = get_shared_keys_override()
+        if override is not None:
+            return bool(override)
+    except Exception as e:  # noqa: BLE001 - never block key resolution
+        logger.warning("api_keys: shared_keys override read failed: %s", e)
+    return _env_shared_keys_allowed()
 
 
 def _user_stored_keys(session_id: str) -> Dict[str, str]:

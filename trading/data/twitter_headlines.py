@@ -30,17 +30,15 @@ _BREAKING_ACCOUNTS = (
 
 
 def _bearer() -> Optional[str]:
+    """Per-user bearer via resolve_api_key only — never bare os.getenv
+    (that bypasses the shared-keys admin policy)."""
     try:
         from config.api_keys import resolve_api_key
 
         tok = (resolve_api_key("TWITTER_BEARER_TOKEN") or "").strip()
-        if tok:
-            return tok
+        return tok or None
     except Exception:
-        pass
-    import os
-
-    return (os.getenv("TWITTER_BEARER_TOKEN") or os.getenv("TWITTER_API_KEY") or "").strip() or None
+        return None
 
 
 def _search_recent(query: str, max_results: int = 10) -> List[Dict[str, Any]]:

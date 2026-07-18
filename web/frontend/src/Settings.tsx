@@ -6,6 +6,7 @@ import {
 import { CHART_TIMEZONES, cacheChartTimezone } from "./chartTime";
 import PageTour from "./PageTour";
 import AdminInvites from "./AdminInvites";
+import AdminSharedKeys from "./AdminSharedKeys";
 
 const SCORE_STYLES = [
   "Balanced (default)",
@@ -141,6 +142,7 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
       <PageTour pageId="settings" />
       <div className="greeting">Settings <small>keys, scoring style, briefing defaults</small></div>
 
+      <AdminSharedKeys onToast={onToast} />
       <AdminInvites onToast={onToast} />
 
       <div className="card card-pad" data-tour="settings-keys" style={{ maxWidth: 560, marginBottom: 16 }}>

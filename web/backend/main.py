@@ -198,6 +198,10 @@ class InviteCreateRequest(BaseModel):
     expires_in_days: Optional[int] = 14
 
 
+class SharedKeysRequest(BaseModel):
+    allowed: bool
+
+
 def _client_ip(request: Request) -> str:
     client = request.client
     return (client.host if client is not None else None) or "unknown"
@@ -372,6 +376,31 @@ def admin_list_invites(admin: str = Depends(require_admin)) -> Dict[str, Any]:
             for r in rows
         ],
     }
+
+
+@app.get("/api/admin/shared-keys")
+def admin_get_shared_keys(admin: str = Depends(require_admin)) -> Dict[str, Any]:
+    """Live shared-keys policy (admin env-fallback toggle)."""
+    from trading.auth.admin_settings import shared_keys_status
+
+    status_snap = shared_keys_status()
+    return {"success": True, **status_snap}
+
+
+@app.post("/api/admin/shared-keys")
+def admin_set_shared_keys(
+    body: SharedKeysRequest,
+    admin: str = Depends(require_admin),
+) -> Dict[str, Any]:
+    """Flip shared env-key fallback without restarting the server."""
+    from trading.auth.admin_settings import (
+        set_shared_keys_override,
+        shared_keys_status,
+    )
+
+    set_shared_keys_override(bool(body.allowed), updated_by=admin)
+    status_snap = shared_keys_status()
+    return {"success": True, **status_snap}
 
 
 # --------------------------------------------------------------------------

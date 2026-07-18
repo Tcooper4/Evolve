@@ -7,7 +7,6 @@ All sources are optional — the aggregator uses whatever is available.
 
 import hashlib
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 import email.utils
@@ -258,8 +257,8 @@ def _fetch_reddit(symbol: str, max_items: int = 5) -> List[Dict]:
         client_id = (resolve_api_key("REDDIT_CLIENT_ID") or "").strip()
         client_secret = (resolve_api_key("REDDIT_CLIENT_SECRET") or "").strip()
     except Exception:
-        client_id = (os.getenv("REDDIT_CLIENT_ID") or "").strip()
-        client_secret = (os.getenv("REDDIT_CLIENT_SECRET") or "").strip()
+        client_id = ""
+        client_secret = ""
     if not (client_id and client_secret):
         return []
 

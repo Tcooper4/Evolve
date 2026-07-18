@@ -3,7 +3,6 @@
 Minimal NewsAPI fetcher for recent headlines. Used by Chat to add real-time news context.
 """
 import logging
-import os
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)

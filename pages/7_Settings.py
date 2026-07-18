@@ -92,22 +92,16 @@ with tab_keys:
         _uid = st.session_state.get("evolve_session_id") or get_stable_user_id()
         _saved = load_user_api_keys(_uid) or {}
 
-        # Show masked existing keys
-        _has_anthropic = bool(
-            _saved.get("ANTHROPIC_API_KEY")
-            or os.environ.get("ANTHROPIC_API_KEY")
-        )
-        _has_openai = bool(
-            _saved.get("OPENAI_API_KEY")
-            or os.environ.get("OPENAI_API_KEY")
-        )
-        _has_news = bool(
-            _saved.get("NEWS_API_KEY")
-            or os.environ.get("NEWS_API_KEY")
-        )
+        from config.api_keys import resolve_api_key
+
+        # Presence dots must follow resolve_api_key (shared-keys aware),
+        # not bare os.environ — otherwise the UI lies when shared keys are off.
+        _has_anthropic = bool(resolve_api_key("ANTHROPIC_API_KEY", session_id=_uid))
+        _has_openai = bool(resolve_api_key("OPENAI_API_KEY", session_id=_uid))
+        _has_news = bool(resolve_api_key("NEWS_API_KEY", session_id=_uid))
         _has_reddit = bool(
-            _saved.get("REDDIT_CLIENT_ID")
-            or os.environ.get("REDDIT_CLIENT_ID")
+            resolve_api_key("REDDIT_CLIENT_ID", session_id=_uid)
+            and resolve_api_key("REDDIT_CLIENT_SECRET", session_id=_uid)
         )
 
         st.markdown("#### OpenAI")

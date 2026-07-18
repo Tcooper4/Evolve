@@ -16,10 +16,16 @@ from cryptography.fernet import Fernet
 def _iso_env(monkeypatch, tmp_path):
     monkeypatch.setenv("EVOLVE_ENCRYPTION_KEY", Fernet.generate_key().decode())
     import config.user_store as US
+    from trading.auth import accounts as A
+    from trading.auth import admin_settings as AS
+
     monkeypatch.setattr(US, "USER_DB_PATH", tmp_path / "users.db")
+    monkeypatch.setattr(A, "DB_PATH", tmp_path / "accounts.db")
+    AS.invalidate_shared_keys_cache()
     monkeypatch.delenv("EVOLVE_SESSION_ID", raising=False)
     monkeypatch.delenv("EVOLVE_SHARED_KEYS", raising=False)
     yield
+    AS.invalidate_shared_keys_cache()
 
 
 def _fresh_llm_config():

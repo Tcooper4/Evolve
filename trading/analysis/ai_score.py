@@ -360,39 +360,32 @@ def _persist_ai_score_result(
 
 
 def _has_external_api_keys() -> bool:
-    """True only if at least one paid/external API key is configured."""
-    import os
+    """True only if at least one paid/external API key is configured
+    for the *current* user (resolve_api_key — never bare os.environ).
+    """
+    from config.api_keys import resolve_api_key
 
     keys = [
-        "TWITTER_API_KEY",
+        "TWITTER_BEARER_TOKEN",
         "FRED_API_KEY",
         "TRADIER_TOKEN",
         "NEWS_API_KEY",
         "REDDIT_CLIENT_ID",
         "REDDIT_CLIENT_SECRET",
     ]
-    try:
-        _ss = st.session_state
-    except Exception:
-        _ss = None
-
     for key in keys:
-        env_v = (os.environ.get(key, "") or "").strip()
-        sess_v = ""
-        if _ss is not None:
-            try:
-                sess_v = str(
-                    _ss.get(f"user_key_{key}", "") or ""
-                ).strip()
-            except Exception:
-                sess_v = ""
-        val = env_v or sess_v
+        try:
+            val = (resolve_api_key(key) or "").strip()
+        except Exception:
+            val = ""
         if not val:
             continue
         if is_placeholder_credential(val):
             continue
         return True
     return False
+
+
 _ML_TRAINER_INSTANCE = None
 
 
