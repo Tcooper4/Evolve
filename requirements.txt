@@ -7,7 +7,10 @@ packaging==23.2
 click==8.2.1
 
 # Data
-pandas==2.0.3
+pandas==2.2.3  # 2.0.3 has no prebuilt wheel for Python 3.13+, forcing an
+# isolated source build whose build env lacks pkg_resources (ModuleNotFoundError
+# on fresh Cloudflare/CI images) - 2.2.3 ships real wheels for 3.12/3.13, same
+# pandas-2.x API generation, no applymap/freq-alias usage found in this repo
 numpy==1.26.4
 yfinance==1.2.0
 alpha_vantage==3.0.0
