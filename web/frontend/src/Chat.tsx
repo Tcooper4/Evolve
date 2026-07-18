@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { sendChat } from "./api";
 import PageTour from "./PageTour";
 
@@ -19,6 +19,7 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   async function send() {
     const text = input.trim();
@@ -41,12 +42,25 @@ export default function Chat() {
     }
   }
 
+  // Keep the composer in view when the mobile keyboard opens (visualViewport).
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      const el = inputRef.current;
+      if (!el || document.activeElement !== el) return;
+      el.scrollIntoView({ block: "end", behavior: "smooth" });
+    };
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
+
   return (
     <div className="fade-in">
       <PageTour pageId="chat" />
       <div className="greeting">Chat <small>your assistant, your memory, your API key</small></div>
 
-      <div className="card">
+      <div className="card chat-shell">
         <div className="chat-box" data-tour="chat-box" ref={box}>
           {msgs.map((m, i) => (
             <div key={i} className={`msg ${m.role} fade-in`}>
@@ -60,21 +74,32 @@ export default function Chat() {
           ))}
           {busy && <div className="msg bot dim">thinking…</div>}
         </div>
-        <div
-          data-tour="chat-starters"
-          style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "0 18px 12px" }}
-        >
+        <div className="chat-starters" data-tour="chat-starters">
           {STARTERS.map((q) => (
-            <button key={q} className="ghost" style={{ fontSize: 12.5, border: "1px solid var(--border)" }}
-              onClick={() => { setInput(q); }}>
+            <button
+              key={q}
+              type="button"
+              className="ghost chat-starter"
+              onClick={() => { setInput(q); inputRef.current?.focus(); }}
+            >
               {q}
             </button>
           ))}
         </div>
-        <div className="row" data-tour="chat-input" style={{ padding: 14, borderTop: "1px solid var(--border)" }}>
-          <input style={{ flex: 1 }} value={input} placeholder="Ask about a ticker, risk, news…"
+        <div className="chat-input" data-tour="chat-input">
+          <input
+            ref={inputRef}
+            value={input}
+            placeholder="Ask about a ticker, risk, news…"
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()} />
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            onFocus={() => {
+              // Delay so the keyboard animation can finish before scrolling.
+              window.setTimeout(() => {
+                inputRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+              }, 300);
+            }}
+          />
           <button className="primary" onClick={send} disabled={busy}>Send</button>
         </div>
       </div>

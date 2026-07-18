@@ -120,6 +120,33 @@ If a user opens the site over plain HTTP outside localhost, the app shows
 a small dismissible banner explaining that install/offline features need
 HTTPS, rather than failing silently.
 
+### 4c. Cloudflare Tunnel (HTTPS without opening ports)
+
+For friends/family access or PWA install from a phone, expose local
+Evolve over HTTPS with **cloudflared** — no router port-forwarding.
+
+**Quick test** (temporary URL, no account):
+
+```powershell
+cloudflared tunnel --url http://localhost:8000
+```
+
+Copy the `https://*.trycloudflare.com` URL from the output. Evolve must
+already be running (`docker compose up -d` on port 8000).
+
+**Persistent named tunnel** (recommended):
+
+```powershell
+cloudflared tunnel login          # browser once — pick your Cloudflare zone
+cloudflared tunnel create evolve  # note the tunnel UUID
+# Edit cloudflared/config.yml — paste UUID, optional hostname
+.\scripts\start-cloudflare-tunnel.ps1
+```
+
+Optional DNS: `cloudflared tunnel route dns evolve evolve.yourdomain.com`
+
+Full steps: `cloudflared/README.md`.
+
 ### 5. Create accounts
 
 ```bash

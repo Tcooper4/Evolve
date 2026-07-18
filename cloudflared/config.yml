@@ -1,0 +1,24 @@
+# Cloudflare Tunnel config for Evolve (localhost:8000).
+#
+# Setup (one-time, after `cloudflared tunnel login`):
+#   cloudflared tunnel create evolve
+#   cloudflared tunnel route dns evolve evolve.yourdomain.com   # optional
+#   copy credentials JSON to %USERPROFILE%\.cloudflared\<TUNNEL-ID>.json
+#   set tunnel: below to your tunnel UUID
+#
+# Run:
+#   cloudflared tunnel --config cloudflared/config.yml run evolve
+#
+# Quick try (no account, temporary URL):
+#   cloudflared tunnel --url http://localhost:8000
+
+tunnel: REPLACE_WITH_TUNNEL_ID
+credentials-file: C:\Users\Thomas\.cloudflared\REPLACE_WITH_TUNNEL_ID.json
+
+ingress:
+  # Custom hostname — uncomment after `tunnel route dns`:
+  # - hostname: evolve.yourdomain.com
+  #   service: http://localhost:8000
+  # Catch-all for the tunnel's *.cfargotunnel.com hostname:
+  - service: http://localhost:8000
+  - service: http_status:404

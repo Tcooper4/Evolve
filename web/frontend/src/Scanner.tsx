@@ -228,7 +228,7 @@ export default function Scanner({
         {tab === "scan" ? (
           <div className="field" style={{ marginTop: 14 }} data-tour="scanner-filters">
             <label>Filters</label>
-            <div className="seg" style={{ display: "inline-flex", flexWrap: "wrap", width: "fit-content", maxWidth: "100%" }}>
+            <div className="seg" style={{ flexWrap: "wrap", width: "100%", maxWidth: "100%" }}>
               {FILTERS.map((f) => (
                 <button key={f} type="button" className={active.includes(f) ? "active" : ""}
                   onClick={() => setActive((a) => a.includes(f) ? a.filter((x) => x !== f) : [...a, f])}>

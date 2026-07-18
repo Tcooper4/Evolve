@@ -509,7 +509,7 @@ export default function Analyze({
             )}
           </div>
 
-          <div className="seg" data-tour="analyze-tools" style={{ marginBottom: 12 }}>
+          <div className="seg" data-tour="analyze-tools" style={{ marginBottom: 12, flexWrap: "wrap" }}>
             <button className={tool === "main" ? "active" : ""} onClick={() => setTool("main")}>Overview</button>
             <button className={tool === "monte" ? "active" : ""} onClick={() => { setTool("monte"); if (!mc) void loadMonte(); }}>Monte Carlo</button>
             <button className={tool === "options" ? "active" : ""} onClick={() => { setTool("options"); if (!opts) void loadOptions(); }}>Options</button>

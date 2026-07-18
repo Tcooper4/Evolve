@@ -608,14 +608,14 @@ export default function Backtest() {
                     right more often than a coin flip; red = worse than one. A model
                     that's only green in one era isn't a model, it's a memory.
                   </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <div className="fold-strip">
                     {folds.map((f) => {
                       const da = f.directional_accuracy;
                       const col = da == null ? "var(--text-3)"
                         : da >= 0.55 ? "var(--up)"
                           : da <= 0.45 ? "var(--down)" : "var(--text-2)";
                       return (
-                        <div key={f.window} className="card" style={{ padding: "8px 12px", minWidth: 118 }}
+                        <div key={f.window} className="card fold-chip"
                           title={`train ${f.train_start} → ${f.train_end}${f.mape != null ? ` · MAPE ${f.mape.toFixed(1)}%` : ""}`}>
                           <div className="dim" style={{ fontSize: 10.5 }}>
                             {f.test_start} → {f.test_end}
