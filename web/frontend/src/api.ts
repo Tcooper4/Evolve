@@ -50,6 +50,29 @@ async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function readApiDetail(res: Response, fallback: string): Promise<string> {
+  try {
+    const data = (await res.json()) as { detail?: unknown };
+    const d = data?.detail;
+    if (typeof d === "string" && d.trim()) return d;
+    if (Array.isArray(d)) {
+      const parts = d
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if (item && typeof item === "object" && "msg" in item) {
+            return String((item as { msg: unknown }).msg);
+          }
+          return "";
+        })
+        .filter(Boolean);
+      if (parts.length) return parts.join("; ");
+    }
+  } catch {
+    /* non-JSON body */
+  }
+  return fallback;
+}
+
 export async function login(username: string, password: string) {
   const body = new URLSearchParams({ username, password });
   const res = await fetch("/api/auth/token", {
@@ -64,6 +87,83 @@ export async function login(username: string, password: string) {
   };
   setToken(data.access_token);
   return data.display_name;
+}
+
+export async function signup(opts: {
+  username: string;
+  password: string;
+  invite_code: string;
+  display_name?: string;
+}): Promise<string> {
+  const res = await fetch("/api/auth/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(opts),
+  });
+  if (!res.ok) {
+    throw new Error(await readApiDetail(res, "Signup failed"));
+  }
+  const data = (await res.json()) as {
+    access_token: string;
+    display_name: string;
+  };
+  setToken(data.access_token);
+  return data.display_name;
+}
+
+export type InviteRow = {
+  code: string;
+  created_by: string;
+  created_at: string;
+  used_by: string | null;
+  used_at: string | null;
+  expires_at: string | null;
+  status: string;
+};
+
+/** Returns invite rows for admins, or null when the caller is not admin (403). */
+export async function listInvites(): Promise<InviteRow[] | null> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch("/api/admin/invites", { headers });
+  if (res.status === 401) {
+    setToken(null);
+    throw new Error("unauthorized");
+  }
+  if (res.status === 403) return null;
+  if (!res.ok) {
+    throw new Error(await readApiDetail(res, "Could not list invites"));
+  }
+  const data = (await res.json()) as { invites?: InviteRow[] };
+  return Array.isArray(data.invites) ? data.invites : [];
+}
+
+export async function createInvite(expires_in_days = 14): Promise<{
+  code: string;
+  expires_at: string | null;
+  status: string;
+}> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch("/api/admin/invites", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ expires_in_days }),
+  });
+  if (res.status === 401) {
+    setToken(null);
+    throw new Error("unauthorized");
+  }
+  if (!res.ok) {
+    throw new Error(await readApiDetail(res, "Could not create invite"));
+  }
+  return res.json() as Promise<{
+    code: string;
+    expires_at: string | null;
+    status: string;
+  }>;
 }
 
 export const getQuote = (symbol: string) => req<Quote>(`/api/quote/${symbol}`);

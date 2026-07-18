@@ -187,6 +187,112 @@ def login(
                          display_name=display)
 
 
+class SignupRequest(BaseModel):
+    username: str
+    password: str
+    invite_code: str
+    display_name: Optional[str] = None
+
+
+class InviteCreateRequest(BaseModel):
+    expires_in_days: Optional[int] = 14
+
+
+def _client_ip(request: Request) -> str:
+    client = request.client
+    return (client.host if client is not None else None) or "unknown"
+
+
+def _signup_rate_key(username: str) -> str:
+    """Namespace signup failures inside the shared LoginRateLimiter."""
+    return f"signup:{(username or '').strip().lower() or '?'}"
+
+
+@app.post("/api/auth/signup", response_model=TokenResponse)
+def signup(request: Request, body: SignupRequest) -> TokenResponse:
+    """Invite-gated account creation. A valid unused invite is mandatory —
+    there is no fallback path that skips the code.
+    """
+    from trading.auth import accounts
+    from trading.auth.invites import consume_invite, peek_invite
+    from trading.auth.login_rate_limit import login_rate_limiter
+    from trading.auth.password_policy import validate_signup_password
+
+    username = (body.username or "").strip().lower()
+    password = body.password or ""
+    invite_code = body.invite_code or ""
+    ip = _client_ip(request)
+    rate_user = _signup_rate_key(username)
+
+    gate = login_rate_limiter.check(rate_user, ip)
+    if not gate.allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=gate.detail or "Too many failed signup attempts.",
+            headers={"Retry-After": str(max(1, int(gate.retry_after_sec)))},
+        )
+
+    def _fail(detail: str, code: int = status.HTTP_400_BAD_REQUEST) -> None:
+        fail = login_rate_limiter.record_failure(rate_user, ip)
+        if not fail.allowed:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=fail.detail or "Too many failed signup attempts.",
+                headers={"Retry-After": str(max(1, int(fail.retry_after_sec)))},
+            )
+        raise HTTPException(status_code=code, detail=detail)
+
+    if not invite_code.strip():
+        _fail("Invite code is required")
+
+    try:
+        peek_invite(invite_code)
+    except ValueError as e:
+        _fail(str(e))
+
+    try:
+        validate_signup_password(password)
+    except ValueError as e:
+        _fail(str(e))
+
+    try:
+        accounts.create_user(
+            username,
+            password,
+            display_name=(body.display_name or username),
+            role="user",
+        )
+    except ValueError as e:
+        _fail(str(e))
+
+    try:
+        consume_invite(invite_code, username)
+    except ValueError as e:
+        # Account was created but invite raced/expired — deactivate to avoid
+        # an orphan account without a consumed invite.
+        try:
+            accounts.set_active(username, False)
+        except Exception as de:
+            logger.error("signup rollback deactivate failed for %s: %s", username, de)
+        _fail(str(e))
+
+    login_rate_limiter.record_success(rate_user, ip)
+    # Also clear any prior login-bucket for the new username on this IP.
+    login_rate_limiter.record_success(username, ip)
+
+    display = (body.display_name or username).strip() or username
+    claims = {
+        "sub": username,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=TOKEN_TTL_HOURS),
+    }
+    token = jwt.encode(claims, _secret(), algorithm=ALGORITHM)
+    return TokenResponse(
+        access_token=token,
+        username=username,
+        display_name=display,
+    )
+
+
 def current_user(token: str = Depends(oauth2)) -> str:
     """Resolve the JWT to a username and install the per-request identity
     so all the multi-user plumbing (API keys, memory, watchlist) scopes
@@ -205,6 +311,67 @@ def current_user(token: str = Depends(oauth2)) -> str:
         raise cred_err
     os.environ["EVOLVE_SESSION_ID"] = f"user:{username}"
     return username
+
+
+def require_admin(user: str = Depends(current_user)) -> str:
+    """Admin-role gate for invite management (existing ``role`` column)."""
+    from trading.auth import accounts
+
+    row = accounts.get_user(user)
+    if not row or not row.get("active") or row.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required",
+        )
+    return user
+
+
+@app.post("/api/admin/invites")
+def admin_create_invite(
+    body: InviteCreateRequest,
+    admin: str = Depends(require_admin),
+) -> Dict[str, Any]:
+    """Generate one invite code for a trusted invitee."""
+    from trading.auth.invites import generate_invite_code
+
+    try:
+        inv = generate_invite_code(
+            admin,
+            expires_in_days=body.expires_in_days,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return {
+        "success": True,
+        "code": inv["code"],
+        "created_by": inv["created_by"],
+        "created_at": inv["created_at"],
+        "expires_at": inv["expires_at"],
+        "status": inv["status"],
+    }
+
+
+@app.get("/api/admin/invites")
+def admin_list_invites(admin: str = Depends(require_admin)) -> Dict[str, Any]:
+    """List outstanding, used, and expired invite codes."""
+    from trading.auth.invites import list_invite_codes
+
+    rows = list_invite_codes()
+    return {
+        "success": True,
+        "invites": [
+            {
+                "code": r["code_display"],
+                "created_by": r["created_by"],
+                "created_at": r["created_at"],
+                "used_by": r["used_by"],
+                "used_at": r["used_at"],
+                "expires_at": r["expires_at"],
+                "status": r["status"],
+            }
+            for r in rows
+        ],
+    }
 
 
 # --------------------------------------------------------------------------

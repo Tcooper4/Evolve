@@ -5,6 +5,7 @@ import Backtest from "./Backtest";
 import Chat from "./Chat";
 import Dashboard from "./Dashboard";
 import Login from "./Login";
+import Signup from "./Signup";
 import MarketTicker from "./MarketTicker";
 import Portfolio from "./Portfolio";
 import Scanner from "./Scanner";
@@ -27,9 +28,16 @@ export default function App() {
   const [name, setName] = useState<string | null>(
     hasToken() ? sessionStorage.getItem("evolve_name") : null,
   );
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [page, setPage] = useState<PageId>("dashboard");
   const [analyzeSymbol, setAnalyzeSymbol] = useState("SPY");
   const [toast, setToast] = useState<string | null>(null);
+
+  const finishAuth = (n: string) => {
+    sessionStorage.setItem("evolve_name", n);
+    setName(n);
+    setAuthMode("login");
+  };
 
   useEffect(() => {
     if (!name) return;
@@ -45,10 +53,17 @@ export default function App() {
   if (!name) {
     return (
       <>
-        <Login onLogin={(n) => {
-          sessionStorage.setItem("evolve_name", n);
-          setName(n);
-        }} />
+        {authMode === "login" ? (
+          <Login
+            onLogin={finishAuth}
+            onCreateAccount={() => setAuthMode("signup")}
+          />
+        ) : (
+          <Signup
+            onLogin={finishAuth}
+            onBack={() => setAuthMode("login")}
+          />
+        )}
         <ReloadPrompt />
         <InsecureContextNotice />
       </>

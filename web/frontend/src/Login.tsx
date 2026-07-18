@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { login } from "./api";
 
-export default function Login({ onLogin }: { onLogin: (name: string) => void }) {
+export default function Login({
+  onLogin,
+  onCreateAccount,
+}: {
+  onLogin: (name: string) => void;
+  onCreateAccount: () => void;
+}) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,17 +38,27 @@ export default function Login({ onLogin }: { onLogin: (name: string) => void }) 
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           autoFocus
+          autoComplete="username"
         />
         <input
           placeholder="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
+          onKeyDown={(e) => e.key === "Enter" && void submit()}
+          autoComplete="current-password"
         />
         {error && <div className="error">{error}</div>}
-        <button className="primary" onClick={submit} disabled={busy}>
+        <button className="primary" onClick={() => void submit()} disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
+        </button>
+        <button
+          type="button"
+          className="ghost"
+          onClick={onCreateAccount}
+          disabled={busy}
+        >
+          Have an invite? Create account
         </button>
       </div>
     </div>

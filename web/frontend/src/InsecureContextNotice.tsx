@@ -1,24 +1,16 @@
 /**
  * Dismissible notice shown only when the app is served over an insecure
  * origin in production (not localhost). On such origins the browser silently
- * disables the service worker and install prompt, so PWA/offline features
- * won't appear — this explains why rather than leaving the user confused.
+ * disables the service worker and install prompt — and credentials typed on
+ * login/signup/Settings would cross the network without TLS.
  *
  * Never shown on localhost (a secure context) or when the page is already
  * secure (https), so normal use and local dev are unaffected.
  */
 import { useEffect, useState } from "react";
+import { shouldShowInsecureNotice } from "./insecureContext";
 
 const DISMISS_KEY = "evolve_insecure_notice_dismissed";
-
-function isLocalhost(host: string): boolean {
-  return (
-    host === "localhost" ||
-    host === "127.0.0.1" ||
-    host === "[::1]" ||
-    host.endsWith(".localhost")
-  );
-}
 
 export default function InsecureContextNotice() {
   const [show, setShow] = useState(false);
@@ -26,10 +18,14 @@ export default function InsecureContextNotice() {
   useEffect(() => {
     try {
       if (sessionStorage.getItem(DISMISS_KEY) === "1") return;
-      const secure = window.isSecureContext;
-      const local = isLocalhost(window.location.hostname);
-      // Only nag when genuinely insecure AND not localhost.
-      if (!secure && !local) setShow(true);
+      if (
+        shouldShowInsecureNotice({
+          isSecureContext: window.isSecureContext,
+          hostname: window.location.hostname,
+        })
+      ) {
+        setShow(true);
+      }
     } catch {
       /* storage/blocked context — stay silent */
     }
@@ -54,7 +50,7 @@ export default function InsecureContextNotice() {
         left: 16,
         bottom: 16,
         zIndex: 10001,
-        maxWidth: 340,
+        maxWidth: 360,
         padding: "12px 14px",
         borderRadius: 10,
         border: "1px solid var(--border-strong)",
@@ -66,8 +62,8 @@ export default function InsecureContextNotice() {
       }}
     >
       <div style={{ marginBottom: 10 }}>
-        You're on an insecure (HTTP) connection. Installing Evolve as an app and
-        offline support need HTTPS — ask your host to enable TLS.
+        You're on an insecure (HTTP) connection. Do not enter passwords or API
+        keys here — HTTPS is required for login, signup, and saving credentials.
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button type="button" className="ghost" onClick={dismiss}>

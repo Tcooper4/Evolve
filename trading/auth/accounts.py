@@ -152,6 +152,27 @@ def set_active(username: str, active: bool, db_path: Optional[Path] = None) -> N
         con.close()
 
 
+def get_user(username: str, db_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
+    """Return one account row (no password hash), or None."""
+    username = (username or "").strip().lower()
+    if not username:
+        return None
+    con = _conn(db_path)
+    try:
+        row = con.execute(
+            "SELECT username, display_name, email, role, active, created_at,"
+            " last_login FROM accounts WHERE username=?",
+            (username,),
+        ).fetchone()
+        if not row:
+            return None
+        keys = ["username", "display_name", "email", "role", "active",
+                "created_at", "last_login"]
+        return dict(zip(keys, row))
+    finally:
+        con.close()
+
+
 def list_users(db_path: Optional[Path] = None) -> List[Dict[str, Any]]:
     con = _conn(db_path)
     try:

@@ -230,26 +230,39 @@ def inject_user_keys_to_session(session_id: str) -> None:
 def save_user_api_keys(session_id: str, keys: dict) -> None:
     """
     Save API keys for a user session.
-    Keys dict: {
-        "ANTHROPIC_API_KEY": "sk-ant-...",
-        "OPENAI_API_KEY": "sk-...",
-    }
-    Keys are encrypted before storage.
+
+    Keys dict values must be **plaintext** (as entered by the user).
+    Each value is Fernet-encrypted before storage. Partial updates merge
+    into the existing **ciphertext** blob — never merge decrypted values
+    back into the store (that would write plaintext to disk).
     """
     if not session_id:
         return
     try:
         cipher = _get_cipher()
-        # Encrypt each key value
-        encrypted: dict = {}
+        # Load ciphertext map as stored (not decrypted).
+        existing: dict = {}
+        with _get_conn() as conn:
+            row = conn.execute(
+                "SELECT keys FROM user_api_keys WHERE session_id=?",
+                (session_id,),
+            ).fetchone()
+        if row and row[0]:
+            try:
+                payload = json.loads(row[0])
+                if isinstance(payload, dict):
+                    existing = dict(payload)
+            except Exception:
+                existing = {}
+
         for k, v in (keys or {}).items():
-            if v and isinstance(v, str):
-                encrypted[k] = cipher.encrypt(v.encode()).decode()
-            elif isinstance(v, str) and v == "":
-                # Explicit clear
-                encrypted[k] = ""
-        existing = load_user_api_keys(session_id) or {}
-        existing.update(encrypted)
+            if not isinstance(k, str):
+                continue
+            if isinstance(v, str) and v == "":
+                existing[k] = ""
+            elif isinstance(v, str) and v:
+                existing[k] = cipher.encrypt(v.encode()).decode()
+
         with _get_conn() as conn:
             conn.execute(
                 """INSERT OR REPLACE INTO
@@ -259,8 +272,11 @@ def save_user_api_keys(session_id: str, keys: dict) -> None:
             )
             conn.commit()
     except Exception as e:
+        from config.secret_redact import redact_secrets
+
         logger.warning(
-            "user_store: save_user_api_keys failed: %s", e
+            "user_store: save_user_api_keys failed: %s",
+            redact_secrets(str(e), known=[v for v in (keys or {}).values() if isinstance(v, str)]),
         )
 
 
@@ -299,5 +315,10 @@ def load_user_api_keys(session_id: str) -> dict:
                 continue
         return out
     except Exception as e:
-        logger.warning("user_store: load_user_api_keys failed: %s", e)
+        from config.secret_redact import redact_secrets
+
+        logger.warning(
+            "user_store: load_user_api_keys failed: %s",
+            redact_secrets(str(e)),
+        )
         return {}

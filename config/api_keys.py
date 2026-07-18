@@ -76,7 +76,12 @@ def _user_stored_keys(session_id: str) -> Dict[str, str]:
         keys.update(load_user_keys(session_id) or {})
         return {k: v for k, v in keys.items() if isinstance(v, str) and v}
     except Exception as e:  # noqa: BLE001 - key lookup must never crash a request
-        logger.warning("api_keys: user store lookup failed: %s", e)
+        from config.secret_redact import redact_secrets
+
+        logger.warning(
+            "api_keys: user store lookup failed: %s",
+            redact_secrets(str(e)),
+        )
         return {}
 
 

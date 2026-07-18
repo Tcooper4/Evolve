@@ -44,21 +44,28 @@ def fetch_recent_news(
         return []
 
     query = company_name or SYMBOL_TO_QUERY.get(symbol.upper(), symbol)
-    url = (
-        "https://newsapi.org/v2/everything"
-        f"?q={query!s}"
-        "&sortBy=publishedAt"
-        f"&pageSize={max_items}"
-        f"&apiKey={api_key}"
-    )
+    # Pass the key as a request param — never interpolate into a URL string
+    # that exceptions / HTTPError might echo into logs.
+    url = "https://newsapi.org/v2/everything"
+    params = {
+        "q": query,
+        "sortBy": "publishedAt",
+        "pageSize": max_items,
+        "apiKey": api_key,
+    }
 
     try:
         import requests
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
-        logger.debug("NewsAPI request failed: %s", e)
+        from config.secret_redact import redact_secrets
+
+        logger.debug(
+            "NewsAPI request failed: %s",
+            redact_secrets(str(e), known=[api_key]),
+        )
         return []
 
     articles = data.get("articles") or []
