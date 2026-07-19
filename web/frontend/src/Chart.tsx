@@ -35,7 +35,13 @@ export interface ChartOverlaySeries {
   label?: string;
   color: string;
   style?: "solid" | "dashed" | "dotted";
-  points: Array<{ time: string; value: number }>;
+  /** Time series on the candle price scale (SMA, Bollinger, etc.). */
+  points?: Array<{ time: string; value: number }>;
+  /**
+   * Fixed dollar level (gamma flip, wing guides). Drawn with createPriceLine
+   * so it stays on the candle scale — not the volume pane at the bottom.
+   */
+  priceLevel?: number;
 }
 
 interface Hover {
@@ -129,6 +135,7 @@ export default function Chart({
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const overlaySeriesRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
+  const priceLinesRef = useRef<Map<string, ReturnType<ISeriesApi<"Candlestick">["createPriceLine"]>>>(new Map());
   const candlesRef = useRef(candles);
   const markersRef = useRef(markers);
   const fittedOnceRef = useRef(false);
@@ -160,6 +167,7 @@ export default function Chart({
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
       overlaySeriesRef.current = new Map();
+      priceLinesRef.current = new Map();
       fittedOnceRef.current = false;
     }
     modeRef.current = mode;
@@ -260,9 +268,14 @@ export default function Chart({
           const day = match
             ? chartDayKey(match.time)
             : chartDayKey(p.time as string | number);
-          const noteByDay = new Map(
-            markersRef.current.map((m) => [chartDayKey(m.time), m.title || m.text || ""]),
-          );
+          const noteByDay = new Map<string, string>();
+          for (const m of markersRef.current) {
+            const key = chartDayKey(m.time);
+            const bit = m.title || m.text || "";
+            if (!bit) continue;
+            const prev = noteByDay.get(key);
+            noteByDay.set(key, prev ? `${prev} · ${bit}` : bit);
+          }
           const note = noteByDay.get(day) || undefined;
           // Prefer per-candle volume from our data (histogram can lag/mismatch)
           const v = Number(match?.volume ?? 0);
@@ -312,21 +325,32 @@ export default function Chart({
     volume.setData(toVolumeData(candles, displayTz));
 
     if (markers.length) {
-      const byDay = new Map(markers.map((m) => [chartDayKey(m.time), m]));
+      // Keep every same-day mark (news + strategy + options) — don't let
+      // the last overlay wipe earlier ones.
+      const byDay = new Map<string, ChartMarker[]>();
+      for (const m of markers) {
+        const day = chartDayKey(m.time);
+        const list = byDay.get(day) ?? [];
+        list.push(m);
+        byDay.set(day, list);
+      }
       const lastCandleByDay = new Map<string, Candle>();
       for (const c of candles) {
         lastCandleByDay.set(chartDayKey(c.time), c);
       }
       const mk: SeriesMarker<Time>[] = [];
-      for (const [day, m] of byDay) {
+      for (const [day, list] of byDay) {
         const c = lastCandleByDay.get(day);
         if (!c) continue;
+        // One LWC marker slot per day: combine letters, prefer first color/shape.
+        const letters = list.map((m) => m.text || "?").join("");
+        const primary = list[list.length - 1];
         mk.push({
           time: toChartTime(c.time, displayTz),
-          position: m.position ?? (c.close >= c.open ? "aboveBar" : "belowBar"),
-          color: m.color ?? (c.close >= c.open ? "#2eea8b" : "#ff5470"),
-          shape: m.shape ?? (c.close >= c.open ? "arrowUp" : "arrowDown"),
-          text: m.text ?? "N",
+          position: primary.position ?? (c.close >= c.open ? "aboveBar" : "belowBar"),
+          color: primary.color ?? (c.close >= c.open ? "#2eea8b" : "#ff5470"),
+          shape: primary.shape ?? "circle",
+          text: letters.slice(0, 6),
         });
       }
       series.setMarkers(mk);
@@ -342,8 +366,10 @@ export default function Chart({
 
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart) return;
+    const candleSeries = candleSeriesRef.current;
+    if (!chart || !candleSeries) return;
     const existing = overlaySeriesRef.current;
+    const priceLines = priceLinesRef.current;
     const nextIds = new Set(overlays.map((o) => o.id));
 
     for (const [id, s] of existing) {
@@ -352,8 +378,46 @@ export default function Chart({
         existing.delete(id);
       }
     }
+    for (const [id, line] of priceLines) {
+      if (!nextIds.has(id)) {
+        try { candleSeries.removePriceLine(line); } catch { /* skip */ }
+        priceLines.delete(id);
+      }
+    }
 
     for (const ov of overlays) {
+      const level = ov.priceLevel != null && Number.isFinite(ov.priceLevel)
+        ? ov.priceLevel
+        : null;
+
+      if (level != null) {
+        const oldSeries = existing.get(ov.id);
+        if (oldSeries) {
+          try { chart.removeSeries(oldSeries); } catch { /* skip */ }
+          existing.delete(ov.id);
+        }
+        const prev = priceLines.get(ov.id);
+        if (prev) {
+          try { candleSeries.removePriceLine(prev); } catch { /* skip */ }
+        }
+        const line = candleSeries.createPriceLine({
+          price: level,
+          color: ov.color,
+          lineWidth: 1,
+          lineStyle: lineStyleOf(ov.style),
+          axisLabelVisible: true,
+          title: ov.label ?? ov.id,
+        });
+        priceLines.set(ov.id, line);
+        continue;
+      }
+
+      const prevLine = priceLines.get(ov.id);
+      if (prevLine) {
+        try { candleSeries.removePriceLine(prevLine); } catch { /* skip */ }
+        priceLines.delete(ov.id);
+      }
+
       let s = existing.get(ov.id);
       if (!s) {
         s = chart.addLineSeries({
@@ -377,7 +441,7 @@ export default function Chart({
       for (const c of candles) {
         lastByDay.set(chartDayKey(c.time), c.time);
       }
-      const data = ov.points
+      const data = (ov.points ?? [])
         .map((p) => {
           if (!Number.isFinite(p.value)) return null;
           const aligned = lastByDay.get(chartDayKey(p.time));
@@ -425,6 +489,7 @@ export default function Chart({
     candleSeriesRef.current = null;
     volumeSeriesRef.current = null;
     overlaySeriesRef.current = new Map();
+    priceLinesRef.current = new Map();
     fittedOnceRef.current = false;
   }, []);
 
@@ -475,7 +540,7 @@ export default function Chart({
           overflow: "hidden",
           color: activeNote ? "var(--text-2, #c5d0e0)" : "var(--muted, #6b7c93)",
         }}
-        title={activeNote ?? "N = full volume spike · n = notable volume · E = large move (see hover for color meaning)"}
+        title={activeNote ?? "N = busy volume · n = above average · E = big move · hover a mark for details"}
       >
         {activeNote || "Hover a marked day — N full spike · n notable · E large move (colors = up vs down day)"}
       </div>

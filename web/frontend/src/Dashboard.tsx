@@ -631,7 +631,7 @@ export default function Dashboard({
             <label
               className="dim"
               style={{ fontSize: 12, display: "inline-flex", gap: 6, alignItems: "center" }}
-              title="Iron condor / credit-spread research guide from delayed GEX + skew"
+              title="Research guide from delayed options data — marks land on the day’s last bar"
             >
               <input
                 type="checkbox"
@@ -708,9 +708,14 @@ export default function Dashboard({
         {optOverlayOn && (
           <div style={{ padding: "0 18px 10px" }}>
             <div className="dim" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 6 }}>
-              {optOverlay?.disclosure
-                ?? "Options structure research guide only — not trade instructions."}
+              {optOverlay?.summary
+                ?? "Research guide only — not a trade order. Orange line = gamma flip."}
             </div>
+            {optOverlay?.timing_note && (
+              <div className="dim" style={{ fontSize: 11, lineHeight: 1.4, marginBottom: 6 }}>
+                {optOverlay.timing_note}
+              </div>
+            )}
             {optOverlayBusy && <div className="dim" style={{ fontSize: 12 }}>Loading options structure…</div>}
             {!optOverlayBusy && optOverlay && optOverlay.success === false && (
               <div className="dim" style={{ fontSize: 12 }}>
@@ -740,7 +745,7 @@ export default function Dashboard({
           <div style={{ padding: "0 18px 14px" }}>
             <div className="dim" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 8 }}>
               {overlay?.disclosure
-                ?? "Backtest signals / research guide only — not trade instructions."}
+                ?? "Backtest signals — research only, not trade orders."}
             </div>
             {overlayBusy && <div className="dim" style={{ fontSize: 12 }}>Loading strategy markers…</div>}
             {!overlayBusy && overlay && overlay.success === false && (
@@ -753,14 +758,14 @@ export default function Dashboard({
                 {overlay.gamma_context && (
                   <div className="dim" style={{ fontSize: 12, marginBottom: 6 }}>
                     {overlay.gamma_context.available
-                      ? <>Current GEX snapshot (display-only): <b>{String(overlay.gamma_context.regime_short ?? "—").replace(/_/g, " ")}</b>
-                          {" — "}{String(overlay.gamma_context.historical_note ?? "")}</>
+                      ? <>Today’s GEX snapshot: <b>{String(overlay.gamma_context.regime_short ?? "—").replace(/_/g, " ")}</b>
+                          {" — "}{String(overlay.gamma_context.historical_note ?? "display only")}</>
                       : <>GEX context unavailable{overlay.gamma_context.reason ? ` — ${String(overlay.gamma_context.reason)}` : ""}</>}
                   </div>
                 )}
                 {(overlay.reference_levels?.levels?.length ?? 0) > 0 && (
                   <div className="dim" style={{ fontSize: 12 }}>
-                    Last-bar reference levels:{" "}
+                    Last-bar levels:{" "}
                     {overlay.reference_levels!.levels!.map((l) => (
                       <span key={l.key} style={{ marginRight: 10 }}>
                         {l.label} <b className="num">{l.value}</b>
@@ -769,8 +774,7 @@ export default function Dashboard({
                     <div style={{ marginTop: 4 }}>{overlay.reference_levels?.note}</div>
                     {(overlay.overlay_series?.length ?? 0) > 0 && (
                       <div style={{ marginTop: 4 }}>
-                        Dotted guides on chart: {overlay.overlay_series!.map((s) => s.label || s.id).join(" · ")}
-                        {" — research guide only."}
+                        Chart lines: {overlay.overlay_series!.map((s) => s.label || s.id).join(" · ")}
                       </div>
                     )}
                   </div>

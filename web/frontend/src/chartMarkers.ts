@@ -7,37 +7,36 @@ export function describeEventMark(e: ChartEvent): string {
   const tier = String(e.tier || "significant");
   const letter = String(
     e.text
-      ?? (tier === "notable" ? "n" : tier === "event_move" ? "E" : tier === "provisional" ? "LIVE" : "N"),
+    ?? (tier === "notable" ? "n" : tier === "event_move" ? "E" : tier === "provisional" ? "LIVE" : "N"),
   );
   const up = (e.price_change_pct ?? 0) >= 0
     || (e.color || "").toLowerCase().includes("00ff")
     || (e.color || "").toLowerCase().includes("7eb6")
     || (e.color || "").toLowerCase().includes("f0c7");
 
-  let name = "Full volume spike";
-  let meaning =
-    "hit the full spike bar (≥~2× volume with ≥~2% move, or ≥~3× volume alone)";
-  let colorMeaning = up ? "green = up-day" : "red = down-day";
+  let name = "Busy day";
+  let meaning = "unusually high volume (and often a big move)";
+  let color = up ? "green up" : "red down";
 
   if (tier === "notable") {
-    name = "Notable volume";
-    meaning = "elevated volume below the full 2×/2% or 3× spike bar";
-    colorMeaning = up ? "gold = up-day" : "orange = down-day";
+    name = "Above-average volume";
+    meaning = "louder than usual, but not a full spike";
+    color = up ? "gold up" : "orange down";
   } else if (tier === "event_move") {
-    name = "Large session move";
-    meaning = "big price change (≥~1.2%) without extreme volume";
-    colorMeaning = up ? "blue = up-day" : "purple = down-day";
+    name = "Big price move";
+    meaning = "large % change without extreme volume";
+    color = up ? "blue up" : "purple down";
   } else if (tier === "provisional") {
     name = "Live volume spike";
-    meaning = "provisional intraday spike (may change by close)";
-    colorMeaning = "amber = live";
+    meaning = "intraday alert — may change by close";
+    color = "amber live";
   }
 
   const vol = e.volume_ratio != null ? ` · ${Number(e.volume_ratio).toFixed(1)}× vol` : "";
   const move = e.price_change_pct != null
     ? ` · ${(Number(e.price_change_pct) * 100).toFixed(1)}%`
     : "";
-  return `[${letter}] ${name}${vol}${move} — ${meaning}. Color: ${colorMeaning}.`;
+  return `[${letter}] ${name}${vol}${move} — ${meaning} (${color}).`;
 }
 
 /** Calendar day key for UTC/unix/ISO candle times and YYYY-MM-DD markers. */
@@ -85,12 +84,21 @@ export type OverlaySeriesLike = {
   label?: string;
   color: string;
   style?: "solid" | "dashed" | "dotted";
-  points: Array<{ time: string; value: number }>;
+  points?: Array<{ time: string; value: number }>;
+  /** Fixed $ level (gamma flip / wing guides) — drawn as a candle price line. */
+  priceLevel?: number;
 };
+
+function isFlatValues(vals: number[]): boolean {
+  if (!vals.length) return false;
+  const first = vals[0];
+  return vals.every((v) => Math.abs(v - first) < 1e-9);
+}
 
 /**
  * Remap daily overlay points onto real plotted bar times (last bar of that day).
- * Drops series that cannot draw (≥2 points) after filtering.
+ * Constant guides (gamma flip, wings) become priceLevel so they draw on 1D too.
+ * Time-varying series still need ≥2 points after filtering.
  */
 export function alignOverlaySeriesToCandles(
   series: OverlaySeriesLike[],
@@ -100,11 +108,21 @@ export function alignOverlaySeriesToCandles(
   const lastByDay = lastCandleTimeByDay(candles);
   const out: OverlaySeriesLike[] = [];
   for (const s of series) {
+    if (s.priceLevel != null && Number.isFinite(s.priceLevel)) {
+      out.push({ ...s, points: [] });
+      continue;
+    }
     const points: Array<{ time: string; value: number }> = [];
-    for (const p of s.points) {
+    for (const p of s.points ?? []) {
       const ct = lastByDay.get(chartDayKey(p.time));
       if (!ct || !Number.isFinite(p.value)) continue;
       points.push({ time: ct, value: p.value });
+    }
+    if (!points.length) continue;
+    const vals = points.map((p) => p.value);
+    if (isFlatValues(vals)) {
+      out.push({ ...s, points: [], priceLevel: vals[0] });
+      continue;
     }
     if (points.length >= 2) {
       out.push({ ...s, points });

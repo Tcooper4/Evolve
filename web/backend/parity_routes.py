@@ -1451,6 +1451,10 @@ def build_router(current_user: Callable[..., str]) -> APIRouter:
                 "Options analytics use delayed/free yfinance chains, not "
                 "real-time OPRA. Treat GEX and skew as directional context."
             ),
+            "summary": (
+                "Delayed options data — context only, not a trade signal. "
+                "GEX shows where dealers may hedge; skew shows put vs call fear."
+            ),
             "error": None if ok else "options context unavailable",
         }
 

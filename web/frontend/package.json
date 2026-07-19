@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build && node scripts/assert-pwa-sw.mjs",
     "preview": "vite preview",
     "gen:icons": "node scripts/gen-pwa-icons.mjs",
-    "test:unit": "node --experimental-strip-types src/dashboardLoad.selftest.ts && node --experimental-strip-types src/pwaWorkbox.selftest.ts && node --experimental-strip-types src/pwaManifest.selftest.ts && node --experimental-strip-types src/insecureContext.selftest.ts && node --experimental-strip-types src/signupPassword.selftest.ts"
+    "test:unit": "node --experimental-strip-types src/dashboardLoad.selftest.ts && node --experimental-strip-types src/analyzeLoad.selftest.ts && node --experimental-strip-types src/pwaWorkbox.selftest.ts && node --experimental-strip-types src/pwaManifest.selftest.ts && node --experimental-strip-types src/insecureContext.selftest.ts && node --experimental-strip-types src/signupPassword.selftest.ts"
   },
   "dependencies": {
     "lightweight-charts": "^4.2.0",

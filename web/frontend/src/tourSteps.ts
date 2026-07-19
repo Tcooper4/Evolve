@@ -22,13 +22,15 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
       target: '[data-tour="dashboard-chart"]',
       title: "Price chart",
       content:
-        "Main candle chart for the loaded ticker. News marks (N / n / E) appear when volume spikes line up with headlines.",
+        "Candle chart for this ticker. N / n / E marks flag busy volume days. "
+        + "Optional overlays: strategy backtest signals, and options structure "
+        + "(gamma flip line + a letter on the day’s last bar — usually the close).",
     },
     {
       target: '[data-tour="dashboard-headlines"]',
       title: "Headlines",
       content:
-        "Recent stories for this symbol. LLM blurbs (when keyed) are context only — not a buy/sell call.",
+        "Recent stories for this symbol. Short blurbs (when keyed) are context — not a buy/sell call.",
     },
     {
       target: '[data-tour="dashboard-briefing"]',
@@ -55,31 +57,31 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
       target: '[data-tour="analyze-score"]',
       title: "AI Score",
       content:
-        "The score ring summarizes technical, momentum, sentiment, and fundamental dimensions on a 0–10 scale.",
+        "The big number is our overall read (0–10). The sentence under it says what we expect the stock to do and why — in plain English.",
     },
     {
       target: '[data-tour="analyze-chart"]',
       title: "Chart + markers",
       content:
-        "Candles with volume/news marks and optional pattern markers once you open Patterns.",
+        "Price candles for this symbol. Marks flag busy volume days; pattern marks show up after you open Patterns.",
     },
     {
       target: '[data-tour="analyze-tools"]',
       title: "Tool tabs",
       content:
-        "Monte Carlo, Options, Filings, and Labs dig deeper. GEX and skew under Options are advanced/optional — fine to skip when you’re learning.",
+        "Dig deeper when you want: Monte Carlo (what-if ranges), Options, Filings, Labs. Fine to skip Options/GEX while learning.",
     },
     {
       target: '[data-tour="analyze-forecast-risk"]',
       title: "Forecast + risk",
       content:
-        "Forecast and risk cards show the consensus path, model agreement, volatility, drawdown, and other symbol risk metrics.",
+        "Forecast = where models think price could go. Risk = how bumpy the ride can get. Neither is a trade order.",
     },
     {
       target: '[data-tour="analyze-news"]',
       title: "News context",
       content:
-        "Headlines and optional LLM context explain what may be moving the symbol. Treat them as context, not instructions.",
+        "Recent headlines that may help explain the move. Context only — not buy/sell advice.",
     },
   ],
   scanner: [

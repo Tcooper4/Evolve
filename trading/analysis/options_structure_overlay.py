@@ -51,11 +51,11 @@ DEFAULT_OPTIONS_OVERLAY_ENABLED = False
 STRUCTURE_MAPPING_VALIDATED = False
 
 STRUCTURE_MAPPING_NOTE = (
-    "Regime→structure map is a research-backed default (long_gamma → "
-    "defined-risk short premium; short_gamma / near_flip → wait), not an "
-    "Evolve OOS-validated rule for this codebase's GEX or trade book."
+    "Research default map — not Evolve-validated: long gamma → defined-risk "
+    "short premium; short gamma / near flip → wait."
 )
 
+# Full honesty text for API / tests — keep keywords used by test_gex_snapshot_logger
 DISCLOSURE = (
     "Options structure research guide only — not trade instructions. "
     "Uses delayed/free option-chain GEX + IV skew (not OPRA). "
@@ -70,6 +70,18 @@ DISCLOSURE = (
     "Equity-style ~5 bps backtest spreads understate options trading "
     "costs by roughly 20–100×+; see trading.backtesting.options_cost_model "
     "(ATM floor several % of option mid; observed bid/ask preferred)."
+)
+
+# Short copy for Dashboard / Analyze — beginners see this first
+UI_SUMMARY = (
+    "Research guide only — not a trade order. "
+    "Orange line = gamma flip (price where dealer hedging may flip). "
+    "Letter mark sits on that day’s last candle (usually the close)."
+)
+
+TIMING_NOTE = (
+    "This is today’s options snapshot, not a history of intraday option trades. "
+    "On intraday charts the mark snaps to the last bar of the calendar day."
 )
 
 STRUCTURE_IRON_CONDOR = "iron_condor"
@@ -138,9 +150,8 @@ def pick_options_structure(
             "mark_text": "WAIT",
             "color": "#E89B6B",
             "rationale": (
-                "Dealers net short gamma — amplified moves / breakout risk. "
-                "Short iron condors and credit spreads are the wrong side of "
-                "this tape; wait or use defined-risk debit ideas separately."
+                "Dealers are short gamma — bigger swings more likely. "
+                "Avoid short premium for now."
             ),
             "wing_pct_guide": None,
             "also_noted": [
@@ -163,8 +174,8 @@ def pick_options_structure(
             "mark_text": "WAIT",
             "color": "#F0C75E",
             "rationale": (
-                "Near gamma flip or unclear regime — pinning and breakout "
-                "risk can flip quickly. No structure overlay recommendation."
+                "Near the gamma flip — hedging can flip fast. "
+                "No structure idea until the regime clears."
             ),
             "wing_pct_guide": None,
         })
@@ -186,10 +197,8 @@ def pick_options_structure(
                 "mark_text": "PCS",
                 "color": "#7EB6FF",
                 "rationale": (
-                    "Long-gamma / pin-prone tape with elevated put skew and spot "
-                    "above gamma flip — a defined-risk put credit fits a "
-                    "supported-bullish tape better than a wide naked short put. "
-                    "Iron condor is the alternate if you want both wings."
+                    "Calm / pin-prone tape with put skew and price above the flip — "
+                    "defined-risk put credit is the research guide (iron condor if you want both wings)."
                 ),
                 "wing_pct_guide": 0.03,
                 "alternate": STRUCTURE_IRON_CONDOR,
@@ -201,9 +210,8 @@ def pick_options_structure(
                 "mark_text": "CCS",
                 "color": "#C084FC",
                 "rationale": (
-                    "Long-gamma tape with call-side skew and spot below flip — "
-                    "a defined-risk call credit is the directional short-premium "
-                    "read. Prefer an iron condor if you want non-directional."
+                    "Calm / pin-prone tape with call skew and price below the flip — "
+                    "defined-risk call credit is the research guide (iron condor if you want both wings)."
                 ),
                 "wing_pct_guide": 0.03,
                 "alternate": STRUCTURE_IRON_CONDOR,
@@ -215,9 +223,8 @@ def pick_options_structure(
                 "mark_text": "IC",
                 "color": "#00FF88",
                 "rationale": (
-                    "Dealers net long gamma — dampened / pinning-prone tape favors "
-                    "a defined-risk iron condor (short premium both wings with "
-                    "long hedges) over directional single-legged short premium."
+                    "Dealers are long gamma — price often chops near a pin. "
+                    "Defined-risk iron condor is the research guide."
                 ),
                 "wing_pct_guide": 0.04,
                 "alternate": (
@@ -291,6 +298,8 @@ def build_options_structure_overlay(symbol: str) -> Dict[str, Any]:
         "gex": None,
         "skew": None,
         "disclosure": DISCLOSURE,
+        "summary": UI_SUMMARY,
+        "timing_note": TIMING_NOTE,
         "mapping_validated": STRUCTURE_MAPPING_VALIDATED,
         "mapping_note": STRUCTURE_MAPPING_NOTE,
         "default_on": DEFAULT_OPTIONS_OVERLAY_ENABLED,
@@ -380,7 +389,7 @@ def build_options_structure_overlay(symbol: str) -> Dict[str, Any]:
 
         title = (
             f"[{pick['mark_text']}] {pick['label']} — {pick['rationale']} "
-            f"(research guide; mapping not Evolve-OOS-validated; delayed chain)"
+            f"(research guide; delayed options data)"
         )
         out["markers"] = [{
             "time": today,
@@ -396,40 +405,27 @@ def build_options_structure_overlay(symbol: str) -> Dict[str, Any]:
         out["reference_levels"] = {
             "levels": levels,
             "note": (
-                "Wing prices are approximate % guides from spot — not live "
-                "option strikes or order tickets."
+                "Wing prices are rough % guides from spot — not live strikes or orders."
             ),
         }
 
-        # Horizontal guides: gamma flip + short wings when available
+        # Horizontal guides as candle price lines (not volume-scale series)
         series: List[Dict[str, Any]] = []
-        try:
-            from trading.data.price_cache import get_history
-
-            hist = get_history(sym, period="3mo")
-            if hist is not None and not hist.empty:
-                times = [
-                    (d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)[:10])
-                    for d in hist.index
-                ]
-                for lv in levels:
-                    if lv["key"] in ("gamma_flip", "short_put_guide", "short_call_guide"):
-                        color = {
-                            "gamma_flip": "#F5A623",
-                            "short_put_guide": "#7EB6FF",
-                            "short_call_guide": "#C084FC",
-                        }.get(lv["key"], "#8899aa")
-                        series.append({
-                            "id": lv["key"],
-                            "label": lv["label"],
-                            "color": color,
-                            "style": "dotted",
-                            "points": [
-                                {"time": t, "value": float(lv["value"])} for t in times
-                            ],
-                        })
-        except Exception as e:
-            logger.debug("options overlay series skip: %s", e)
+        for lv in levels:
+            if lv["key"] in ("gamma_flip", "short_put_guide", "short_call_guide"):
+                color = {
+                    "gamma_flip": "#F5A623",
+                    "short_put_guide": "#7EB6FF",
+                    "short_call_guide": "#C084FC",
+                }.get(lv["key"], "#8899aa")
+                series.append({
+                    "id": lv["key"],
+                    "label": lv["label"],
+                    "color": color,
+                    "style": "dotted",
+                    "priceLevel": float(lv["value"]),
+                    "points": [],
+                })
         out["overlay_series"] = series
         out["success"] = True
         return out

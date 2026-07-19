@@ -5,6 +5,7 @@ import {
   getSignalIc, runGnn, runMonteCarlo, trackRec,
   type Candle, type ChartEvent, type EdgarFiling, type ScoreResult,
 } from "./api";
+import { runAnalyzeLoad } from "./analyzeLoad";
 import Chart, { type ChartMarker } from "./Chart";
 import Sparkline from "./Sparkline";
 import { cacheChartTimezone, loadCachedChartTimezone } from "./chartTime";
@@ -88,6 +89,7 @@ export default function Analyze({
   const [tool, setTool] = useState<ToolTab>("main");
   const [lab, setLab] = useState<LabTab>("ic");
   const [res, setRes] = useState<ScoreResult | null>(null);
+  const [runSym, setRunSym] = useState<string | null>(null);
   const [news, setNews] = useState<Record<string, unknown>[]>([]);
   const [newsWhy, setNewsWhy] = useState<Record<string, string>>({});
   const [forecast, setForecast] = useState<Record<string, unknown> | null>(null);
@@ -102,6 +104,7 @@ export default function Analyze({
   const [playbook, setPlaybook] = useState<Record<string, unknown> | null>(null);
   const [earnings, setEarnings] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scoreLoading, setScoreLoading] = useState(false);
   const [extrasLoading, setExtrasLoading] = useState(false);
   const [toolBusy, setToolBusy] = useState(false);
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -122,7 +125,13 @@ export default function Analyze({
   }, []);
 
   async function run() {
+    const sym = (input || "SPY").trim().toUpperCase();
+    setInput(sym);
     setLoading(true);
+    setScoreLoading(true);
+    setExtrasLoading(true);
+    setChartLoading(true);
+    setRunSym(sym);
     setNews([]);
     setNewsWhy({});
     setForecast(null);
@@ -141,57 +150,59 @@ export default function Analyze({
     setEvents([]);
     setEdgar(null);
     setTracked("idle");
-    try {
-      const score = await getScore(input, mode);
-      setRes(score);
-      setLoading(false);
+    setRes(null);
 
-      setExtrasLoading(true);
-      setChartLoading(true);
-      getHistory(input, "6mo")
-        .then((h) => setCandles(h.candles))
-        .catch(() => setCandles([]))
-        .finally(() => setChartLoading(false));
-      getChartEvents(input, "6mo")
-        .then((ev) => setEvents(ev.events ?? []))
-        .catch(() => setEvents([]));
-
-      const [n, rk, pb, er] = await Promise.all([
-        getNews(input).catch(() => ({ items: [] })),
-        getRisk(input).catch(() => ({ metrics: null })),
-        getPlaybook(input).catch(() => null),
-        getEarnings(input).catch(() => null),
-      ]);
-      setNews((n.items as Record<string, unknown>[]) ?? []);
-      setNewsWhy({});
-      const titles = ((n.items as Record<string, unknown>[]) ?? [])
-        .map((it) => String(it.title ?? it.headline ?? "").trim())
-        .filter(Boolean)
-        .slice(0, 6);
-      if (titles.length) {
-        getNewsContext(titles)
-          .then((ctx) => {
-            const map: Record<string, string> = {};
-            for (const it of ctx.items ?? []) {
-              if (it.title && it.why) map[it.title] = it.why;
-            }
-            setNewsWhy(map);
-          })
-          .catch(() => {});
-      }
-      setRisk((rk.metrics as Record<string, string | number>) ?? null);
-      setPlaybook(pb);
-      setEarnings(er);
-
-      getForecast(input)
-        .then((f) => setForecast((f.forecast as Record<string, unknown>) ?? null))
-        .catch(() => setForecast(null))
-        .finally(() => setExtrasLoading(false));
-    } catch {
-      setRes(null);
-      setLoading(false);
-      setExtrasLoading(false);
-    }
+    await runAnalyzeLoad({
+      symbol: sym,
+      mode,
+      fetchers: {
+        getScore,
+        getHistory,
+        getChartEvents,
+        getNews,
+        getRisk,
+        getPlaybook,
+        getEarnings,
+        getForecast,
+        getNewsContext,
+      },
+      hooks: {
+        onCritical: ({ history }) => {
+          setCandles((history.candles as Candle[]) ?? []);
+          setChartLoading(false);
+          setLoading(false);
+        },
+        onCriticalError: () => {
+          setCandles([]);
+          setChartLoading(false);
+          setLoading(false);
+        },
+        onScore: (score) => {
+          setRes(score as unknown as ScoreResult);
+          setScoreLoading(false);
+        },
+        onScoreError: () => {
+          setRes({
+            symbol: sym,
+            score: null,
+            grade: null,
+            signals: {},
+            error: "Score unavailable",
+          });
+          setScoreLoading(false);
+        },
+        onEvents: (ev) => setEvents(ev as ChartEvent[]),
+        onExtras: ({ news: items, risk: rk, playbook: pb, earnings: er }) => {
+          setNews(items as Record<string, unknown>[]);
+          setRisk((rk as Record<string, string | number> | null) ?? null);
+          setPlaybook(pb);
+          setEarnings(er);
+        },
+        onNewsWhy: (map) => setNewsWhy(map),
+        onForecast: (f) => setForecast(f),
+        onForecastSettled: () => setExtrasLoading(false),
+      },
+    });
   }
 
   async function loadMonte() {
@@ -350,6 +361,9 @@ export default function Analyze({
           : regime === "sideways" ? "range-bound"
             : regime || "unclear";
 
+  const displaySym = (res?.symbol || runSym || input || "SPY").toUpperCase();
+  const showResults = !loading && !!runSym;
+
   return (
     <div className="fade-in">
       <PageTour pageId="analyze" />
@@ -361,18 +375,18 @@ export default function Analyze({
           <span className="icon">⌕</span>
           <input value={input}
             onChange={(e) => setInput(e.target.value.toUpperCase())}
-            onKeyDown={(e) => e.key === "Enter" && run()} />
+            onKeyDown={(e) => e.key === "Enter" && void run()} />
         </div>
         <div className="seg">
           <button className={mode === "long" ? "active" : ""} onClick={() => setMode("long")}>Buy / long</button>
           <button className={mode === "short" ? "active" : ""} onClick={() => setMode("short")}>Short</button>
         </div>
-        <button className="primary" onClick={run}>
-          {loading ? "Analyzing…" : "Analyze"}
+        <button className="primary" onClick={() => void run()}>
+          {loading ? "Loading chart…" : scoreLoading ? "Scoring…" : "Analyze"}
         </button>
       </div>
 
-      {!loading && !res && (
+      {!loading && !runSym && (
         <>
           <div className="card card-pad empty" data-tour="analyze-score">
             Enter a symbol for score, forecast, headlines, and risk.
@@ -399,14 +413,25 @@ export default function Analyze({
 
       {loading && <div className="skeleton" style={{ height: 220, marginBottom: 16 }} />}
 
-      {!loading && res && res.score != null && (
+      {showResults && (
         <>
           <div className="card card-pad" data-tour="analyze-score" style={{ marginBottom: 16 }}>
+            {scoreLoading ? (
+              <div style={{ display: "flex", gap: 28, alignItems: "center", flexWrap: "wrap" }}>
+                <div className="skeleton" style={{ width: 130, height: 130, borderRadius: "50%" }} />
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ fontSize: 22, fontWeight: 700 }}>{displaySym}</div>
+                  <div className="dim" style={{ marginTop: 8 }}>
+                    Computing AI score… chart and headlines load in parallel.
+                  </div>
+                </div>
+              </div>
+            ) : res && res.score != null ? (
             <div style={{ display: "flex", gap: 28, alignItems: "center", flexWrap: "wrap" }}>
               <ScoreRing score={Number(res.score)} />
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{res.symbol}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700 }}>{displaySym}</div>
                   <button className="ghost" style={{ fontSize: 12, border: "1px solid var(--border)" }}
                     onClick={trackIdea} disabled={tracked !== "idle"}
                     title="Save this idea (no purchase) — paper-buying later marks it Bought">
@@ -440,23 +465,37 @@ export default function Analyze({
                 ))}
               </div>
             </div>
+            ) : (
+              <div className="dim">
+                Couldn&apos;t score {displaySym}
+                {res?.error ? ` — ${res.error}` : ""}. Live data required.
+              </div>
+            )}
 
             {topSignals.length > 0 && (
               <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
                 <div className="rail-label" style={{ marginTop: 0 }}>Key readings</div>
                 <div className="dim" style={{ fontSize: 11.5, marginBottom: 8 }}>
-                  Raw indicators (mixed units) — not a shared 0–100 score. They feed the 0–10 dimension scores above.
+                  What the score is reacting to — plain English under each name.
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "7px 28px", maxWidth: 420 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px 28px", maxWidth: 520 }}>
                   {topSignals.map((s) => (
                     <div key={s.name} style={{ display: "contents" }}>
-                      <div style={{ fontSize: 13.5, color: "var(--text-2)" }} title={s.hint}>
-                        {signalLabel(s.name)}
+                      <div>
+                        <div style={{ fontSize: 13.5, color: "var(--text-2)" }}>
+                          {signalLabel(s.name)}
+                        </div>
+                        {s.hint && (
+                          <div className="dim" style={{ fontSize: 11.5, lineHeight: 1.35, marginTop: 2 }}>
+                            {stripEmoji(s.hint)}
+                          </div>
+                        )}
                       </div>
                       <div className="num" style={{
                         fontSize: 13.5, fontWeight: 650, textAlign: "right",
                         color: s.impact === "positive" ? "var(--up)"
                           : s.impact === "negative" ? "var(--down)" : "var(--text)",
+                        alignSelf: "start",
                       }}>
                         {s.display}
                       </div>
@@ -469,7 +508,7 @@ export default function Analyze({
 
           <div className="card" data-tour="analyze-chart" style={{ marginBottom: 16 }}>
             <div className="chart-head">
-              <div className="legend"><b>{res.symbol}</b> · 6mo daily</div>
+              <div className="legend"><b>{displaySym}</b> · 6mo daily</div>
             </div>
             {chartLoading ? (
               <div className="skeleton" style={{ height: 320, margin: 18 }} />
@@ -504,7 +543,7 @@ export default function Analyze({
               ]} />
             ) : (
               <div className="empty" style={{ padding: "40px 0" }}>
-                No chart data for {res.symbol}.
+                No chart data for {displaySym}.
               </div>
             )}
           </div>
@@ -528,9 +567,9 @@ export default function Analyze({
                         {friendlyStrategy(primaryStrategy)}
                       </div>
                       <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "var(--text-2)", maxWidth: 520 }}>
-                        Recent tape looks <b style={{ color: "var(--text)" }}>{regimeHint}</b>
-                        {strat.reason ? ` (${String(strat.reason)})` : ""}.
-                        {" "}This is a regime-based suggestion — not a ranked backtest winner.
+                        Recent price action looks <b style={{ color: "var(--text)" }}>{regimeHint}</b>
+                        {strat.reason ? ` — ${String(strat.reason)}` : ""}.
+                        {" "}We suggest trying this playbook style next (not a guaranteed winner).
                         {alts.length > 0 && (
                           <> Also worth trying: {alts.map(friendlyStrategy).join(", ")}.</>
                         )}
@@ -633,8 +672,8 @@ export default function Analyze({
                         return (
                           <div className="dim" style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.45, maxWidth: 480 }}>
                             {applied && rule
-                              ? <>Routing rule <span style={{ color: "var(--text)" }}>{rule}</span> applied (OOS-validated). </>
-                              : <>No feature-routing rule live — default ensemble with eligibility only. </>}
+                              ? <>Using a checked forecast rule: <span style={{ color: "var(--text)" }}>{rule}</span>. </>
+                              : <>Using the default model mix. </>}
                             {just}
                           </div>
                         );
@@ -648,7 +687,7 @@ export default function Analyze({
                           {showModels && (
                             <div style={{ marginTop: 10 }}>
                               <div className="dim" style={{ fontSize: 11.5, marginBottom: 8, lineHeight: 1.4 }}>
-                                Per-model targets under the consensus — disagreement is information, not a vote to trade.
+                                What each model thinks the price could be — disagreement is useful info, not a vote to trade.
                               </div>
                               <table className="tbl">
                                 <thead>
@@ -690,6 +729,9 @@ export default function Analyze({
                 </div>
                 <div className="card card-pad">
                   <div className="rail-label" style={{ marginTop: 0 }}>Risk · {input}</div>
+                  <div className="dim" style={{ fontSize: 11.5, marginBottom: 8 }}>
+                    How rough the ride can get — higher risk means bigger swings, not a prediction of direction.
+                  </div>
                   {riskEntries.length > 0 ? (
                     <div className="kpis">
                       {riskEntries.map(([k, v]) => (
@@ -708,7 +750,7 @@ export default function Analyze({
               <div className="card card-pad" data-tour="analyze-news">
                 <div className="rail-label" style={{ marginTop: 0 }}>News · {input}</div>
                 <div className="dim" style={{ fontSize: 11.5, marginBottom: 8 }}>
-                  Optional LLM blurbs are context only — not a trade call.
+                  Headlines for context only — not a buy/sell call.
                 </div>
                 {news.length === 0 && <div className="dim">No headlines — add a News API key in Settings for more coverage.</div>}
                 {news.slice(0, 6).map((n, i) => {
@@ -736,6 +778,9 @@ export default function Analyze({
           {tool === "monte" && (
             <div className="card card-pad">
               <div className="rail-label" style={{ marginTop: 0 }}>Monte Carlo · {input}</div>
+              <div className="dim" style={{ fontSize: 11.5, marginBottom: 10 }}>
+                Many random “what if” price paths. Median = typical outcome; 5th/95th = rough bad/good range.
+              </div>
               {toolBusy && <div className="dim">Simulating…</div>}
               {!toolBusy && mc?.success === false && (
                 <div className="dim">{String(mc.error ?? "Unavailable")}</div>
@@ -760,8 +805,10 @@ export default function Analyze({
             <div className="card card-pad">
               <div className="rail-label" style={{ marginTop: 0 }}>Options context · {input}</div>
               <div className="dim" style={{ fontSize: 11.5, marginBottom: 10 }}>
-                {String(opts?.disclosure
-                  ?? "Delayed/free chain data (not real-time OPRA) — directional context only.")}
+                {String(
+                  (opts?.summary as string | undefined)
+                  ?? "Delayed options data — context only, not a trade signal.",
+                )}
               </div>
               {toolBusy && <div className="skeleton" style={{ height: 140 }} />}
               {!toolBusy && opts && opts.success === false && (
@@ -788,7 +835,7 @@ export default function Analyze({
                             </div>
                             <div className="sub">
                               {gex.success
-                                ? String(gex.regime ?? "").slice(0, 120)
+                                ? String(gex.regime_plain ?? gex.regime ?? "").slice(0, 120)
                                 : String(gex.error ?? "GEX unavailable")}
                             </div>
                           </div>
@@ -869,7 +916,7 @@ export default function Analyze({
 
           {tool === "filings" && (
             <div className="card card-pad" style={{ marginBottom: 16 }}>
-              <div className="rail-label" style={{ marginTop: 0 }}>SEC filings · {res.symbol}</div>
+              <div className="rail-label" style={{ marginTop: 0 }}>SEC filings · {displaySym}</div>
               {toolBusy && !edgar && <div className="skeleton" style={{ height: 100 }} />}
               {edgar?.success === false && (
                 <div className="dim">Couldn't reach SEC EDGAR right now{edgar.error ? ` — ${edgar.error}` : ""}.</div>
@@ -925,7 +972,7 @@ export default function Analyze({
                   : (
                     <>
                       <div className="dim" style={{ fontSize: 12.5, marginBottom: 10 }}>
-                        Does the score historically predict forward returns? IC above ~0.05 is meaningful.
+                        Has this score historically lined up with later returns? Above ~0.05 is a meaningful hint.
                       </div>
                       <div className="kpis">
                         {Object.entries(ic)
@@ -1024,12 +1071,6 @@ export default function Analyze({
             </div>
           )}
         </>
-      )}
-
-      {!loading && res && res.score == null && (
-        <div className="card card-pad empty">
-          Couldn't score {res.symbol}{res.error ? ` — ${res.error}` : ""}. Live data required.
-        </div>
       )}
     </div>
   );

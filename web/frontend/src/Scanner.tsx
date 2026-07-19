@@ -353,7 +353,14 @@ export default function Scanner({
               </button>
             </div>
           </div>
-          {drillBusy && <div className="skeleton" style={{ height: 100, marginTop: 12 }} />}
+          {drillBusy && (
+            <>
+              <div className="dim" style={{ marginTop: 12, fontSize: 12.5 }}>
+                Full AI score usually takes 20–40s on a cold ticker — screen scores above are the fast path.
+              </div>
+              <div className="skeleton" style={{ height: 100, marginTop: 12 }} />
+            </>
+          )}
           {!drillBusy && drillErr && <div className="dim" style={{ marginTop: 12 }}>⚠ {drillErr}</div>}
           {!drillBusy && drill && (
             <>

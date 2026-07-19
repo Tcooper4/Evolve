@@ -507,7 +507,8 @@ export type StrategyOverlay = {
     label?: string;
     color: string;
     style?: "solid" | "dashed" | "dotted";
-    points: Array<{ time: string; value: number }>;
+    points?: Array<{ time: string; value: number }>;
+    priceLevel?: number;
   }>;
   reference_levels?: {
     levels?: Array<{ key: string; label: string; value: number; price_scale?: boolean }>;
@@ -515,6 +516,8 @@ export type StrategyOverlay = {
   };
   gamma_context?: Record<string, unknown> | null;
   disclosure?: string;
+  summary?: string;
+  timing_note?: string;
   default_on?: boolean;
   framing?: string;
   last_bar?: string;

@@ -34,9 +34,8 @@ DEFAULT_STRATEGY_OVERLAY_ENABLED = False
 
 DISCLOSURE = (
     "Backtest signals / research guide only — not trade instructions. "
-    "Markers use delayed free market data; past performance is not a live "
-    "recommendation. Gamma regime tags (when present) reuse the current "
-    "delayed-chain GEX snapshot and do not filter which signals appear."
+    "Markers use delayed free market data. "
+    "Gamma tags (when shown) are today’s snapshot and do not filter which signals appear."
 )
 
 LABEL_BUY = "backtest signal / research guide — buy signal"
@@ -149,8 +148,7 @@ def reference_levels_from_last_bar(
     return {
         "levels": levels,
         "note": (
-            "Reference levels from the last closed bar — research context, "
-            "not a live trade target or invalidation instruction."
+            "Levels from the last closed bar — context only, not a live trade target."
         ),
     }
 

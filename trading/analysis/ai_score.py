@@ -26,6 +26,130 @@ from trading.utils.safe_math import safe_rsi
 
 logger = logging.getLogger(__name__)
 
+
+def _strip_signal_noise(text: str) -> str:
+    """Drop emoji / decorative chars for beginner-facing copy."""
+    out = []
+    for ch in str(text or ""):
+        o = ord(ch)
+        if 0x1F300 <= o <= 0x1FAFF or 0x2600 <= o <= 0x27BF:
+            continue
+        out.append(ch)
+    return "".join(out).strip()
+
+
+def _expect_for_score(overall: float) -> tuple[str, str]:
+    """Return (what we expect the stock to do, lean label)."""
+    if overall >= 7.0:
+        return ("move higher in the near term", "bullish")
+    if overall >= 6.5:
+        return ("lean a bit higher", "mildly bullish")
+    if overall >= 4.0:
+        return ("stay mixed or sideways for now", "neutral")
+    if overall >= 3.0:
+        return ("lean a bit lower", "mildly bearish")
+    return ("face downside pressure", "bearish")
+
+
+def _why_from_signal(sig: Dict[str, Any]) -> str:
+    """One short beginner phrase explaining a single signal."""
+    name = (
+        str(sig.get("name") or "reading")
+        .replace("Pattern:", "")
+        .replace("Factor:", "")
+        .replace("_", " ")
+        .strip()
+    )
+    desc = _strip_signal_noise(str(sig.get("description") or ""))
+    meaning = desc.split(" — ", 1)[1].strip() if " — " in desc else desc
+    if not meaning:
+        meaning = name
+    # Keep why clauses short
+    if len(meaning) > 72:
+        meaning = meaning[:69].rstrip() + "…"
+    impact = str(sig.get("impact") or "neutral").lower()
+    if impact in ("positive", "bullish"):
+        return f"{name} looks supportive ({meaning})"
+    if impact in ("negative", "bearish"):
+        return f"{name} looks weak ({meaning})"
+    return f"{name} is mixed ({meaning})"
+
+
+def build_plain_english_summary(
+    symbol: str,
+    overall: float,
+    grade: str,
+    signals: Optional[List[Dict[str, Any]]] = None,
+) -> str:
+    """
+    Beginner verdict: what we expect the stock to do, plus 1–2 why drivers.
+    Research view only — not a trade order.
+    """
+    sym = (symbol or "").strip().upper() or "This stock"
+    expect, lean = _expect_for_score(float(overall))
+    sigs = list(signals or [])
+    pos = [s for s in sigs if str(s.get("impact") or "").lower() == "positive"]
+    neg = [s for s in sigs if str(s.get("impact") or "").lower() == "negative"]
+
+    drivers: List[Dict[str, Any]] = []
+    if lean.endswith("bullish"):
+        drivers = pos[:2] or (sigs[:1] if sigs else [])
+    elif lean.endswith("bearish"):
+        drivers = neg[:2] or (sigs[:1] if sigs else [])
+    else:
+        # Neutral: show one of each when available so “why” is concrete
+        if pos:
+            drivers.append(pos[0])
+        if neg:
+            drivers.append(neg[0])
+        if not drivers and sigs:
+            drivers = sigs[:2]
+
+    why = "; ".join(_why_from_signal(s) for s in drivers[:2])
+    base = (
+        f"Based on our signals, we expect {sym} to {expect} "
+        f"(score {float(overall):.1f}/10, grade {grade})."
+    )
+    if why:
+        return f"{base} Main drivers: {why}. Research view only — not a trade order."
+    return (
+        f"{base} Readings look {lean} overall. "
+        "Research view only — not a trade order."
+    )
+
+
+def build_plain_english_short_summary(
+    symbol: str,
+    score: float,
+    label: str,
+    signals: Optional[List[Dict[str, Any]]] = None,
+) -> str:
+    """Beginner short-thesis verdict."""
+    sym = (symbol or "").strip().upper() or "This stock"
+    s = float(score)
+    if s >= 7.0:
+        expect = f"a stronger case that {sym} could fall"
+    elif s >= 6.0:
+        expect = f"a moderate case that {sym} could fall"
+    elif s >= 5.0:
+        expect = f"only a weak short case for {sym}"
+    else:
+        expect = f"little reason to short {sym} right now"
+
+    drivers = [
+        s_ for s_ in (signals or [])
+        if str(s_.get("impact") or "").lower() in ("bearish", "negative", "positive")
+    ][:2]
+    why = "; ".join(_why_from_signal(s_) for s_ in drivers)
+    base = (
+        f"Based on our short signals, {expect} "
+        f"({label}, {s:.1f}/10)."
+    )
+    if why:
+        return f"{base} Main drivers: {why}. Research view only — not a trade order."
+    return f"{base} Research view only — not a trade order."
+
+
 _MACRO_FACTORS_INSTANCE = None
 
 # Order preserved for signal_completeness score denominator
@@ -690,7 +814,10 @@ def _bundle_technical(
                 "name": "RSI",
                 "value": round(float(rsi), 1),
                 "impact": "positive" if rsi < 50 else "neutral" if rsi < 70 else "negative",
-                "description": f"RSI {rsi:.1f} — {'oversold' if rsi < 30 else 'neutral' if rsi < 70 else 'overbought'}",
+                "description": (
+                    f"RSI {rsi:.1f} — "
+                    f"{'looks washed out (often bounce zone)' if rsi < 30 else 'looks stretched (often pause/pullback zone)' if rsi >= 70 else 'neither washed out nor stretched'}"
+                ),
             }
         )
 
@@ -707,7 +834,10 @@ def _bundle_technical(
                 "name": "Bollinger Position",
                 "value": round(float(bb_pct * 100), 1),
                 "impact": "positive" if bb_pct < 0.3 else "negative" if bb_pct > 0.8 else "neutral",
-                "description": f"Price at {bb_pct*100:.0f}% of Bollinger Band",
+                "description": (
+                    f"Price at {bb_pct*100:.0f}% of its recent band — "
+                    f"{'near the low end (bounce zone)' if bb_pct < 0.3 else 'near the high end (stretched)' if bb_pct > 0.8 else 'around the middle'}"
+                ),
             }
         )
         tech_divisor = 2.0
@@ -806,7 +936,11 @@ def _bundle_momentum_base(
                     "name": f"Price vs {name}",
                     "value": round(pct_diff, 2),
                     "impact": "positive" if above else "negative",
-                    "description": f"{'Above' if above else 'Below'} {name} by {abs(pct_diff):.1f}%",
+                    "description": (
+                        f"{'Trading above' if above else 'Trading below'} its {name} "
+                        f"by {abs(pct_diff):.1f}% — "
+                        f"{'uptrend support' if above else 'weaker trend'}"
+                    ),
                 }
             )
 
@@ -820,7 +954,11 @@ def _bundle_momentum_base(
                 "name": "20d Momentum",
                 "value": round(float(momentum_20d), 2),
                 "impact": "positive" if momentum_20d > 0 else "negative",
-                "description": f"Price {momentum_20d:+.1f}% over 20 days",
+                "description": (
+                    f"{'Up' if momentum_20d >= 0 else 'Down'} "
+                    f"{abs(momentum_20d):.1f}% over the last 20 days — "
+                    f"{'recent strength' if momentum_20d > 5 else 'recent weakness' if momentum_20d < -5 else 'no strong trend'}"
+                ),
             }
         )
 
@@ -921,7 +1059,7 @@ def compute_ai_score(
         momentum_score: float 0-10
         signals: list of dicts {name, value, impact, description}
         data_quality: per-dimension real vs unavailable
-        summary: str — one-sentence plain-English verdict
+        summary: str — beginner plain-English “what to expect” verdict
         error: str | None
     """
     if hist is not None and not hist.empty:
@@ -2172,12 +2310,8 @@ def _compute_ai_score_impl(
             else "F"
         )
 
-        # Plain-English summary
-        direction = "bullish" if overall >= 6.5 else "bearish" if overall < 4 else "neutral"
-        summary = (
-            f"{symbol} scores {overall}/10 ({grade}) — signals are predominantly "
-            f"{direction} based on {len(signals)} technical and fundamental indicators."
-        )
+        # Plain-English summary: what we expect + why (beginner-facing)
+        summary = build_plain_english_summary(symbol, overall, grade, signals)
 
         _n_real = len(
             [v for v in _signal_status.values() if v == "real"]
@@ -2435,7 +2569,9 @@ def compute_short_score(
             "long_score": float(
                 ai_result.get("overall_score", 5.0) or 5.0
             ),
-            "summary": f"{label} — Short Score {score:.1f}/10",
+            "summary": build_plain_english_short_summary(
+                symbol, score, label, short_signals
+            ),
             "error": None,
         }
     except Exception as e:

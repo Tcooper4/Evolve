@@ -74,6 +74,12 @@ DATA_DISCLOSURE = (
     "EVOLVE_GEX_SNAPSHOT_LOG=1 to accumulate a future validation set)."
 )
 
+# Short beginner-facing blurb (UI); full honesty stays in DATA_DISCLOSURE
+UI_SUMMARY = (
+    "Delayed options data — not a live exchange feed. "
+    "Shows where dealers may hedge. Context only, not a trade signal."
+)
+
 REGIME_LONG = (
     "dealers net long gamma: expect dampened, pinning-prone price action "
     "(dealers hedge counter-trend against directional flow)"
@@ -86,6 +92,11 @@ REGIME_NEAR_FLIP = (
     "near gamma flip: mixed / unstable dealer-hedging regime — "
     "pinning and breakout risk can flip quickly with spot"
 )
+
+# Short regime lines for UI cards
+REGIME_LONG_SHORT = "Calm / pin-prone — dealers hedge against big moves"
+REGIME_SHORT_SHORT = "Choppy / breakout risk — dealers hedge with the trend"
+REGIME_NEAR_FLIP_SHORT = "Unstable — near the gamma flip; wait for clarity"
 
 
 def black_scholes_gamma(
@@ -276,6 +287,7 @@ def compute_gex_profile(
             "gex=gamma*OI*multiplier*spot^2*0.01"
         ),
         "disclosure": disclosure,
+        "summary": UI_SUMMARY,
         "delayed_data": True,
         "error": None,
     }
@@ -332,10 +344,13 @@ def compute_gex_profile(
     regime = _regime_label(net, flip, spot_f)
     if "long gamma" in regime:
         short = "long_gamma"
+        plain = REGIME_LONG_SHORT
     elif "short gamma" in regime:
         short = "short_gamma"
+        plain = REGIME_SHORT_SHORT
     else:
         short = "near_flip"
+        plain = REGIME_NEAR_FLIP_SHORT
 
     return {
         "success": True,
@@ -349,6 +364,7 @@ def compute_gex_profile(
             for k in sorted(by_strike.keys())
         ],
         "regime": regime,
+        "regime_plain": plain,
         "regime_short": short,
         "near_flip_pct": NEAR_FLIP_PCT,
         "near_flip_validated": False,
@@ -358,6 +374,7 @@ def compute_gex_profile(
         ),
         "sign_convention": base["sign_convention"],
         "disclosure": disclosure,
+        "summary": UI_SUMMARY,
         "delayed_data": True,
         "error": None,
     }
@@ -430,6 +447,7 @@ def get_gamma_exposure(
 __all__ = [
     "CONTRACT_MULTIPLIER",
     "DATA_DISCLOSURE",
+    "UI_SUMMARY",
     "NEAR_FLIP_PCT",
     "black_scholes_gamma",
     "gex_contribution",
