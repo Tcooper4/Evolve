@@ -131,6 +131,21 @@ class EconometricDiagnostics:
             "optimal_lags": self.select_optimal_lags(),
             "structural_breaks": self.detect_structural_breaks(),
             "summary": {},
+            # HONESTY CARRYOVER (2026-07): this panel was renamed from
+            # "Causal" to "Diagnostics" specifically because it tests
+            # stationarity/ARCH/normality/structural breaks - real,
+            # legitimate statistics - but never tested actual causality
+            # (no Granger test exists in this class). That guarantee
+            # must survive independently of the plain-language pass on
+            # the seven findings above, not depend on it being restated
+            # each time - stated once, here, in the same everyday voice
+            # as the rest of this module.
+            "disclosure": (
+                "This looks at patterns in the price history itself - "
+                "not whether one thing causes another. Think of it as "
+                "checking how the stock has been behaving, not a "
+                "prediction about what causes what."
+            ),
         }
         self._results["summary"] = self._generate_summary()
         return self._results
