@@ -541,6 +541,7 @@ export type OptionsStructureOverlay = StrategyOverlay & {
     label?: string;
     mark_text?: string;
     rationale?: string;
+    plain_language?: string;
     wing_pct_guide?: number | null;
     alternate?: string | null;
   };
@@ -648,6 +649,7 @@ export type MarketState = {
   symbol?: string;
   level?: string;
   label?: string;
+  plain_language?: string;
   disclosure?: string;
   predicts_direction?: boolean;
   push_priority?: boolean;

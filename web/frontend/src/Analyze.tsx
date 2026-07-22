@@ -357,7 +357,7 @@ export default function Analyze({
   const regimeHint =
     regime === "bull" ? "trending up"
       : regime === "bear" ? "trending down"
-        : regime === "volatile" ? "choppy / high vol"
+        : regime === "volatile" ? "choppy / big price swings"
           : regime === "sideways" ? "range-bound"
             : regime || "unclear";
 
@@ -368,7 +368,7 @@ export default function Analyze({
     <div className="fade-in">
       <PageTour pageId="analyze" />
       <div className="greeting">
-        Analyze <small>AI Score, forecast, news & risk</small>
+        Analyze <small>Overall rating, price outlook, news & bumpiness</small>
       </div>
       <div className="topbar" data-tour="analyze-controls">
         <div className="search">
@@ -379,7 +379,7 @@ export default function Analyze({
         </div>
         <div className="seg">
           <button className={mode === "long" ? "active" : ""} onClick={() => setMode("long")}>Buy / long</button>
-          <button className={mode === "short" ? "active" : ""} onClick={() => setMode("short")}>Short</button>
+          <button className={mode === "short" ? "active" : ""} onClick={() => setMode("short")}>Bet it falls</button>
         </div>
         <button className="primary" onClick={() => void run()}>
           {loading ? "Loading chart…" : scoreLoading ? "Scoring…" : "Analyze"}
@@ -389,14 +389,14 @@ export default function Analyze({
       {!loading && !runSym && (
         <>
           <div className="card card-pad empty" data-tour="analyze-score">
-            Enter a symbol for score, forecast, headlines, and risk.
+            Enter a ticker (like AAPL) for rating, outlook, headlines, and risk.
           </div>
           <div className="card card-pad empty" data-tour="analyze-chart" style={{ marginTop: 12 }}>
             Chart and news marks appear here after Analyze.
           </div>
           <div className="seg" data-tour="analyze-tools" style={{ marginTop: 12, flexWrap: "wrap", opacity: 0.75 }}>
             <button type="button" disabled>Overview</button>
-            <button type="button" disabled>Monte Carlo</button>
+            <button type="button" disabled>What-if ranges</button>
             <button type="button" disabled>Options</button>
             <button type="button" disabled>Filings</button>
             <button type="button" disabled>Labs</button>
@@ -434,7 +434,7 @@ export default function Analyze({
                   <div style={{ fontSize: 22, fontWeight: 700 }}>{displaySym}</div>
                   <button className="ghost" style={{ fontSize: 12, border: "1px solid var(--border)" }}
                     onClick={trackIdea} disabled={tracked !== "idle"}
-                    title="Save this idea (no purchase) — paper-buying later marks it Bought">
+                    title="Save this idea (no purchase) — record a practice buy in Portfolio when you try it">
                     {tracked === "done" ? "✓ Tracking" : tracked === "saving" ? "Saving…" : "☆ Track idea"}
                   </button>
                 </div>
@@ -445,7 +445,7 @@ export default function Analyze({
                     <> · short {Number(res.short_score).toFixed(1)}</>
                   )}
                   {tracked === "done" && (
-                    <> · open idea — buy in Portfolio to mark acted</>
+                    <> · saved idea — record a practice buy in Portfolio when you try it</>
                   )}
                 </div>
                 {res.summary && (
@@ -508,7 +508,7 @@ export default function Analyze({
 
           <div className="card" data-tour="analyze-chart" style={{ marginBottom: 16 }}>
             <div className="chart-head">
-              <div className="legend"><b>{displaySym}</b> · 6mo daily</div>
+              <div className="legend"><b>{displaySym}</b> · 6 months, daily bars</div>
             </div>
             {chartLoading ? (
               <div className="skeleton" style={{ height: 320, margin: 18 }} />
@@ -550,7 +550,7 @@ export default function Analyze({
 
           <div className="seg" data-tour="analyze-tools" style={{ marginBottom: 12, flexWrap: "wrap" }}>
             <button className={tool === "main" ? "active" : ""} onClick={() => setTool("main")}>Overview</button>
-            <button className={tool === "monte" ? "active" : ""} onClick={() => { setTool("monte"); if (!mc) void loadMonte(); }}>Monte Carlo</button>
+            <button className={tool === "monte" ? "active" : ""} onClick={() => { setTool("monte"); if (!mc) void loadMonte(); }}>What-if ranges</button>
             <button className={tool === "options" ? "active" : ""} onClick={() => { setTool("options"); if (!opts) void loadOptions(); }}>Options</button>
             <button className={tool === "filings" ? "active" : ""} onClick={() => { setTool("filings"); if (!edgar) void loadFilings(); }}>Filings</button>
             <button className={tool === "labs" ? "active" : ""} onClick={() => openLab(lab)}>Labs</button>
@@ -562,7 +562,7 @@ export default function Analyze({
                 <div className="card card-pad" style={{ marginBottom: 16 }}>
                   <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap", justifyContent: "space-between" }}>
                     <div style={{ flex: 1, minWidth: 260 }}>
-                      <div className="rail-label" style={{ marginTop: 0 }}>Suggested strategy</div>
+                      <div className="rail-label" style={{ marginTop: 0 }}>Suggested trading style</div>
                       <div style={{ fontSize: 16, fontWeight: 650, marginBottom: 6 }}>
                         {friendlyStrategy(primaryStrategy)}
                       </div>
@@ -603,7 +603,7 @@ export default function Analyze({
                       ) : null}
                       {earnings.avg_move_1d != null && (
                         <div className="card kpi" style={{ padding: "10px 12px" }}>
-                          <div className="label">Avg 1d move</div>
+                          <div className="label">Avg one-day move</div>
                           <div className="value num" style={{ fontSize: 16 }}>
                             ±{Number(earnings.avg_move_1d).toFixed(1)}%
                           </div>
@@ -611,7 +611,7 @@ export default function Analyze({
                       )}
                       {earnings.beat_rate != null && (
                         <div className="card kpi" style={{ padding: "10px 12px" }}>
-                          <div className="label">EPS beat rate</div>
+                          <div className="label">Profit beat rate</div>
                           <div className="value num" style={{ fontSize: 16 }}>
                             {Number(earnings.beat_rate).toFixed(0)}%
                           </div>
@@ -619,7 +619,7 @@ export default function Analyze({
                       )}
                       {earnings.positive_reaction_rate != null && (
                         <div className="card kpi" style={{ padding: "10px 12px" }}>
-                          <div className="label">Positive reaction</div>
+                          <div className="label">Stock usually rose</div>
                           <div className="value num" style={{ fontSize: 16 }}>
                             {Number(earnings.positive_reaction_rate).toFixed(0)}%
                           </div>
@@ -634,7 +634,7 @@ export default function Analyze({
                 <div className="card card-pad">
                   <div className="rail-label" style={{ marginTop: 0 }}>Forecast</div>
                   {extrasLoading && !forecast && (
-                    <div className="dim">Loading consensus forecast…</div>
+                    <div className="dim">Loading combined price outlook…</div>
                   )}
                   {!extrasLoading && fcPath.length === 0 && (
                     <div className="dim">Forecast unavailable for this symbol right now.</div>
@@ -656,7 +656,7 @@ export default function Analyze({
                         {forecast?.consensus_price != null
                           ? `$${Number(forecast.consensus_price).toFixed(2)}`
                           : "—"}
-                        {conviction && <> · {conviction.toLowerCase()} conviction</>}
+                        {conviction && <> · {conviction.toLowerCase()} confidence</>}
                         {agreement != null && Number.isFinite(agreement) && (
                           <> · agreement {(agreement * 100).toFixed(0)}%</>
                         )}
@@ -672,7 +672,7 @@ export default function Analyze({
                         return (
                           <div className="dim" style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.45, maxWidth: 480 }}>
                             {applied && rule
-                              ? <>Using a checked forecast rule: <span style={{ color: "var(--text)" }}>{rule}</span>. </>
+                              ? <>Using a tested rule for this stock: <span style={{ color: "var(--text)" }}>{rule}</span>. </>
                               : <>Using the default model mix. </>}
                             {just}
                           </div>
@@ -691,7 +691,7 @@ export default function Analyze({
                               </div>
                               <table className="tbl">
                                 <thead>
-                                  <tr><th>Model</th><th>Target</th><th>vs last</th><th>Lean</th></tr>
+                                  <tr><th>Model</th><th>Target</th><th>vs current</th><th>Direction</th></tr>
                                 </thead>
                                 <tbody>
                                   {modelRows.map((m) => (
@@ -777,7 +777,7 @@ export default function Analyze({
 
           {tool === "monte" && (
             <div className="card card-pad">
-              <div className="rail-label" style={{ marginTop: 0 }}>Monte Carlo · {input}</div>
+              <div className="rail-label" style={{ marginTop: 0 }}>What-if price paths · {input}</div>
               <div className="dim" style={{ fontSize: 11.5, marginBottom: 10 }}>
                 Many random “what if” price paths. Median = typical outcome; 5th/95th = rough bad/good range.
               </div>
@@ -788,11 +788,11 @@ export default function Analyze({
               {!toolBusy && mc?.success !== false && mc?.final_p50 != null && (
                 <>
                   <div className="kpis" style={{ marginBottom: 12 }}>
-                    <div className="card kpi"><div className="label">5th %ile</div>
+                    <div className="card kpi"><div className="label">Bad-case outcome</div>
                       <div className="value num" style={{ fontSize: 18 }}>${Number(mc.final_p5).toLocaleString()}</div></div>
                     <div className="card kpi"><div className="label">Median</div>
                       <div className="value num" style={{ fontSize: 18 }}>${Number(mc.final_p50).toLocaleString()}</div></div>
-                    <div className="card kpi"><div className="label">95th %ile</div>
+                    <div className="card kpi"><div className="label">Good-case outcome</div>
                       <div className="value num" style={{ fontSize: 18 }}>${Number(mc.final_p95).toLocaleString()}</div></div>
                   </div>
                   {mcPath.length > 1 && <Sparkline values={mcPath.map(Number)} width={520} height={56} baseline="start" />}
@@ -827,7 +827,7 @@ export default function Analyze({
                       <>
                         <div className="kpis" style={{ marginBottom: 12 }}>
                           <div className="card kpi">
-                            <div className="label">GEX regime</div>
+                            <div className="label">Options positioning</div>
                             <div className="value" style={{ fontSize: 15 }}>
                               {gex.success
                                 ? String(gex.regime_short ?? "—").replace(/_/g, " ")
@@ -835,12 +835,12 @@ export default function Analyze({
                             </div>
                             <div className="sub">
                               {gex.success
-                                ? String(gex.regime_plain ?? gex.regime ?? "").slice(0, 120)
-                                : String(gex.error ?? "GEX unavailable")}
+                                ? String(gex.plain_language ?? gex.regime_plain ?? gex.regime ?? "").slice(0, 160)
+                                : String(gex.error ?? "Options positioning unavailable")}
                             </div>
                           </div>
                           <div className="card kpi">
-                            <div className="label">Gamma flip</div>
+                            <div className="label">Key options price level</div>
                             <div className="value num" style={{ fontSize: 18 }}>
                               {gex.gamma_flip != null
                                 ? Number(gex.gamma_flip).toFixed(2)
@@ -848,13 +848,10 @@ export default function Analyze({
                             </div>
                             <div className="sub">
                               spot {gex.spot != null ? Number(gex.spot).toFixed(2) : "—"}
-                              {gex.net_gex != null
-                                ? ` · net GEX ${Number(gex.net_gex).toExponential(2)}`
-                                : ""}
                             </div>
                           </div>
                           <div className="card kpi">
-                            <div className="label">IV skew</div>
+                            <div className="label">Fear vs greed in options</div>
                             <div className="value" style={{ fontSize: 15 }}>
                               {skew.success
                                 ? String(skew.shape ?? "—").replace(/_/g, " ")
@@ -863,12 +860,13 @@ export default function Analyze({
                             <div className="sub">
                               {skew.success
                                 ? String(
-                                  (skew.event_context as Record<string, unknown> | undefined)
-                                    ?.interpretation
+                                  skew.plain_language
+                                    ?? (skew.event_context as Record<string, unknown> | undefined)
+                                      ?.plain_language
                                     ?? skew.detail
                                     ?? "",
-                                ).replace(/_/g, " ")
-                                : String(skew.error ?? "Skew unavailable")}
+                                ).slice(0, 160)
+                                : String(skew.error ?? "Options pricing unavailable")}
                             </div>
                           </div>
                           <div className="card kpi">
@@ -878,17 +876,17 @@ export default function Analyze({
                             </div>
                             <div className="sub">
                               {sent.success
-                                ? `P/C ${Number(sent.put_call_ratio ?? 0).toFixed(2)} · max pain ${Number(sent.max_pain ?? 0).toFixed(2)}`
+                                ? `Put vs call activity ${Number(sent.put_call_ratio ?? 0).toFixed(2)} · crowd price ${Number(sent.max_pain ?? 0).toFixed(2)}`
                                 : String(sent.error ?? "Flow unavailable")}
                             </div>
                           </div>
                         </div>
                         {pins.length > 0 && (
                           <div style={{ marginBottom: 12 }}>
-                            <div className="rail-label">Pin candidates (highest |GEX|)</div>
+                            <div className="rail-label">Price levels options traders watch</div>
                             <table className="tbl">
                               <thead>
-                                <tr><th>Strike</th><th className="num">GEX</th></tr>
+                                <tr><th>Strike</th><th className="num">Strength</th></tr>
                               </thead>
                               <tbody>
                                 {pins.map((p) => (
@@ -901,7 +899,12 @@ export default function Analyze({
                             </table>
                           </div>
                         )}
-                        {skew.framing != null && (
+                        {skew.plain_language != null && (
+                          <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
+                            {String(skew.plain_language)}
+                          </div>
+                        )}
+                        {skew.plain_language == null && skew.framing != null && (
                           <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
                             {String(skew.framing)}
                           </div>
@@ -959,10 +962,10 @@ export default function Analyze({
           {tool === "labs" && (
             <div className="card card-pad">
               <div className="seg" style={{ marginBottom: 12, flexWrap: "wrap" }}>
-                <button className={lab === "ic" ? "active" : ""} onClick={() => openLab("ic")}>Signal IC</button>
+                <button className={lab === "ic" ? "active" : ""} onClick={() => openLab("ic")}>Score accuracy</button>
                 <button className={lab === "diagnostics" ? "active" : ""} onClick={() => openLab("diagnostics")}>Diagnostics</button>
                 <button className={lab === "patterns" ? "active" : ""} onClick={() => openLab("patterns")}>Patterns</button>
-                <button className={lab === "gnn" ? "active" : ""} onClick={() => openLab("gnn")}>GNN</button>
+                <button className={lab === "gnn" ? "active" : ""} onClick={() => openLab("gnn")}>Connected stocks</button>
               </div>
               {toolBusy && <div className="dim">Computing…</div>}
 
@@ -972,7 +975,7 @@ export default function Analyze({
                   : (
                     <>
                       <div className="dim" style={{ fontSize: 12.5, marginBottom: 10 }}>
-                        Has this score historically lined up with later returns? Above ~0.05 is a meaningful hint.
+                        Has this score historically lined up with later returns? Above 0.05 means it has been a useful hint.
                       </div>
                       <div className="kpis">
                         {Object.entries(ic)
@@ -997,8 +1000,7 @@ export default function Analyze({
                   : (
                     <>
                       <div className="dim" style={{ fontSize: 12.5, marginBottom: 12 }}>
-                        Stationarity and structural diagnostics (ADF/KPSS, ARCH, normality, lags, breaks)
-                        — not Granger causality. Helps judge which model families fit this tape.
+                        Checks whether price patterns are stable over time — helps pick the right forecast style.
                         {diagnostics.complexity != null && (
                           <> Complexity: <b style={{ color: "var(--text)" }}>{String(diagnostics.complexity)}</b>.</>
                         )}

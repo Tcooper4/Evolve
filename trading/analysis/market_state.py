@@ -43,6 +43,29 @@ LEVEL_CRITICAL = "critical"
 PUSH_PRIORITY_LEVELS = frozenset({LEVEL_ELEVATED, LEVEL_CRITICAL})
 
 
+def _plain_language_market_state(
+    level: str,
+    stress: List[str],
+    calm: List[str],
+) -> str:
+    """Plain composite read — no direction forecast."""
+    if level == LEVEL_CRITICAL:
+        return (
+            "Several serious stress signals at once — pay close attention and "
+            "be extra careful with new risk."
+        )
+    if level == LEVEL_ELEVATED:
+        return (
+            "Multiple stress signals are active — expect choppier conditions and "
+            "size down if you are unsure."
+        )
+    if level == LEVEL_WATCHFUL:
+        return "One thing looks off — worth watching, but not an all-clear alarm."
+    if stress:
+        return "Mostly calm, with one minor stress signal — stay aware."
+    return "Overall calm right now — no major stress signals in the mix."
+
+
 def event_severity_score(
     sentiment_magnitude: float,
     reputation: float,
@@ -191,6 +214,7 @@ def compose_market_state(
     return {
         "level": level,
         "label": label,
+        "plain_language": _plain_language_market_state(level, stress, calm),
         "drivers_stress": stress,
         "drivers_calm": calm,
         "push_priority": level in PUSH_PRIORITY_LEVELS,
@@ -317,6 +341,7 @@ def get_market_state(
             "success": True,
             "level": composite["level"],
             "label": composite["label"],
+            "plain_language": composite["plain_language"],
             "drivers_stress": composite["drivers_stress"],
             "drivers_calm": composite["drivers_calm"],
             "push_priority": composite["push_priority"],

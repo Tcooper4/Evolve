@@ -522,11 +522,11 @@ export default function Dashboard({
           )}
         </div>
         <div className="card kpi fade-in">
-          <div className="label">Prev close</div>
+          <div className="label">Yesterday's close</div>
           <div className="value num">
             {quote?.prev_close != null ? quote.prev_close.toFixed(2) : "—"}
           </div>
-          <div className="sub">last session</div>
+          <div className="sub">previous trading day</div>
         </div>
         <div className="card kpi fade-in">
           <div className="label">{PERIOD_LABEL[period]} range</div>
@@ -545,9 +545,9 @@ export default function Dashboard({
               ? `${periodChange >= 0 ? "+" : ""}${periodChange.toFixed(2)}%`
               : "—"}
           </div>
-          <div className="sub">close vs close</div>
+          <div className="sub">first vs last day in range</div>
         </div>
-        <div className="card kpi fade-in" title={marketState?.disclosure || "Situational awareness — not a price prediction"}>
+        <div className="card kpi fade-in" title={marketState?.disclosure || "Overall market mood right now — not a price forecast"}>
           <div className="label">Market state</div>
           <div className="value num" style={{
             fontSize: 16,
@@ -563,8 +563,9 @@ export default function Dashboard({
               : loading ? "…" : "—"}
           </div>
           <div className="sub" style={{ maxWidth: 220 }}>
-            {marketState?.label
-              || (marketState?.error ? "unavailable" : "GEX · news · vol")}
+            {marketState?.plain_language
+              || marketState?.label
+              || (marketState?.error ? "unavailable" : "options positioning · news · price swings")}
           </div>
         </div>
         <div className="card kpi fade-in" title={gpr?.description || "Load in Settings → Market signals"}>
@@ -576,10 +577,10 @@ export default function Dashboard({
             {gpr?.current != null ? `${Number(gpr.current).toFixed(0)}` : "—"}
             {gpr?.level ? <span className="dim" style={{ fontSize: 12, marginLeft: 6 }}>{gpr.level}</span> : null}
           </div>
-          <div className="sub">{gpr?.trend || "Caldara & Iacoviello · Settings to load"}</div>
+          <div className="sub">{gpr?.trend || "World-news stress index — load in Settings"}</div>
         </div>
         <div className="card kpi fade-in" title={rb?.description || "Load in Settings → Market signals"}>
-          <div className="label">EPS revision breadth</div>
+          <div className="label">Profit forecast trends</div>
           <div className="value num" style={{
             fontSize: 16,
             color: rb?.signal === "POSITIVE" ? "var(--up)"
@@ -597,15 +598,15 @@ export default function Dashboard({
             <b>{symbol}</b>
             {" · "}
             {period === "1d" || period === "5d" || period === "1mo" || period === "3mo"
-              ? (period === "1d" ? dayInterval : "intraday")
+              ? (period === "1d" ? dayInterval : "within today's session")
               : "daily"}
             {visibleNews.length > 0
-              ? ` · ${visibleNews.length} news mark${visibleNews.length === 1 ? "" : "s"}`
+              ? ` · ${visibleNews.length} news dot${visibleNews.length === 1 ? "" : "s"}`
               : (period === "1d" || period === "5d")
-                ? " · no news marks in this session window"
-                : " · no news marks"}
+                ? " · no news dots in this time range"
+                : " · no news dots"}
             {overlayOn && overlay?.success
-              ? ` · ${visibleStrategy.length} backtest signal${visibleStrategy.length === 1 ? "" : "s"}`
+              ? ` · ${visibleStrategy.length} past-strategy marker${visibleStrategy.length === 1 ? "" : "s"}`
               : ""}
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -615,7 +616,7 @@ export default function Dashboard({
                 checked={overlayOn}
                 onChange={(e) => setOverlayOn(e.target.checked)}
               />
-              Strategy overlay
+              Strategy buy/sell markers
             </label>
             {overlayOn && (
               <select
@@ -631,14 +632,14 @@ export default function Dashboard({
             <label
               className="dim"
               style={{ fontSize: 12, display: "inline-flex", gap: 6, alignItems: "center" }}
-              title="Research guide from delayed options data — marks land on the day’s last bar"
+              title="Uses delayed options data — markers appear on the day's final price point"
             >
               <input
                 type="checkbox"
                 checked={optOverlayOn}
                 onChange={(e) => setOptOverlayOn(e.target.checked)}
               />
-              Options structure
+              Options levels guide
             </label>
             {period === "1d" && (
               <div className="seg">
@@ -709,7 +710,7 @@ export default function Dashboard({
           <div style={{ padding: "0 18px 10px" }}>
             <div className="dim" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 6 }}>
               {optOverlay?.summary
-                ?? "Research guide only — not a trade order. Orange line = gamma flip."}
+                ?? "Research guide only — not a trade order. Orange line = key options price level."}
             </div>
             {optOverlay?.timing_note && (
               <div className="dim" style={{ fontSize: 11, lineHeight: 1.4, marginBottom: 6 }}>
@@ -726,7 +727,12 @@ export default function Dashboard({
               <div className="dim" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
                 <b>{String(optOverlay.pick?.label ?? optOverlay.markers?.[0]?.text ?? "Structure")}</b>
                 {" — "}
-                {String(optOverlay.pick?.rationale ?? optOverlay.markers?.[0]?.title ?? "")}
+                {String(
+                  optOverlay.pick?.plain_language
+                    ?? optOverlay.pick?.rationale
+                    ?? optOverlay.markers?.[0]?.title
+                    ?? "",
+                )}
                 {(optOverlay.reference_levels?.levels?.length ?? 0) > 0 && (
                   <div style={{ marginTop: 4 }}>
                     Guides:{" "}
@@ -745,7 +751,7 @@ export default function Dashboard({
           <div style={{ padding: "0 18px 14px" }}>
             <div className="dim" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 8 }}>
               {overlay?.disclosure
-                ?? "Backtest signals — research only, not trade orders."}
+                ?? "Past-strategy buy/sell markers — research only, not trade orders."}
             </div>
             {overlayBusy && <div className="dim" style={{ fontSize: 12 }}>Loading strategy markers…</div>}
             {!overlayBusy && overlay && overlay.success === false && (
@@ -758,14 +764,14 @@ export default function Dashboard({
                 {overlay.gamma_context && (
                   <div className="dim" style={{ fontSize: 12, marginBottom: 6 }}>
                     {overlay.gamma_context.available
-                      ? <>Today’s GEX snapshot: <b>{String(overlay.gamma_context.regime_short ?? "—").replace(/_/g, " ")}</b>
+                      ? <>Today's options snapshot: <b>{String(overlay.gamma_context.regime_plain ?? overlay.gamma_context.regime_short ?? "—").replace(/_/g, " ")}</b>
                           {" — "}{String(overlay.gamma_context.historical_note ?? "display only")}</>
-                      : <>GEX context unavailable{overlay.gamma_context.reason ? ` — ${String(overlay.gamma_context.reason)}` : ""}</>}
+                      : <>Options context unavailable{overlay.gamma_context.reason ? ` — ${String(overlay.gamma_context.reason)}` : ""}</>}
                   </div>
                 )}
                 {(overlay.reference_levels?.levels?.length ?? 0) > 0 && (
                   <div className="dim" style={{ fontSize: 12 }}>
-                    Last-bar levels:{" "}
+                    Latest price levels:{" "}
                     {overlay.reference_levels!.levels!.map((l) => (
                       <span key={l.key} style={{ marginRight: 10 }}>
                         {l.label} <b className="num">{l.value}</b>
@@ -789,7 +795,7 @@ export default function Dashboard({
         <div className="card card-pad" data-tour="dashboard-headlines">
           <div className="rail-label" style={{ marginTop: 0 }}>Headlines · {symbol}</div>
           <div className="dim" style={{ fontSize: 11.5, marginBottom: 6 }}>
-            LLM blurbs (when keyed) are context only — not a call.
+            AI summaries (when you add an API key) are background only — not buy/sell advice.
           </div>
           {news.length === 0 && <div className="dim">No headlines yet.</div>}
           {news.slice(0, 5).map((n, i) => {
@@ -838,13 +844,13 @@ export default function Dashboard({
         <div className="card card-pad" data-tour="dashboard-briefing">
           <div className="rail-label" style={{ marginTop: 0 }}>Morning briefing</div>
           {!brief && !briefBusy && (
-            <div className="dim">Generate a briefing to surface top long/short candidates from the S&P 100.</div>
+            <div className="dim">Generate a briefing to surface top buy and sell ideas from 100 large US stocks.</div>
           )}
           {briefBusy && <div className="skeleton" style={{ height: 120 }} />}
           {brief && !briefBusy && (
             <>
               {brief.error && <div className="dim">⚠ {String(brief.error)}</div>}
-              {opps.length === 0 && !brief.error && <div className="dim">No opportunities above threshold.</div>}
+              {opps.length === 0 && !brief.error && <div className="dim">No stocks scored high enough to show here.</div>}
               {opps.slice(0, 5).map((o, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0",
                   borderTop: i ? "1px solid var(--border)" : "none", cursor: "pointer" }}

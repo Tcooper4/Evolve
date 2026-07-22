@@ -32,6 +32,7 @@ class Pattern:
     start_date: Optional[str]
     end_date: Optional[str]
     description: str
+    plain_language: str = ""
     target_price: Optional[float] = None
     stop_price: Optional[float] = None
 
@@ -108,6 +109,7 @@ class ChartPatternDetector:
                 self._sr_to_dict(sr) for sr in self._sr_levels
             ],
             "trend": trend,
+            "trend_plain_language": self._trend_plain_language(trend),
             "signals": signals,
             "last_price": float(self.closes[-1]),
         }
@@ -180,6 +182,10 @@ class ChartPatternDetector:
                             f"Head at ${head_h:.2f}, "
                             f"neckline at ${neckline:.2f}"
                         ),
+                        plain_language=(
+                            f"Chart looks like a top may be forming — if it breaks below "
+                            f"about ${neckline:.2f}, sellers could push it lower."
+                        ),
                         target_price=round(target, 2),
                         stop_price=round(head_h * 1.02, 2),
                     ))
@@ -223,6 +229,10 @@ class ChartPatternDetector:
                                 f"Head at ${head_l:.2f}, "
                                 f"neckline at ${neckline:.2f}"
                             ),
+                            plain_language=(
+                                f"Chart looks like a bottom may be forming — if it breaks above "
+                                f"about ${neckline:.2f}, buyers could push it higher."
+                            ),
                             target_price=round(target, 2),
                             stop_price=round(head_l * 0.98, 2),
                         ))
@@ -261,6 +271,10 @@ class ChartPatternDetector:
                             f"Bearish reversal. Two tops near "
                             f"${max(h1,h2):.2f}"
                         ),
+                        plain_language=(
+                            f"Price failed twice near ${max(h1,h2):.2f} — "
+                            "that ceiling may cap rallies until it breaks."
+                        ),
                         target_price=round(target, 2),
                         stop_price=round(max(h1, h2) * 1.02, 2),
                     ))
@@ -289,6 +303,10 @@ class ChartPatternDetector:
                         description=(
                             f"Bullish reversal. Two bottoms near "
                             f"${min(l1,l2):.2f}"
+                        ),
+                        plain_language=(
+                            f"Price bounced twice near ${min(l1,l2):.2f} — "
+                            "that floor may support dips until it breaks."
                         ),
                         target_price=round(target, 2),
                         stop_price=round(min(l1, l2) * 0.98, 2),
@@ -329,6 +347,10 @@ class ChartPatternDetector:
                         f"Bullish continuation. "
                         f"Resistance at ${resistance:.2f}, rising support"
                     ),
+                    plain_language=(
+                        f"Price is squeezing upward toward about ${resistance:.2f} — "
+                        "a break higher could extend the move."
+                    ),
                     target_price=round(
                         resistance + (resistance - recent_lows.mean()), 2
                     ),
@@ -350,6 +372,10 @@ class ChartPatternDetector:
                     description=(
                         f"Bearish continuation. "
                         f"Support at ${support:.2f}, falling resistance"
+                    ),
+                    plain_language=(
+                        f"Price is squeezing downward toward about ${support:.2f} — "
+                        "a break lower could extend the drop."
                     ),
                     target_price=round(
                         support - (recent_highs.mean() - support), 2
@@ -396,6 +422,10 @@ class ChartPatternDetector:
                             f"Bullish signal: 50MA crossed above 200MA. "
                             f"50MA=${ma50[i]:.2f}, 200MA=${ma200[i]:.2f}"
                         ),
+                        plain_language=(
+                            "Longer-term trend just turned up — shorter average price "
+                            "crossed above the longer one."
+                        ),
                     ))
 
                 # Death cross
@@ -411,6 +441,10 @@ class ChartPatternDetector:
                         description=(
                             f"Bearish signal: 50MA crossed below 200MA. "
                             f"50MA=${ma50[i]:.2f}, 200MA=${ma200[i]:.2f}"
+                        ),
+                        plain_language=(
+                            "Longer-term trend just turned down — shorter average price "
+                            "crossed below the longer one."
                         ),
                     ))
 
@@ -586,6 +620,7 @@ class ChartPatternDetector:
                     "source": pattern.name,
                     "confidence": pattern.confidence,
                     "description": pattern.description,
+                    "plain_language": pattern.plain_language or pattern.description,
                     "target": pattern.target_price,
                     "stop": pattern.stop_price,
                 })
@@ -628,6 +663,16 @@ class ChartPatternDetector:
 
         return signals
 
+    def _trend_plain_language(self, trend: Dict[str, Any]) -> str:
+        direction = str(trend.get("direction") or "NEUTRAL").upper()
+        if direction == "BULLISH":
+            return "Price has been climbing on most timeframes we checked."
+        if direction == "BEARISH":
+            return "Price has been falling on most timeframes we checked."
+        if direction == "INSUFFICIENT_DATA":
+            return "Not enough history yet to judge the trend."
+        return "Trend signals are mixed — no clear up or down read."
+
     def _pattern_to_dict(self, p: Pattern) -> Dict[str, Any]:
         return {
             "name": p.name,
@@ -636,6 +681,7 @@ class ChartPatternDetector:
             "start_date": p.start_date,
             "end_date": p.end_date,
             "description": p.description,
+            "plain_language": p.plain_language or p.description,
             "target_price": p.target_price,
             "stop_price": p.stop_price,
         }

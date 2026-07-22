@@ -18,7 +18,7 @@ const PAGES = [
   { id: "analyze", label: "Analyze", ic: "◎" },
   { id: "scanner", label: "Scanner", ic: "⌕" },
   { id: "portfolio", label: "Portfolio", ic: "◫" },
-  { id: "backtest", label: "Backtest", ic: "↺" },
+  { id: "backtest", label: "Simulate", ic: "↺" },
   { id: "chat", label: "Chat", ic: "✦" },
   { id: "settings", label: "Settings", ic: "⚙" },
 ] as const;
@@ -85,7 +85,7 @@ export default function App() {
   return (
     <div className="app">
       <aside className="rail">
-        <div className="brand"><span className="dot" /> EVOLVE <small>terminal</small></div>
+        <div className="brand"><span className="dot" /> EVOLVE <small>research hub</small></div>
         <div className="user-chip">
           <span>{name}</span>
           <button className="ghost" onClick={logout}>Log out</button>

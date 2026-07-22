@@ -133,9 +133,9 @@ export default function Scanner({
     symbol: "Symbol",
     quick_score: "Screen score",
     price: "Price",
-    change_20d: "20d chg",
-    rsi: "RSI",
-    vs_sma20: "vs SMA20",
+    change_20d: "20-day change",
+    rsi: "Momentum (RSI)",
+    vs_sma20: "vs 20-day average",
     volume_ratio: "Vol ratio",
   };
   const cols = rows.length
@@ -187,33 +187,33 @@ export default function Scanner({
         Scanner{" "}
         <small>
           {tab === "scan"
-            ? "fast screen first — click a row for the full AI Score"
+            ? "quick filter first — click a row for the full rating"
             : "Find two stocks that usually move together, then trade when they temporarily split apart."}
         </small>
       </div>
 
       <div className="seg" data-tour="scanner-mode" style={{ marginBottom: 14 }}>
         <button className={tab === "scan" ? "active" : ""} onClick={() => setTab("scan")}>Scanner</button>
-        <button className={tab === "pairs" ? "active" : ""} onClick={() => setTab("pairs")}>Pairs trading</button>
+        <button className={tab === "pairs" ? "active" : ""} onClick={() => setTab("pairs")}>Pairs that move together</button>
       </div>
 
       <div className="card card-pad" data-tour="scanner-setup" style={{ marginBottom: 16 }}>
         <div className="form-grid">
           <div className="field">
-            <label>Universe</label>
+            <label>Stock list to scan</label>
             <select value={universe} onChange={(e) => setUniverse(e.target.value)} disabled={!!custom.trim()}>
               {UNIVERSES.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
             </select>
           </div>
           <div className="field">
-            <label>Custom tickers (optional)</label>
+            <label>Your symbols (optional)</label>
             <input value={custom} placeholder="AAPL, MSFT, NVDA"
               onChange={(e) => setCustom(e.target.value.toUpperCase())} />
           </div>
           {tab === "scan" && (
             <>
               <div className="field">
-                <label>Min screen score</label>
+                <label>Minimum quick-filter score</label>
                 <input type="number" min={0} max={10} step={0.5} value={minScore}
                   onChange={(e) => setMinScore(Number(e.target.value))} />
               </div>
@@ -239,7 +239,7 @@ export default function Scanner({
           </div>
         ) : (
           <div className="dim" data-tour="scanner-filters" style={{ marginTop: 14, fontSize: 12.5 }}>
-            Pair screen uses cointegration + correlation ≥ 0.7 (filters apply on the Scanner tab).
+            Pair screen finds stocks that usually move together (strong link + at least 70% similar moves).
           </div>
         )}
         <div
@@ -269,7 +269,7 @@ export default function Scanner({
         )}
         {tab === "pairs" && (
           <div className="dim" style={{ marginTop: 10, fontSize: 12.5, lineHeight: 1.45 }}>
-            Tests every pair in the universe for cointegration (they usually move together)
+            Tests pairs to see if they usually move together and stay linked — only strong matches are shown.
             and correlation ≥ 0.7. Only statistically linked pairs are shown — zero results
             just means none cleared the bar, not that the screen failed.
           </div>

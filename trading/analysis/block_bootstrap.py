@@ -201,6 +201,10 @@ def simulate_equity_paths(
             f"independent crash days. Opt-in method; default remains iid. "
             f"Not a price forecast."
         ).strip()
+        plain_language = (
+            "This simulates many possible futures while keeping realistic "
+            "volatility clumps — not a price prediction."
+        )
     else:
         note = (
             "i.i.d. bootstrap of historical daily returns (default). "
@@ -209,6 +213,10 @@ def simulate_equity_paths(
             "stationary block in Evolve's comparison. "
             "Pass method='stationary_block' for dependence-faithful paths. "
             "Not a price forecast."
+        )
+        plain_language = (
+            "This simulates many possible futures from past daily moves — "
+            "bad days can stack in a row, so the downside case may look worse than real life."
         )
 
     return {
@@ -224,6 +232,7 @@ def simulate_equity_paths(
         "paths": paths,
         "block": block_meta,
         "note": note,
+        "plain_language": plain_language,
     }
 
 

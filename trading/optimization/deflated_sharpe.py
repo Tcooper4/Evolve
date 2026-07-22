@@ -116,13 +116,26 @@ def deflated_sharpe_ratio(
     var = sum((s - mean) ** 2 for s in scores) / max(1, len(scores) - 1)
     bench = expected_max_sharpe(len(scores), math.sqrt(var), trials_mean=0.0)
     dsr = probabilistic_sharpe(observed_sr, bench, n_obs, skew, kurtosis)
+    if dsr >= 0.95:
+        interpretation = "likely real edge (survives the search)"
+        plain_language = (
+            "This result likely holds up after testing many ideas — "
+            "not just lucky picking."
+        )
+    elif dsr >= 0.75:
+        interpretation = "uncertain - could be selection luck"
+        plain_language = (
+            "Uncertain — the good number could be luck from trying many combinations."
+        )
+    else:
+        interpretation = "indistinguishable from lucky noise across this many trials"
+        plain_language = (
+            "Probably no real edge — looks like noise from searching many options."
+        )
     return {
         "deflated_sharpe": round(dsr, 4),
         "expected_max_sharpe_under_null": round(bench, 4),
         "n_trials": len(scores),
-        "interpretation": (
-            "likely real edge (survives the search)" if dsr >= 0.95
-            else "uncertain - could be selection luck" if dsr >= 0.75
-            else "indistinguishable from lucky noise across this many trials"
-        ),
+        "interpretation": interpretation,
+        "plain_language": plain_language,
     }

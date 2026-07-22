@@ -396,6 +396,11 @@ class MacroFactors:
                         f"Yield curve {'inverted' if spread < 0 else 'normal'} "
                         f"({spread:+.2f}%)"
                     )
+                    result["plain_language"] = (
+                        "Short-term rates are above long-term rates — often a cautious economic signal."
+                        if spread < 0
+                        else "The yield curve looks normal — no strong recession warning from rates alone."
+                    )
 
         except Exception as e:
             logger.debug("Yield curve fetch failed: %s", e)
@@ -461,6 +466,11 @@ class MacroFactors:
                         if current < ma20 * 0.98
                         else "Credit markets stable"
                     ),
+                    "plain_language": (
+                        "Borrowing stress is showing up — investors may be getting cautious."
+                        if current < ma20 * 0.98
+                        else "Credit markets look calm — no major stress signal from bonds."
+                    ),
                 }
         except Exception as e:
             logger.debug("Credit spreads fetch failed: %s", e)
@@ -496,6 +506,13 @@ class MacroFactors:
                         else "Weak dollar — tailwind for emerging markets/commodities"
                         if current < ma20 * 0.98
                         else "Dollar neutral"
+                    ),
+                    "plain_language": (
+                        "The U.S. dollar is strong — that can hurt exporters and commodities."
+                        if current > ma20 * 1.02
+                        else "The U.S. dollar is weak — that can help commodities and overseas markets."
+                        if current < ma20 * 0.98
+                        else "The dollar is roughly neutral — not a big macro push either way."
                     ),
                 }
         except Exception as e:
@@ -535,6 +552,11 @@ class MacroFactors:
                         if current > ma20
                         else "Inflation expectations falling — "
                         "supportive for growth stocks"
+                    ),
+                    "plain_language": (
+                        "Inflation expectations are rising — growth stocks may face headwinds."
+                        if current > ma20
+                        else "Inflation expectations are easing — that often helps growth stocks."
                     ),
                 }
         except Exception as e:
@@ -591,6 +613,13 @@ class MacroFactors:
         return {
             "label": label,
             "description": description,
+            "plain_language": (
+                "Big-picture conditions look supportive for taking risk."
+                if label == "RISK_ON"
+                else "Big-picture conditions look cautious — be selective."
+                if label == "RISK_OFF"
+                else "Big-picture signals are mixed — no clear macro push."
+            ),
             "score_bias": score_bias,
             "bullish_count": bullish_factors,
             "bearish_count": bearish_factors,

@@ -19,7 +19,7 @@ const PERIODS = ["6mo", "1y", "2y", "5y"];
 
 /** Least → most aggressive objective (label shown in the dropdown). */
 const OPT_OBJECTIVES = [
-  { id: "sharpe_ratio", label: "Least risky — Sharpe" },
+  { id: "sharpe_ratio", label: "Least risky — best risk-adjusted return" },
   { id: "total_return", label: "More aggressive — Total return" },
   { id: "excess_vs_bh", label: "Most aggressive — Beat buy & hold" },
 ] as const;
@@ -388,13 +388,13 @@ export default function Backtest() {
           )}
           {tab === "options" && (
             <>
-              <div className="field"><label>Entry DTE</label>
+              <div className="field"><label>Days until option expires</label>
                 <input type="number" value={optDte}
                   onChange={(e) => setOptDte(Number(e.target.value) || 37)} /></div>
               <div className="field"><label>Short delta</label>
                 <input type="number" step="0.01" value={optDelta}
                   onChange={(e) => setOptDelta(Number(e.target.value) || 0.2)} /></div>
-              <div className="field"><label>Sweep OOS + DSR</label>
+              <div className="field"><label>Try many settings, check on unseen data</label>
                 <select value={optSweep ? "yes" : "no"}
                   onChange={(e) => setOptSweep(e.target.value === "yes")}>
                   <option value="no">Fixed params</option>
@@ -416,7 +416,7 @@ export default function Backtest() {
         )}
         {tab === "options" && (
           <div className="dim" style={{ fontSize: 12.5, marginTop: 10 }}>
-            Modeled via Black-Scholes on real underlying + VIX history, not real
+            Simulated with a standard options formula using stock and fear-index history, not real
             historical option quotes — informative about strategy structure and
             cost realism, not a precise historical fill replay.
           </div>
@@ -456,9 +456,9 @@ export default function Backtest() {
             </div>
           </div>
           <div className="card card-pad" data-tour="backtest-honesty" style={{ marginBottom: 16 }}>
-            <div className="rail-label" style={{ marginTop: 0 }}>OOS &amp; DSR</div>
+            <div className="rail-label" style={{ marginTop: 0 }}>Honesty check</div>
             <div className="dim" style={{ fontSize: 12.5 }}>
-              OOS means held-out time. DSR adjusts Sharpe for how many trials you ran — still research-only; not auto-wired into live defaults.
+              Test on dates the model never saw, and adjust for how many ideas you tried — still research-only; not auto-wired into live defaults.
             </div>
           </div>
         </>
@@ -726,7 +726,7 @@ export default function Backtest() {
               </div>
               {oos.length > 0 && (
                 <>
-                  <div className="rail-label">Out-of-sample</div>
+                  <div className="rail-label">Test on unseen dates</div>
                   <div className="kpis" style={{ marginBottom: 14 }}>
                     {oos.map(([k, v]) => (
                       <div className="card kpi" key={k}>
@@ -815,7 +815,7 @@ export default function Backtest() {
                     const wr = st?.win_rate;
                     return typeof wr === "number" ? `${(wr * 100).toFixed(1)}%` : "—";
                   })()],
-                  ["Sharpe", (() => {
+                  ["Risk-adjusted return", (() => {
                     const st = (optStruct.stats || (optStruct.test as Record<string, unknown> | undefined)?.stats) as
                       Record<string, unknown> | undefined;
                     const sh = st?.sharpe;
@@ -831,7 +831,7 @@ export default function Backtest() {
               </div>
               {Boolean(optStruct.deflated_sharpe) && typeof optStruct.deflated_sharpe === "object" && (
                 <div className="dim" style={{ fontSize: 12.5 }}>
-                  Deflated Sharpe:{" "}
+                  Return score adjusted for many tries:{" "}
                   {String((optStruct.deflated_sharpe as Record<string, unknown>).deflated_sharpe ?? "—")}
                   {" · "}trials: {String(optStruct.n_trials ?? "—")}
                 </div>

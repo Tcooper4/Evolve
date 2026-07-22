@@ -98,6 +98,29 @@ REGIME_LONG_SHORT = "Calm / pin-prone — dealers hedge against big moves"
 REGIME_SHORT_SHORT = "Choppy / breakout risk — dealers hedge with the trend"
 REGIME_NEAR_FLIP_SHORT = "Unstable — near the gamma flip; wait for clarity"
 
+# High-school plain read (no jargon) — canonical UI / chat field: plain_language
+PLAIN_LANGUAGE_LONG = (
+    "Market-makers may be damping moves today — price often sticks near key levels "
+    "instead of running away."
+)
+PLAIN_LANGUAGE_SHORT = (
+    "Be careful — price may swing more than usual and trends can run further "
+    "before reversing."
+)
+PLAIN_LANGUAGE_NEAR_FLIP = (
+    "The setup is unstable — wait for clearer direction before acting on big moves."
+)
+
+
+def plain_language_for_regime_short(regime_short: str) -> str:
+    """Plain-language read keyed by regime_short (long_gamma / short_gamma / near_flip)."""
+    key = (regime_short or "near_flip").strip().lower()
+    if key == "long_gamma":
+        return PLAIN_LANGUAGE_LONG
+    if key == "short_gamma":
+        return PLAIN_LANGUAGE_SHORT
+    return PLAIN_LANGUAGE_NEAR_FLIP
+
 
 def black_scholes_gamma(
     spot: float,
@@ -280,6 +303,7 @@ def compute_gex_profile(
         "gex_by_strike": [],
         "regime": REGIME_NEAR_FLIP,
         "regime_short": "near_flip",
+        "plain_language": PLAIN_LANGUAGE_NEAR_FLIP,
         "near_flip_pct": NEAR_FLIP_PCT,
         "near_flip_validated": False,
         "sign_convention": (
@@ -365,6 +389,7 @@ def compute_gex_profile(
         ],
         "regime": regime,
         "regime_plain": plain,
+        "plain_language": plain_language_for_regime_short(short),
         "regime_short": short,
         "near_flip_pct": NEAR_FLIP_PCT,
         "near_flip_validated": False,
@@ -405,6 +430,7 @@ def get_gamma_exposure(
         "gex_by_strike": [],
         "regime": REGIME_NEAR_FLIP,
         "regime_short": "near_flip",
+        "plain_language": PLAIN_LANGUAGE_NEAR_FLIP,
         "near_flip_pct": NEAR_FLIP_PCT,
         "near_flip_validated": False,
         "disclosure": DATA_DISCLOSURE,

@@ -16,27 +16,27 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
       target: '[data-tour="dashboard-pulse"]',
       title: "Market pulse",
       content:
-        "The top cards summarize price, range, market state, geopolitical risk, and EPS revision breadth.",
+        "The top cards summarize price, range, market mood, world-news stress, and how many companies are raising profit forecasts.",
     },
     {
       target: '[data-tour="dashboard-chart"]',
       title: "Price chart",
       content:
-        "Candle chart for this ticker. N / n / E marks flag busy volume days. "
-        + "Optional overlays: strategy backtest signals, and options structure "
-        + "(gamma flip line + a letter on the day’s last bar — usually the close).",
+        "Candle chart for this ticker. Dots flag busy volume days. "
+        + "Optional overlays: past-strategy buy/sell markers, and an options levels guide "
+        + "(orange key price line + a letter on the day's final bar — usually the close).",
     },
     {
       target: '[data-tour="dashboard-headlines"]',
       title: "Headlines",
       content:
-        "Recent stories for this symbol. Short blurbs (when keyed) are context — not a buy/sell call.",
+        "Recent stories for this symbol. AI summaries (when keyed) are background only — not buy/sell advice.",
     },
     {
       target: '[data-tour="dashboard-briefing"]',
       title: "Morning briefing",
       content:
-        "Generate a briefing to surface top long/short candidates and click any symbol to load it on the chart.",
+        "Generate a briefing to surface top buy and sell ideas and click any symbol to load it on the chart.",
     },
     {
       target: '[data-tour="dashboard-watchlist"]',
@@ -50,12 +50,12 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
       target: '[data-tour="analyze-controls"]',
       title: "Choose the question",
       content:
-        "Enter a symbol, choose long or short framing, then run the full Analyze workflow.",
+        "Enter a ticker, choose buy or bet-it-falls framing, then run the full Analyze workflow.",
       disableBeacon: true,
     },
     {
       target: '[data-tour="analyze-score"]',
-      title: "AI Score",
+      title: "Overall rating",
       content:
         "The big number is our overall read (0–10). The sentence under it says what we expect the stock to do and why — in plain English.",
     },
@@ -63,13 +63,13 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
       target: '[data-tour="analyze-chart"]',
       title: "Chart + markers",
       content:
-        "Price candles for this symbol. Marks flag busy volume days; pattern marks show up after you open Patterns.",
+        "Price candles for this symbol. Dots flag busy volume days; pattern marks show up after you open Patterns.",
     },
     {
       target: '[data-tour="analyze-tools"]',
       title: "Tool tabs",
       content:
-        "Dig deeper when you want: Monte Carlo (what-if ranges), Options, Filings, Labs. Fine to skip Options/GEX while learning.",
+        "Dig deeper when you want: what-if price ranges, Options, Filings, Labs. Fine to skip Options while learning.",
     },
     {
       target: '[data-tour="analyze-forecast-risk"]',
@@ -88,29 +88,29 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
     {
       target: '[data-tour="scanner-mode"]',
       title: "Scanner modes",
-      content: "Switch between the fast single-stock scanner and pairs trading screen.",
+      content: "Switch between the quick single-stock scanner and pairs that move together.",
       disableBeacon: true,
     },
     {
       target: '[data-tour="scanner-setup"]',
-      title: "Universe setup",
+      title: "Stock list setup",
       content:
-        "Pick a universe or paste custom tickers, then tune score thresholds and result count.",
+        "Pick a stock list or paste your own symbols, then tune score thresholds and result count.",
     },
     {
       target: '[data-tour="scanner-filters"]',
       title: "Filters",
-      content: "Toggle which screens must pass before a name shows up in results.",
+      content: "Toggle which filters must pass before a name shows up in results.",
     },
     {
       target: '[data-tour="scanner-run"]',
       title: "Run",
-      content: "Run a universe scan or pairs screen with the current settings.",
+      content: "Run a scan or pairs screen with the current settings.",
     },
     {
       target: '[data-tour="scanner-results"]',
       title: "Results",
-      content: "Click a row to drill into Analyze for that symbol.",
+      content: "Click a row to open full details in Analyze for that symbol.",
     },
   ],
   portfolio: [
@@ -118,13 +118,13 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
       target: '[data-tour="portfolio-summary"]',
       title: "Account summary",
       content:
-        "Top cards summarize total equity, cash, unrealized P&L, and realized P&L.",
+        "Top cards summarize total account value, cash, open profit/loss, and closed profit/loss.",
       disableBeacon: true,
     },
     {
       target: '[data-tour="portfolio-trade"]',
       title: "Buy / sell",
-      content: "Paper trades go through this form. Cash updates with each fill.",
+      content: "Practice trades go through this form. Cash updates with each fill.",
     },
     {
       target: '[data-tour="portfolio-tabs"]',
@@ -144,7 +144,7 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
       target: '[data-tour="backtest-tabs"]',
       title: "Research modes",
       content:
-        "Switch between backtests, parameter optimization, model tuning, and options structure tests.",
+        "Switch between simulating on past data, fine-tuning settings, forecast models, and options structure tests.",
       disableBeacon: true,
     },
     {
@@ -156,13 +156,13 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
       target: '[data-tour="backtest-folds"]',
       title: "Fold strip",
       content:
-        "After a run, each chip is one out-of-sample window — does the edge hold across time, or just one era?",
+        "After a run, each chip is one unseen time window — does the advantage repeat across eras, or just one period?",
     },
     {
       target: '[data-tour="backtest-honesty"]',
-      title: "OOS & DSR",
+      title: "Honesty check",
       content:
-        "OOS means held-out time. DSR adjusts Sharpe for how many trials you ran — still research-only; not auto-wired into live defaults.",
+        "Test on dates the model never saw and adjust for how many ideas you tried — still research-only; not auto-wired into live defaults.",
     },
   ],
   chat: [
@@ -181,21 +181,21 @@ export const TOUR_STEPS: Record<TourPageId, Step[]> = {
     {
       target: '[data-tour="chat-input"]',
       title: "Ask anything",
-      content: "Type in plain language — tickers, risk, news, briefings.",
+      content: "Type in plain language — stock symbols, risk, news, briefings.",
     },
   ],
   settings: [
     {
       target: '[data-tour="settings-keys"]',
       title: "API keys",
-      content: "Optional Anthropic / OpenAI / news / Twitter keys unlock LLM and headline features.",
+      content: "Optional Anthropic / OpenAI / news / Twitter keys unlock AI and headline features.",
       disableBeacon: true,
     },
     {
       target: '[data-tour="settings-risk"]',
       title: "Risk profile",
       content:
-        "Research preferences and stated risk tolerance drive Kelly framing, briefing defaults, and chat tone.",
+        "Research preferences and how aggressive you say you are drive suggested position sizes, briefing defaults, and chat tone.",
     },
     {
       target: '[data-tour="settings-restart"]',

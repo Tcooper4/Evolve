@@ -49,6 +49,36 @@ FLAT_DIFF = 0.015
 WING_ELEVATED = 0.020
 
 
+def _shape_plain_language(shape: str, skew_diff: float) -> str:
+    """Plain read on vertical IV shape labels."""
+    sh = (shape or "").strip().lower()
+    if sh == "flat":
+        return "Options prices look balanced — no strong fear or hype priced in either direction."
+    if sh == "smile":
+        return "Both upside and downside protection look expensive — uncertainty is high."
+    if sh == "put_smirk":
+        return "Downside protection looks more expensive — people may be paying up for safety."
+    if sh == "call_smirk":
+        return "Upside bets look more expensive — people may be paying up for a rally."
+    return "Options pricing is mixed — read with other signals, not alone."
+
+
+def _event_note_plain_language(interpretation: str, has_catalyst: bool) -> str:
+    if interpretation == "event_driven":
+        return (
+            "Something big may happen today — near-term options pricing may reflect "
+            "that event, not long-run mood."
+        )
+    if interpretation == "could_not_check":
+        return (
+            "We could not check today's calendar — treat options pricing as a hint only."
+        )
+    return (
+        "No major same-day event found in our calendars — pricing may reflect "
+        "broader mood, but calendars are not complete."
+    )
+
+
 def _colmap(df: pd.DataFrame) -> Dict[str, str]:
     return {str(c).lower(): c for c in df.columns}
 
@@ -131,6 +161,7 @@ def classify_skew_shape(
         "put_wing": put_wing,
         "call_wing": call_wing,
         "detail": detail,
+        "plain_language": _shape_plain_language(shape, skew_diff),
     }
 
 
@@ -157,6 +188,7 @@ def compute_vertical_skew(
         "atm_strike": None,
         "otm_pct": float(otm_pct),
         "detail": None,
+        "plain_language": None,
         "disclosure": disclosure,
         "delayed_data": True,
         "error": None,
@@ -217,6 +249,7 @@ def compute_vertical_skew(
         "call_wing": classified["call_wing"],
         "otm_pct": float(otm_pct),
         "detail": classified["detail"],
+        "plain_language": classified["plain_language"],
         "disclosure": disclosure,
         "delayed_data": True,
         "error": None,
@@ -324,6 +357,7 @@ def check_same_day_catalysts(
         "earnings_checked": earnings_checked,
         "macro_checked": macro_checked,
         "note": note,
+        "plain_language": _event_note_plain_language(interpretation, bool(catalysts)),
         "errors": errors,
         "as_of": as_of.isoformat(),
     }
@@ -449,6 +483,13 @@ def get_options_skew(
 
         skew["framing"] = framing.strip()
         skew["term_structure_note"] = term_note
+        shape_plain = skew.get("plain_language") or _shape_plain_language(
+            str(skew.get("shape") or ""), float(skew.get("skew_diff") or 0.0)
+        )
+        event_plain = event.get("plain_language") or _event_note_plain_language(
+            str(event.get("interpretation") or ""), bool(event.get("same_day_catalyst"))
+        )
+        skew["plain_language"] = f"{shape_plain} {event_plain}".strip()
         skew["disclosure"] = DATA_DISCLOSURE
         skew["delayed_data"] = True
         return skew

@@ -44,6 +44,33 @@ body {
      Individual regions (rail nav, .tbl-scroll) may still scroll intentionally. */
   overflow-x: hidden;
 }
+
+/* Hide visible scrollbars — scrolling unchanged (touch, trackpad, wheel). */
+html,
+body,
+.chat-box,
+.wl,
+.tbl-scroll,
+.card:has(table.tbl),
+.card-pad:has(table.tbl),
+.rail,
+.main {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.chat-box::-webkit-scrollbar,
+.wl::-webkit-scrollbar,
+.tbl-scroll::-webkit-scrollbar,
+.card:has(table.tbl)::-webkit-scrollbar,
+.card-pad:has(table.tbl)::-webkit-scrollbar,
+.rail::-webkit-scrollbar,
+.main::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
 ::selection { background: var(--accent-soft); }
 
 /* ---------- primitives ---------- */
@@ -290,7 +317,7 @@ button.ghost:hover { color: var(--text); border-color: var(--border); }
 .empty { color: var(--text-3); text-align: center; padding: 60px 0; font-size: 13.5px; }
 
 /* ---------- login ---------- */
-.login-wrap { display: grid; place-items: center; min-height: 100vh; }
+.login-wrap { display: grid; place-items: center; min-height: 100dvh; }
 .login-card { width: min(380px, calc(100vw - 32px)); padding: 32px 30px; display: flex; flex-direction: column; gap: 14px; }
 .login-sub { color: var(--text-2); font-size: 13.5px; margin-top: -6px; }
 .login-hint { color: var(--text-3); font-size: 12px; line-height: 1.4; margin-top: -4px; }
@@ -444,8 +471,27 @@ select { background: var(--surface-2); border: 1px solid var(--border); color: v
 
 /* ---------- responsive (mobile is table stakes in 2026) ---------- */
 @media (max-width: 900px) {
-  .app { grid-template-columns: minmax(0, 1fr); }
+  :root {
+    --mobile-rail-h: 64px;
+  }
+  /* Bottom tab bar: main content first, nav fixed at viewport bottom (desktop sidebar unchanged). */
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 100dvh;
+  }
+  .main {
+    grid-row: 1;
+    padding: 14px;
+    max-width: 100%;
+    padding-bottom: calc(var(--mobile-rail-h) + env(safe-area-inset-bottom, 0px) + 12px);
+  }
   .rail {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
     flex-direction: row;
     align-items: center;
     flex-wrap: nowrap;
@@ -456,9 +502,12 @@ select { background: var(--surface-2); border: 1px solid var(--border); color: v
     max-width: 100%;
     min-width: 0;
     border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+    padding: 8px 12px max(8px, env(safe-area-inset-bottom, 0px));
     gap: 10px;
+    background: var(--surface-1);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
   }
   .rail .brand,
   .rail .user-chip { flex-shrink: 0; }
@@ -469,7 +518,6 @@ select { background: var(--surface-2); border: 1px solid var(--border); color: v
     flex-shrink: 0;
   }
   .rail .rail-label, .rail .wl { display: none; }
-  .main { padding: 14px; max-width: 100%; }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hero-price { font-size: 30px; }
   #chart { height: 320px; width: 100%; max-width: 100%; }
@@ -511,12 +559,12 @@ select { background: var(--surface-2); border: 1px solid var(--border); color: v
     min-height: 22px;
   }
   .chat-box {
-    /* Leave room for rail + starters + sticky composer + keyboard */
-    height: min(520px, calc(100dvh - 320px));
+    /* Leave room for bottom nav + starters + sticky composer + keyboard */
+    height: min(520px, calc(100dvh - 380px));
     min-height: 220px;
   }
   .chat-shell {
-    max-height: calc(100dvh - 150px);
+    max-height: calc(100dvh - var(--mobile-rail-h) - 90px);
     display: flex;
     flex-direction: column;
   }
@@ -528,6 +576,9 @@ select { background: var(--surface-2); border: 1px solid var(--border); color: v
   .chat-starters,
   .chat-input {
     flex-shrink: 0;
+  }
+  .chat-input {
+    bottom: calc(var(--mobile-rail-h) + env(safe-area-inset-bottom, 0px));
   }
   .chat-starter { min-height: 44px; padding: 10px 12px; }
   .chat-input button { min-height: 44px; }

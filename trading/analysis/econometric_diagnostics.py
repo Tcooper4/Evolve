@@ -27,6 +27,61 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
+def _plain_stationarity(is_stationary: bool, *, on_returns: bool = False) -> str:
+    if on_returns:
+        return (
+            "Day-to-day changes look random enough for simple models."
+            if is_stationary
+            else "Past days still echo in the next — momentum-style models may fit better."
+        )
+    return (
+        "Price history looks stable enough for standard forecasting tools."
+        if is_stationary
+        else "Price drifts over time — forecast models may need extra care."
+    )
+
+
+def _plain_white_noise(is_white_noise: bool) -> str:
+    return (
+        "Recent daily moves do not repeat in a simple pattern."
+        if is_white_noise
+        else "Recent daily moves show repeating patterns — simple random-walk models may miss that."
+    )
+
+
+def _plain_arch(present: bool) -> str:
+    return (
+        "Big-move days tend to cluster — volatility models that expect that may fit better."
+        if present
+        else "Volatility looks fairly steady day to day."
+    )
+
+
+def _plain_normality(is_normal: bool, skewness: float, kurtosis: float) -> str:
+    if is_normal:
+        return "Daily moves look roughly bell-shaped — standard risk math is a fair starting point."
+    if kurtosis > 1.0 and skewness < -0.5:
+        return "Daily moves have fat tails and more downside than upside — expect occasional sharp drops."
+    if kurtosis > 1.0:
+        return "Daily moves have fat tails — occasional big swings are normal."
+    return "Daily moves are not perfectly bell-shaped — use cautious risk sizing."
+
+
+def _plain_structural_breaks(n_breaks: int) -> str:
+    if n_breaks > 0:
+        return f"Price behavior may have shifted around {n_breaks} recent point(s) — old patterns may not apply."
+    return "No major recent shift in how the stock has been behaving."
+
+
+def _plain_lags(optimal_bic: int, optimal_aic: int) -> str:
+    if optimal_bic == optimal_aic:
+        return f"About {optimal_bic} past day(s) of history seem most relevant for the next move."
+    return (
+        f"Past days matter — roughly {optimal_bic}–{optimal_aic} days of history "
+        "show up in the fit."
+    )
+
+
 class EconometricDiagnostics:
     """
     Suite of econometric diagnostic tests for a single return series.
@@ -101,6 +156,7 @@ class EconometricDiagnostics:
                     if adf_result[1] < 0.05
                     else "Non-stationary (unit root present)"
                 ),
+                "plain_language": _plain_stationarity(adf_result[1] < 0.05),
             }
 
             # ADF on returns
@@ -109,6 +165,9 @@ class EconometricDiagnostics:
                 "statistic": round(float(adf_returns[0]), 4),
                 "p_value": round(float(adf_returns[1]), 4),
                 "is_stationary": adf_returns[1] < 0.05,
+                "plain_language": _plain_stationarity(
+                    adf_returns[1] < 0.05, on_returns=True
+                ),
             }
 
             # KPSS test — H0: stationary
@@ -123,6 +182,7 @@ class EconometricDiagnostics:
                         if kpss_result[1] > 0.05
                         else "Non-stationary (reject stationarity)"
                     ),
+                    "plain_language": _plain_stationarity(kpss_result[1] > 0.05),
                 }
             except Exception as e:
                 logger.debug("KPSS test failed: %s", e)
@@ -158,6 +218,7 @@ class EconometricDiagnostics:
                     if p_value > 0.05
                     else "Significant autocorrelation detected in returns"
                 ),
+                "plain_language": _plain_white_noise(p_value > 0.05),
             }
 
             # Also test squared returns for ARCH
@@ -246,6 +307,7 @@ class EconometricDiagnostics:
                     if p_value < 0.05
                     else "No significant ARCH effects"
                 ),
+                "plain_language": _plain_arch(p_value < 0.05),
             }
 
         except ImportError:
@@ -278,6 +340,7 @@ class EconometricDiagnostics:
                     else f"Returns are non-normal (skew={skewness:.2f}, "
                     f"excess kurtosis={kurtosis:.2f})"
                 ),
+                "plain_language": _plain_normality(jb_p > 0.05, skewness, kurtosis),
                 "fat_tails": kurtosis > 1.0,
                 "negative_skew": skewness < -0.5,
             }
@@ -328,6 +391,7 @@ class EconometricDiagnostics:
                         f"BIC suggests {optimal_bic} lag(s), "
                         f"AIC suggests {optimal_aic} lag(s)"
                     ),
+                    "plain_language": _plain_lags(optimal_bic, optimal_aic),
                 }
             else:
                 result["error"] = "Could not fit AR models"
@@ -374,6 +438,7 @@ class EconometricDiagnostics:
                     if len(breaks) > 0
                     else "No significant structural breaks detected"
                 ),
+                "plain_language": _plain_structural_breaks(len(breaks)),
                 "rolling_volatility": {
                     "current": round(float(rolling_std.iloc[-1]), 6)
                     if not rolling_std.empty else None,
@@ -450,6 +515,15 @@ class EconometricDiagnostics:
         return {
             "flags": flags,
             "recommendations": recommendations,
+            "plain_language": (
+                " ".join(
+                    f.replace("⚠️ ", "").replace("📊 ", "").replace("📈 ", "")
+                    .replace("🔔 ", "").replace("📉 ", "").replace("🌊 ", "")
+                    for f in flags[:2]
+                )
+                if flags
+                else "Diagnostics look straightforward — no major red flags."
+            ),
             "overall_complexity": (
                 "High" if len(flags) >= 3
                 else "Medium" if len(flags) >= 1

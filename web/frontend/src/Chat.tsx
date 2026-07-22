@@ -9,7 +9,7 @@ const STARTERS = [
   "Is now a good time to buy?",
   "Explain what's happening in the market like I'm new",
   "Check the risk on my watchlist",
-  "Run a morning briefing summary",
+  "Summarize today's top stock ideas",
 ];
 
 export default function Chat() {
@@ -58,7 +58,7 @@ export default function Chat() {
   return (
     <div className="fade-in">
       <PageTour pageId="chat" />
-      <div className="greeting">Chat <small>your assistant, your memory, your API key</small></div>
+      <div className="greeting">Chat <small>ask in plain English — uses your saved settings and optional AI key</small></div>
 
       <div className="card chat-shell">
         <div className="chat-box" data-tour="chat-box" ref={box}>
@@ -90,7 +90,7 @@ export default function Chat() {
           <input
             ref={inputRef}
             value={input}
-            placeholder="Ask about a ticker, risk, news…"
+            placeholder="Ask about a stock symbol, risk, news…"
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             onFocus={() => {

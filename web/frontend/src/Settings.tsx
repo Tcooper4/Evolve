@@ -16,8 +16,8 @@ const SCORE_STYLES = [
 ];
 
 const DIRECTIONS = [
-  "Bullish only (BUY signals)",
-  "Bearish only (SHORT signals)",
+  "Rising-price ideas only (buy)",
+  "Falling-price ideas only (short)",
   "Both",
 ];
 
@@ -140,7 +140,7 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
   return (
     <div className="fade-in">
       <PageTour pageId="settings" />
-      <div className="greeting">Settings <small>keys, scoring style, briefing defaults</small></div>
+      <div className="greeting">Settings <small>API keys, rating style, daily summary defaults</small></div>
 
       <AdminSharedKeys onToast={onToast} />
       <AdminInvites onToast={onToast} />
@@ -152,13 +152,13 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
         <Field label="News API key" val={news} set={setNews} has={saved.news} />
         <Field label="Twitter/X bearer token" val={twitterBearer} set={setTwitterBearer} has={saved.twitter} />
         <p style={{ fontSize: 12, color: "var(--text-2)", margin: "0 0 12px" }}>
-          Bearer token powers breaking headlines and volume-chart news overlays. Without it,
+          Bearer token powers breaking headlines and news dots on the price chart. Without it,
           Evolve falls back to wire RSS (and a Walter Bloomberg RSS mirror when available).
         </p>
         <Field label="Reddit client ID" val={redditId} set={setRedditId} has={saved.reddit} />
         <Field label="Reddit client secret" val={redditSecret} set={setRedditSecret} has={saved.reddit} />
         <p style={{ fontSize: 12, color: "var(--text-2)", margin: "0 0 4px" }}>
-          Optional. AI Score sentiment is news-first; Reddit is a 30% blend when configured.
+          Optional. Ratings lean on news; Reddit adds up to 30% when connected.
         </p>
       </div>
 
@@ -172,18 +172,18 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
             </select>
           </div>
           <div className="field">
-            <label>Briefing universe</label>
+            <label>Stock list for morning briefing</label>
             <select value={briefUniverse} onChange={(e) => setBriefUniverse(e.target.value)}>
               {["default", "sp100", "sp500", "nasdaq100"].map((u) => <option key={u}>{u}</option>)}
             </select>
           </div>
           <div className="field">
-            <label>Min AI score</label>
+            <label>Minimum overall rating (0–10)</label>
             <input type="number" min={0} max={10} step={0.5} value={minAi}
               onChange={(e) => setMinAi(Number(e.target.value))} />
           </div>
           <div className="field">
-            <label>Opportunity direction</label>
+            <label>Which ideas to include in briefings</label>
             <select value={direction} onChange={(e) => setDirection(e.target.value)}>
               {DIRECTIONS.map((d) => <option key={d}>{d}</option>)}
             </select>
@@ -197,7 +197,7 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
             </select>
           </div>
           <div className="field">
-            <label>Risk tolerance (stated)</label>
+            <label>How aggressive you say you are</label>
             <select value={riskTolerance} onChange={(e) => setRiskTolerance(e.target.value)}>
               {RISK_TOLERANCES.map((r) => (
                 <option key={r.id} value={r.id}>{r.label}</option>
@@ -205,7 +205,7 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
             </select>
           </div>
           <div className="field">
-            <label>Comfortable with undefined-risk / naked positions?</label>
+            <label>Okay showing trades with unlimited loss potential? (advanced options)</label>
             <select
               value={allowUndefinedRisk ? "yes" : "no"}
               onChange={(e) => setAllowUndefinedRisk(e.target.value === "yes")}
@@ -215,21 +215,20 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
             </select>
           </div>
           <div className="field">
-            <label>Preferred DTE min</label>
+            <label>Shortest days until option expires</label>
             <input type="number" min={0} max={365} step={1} value={preferredDteMin}
               onChange={(e) => setPreferredDteMin(Number(e.target.value))} />
           </div>
           <div className="field">
-            <label>Preferred DTE max</label>
+            <label>Longest days until option expires</label>
             <input type="number" min={0} max={365} step={1} value={preferredDteMax}
               onChange={(e) => setPreferredDteMax(Number(e.target.value))} />
           </div>
         </div>
         <p style={{ fontSize: 12, color: "var(--text-2)", margin: "10px 0 0" }}>
-          Risk tolerance is what you set here — Evolve never infers it from clicks or
-          watchlist activity. Default is moderate (keeps prior Kelly guidance).
-          Conservative forces quarter-Kelly as a profile reason and deprioritizes
-          undefined-risk options ideas without hiding them.
+          Risk tolerance is what you set here — Evolve never guesses it from clicks.
+          Conservative uses smaller suggested position sizes and deprioritizes
+          advanced options with unlimited risk without hiding them.
         </p>
         <p style={{ fontSize: 12, color: "var(--text-2)", margin: "10px 0 0" }}>
           Intraday chart labels and hover times use this zone. Candle data is stored in UTC.
@@ -253,8 +252,8 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
         <div className="rail-label" style={{ marginTop: 0 }}>Market signals</div>
         <p style={{ fontSize: 12.5, color: "var(--text-2)", margin: "0 0 12px", lineHeight: 1.45 }}>
           Manual load only — results save to your profile and show on the Dashboard pulse.
-          GPR is the Caldara &amp; Iacoviello academic index (disk-cached ~30 days).
-          EPS breadth samples S&amp;P names and can take a few minutes.
+          GPR measures world-news stress from major events (cached ~30 days).
+          Profit forecast trends sample large US stocks and can take a few minutes.
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
@@ -273,14 +272,14 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
                 setSigMsg(e instanceof Error ? e.message : "GPR failed");
               } finally { setGprBusy(false); setTimeout(() => setSigMsg(""), 4000); }
             }}>
-              {gprBusy ? "Loading GPR…" : "Load Geopolitical Risk Index"}
+              {gprBusy ? "Loading…" : "Load world-news stress index"}
             </button>
           </div>
           <div>
             <div className="dim" style={{ fontSize: 12.5, marginBottom: 6 }}>
               {rb
-                ? `EPS breadth: ${rb.pct_up.toFixed(0)}% ↑ / ${rb.pct_down.toFixed(0)}% ↓ (${rb.sample_size ?? "?"} stocks) · ${rb.signal ?? ""}`
-                : "EPS revision breadth: not loaded"}
+                ? `Profit forecasts: ${rb.pct_up.toFixed(0)}% raising / ${rb.pct_down.toFixed(0)}% cutting (${rb.sample_size ?? "?"} stocks) · ${rb.signal ?? ""}`
+                : "Profit forecast trends: not loaded"}
             </div>
             <button disabled={rbBusy} onClick={async () => {
               setRbBusy(true); setSigMsg("");
@@ -294,7 +293,7 @@ export default function Settings({ onToast }: { onToast?: (msg: string) => void 
                 setSigMsg(e instanceof Error ? e.message : "Breadth failed");
               } finally { setRbBusy(false); setTimeout(() => setSigMsg(""), 5000); }
             }}>
-              {rbBusy ? "Computing breadth (may take minutes)…" : "Compute EPS revision breadth"}
+              {rbBusy ? "Computing (may take minutes)…" : "Calculate profit forecast trends"}
             </button>
           </div>
         </div>

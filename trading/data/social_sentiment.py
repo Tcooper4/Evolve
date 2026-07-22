@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import streamlit as st
 
 from trading.utils.credential_placeholders import is_placeholder_credential
+from trading.utils.plain_language import sentiment_label_plain_language
 
 logger = logging.getLogger(__name__)
 
@@ -376,6 +377,7 @@ def _get_social_sentiment_impl(
         "success": False,
         "sentiment_score": 0.0,
         "sentiment_label": "NEUTRAL",
+        "plain_language": sentiment_label_plain_language("NEUTRAL"),
         "mention_count": 0,
         "top_posts": [],
         "trending": False,
@@ -453,6 +455,9 @@ def _get_social_sentiment_impl(
         else:
             out["sentiment_label"] = "NEUTRAL"
 
+        out["plain_language"] = sentiment_label_plain_language(
+            out["sentiment_label"], out.get("sentiment_score")
+        )
         out["mention_count"] = len(posts)
         top_with_sent.sort(key=lambda x: (x.get("score", 0), abs(x.get("sentiment", 0))), reverse=True)
         out["top_posts"] = top_with_sent[:10]
@@ -484,6 +489,7 @@ def get_news_headline_sentiment(symbol: str, max_items: int = 15) -> Dict[str, A
         "success": False,
         "sentiment_score": 0.0,
         "sentiment_label": "NEUTRAL",
+        "plain_language": sentiment_label_plain_language("NEUTRAL"),
         "confidence": 0.0,
         "mention_count": 0,
         "top_posts": [],
@@ -558,6 +564,9 @@ def get_news_headline_sentiment(symbol: str, max_items: int = 15) -> Dict[str, A
 
         out["sentiment_score"] = avg_c
         out["sentiment_label"] = _label_from_score(avg_c)
+        out["plain_language"] = sentiment_label_plain_language(
+            out["sentiment_label"], avg_c
+        )
         out["mention_count"] = len(blended)
         out["confidence"] = min(1.0, 0.35 + 0.05 * len(blended))
         out["top_posts"] = sorted(
@@ -619,6 +628,9 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
             "success": True,
             "sentiment_score": blended,
             "sentiment_label": _label_from_score(blended),
+            "plain_language": sentiment_label_plain_language(
+                _label_from_score(blended), blended
+            ),
             "confidence": max(
                 float(news.get("confidence") or 0.5),
                 float(reddit.get("confidence") or 0.0),
@@ -644,6 +656,7 @@ def get_social_sentiment(symbol: str, limit: int = 25) -> Dict[str, Any]:
         "symbol": symbol,
         "sentiment_score": 0.0,
         "sentiment_label": "NEUTRAL",
+        "plain_language": sentiment_label_plain_language("NEUTRAL"),
         "confidence": 0.0,
         "source": "unavailable",
         "reason": (

@@ -97,6 +97,8 @@ def _with_mapping_meta(pick: Dict[str, Any]) -> Dict[str, Any]:
     out["mapping_note"] = STRUCTURE_MAPPING_NOTE
     out["mapping_basis"] = "research_default"
     out["risk_class"] = out.get("risk_class") or "defined"
+    if "plain_language" not in out:
+        out["plain_language"] = out.get("rationale") or ""
     return out
 
 
@@ -153,6 +155,10 @@ def pick_options_structure(
                 "Dealers are short gamma — bigger swings more likely. "
                 "Avoid short premium for now."
             ),
+            "plain_language": (
+                "Be careful — price may swing more than usual right now, "
+                "so avoid selling options premium for now."
+            ),
             "wing_pct_guide": None,
             "also_noted": [
                 {
@@ -177,6 +183,10 @@ def pick_options_structure(
                 "Near the gamma flip — hedging can flip fast. "
                 "No structure idea until the regime clears."
             ),
+            "plain_language": (
+                "The market is in an in-between state — wait until direction "
+                "is clearer before any options structure idea."
+            ),
             "wing_pct_guide": None,
         })
     else:
@@ -200,6 +210,10 @@ def pick_options_structure(
                     "Calm / pin-prone tape with put skew and price above the flip — "
                     "defined-risk put credit is the research guide (iron condor if you want both wings)."
                 ),
+                "plain_language": (
+                    "Price looks calm but put protection is expensive — a defined-risk "
+                    "put spread is the research guide, not a trade order."
+                ),
                 "wing_pct_guide": 0.03,
                 "alternate": STRUCTURE_IRON_CONDOR,
             })
@@ -213,6 +227,10 @@ def pick_options_structure(
                     "Calm / pin-prone tape with call skew and price below the flip — "
                     "defined-risk call credit is the research guide (iron condor if you want both wings)."
                 ),
+                "plain_language": (
+                    "Price looks calm but call protection is expensive — a defined-risk "
+                    "call spread is the research guide, not a trade order."
+                ),
                 "wing_pct_guide": 0.03,
                 "alternate": STRUCTURE_IRON_CONDOR,
             })
@@ -225,6 +243,10 @@ def pick_options_structure(
                 "rationale": (
                     "Dealers are long gamma — price often chops near a pin. "
                     "Defined-risk iron condor is the research guide."
+                ),
+                "plain_language": (
+                    "Market-makers may be damping moves today — price often chops in a range. "
+                    "A defined-risk iron condor is the research guide, not a trade order."
                 ),
                 "wing_pct_guide": 0.04,
                 "alternate": (

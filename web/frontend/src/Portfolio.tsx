@@ -237,7 +237,7 @@ export default function Portfolio() {
       <div data-tour="portfolio-summary">
         {data && (
           <div className="kpis">
-            <div className="card kpi"><div className="label">Total equity</div>
+            <div className="card kpi"><div className="label">Total account value</div>
               <div className="value num">${data.total_equity.toLocaleString()}</div>
               <div className="sub">cash + market value</div>
             </div>
@@ -245,11 +245,11 @@ export default function Portfolio() {
               <div className="value num">${data.cash.toLocaleString()}</div>
               {!data.all_prices_live && <div className="sub">some prices unavailable — showing cost</div>}
             </div>
-            <div className="card kpi"><div className="label">Unrealized P&L</div>
+            <div className="card kpi"><div className="label">Open profit/loss</div>
               <div className={`value num ${pnlCls(data.total_unrealized_pnl)}`}>
                 {data.total_unrealized_pnl >= 0 ? "+" : ""}${data.total_unrealized_pnl.toLocaleString()}
               </div><div className="sub">open positions</div></div>
-            <div className="card kpi"><div className="label">Realized P&L</div>
+            <div className="card kpi"><div className="label">Closed profit/loss</div>
               <div className={`value num ${pnlCls(data.realized_pnl)}`}>
                 {data.realized_pnl >= 0 ? "+" : ""}${data.realized_pnl.toLocaleString()}
               </div><div className="sub">closed trades, all time</div></div>
@@ -273,7 +273,7 @@ export default function Portfolio() {
 
       <div className="seg" data-tour="portfolio-tabs" style={{ marginBottom: 12, flexWrap: "wrap" }}>
         <button className={tab === "positions" ? "active" : ""} onClick={() => setTab("positions")}>Positions</button>
-        <button className={tab === "trades" ? "active" : ""} onClick={() => setTab("trades")}>Trade ledger</button>
+        <button className={tab === "trades" ? "active" : ""} onClick={() => setTab("trades")}>Trade history</button>
         <button className={tab === "cash" ? "active" : ""} onClick={() => { setTab("cash"); void loadCash(); }}>Cash / limits</button>
         <button
           data-tour="portfolio-risk"
@@ -402,8 +402,8 @@ export default function Portfolio() {
                     <div className="label">
                       Sizing guide
                       {acctRisk.kelly?.recommended_basis === "quarter_kelly"
-                        ? " (quarter Kelly)"
-                        : " (half Kelly)"}
+                        ? " (extra cautious size)"
+                        : " (moderate size guide)"}
                     </div>
                     <div className="value num" style={{ fontSize: 18 }}>
                       {acctRisk.kelly?.recommended_dollars != null
@@ -537,7 +537,7 @@ export default function Portfolio() {
                 ))}
               </div>
             ) : (
-              <div className="dim">Enter a symbol to see Sharpe, drawdown, volatility, and more.</div>
+              <div className="dim">Enter a symbol to see risk/return score, biggest drop, and price swing size.</div>
             )}
           </div>
         )}
@@ -636,7 +636,7 @@ export default function Portfolio() {
                         )}
                         {r.kelly_recommended_fraction != null && (
                           <div style={{ fontSize: 10.5 }}>
-                            Kelly ~{(r.kelly_recommended_fraction * 100).toFixed(1)}%
+                            Suggested size ~{(r.kelly_recommended_fraction * 100).toFixed(1)}%
                             {r.kelly_recommended_dollars != null
                               ? ` ($${r.kelly_recommended_dollars})`
                               : ""}
@@ -819,7 +819,7 @@ export default function Portfolio() {
         {!loading && tab === "allocate" && (
           <div className="card-pad">
             <div className="dim" style={{ fontSize: 12.5, marginBottom: 10 }}>
-              Risk-parity split — each name contributes similar risk.
+              Split money so each holding adds about the same ups-and-downs.
             </div>
             <div className="row" style={{ marginBottom: 14 }}>
               <input value={allocInput} style={{ flex: 1, minWidth: 200 }}

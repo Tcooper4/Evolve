@@ -514,17 +514,17 @@ export default function Chart({
         {shown ? (
           <>
             <span>{formatChartTime(shown.t, intraday, displayTz, false)}</span>
-            <span>O <b>{shown.o.toFixed(2)}</b></span>
-            <span>H <b>{shown.h.toFixed(2)}</b></span>
-            <span>L <b>{shown.l.toFixed(2)}</b></span>
-            <span>C <b style={{ color: shown.c >= shown.o ? "var(--up)" : "var(--down)" }}>{shown.c.toFixed(2)}</b></span>
-            <span>V <b>{formatVolume(Number(shown.v) || 0)}</b></span>
+            <span>Open <b>{shown.o.toFixed(2)}</b></span>
+            <span>High <b>{shown.h.toFixed(2)}</b></span>
+            <span>Low <b>{shown.l.toFixed(2)}</b></span>
+            <span>Close <b style={{ color: shown.c >= shown.o ? "var(--up)" : "var(--down)" }}>{shown.c.toFixed(2)}</b></span>
+            <span>Volume <b>{formatVolume(Number(shown.v) || 0)}</b></span>
             {shown.note && (
               <span className="dim" title={shown.note} style={{ maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {shown.note.startsWith("[") ? shown.note.split(" — ")[0] : "Mark"}
+                {shown.note.startsWith("[") ? shown.note.split(" — ")[0] : "Event"}
               </span>
             )}
-            {live && <span className="live-dot" title="Live last bar">LIVE</span>}
+            {live && <span className="live-dot" title="Price updating live on the latest candle">LIVE</span>}
           </>
         ) : (
           <span className="dim">—</span>
@@ -540,9 +540,9 @@ export default function Chart({
           overflow: "hidden",
           color: activeNote ? "var(--text-2, #c5d0e0)" : "var(--muted, #6b7c93)",
         }}
-        title={activeNote ?? "N = busy volume · n = above average · E = big move · hover a mark for details"}
+        title={activeNote ?? "Big volume day · Above-average volume · Large price move · hover a dot for details"}
       >
-        {activeNote || "Hover a marked day — N full spike · n notable · E large move (colors = up vs down day)"}
+        {activeNote || "Hover a marked day — big volume · above average · large move (colors = up vs down day)"}
       </div>
       <div id="chart" className="chart-pane" ref={containerRef} />
     </div>

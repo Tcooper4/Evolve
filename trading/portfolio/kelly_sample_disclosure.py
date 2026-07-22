@@ -37,6 +37,50 @@ SMALL_SAMPLE_N = 25
 PREMIUM_SOFT_N = 40
 
 
+def _plain_language_caveat(
+    *,
+    n_closed_trades: int | None,
+    sample_size_flag: str,
+    recommend_quarter: bool,
+    defined_risk_premium_selling: bool,
+    risk_tolerance: str,
+) -> str:
+    """High-school read on Kelly sample caveats — no sizing jargon."""
+    from trading.portfolio.risk_profile import RISK_CONSERVATIVE
+
+    if n_closed_trades is None:
+        base = (
+            "We do not know how many past trades this is based on — "
+            "treat any suggested size as a rough ceiling, not a target."
+        )
+    elif n_closed_trades < SMALL_SAMPLE_N:
+        base = (
+            f"Only {n_closed_trades} closed trades so far — use a small slice of "
+            "your account until you have more history; a hot streak can hide a bad loss."
+        )
+    elif defined_risk_premium_selling and n_closed_trades < PREMIUM_SOFT_N:
+        base = (
+            f"{n_closed_trades} closed trades is a start, but options premium strategies "
+            "can look great until one big loss — stay cautious on size."
+        )
+    elif sample_size_flag == "adequate" and not recommend_quarter:
+        base = (
+            f"Based on {n_closed_trades} closed trades — still use conservative sizing; "
+            "the math is a ceiling, not something to max out."
+        )
+    else:
+        base = (
+            "Use a smaller-than-max position until your trade history is longer — "
+            "the full math number is a ceiling, not a target."
+        )
+
+    if risk_tolerance == RISK_CONSERVATIVE:
+        return f"{base} Your settings ask for extra-cautious sizing."
+    if defined_risk_premium_selling and recommend_quarter:
+        return f"{base} Options premium strategies can have rare large losses — size down."
+    return base
+
+
 def assess_kelly_sample(
     n_closed_trades: Optional[int],
     win_rate: float,
@@ -79,6 +123,14 @@ def assess_kelly_sample(
             "defined_risk_premium_selling": bool(defined_risk_premium_selling),
             "risk_tolerance": rt,
             "quarter_kelly_reasons": [],
+            "plain_language": _plain_language_caveat(
+                n_closed_trades=None,
+                sample_size_flag="unknown",
+                recommend_quarter=bool(defined_risk_premium_selling)
+                or rt == RISK_CONSERVATIVE,
+                defined_risk_premium_selling=bool(defined_risk_premium_selling),
+                risk_tolerance=rt,
+            ),
         }
         if defined_risk_premium_selling:
             out["quarter_kelly_reasons"].append("premium_selling")
@@ -169,6 +221,13 @@ def assess_kelly_sample(
         )
 
     out["quarter_kelly_reasons"] = reasons
+    out["plain_language"] = _plain_language_caveat(
+        n_closed_trades=n,
+        sample_size_flag=str(out.get("sample_size_flag") or "adequate"),
+        recommend_quarter=bool(out.get("recommend_quarter_kelly")),
+        defined_risk_premium_selling=bool(defined_risk_premium_selling),
+        risk_tolerance=rt,
+    )
     return out
 
 
@@ -192,6 +251,7 @@ def attach_kelly_recommendation(
         "small_sample_threshold": assessment.get(
             "small_sample_threshold", SMALL_SAMPLE_N
         ),
+        "plain_language": assessment.get("plain_language"),
     })
 
     half = float(out.get("half_kelly_fraction") or 0.0)
