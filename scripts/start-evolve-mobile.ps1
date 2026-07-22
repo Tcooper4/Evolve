@@ -14,6 +14,7 @@ $python = Join-Path $root "evolve_venv\Scripts\python.exe"
 if (-not (Test-Path $python)) { $python = "python" }
 $logDir = Join-Path $root "data"
 $cfLog = Join-Path $logDir "cloudflared-quick.log"
+$republishLock = Join-Path $logDir "tunnel-republish.lock"
 
 function Wait-HttpOk($Url, $Seconds = 90) {
     $deadline = (Get-Date).AddSeconds($Seconds)
@@ -36,6 +37,19 @@ $origin = if ($cfg.origin) { $cfg.origin } else { "http://127.0.0.1:8000" }
 $bootstrapUrl = $cfg.bootstrap_url
 
 Write-Host "=== Evolve mobile stack ===" -ForegroundColor Cyan
+
+if (Test-Path $republishLock) {
+    $lockAge = (Get-Date) - (Get-Item $republishLock).LastWriteTime
+    if ($lockAge.TotalMinutes -lt 5) {
+        Write-Host "Another tunnel republish is in progress - waiting..."
+        $waitDeadline = (Get-Date).AddMinutes(3)
+        while ((Test-Path $republishLock) -and (Get-Date) -lt $waitDeadline) {
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+New-Item -ItemType File -Force -Path $republishLock | Out-Null
+try {
 
 if (-not $SkipDocker) {
     Write-Host "Starting Docker..."
@@ -115,3 +129,6 @@ Write-Host "  $bootstrapUrl"
 Write-Host ""
 Write-Host "Direct tunnel (changes on restart): $tunnelUrl"
 Write-Host "Leave cloudflared running (PID $($cfProc.Id))."
+} finally {
+    Remove-Item $republishLock -Force -ErrorAction SilentlyContinue
+}

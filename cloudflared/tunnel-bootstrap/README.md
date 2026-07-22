@@ -44,6 +44,23 @@ This will:
 
 Keep `cloudflared` running (the script leaves it in the background).
 
+## Auto-republish on Docker restart
+
+After one-time autostart install:
+
+```powershell
+.\scripts\install-evolve-mobile-autostart.ps1 -StartWatcherNow
+```
+
+This registers **Evolve Tunnel Watcher** — a background job that listens for
+`docker compose` restarts of the `evolve` service and runs
+`start-evolve-mobile.ps1 -SkipDocker` (new tunnel + publish to Worker).
+
+Log: `data\evolve-tunnel-watcher.log`
+
+Manual Docker restarts (`docker compose restart`, Docker Desktop restart, etc.)
+will refresh the stable bookmark URL automatically once the watcher is running.
+
 ## Files
 
 | File | Purpose |
