@@ -38,6 +38,8 @@ body {
   font-family: var(--font);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  /* Block browser pinch/double-tap zoom on the shell; charts opt back in below. */
+  touch-action: manipulation;
   /* Prevent a single wide child from creating a page-level horizontal scrollbar.
      Individual regions (rail nav, .tbl-scroll) may still scroll intentionally. */
   overflow-x: hidden;
@@ -240,6 +242,12 @@ button.ghost:hover { color: var(--text); border-color: var(--border); }
 }
 .chart-live #chart {
   transition: opacity 0.25s ease;
+}
+
+/* Chart canvas: full touch control for lightweight-charts pinch/pan (not browser zoom). */
+#chart {
+  touch-action: none;
+  -ms-touch-action: none;
 }
 
 /* ---------- watchlist ---------- */

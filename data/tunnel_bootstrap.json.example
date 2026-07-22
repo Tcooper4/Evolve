@@ -1,0 +1,5 @@
+{
+  "bootstrap_url": "https://evolve-tunnel-bootstrap.YOUR_SUBDOMAIN.workers.dev",
+  "update_secret": "generate-a-long-random-secret",
+  "origin": "http://127.0.0.1:8000"
+}

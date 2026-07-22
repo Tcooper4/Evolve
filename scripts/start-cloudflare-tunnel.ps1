@@ -13,7 +13,7 @@ if (-not (Test-Path $cloudflared)) {
 
 if ($Quick) {
     Write-Host "Starting quick tunnel (temporary trycloudflare.com URL)..."
-    & $cloudflared tunnel --url http://localhost:8000
+    & $cloudflared tunnel --url http://127.0.0.1:8000
     exit $LASTEXITCODE
 }
 
@@ -35,5 +35,5 @@ Or use quick mode: .\scripts\start-cloudflare-tunnel.ps1 -Quick
 "@
 }
 
-Write-Host "Starting named tunnel 'evolve' -> http://localhost:8000"
+Write-Host "Starting named tunnel 'evolve' -> http://127.0.0.1:8000"
 & $cloudflared tunnel --config $config run evolve

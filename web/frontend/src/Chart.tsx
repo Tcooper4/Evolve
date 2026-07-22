@@ -544,7 +544,7 @@ export default function Chart({
       >
         {activeNote || "Hover a marked day — N full spike · n notable · E large move (colors = up vs down day)"}
       </div>
-      <div id="chart" ref={containerRef} />
+      <div id="chart" className="chart-pane" ref={containerRef} />
     </div>
   );
 }

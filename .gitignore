@@ -73,6 +73,7 @@ data/users.db
 data/users.db-shm
 data/users.db-wal
 data/*.db
+data/tunnel_bootstrap.json
 # SQLite WAL/SHM sidecars (ephemeral; any DB name, e.g. signal_scores)
 *.db-shm
 *.db-wal

@@ -9,8 +9,13 @@
 # Run:
 #   cloudflared tunnel --config cloudflared/config.yml run evolve
 #
-# Quick try (no account, temporary URL):
-#   cloudflared tunnel --url http://localhost:8000
+# Quick try (no account, temporary URL — changes every restart):
+#   cloudflared tunnel --url http://127.0.0.1:8000
+#
+# Stable phone URL (free — auto-updates when tunnel restarts):
+#   See cloudflared/tunnel-bootstrap/README.md
+#   .\scripts\setup-tunnel-bootstrap.ps1    # once
+#   .\scripts\start-evolve-mobile.ps1       # each session
 
 tunnel: REPLACE_WITH_TUNNEL_ID
 credentials-file: C:\Users\Thomas\.cloudflared\REPLACE_WITH_TUNNEL_ID.json
@@ -20,5 +25,5 @@ ingress:
   # - hostname: evolve.yourdomain.com
   #   service: http://localhost:8000
   # Catch-all for the tunnel's *.cfargotunnel.com hostname:
-  - service: http://localhost:8000
+  - service: http://127.0.0.1:8000
   - service: http_status:404

@@ -5,10 +5,17 @@
 #
 # ## Quick start (temporary URL, no Cloudflare account)
 #
-#   cloudflared tunnel --url http://localhost:8000
+#   cloudflared tunnel --url http://127.0.0.1:8000
 #
 # Prints a https://*.trycloudflare.com URL — good for testing; URL changes
 # each run.
+#
+# ## Stable phone URL (free, auto-updates on tunnel restart)
+#
+# One-time:  .\scripts\setup-tunnel-bootstrap.ps1
+# Each day:  .\scripts\start-evolve-mobile.ps1
+#
+# See cloudflared/tunnel-bootstrap/README.md
 #
 # ## Named tunnel (persistent)
 #

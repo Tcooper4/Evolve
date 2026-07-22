@@ -1,0 +1,10 @@
+# One-time deploy — see cloudflared/tunnel-bootstrap/README.md
+name = "evolve-tunnel-bootstrap"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Create KV:  wrangler kv namespace create TUNNEL
+# Paste the id below, then:  wrangler secret put UPDATE_SECRET
+[[kv_namespaces]]
+binding = "TUNNEL"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
