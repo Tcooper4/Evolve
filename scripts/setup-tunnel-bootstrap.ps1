@@ -42,7 +42,7 @@ if (-not $wrangler) {
                 }
                 New-Item -ItemType Directory -Force -Path (Split-Path $configPath) | Out-Null
                 $cfg | ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
-                Write-Host "Saved $configPath — set Worker secret UPDATE_SECRET to: $secret"
+                Write-Host "Saved $configPath - set Worker secret UPDATE_SECRET to: $secret"
                 exit 0
             }
         } finally {
@@ -63,15 +63,17 @@ try {
     $toml = Get-Content $wranglerToml -Raw
     if ($toml -match "REPLACE_WITH_KV_NAMESPACE_ID") {
         Write-Host "Creating KV namespace TUNNEL..."
-        $kvOut = & $wranglerCmd kv namespace create TUNNEL 2>&1 | Out-String
+        $kvOut = (& $wranglerCmd kv namespace create TUNNEL 2>&1 | Out-String)
         Write-Host $kvOut
-        if ($kvOut -match 'id = "([a-f0-9-]+)"') {
-            $kvId = $Matches[1]
+        $kvPattern = 'id = "' + [char]40 + [char]91 + 'a-f0-9-' + [char]93 + '+' + [char]41 + '"'
+        $kvMatch = [regex]::Match($kvOut, $kvPattern)
+        if ($kvMatch.Success) {
+            $kvId = $kvMatch.Groups[1].Value
             $toml = $toml -replace "REPLACE_WITH_KV_NAMESPACE_ID", $kvId
             Set-Content -Path $wranglerToml -Value $toml -Encoding UTF8
             Write-Host "Updated wrangler.toml with KV id $kvId"
         } else {
-            Write-Error "Could not parse KV namespace id — create manually and edit wrangler.toml"
+            Write-Error "Could not parse KV namespace id - create manually and edit wrangler.toml"
         }
     }
 
@@ -80,12 +82,14 @@ try {
     $secret | & $wranglerCmd secret put UPDATE_SECRET
 
     Write-Host "Deploying Worker..."
-    $deployOut = & $wranglerCmd deploy 2>&1 | Out-String
+    $deployOut = (& $wranglerCmd deploy 2>&1 | Out-String)
     Write-Host $deployOut
-    if ($deployOut -notmatch "(https://[a-z0-9-]+\.workers\.dev)") {
+    $workerPattern = 'https://' + [char]91 + 'a-z0-9-' + [char]93 + '\.workers\.dev'
+    $deployMatch = [regex]::Match($deployOut, $workerPattern)
+    if (-not $deployMatch.Success) {
         Write-Error "Deploy finished but could not find workers.dev URL in output."
     }
-    $bootstrapUrl = $Matches[1]
+    $bootstrapUrl = $deployMatch.Groups[0].Value
 
     $cfg = @{
         bootstrap_url = $bootstrapUrl
@@ -100,8 +104,9 @@ try {
     Write-Host "Stable phone URL (bookmark / Add to Home Screen):"
     Write-Host "  $bootstrapUrl" -ForegroundColor White
     Write-Host ""
-    Write-Host "Config saved: data\tunnel_bootstrap.json (keep private — contains update secret)"
+    Write-Host "Config saved: data\tunnel_bootstrap.json (keep private - contains update secret)"
     Write-Host "Start stack:  .\scripts\start-evolve-mobile.ps1"
+    Write-Host "Autostart:    .\scripts\install-evolve-mobile-autostart.ps1"
 }
 finally {
     Pop-Location

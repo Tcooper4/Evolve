@@ -15,7 +15,7 @@ def load_config(path: Path) -> Dict[str, Any]:
         raise FileNotFoundError(
             f"Missing {path} — run scripts/setup-tunnel-bootstrap.ps1 first."
         )
-    with open(path, encoding="utf-8", errors="replace") as f:
+    with open(path, encoding="utf-8-sig", errors="replace") as f:
         return json.load(f)
 
 
@@ -36,6 +36,7 @@ def publish_url(
         headers={
             "Content-Type": "application/json",
             "X-Evolve-Secret": update_secret,
+            "User-Agent": "EvolveBootstrap/1.0",
         },
     )
     try:

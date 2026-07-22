@@ -28,10 +28,7 @@ function Wait-HttpOk($Url, $Seconds = 90) {
 }
 
 if (-not (Test-Path $configPath)) {
-    Write-Error @"
-Missing data\tunnel_bootstrap.json — run one-time setup first:
-  .\scripts\setup-tunnel-bootstrap.ps1
-"@
+    Write-Error "Missing data\tunnel_bootstrap.json - run .\scripts\setup-tunnel-bootstrap.ps1 first."
 }
 
 $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
@@ -44,17 +41,19 @@ if (-not $SkipDocker) {
     Write-Host "Starting Docker..."
     Push-Location $root
     try {
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
         docker compose up -d 2>&1 | Out-Host
+        $ErrorActionPreference = $prevEap
     } finally {
         Pop-Location
     }
     Write-Host "Waiting for $origin ..."
     if (-not (Wait-HttpOk "$origin/api/health")) {
-        Write-Warning "Health check slow — continuing anyway."
+        Write-Warning "Health check slow - continuing anyway."
     }
 }
 
-# Stop stale local listeners on 127.0.0.1:8000 (non-Docker) if any
 Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue |
     ForEach-Object {
         $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
@@ -73,20 +72,24 @@ if (Test-Path $cfLog) { Remove-Item $cfLog -Force }
 
 $cfProc = Start-Process -FilePath $cloudflared -ArgumentList @(
     "tunnel", "--url", $origin, "--protocol", "http2"
-) -RedirectStandardOutput $cfLog -RedirectStandardError $cfLog -PassThru -WindowStyle Hidden
+) -RedirectStandardError $cfLog -PassThru -WindowStyle Hidden
 
 Write-Host "Waiting for trycloudflare.com URL (pid $($cfProc.Id))..."
 $tunnelUrl = $null
 $deadline = (Get-Date).AddSeconds(90)
+$tunnelPattern = 'https://' + [char]91 + 'a-z0-9-' + [char]93 + '+\.trycloudflare\.com'
 while ((Get-Date) -lt $deadline) {
     if ($cfProc.HasExited) {
         Write-Error "cloudflared exited early. Log:`n$(Get-Content $cfLog -Raw -ErrorAction SilentlyContinue)"
     }
     if (Test-Path $cfLog) {
         $text = Get-Content $cfLog -Raw -ErrorAction SilentlyContinue
-        if ($text -match "(https://[a-z0-9-]+\.trycloudflare\.com)") {
-            $tunnelUrl = $Matches[1]
-            break
+        if ($text) {
+            $tunnelMatch = [regex]::Match($text, $tunnelPattern)
+            if ($tunnelMatch.Success) {
+                $tunnelUrl = $tunnelMatch.Groups[0].Value
+                break
+            }
         }
     }
     Start-Sleep -Seconds 1
@@ -102,13 +105,13 @@ if (-not $NoPublish) {
     Write-Host "Publishing to bootstrap Worker..."
     & $python (Join-Path $root "scripts\tunnel_bootstrap\publish_url.py") $tunnelUrl
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Publish failed — phone bookmark may be stale until publish succeeds."
+        Write-Warning "Publish failed - phone bookmark may be stale until publish succeeds."
     }
 }
 
 Write-Host ""
-Write-Host "=== Phone URL (stable — use this on home screen) ===" -ForegroundColor Cyan
+Write-Host "=== Phone URL (stable - bookmark this) ===" -ForegroundColor Cyan
 Write-Host "  $bootstrapUrl"
 Write-Host ""
 Write-Host "Direct tunnel (changes on restart): $tunnelUrl"
-Write-Host "Leave this window open or keep cloudflared running (PID $($cfProc.Id))."
+Write-Host "Leave cloudflared running (PID $($cfProc.Id))."
